@@ -23,6 +23,14 @@ const CHUNK_SIZE = 64 * 1024;
 
 const streamChunk = createIncompressibleChunk(CHUNK_SIZE);
 
+export function redirectToHttps(request: Request): Response | null {
+  const url = new URL(request.url);
+  if (url.protocol !== "http:") return null;
+
+  url.protocol = "https:";
+  return Response.redirect(url.toString(), 308);
+}
+
 function createIncompressibleChunk(size: number): Uint8Array {
   const bytes = new Uint8Array(size);
   let state = 0x6d2b79f5;
@@ -46,6 +54,7 @@ function diagnosticHeaders(contentType: string): Headers {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
     "Content-Type": contentType,
     "Cross-Origin-Resource-Policy": "same-origin",
+    "Strict-Transport-Security": "max-age=31536000",
     "Timing-Allow-Origin": "*",
     "X-Content-Type-Options": "nosniff"
   });
@@ -152,6 +161,9 @@ async function handleUpload(request: Request): Promise<Response> {
 
 export default {
   async fetch(request: WorkerRequest, env: Env): Promise<Response> {
+    const httpsRedirect = redirectToHttps(request);
+    if (httpsRedirect) return httpsRedirect;
+
     const url = new URL(request.url);
     switch (url.pathname) {
       case "/api/ping":

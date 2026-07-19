@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { clampDownloadSize } from "../worker";
+import { clampDownloadSize, redirectToHttps } from "../worker";
+
+describe("transport security", () => {
+  it("redirects plain HTTP requests without losing their path or query", () => {
+    const response = redirectToHttps(new Request("http://network.johnnyli.dev/api/ping?n=1"));
+
+    expect(response?.status).toBe(308);
+    expect(response?.headers.get("Location")).toBe("https://network.johnnyli.dev/api/ping?n=1");
+  });
+
+  it("leaves HTTPS requests unchanged", () => {
+    expect(redirectToHttps(new Request("https://network.johnnyli.dev/"))).toBeNull();
+  });
+});
 
 describe("download endpoint limits", () => {
   it("uses a one-megabyte default", () => {
