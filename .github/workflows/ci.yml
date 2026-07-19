@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web and Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --outdir .worker-bundle
+
+  probe-tests:
+    name: Deep probe tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test tools/DeepProbe.Tests/NetworkDeepProbe.Tests.csproj --configuration Release
+
+  windows-probe:
+    name: Windows 11 x64 probe
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish self-contained executable
+        run: dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/NetworkDeepProbe
+      - uses: actions/upload-artifact@v7
+        with:
+          name: NetworkDeepProbe-win-x64
+          path: artifacts/NetworkDeepProbe/NetworkDeepProbe.exe
+          if-no-files-found: error
+          retention-days: 14

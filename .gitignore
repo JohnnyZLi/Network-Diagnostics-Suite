@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.wrangler/
+.worker-bundle/
+worker-configuration.d.ts
+*.tsbuildinfo
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.DS_Store
