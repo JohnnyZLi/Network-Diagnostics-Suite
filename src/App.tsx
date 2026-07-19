@@ -115,7 +115,7 @@ export default function App() {
           <a href="#privacy">Privacy</a>
           <a href="https://github.com/JohnnyZLi" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </nav>
-        <div className="privacy-status"><span /> No analytics</div>
+        <a className="privacy-status" href="https://johnnyli.dev" aria-label="Return to Johnny Li portfolio">← Portfolio</a>
       </header>
 
       <main>
@@ -199,8 +199,8 @@ export default function App() {
 
       <footer>
         <span>Network Diagnostics Suite</span>
-        <p>Open source · no accounts · no retained test results</p>
-        <a href="https://johnnyli.dev">johnnyli.dev ↗</a>
+        <p>Open source · no analytics · no accounts · no retained test results</p>
+        <a href="https://johnnyli.dev">Back to johnnyli.dev ↗</a>
       </footer>
       </div>
     </>
