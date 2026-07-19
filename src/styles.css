@@ -50,6 +50,9 @@ body::before {
 .wordmark__mark i:nth-child(2) { height: 14px; }
 .wordmark__mark i:nth-child(3) { height: 10px; }
 .site-header nav { display: flex; align-items: center; gap: 32px; font-size: 13px; color: var(--muted-strong); }
+.site-header nav a { position: relative; }
+.site-header nav a::after { position: absolute; right: 0; bottom: -7px; left: 0; height: 1px; background: currentColor; content: ""; transform: scaleX(0); transform-origin: right; transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
+.site-header nav a:hover::after, .site-header nav a:focus-visible::after { transform: scaleX(1); transform-origin: left; }
 .site-header nav a:hover { color: var(--text); }
 .privacy-status { justify-self: end; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .09em; }
 .privacy-status span { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(99,214,162,.1); }
@@ -225,6 +228,11 @@ footer p { margin: 0; }
 footer a { justify-self: end; }
 footer a:hover { color: var(--text); }
 
+@media (hover: hover) {
+  .preview-grid article, .methodology-grid article { transition: background-color 240ms cubic-bezier(.22, 1, .36, 1); }
+  .preview-grid article:hover, .methodology-grid article:hover { background-color: var(--panel-strong); }
+}
+
 @media (max-width: 1100px) {
   .hero { grid-template-columns: 1fr; padding-top: 70px; }
   .test-controls { max-width: 600px; }
@@ -273,4 +281,38 @@ footer a:hover { color: var(--text); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body::before { animation: surface-grid-drift 72s linear infinite; }
+  .hero__copy, .test-controls { animation: load-rise 520ms cubic-bezier(.22, 1, .36, 1) both; }
+  .test-controls { animation-delay: 90ms; }
+
+  @supports (animation-timeline: view()) {
+    .measurement-preview > .section-heading,
+    .preview-grid article,
+    .methodology > .section-heading,
+    .methodology-grid article,
+    .deep-probe__intro,
+    .deep-probe__actions,
+    .information-panel,
+    .results > *,
+    .deep-report > * {
+      animation: viewport-rise 1ms cubic-bezier(.22, 1, .36, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 24%;
+    }
+  }
+
+  @keyframes surface-grid-drift {
+    to { background-position: 48px 48px; }
+  }
+  @keyframes load-rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes viewport-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
