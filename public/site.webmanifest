@@ -4,8 +4,8 @@
   "description": "Privacy-first browser and local network diagnostics.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b0d10",
-  "theme_color": "#0b0d10",
+  "background_color": "#f2efe8",
+  "theme_color": "#f2efe8",
   "icons": [
     {
       "src": "/favicon.svg",

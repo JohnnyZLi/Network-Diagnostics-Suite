@@ -3,6 +3,7 @@ import { formatLatency, formatRate } from "./core/format";
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
+import { MotionObserver } from "./components/MotionObserver";
 import { ProgressStage } from "./components/ProgressStage";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
@@ -101,7 +102,9 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
+    <>
+      <MotionObserver />
+      <div className="app-shell">
       <header className="site-header">
         <a className="wordmark" href="/" aria-label="Network Diagnostics Suite home">
           <span className="wordmark__mark" aria-hidden="true"><i /><i /><i /></span>
@@ -199,6 +202,7 @@ export default function App() {
         <p>Open source · no accounts · no retained test results</p>
         <a href="https://johnnyli.dev">johnnyli.dev ↗</a>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }
