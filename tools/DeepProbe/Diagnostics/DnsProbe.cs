@@ -18,12 +18,7 @@ internal static class DnsProbe
         bool includeAddresses,
         CancellationToken cancellationToken)
     {
-        var systemResolvers = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(network => network.OperationalStatus == OperationalStatus.Up)
-            .SelectMany(network => TryGetDnsAddresses(network))
-            .Where(address => !IPAddress.Any.Equals(address) && !IPAddress.IPv6Any.Equals(address))
-            .Distinct()
-            .Take(2)
+        var systemResolvers = DiscoverSystemResolvers()
             .Select((address, index) => new ResolverTarget($"System resolver {index + 1}", address, includeAddresses ? address.ToString() : "Local resolver"));
 
         var targets = systemResolvers.Concat([
@@ -38,6 +33,40 @@ internal static class DnsProbe
             results.Add(await TestResolverAsync(target, cancellationToken));
         }
         return results;
+    }
+
+    internal static IReadOnlyList<IPAddress> DiscoverSystemResolvers()
+    {
+        var addresses = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(network => network.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(TryGetDnsAddresses)
+            .Where(IsUsableResolver)
+            .Distinct()
+            .ToList();
+
+        if (addresses.Count < 2 && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
+        {
+            addresses.AddRange(ReadResolverConfiguration().Where(IsUsableResolver));
+        }
+
+        return addresses.Distinct().Take(2).ToArray();
+    }
+
+    internal static IReadOnlyList<IPAddress> ParseResolverConfiguration(IEnumerable<string> lines)
+    {
+        var addresses = new List<IPAddress>();
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Split('#', 2)[0].Trim();
+            var fields = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length >= 2
+                && string.Equals(fields[0], "nameserver", StringComparison.OrdinalIgnoreCase)
+                && IPAddress.TryParse(fields[1], out var address))
+            {
+                addresses.Add(address);
+            }
+        }
+        return addresses.Distinct().ToArray();
     }
 
     internal static byte[] BuildQuery(ushort transactionId, string name)
@@ -128,8 +157,25 @@ internal static class DnsProbe
     private static IEnumerable<IPAddress> TryGetDnsAddresses(NetworkInterface network)
     {
         try { return network.GetIPProperties().DnsAddresses; }
-        catch (NetworkInformationException) { return []; }
+        catch (Exception error) when (error is NetworkInformationException or PlatformNotSupportedException) { return []; }
     }
+
+    private static IReadOnlyList<IPAddress> ReadResolverConfiguration()
+    {
+        try
+        {
+            return File.Exists("/etc/resolv.conf")
+                ? ParseResolverConfiguration(File.ReadLines("/etc/resolv.conf"))
+                : [];
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsUsableResolver(IPAddress address) =>
+        !IPAddress.Any.Equals(address) && !IPAddress.IPv6Any.Equals(address);
 
     private sealed record ResolverTarget(string Name, IPAddress Address, string DisplayAddress);
 }

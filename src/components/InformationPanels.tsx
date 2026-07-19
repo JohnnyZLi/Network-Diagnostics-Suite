@@ -14,8 +14,8 @@ export function InformationPanels() {
       <article className="information-panel information-panel--probe">
         <span className="eyebrow">Deep probe</span>
         <h2>Some answers require the operating system.</h2>
-        <p>Browsers cannot perform honest traceroutes or expose raw packet loss. The optional Windows probe adds hops, Internet Control Message Protocol loss, Domain Name System timing, interface and gateway details, and path Maximum Transmission Unit discovery.</p>
-        <div className="probe-status"><span>In repository</span><strong>Windows 11 x64</strong></div>
+        <p>Browsers cannot perform honest traceroutes or expose raw packet loss. The optional native probe adds hops, Internet Control Message Protocol loss, Domain Name System timing, interface and gateway details, and path Maximum Transmission Unit discovery.</p>
+        <div className="probe-status"><span>Native builds</span><strong>Windows · macOS · Linux</strong></div>
       </article>
     </section>
   );

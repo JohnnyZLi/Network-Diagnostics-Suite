@@ -26,4 +26,19 @@ public sealed class DnsProbeTests
         response[7] = 0;
         Assert.False(DnsProbe.IsSuccessfulResponse(response, 0x1234));
     }
+
+    [Fact]
+    public void ResolverConfigurationParserHandlesUnixSyntaxAndComments()
+    {
+        var resolvers = DnsProbe.ParseResolverConfiguration([
+            "# generated resolver file",
+            "nameserver 192.0.2.53 # local resolver",
+            "  nameserver\t2001:db8::53  ",
+            "search example.test",
+            "nameserver not-an-address",
+            "nameserver 192.0.2.53"
+        ]);
+
+        Assert.Equal(new[] { "192.0.2.53", "2001:db8::53" }, resolvers.Select(address => address.ToString()));
+    }
 }

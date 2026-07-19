@@ -66,7 +66,7 @@ The application already caps each download response at 24 MiB and each upload re
 - Type-checking, testing, and building the web application.
 - Producing a dry-run Worker bundle.
 - Running the .NET test suite.
-- Publishing a self-contained Windows 11 x64 executable and attaching it as a workflow artifact.
+- Testing and publishing native self-contained probes for Windows x64, macOS Apple Silicon and Intel, and Linux x64 and ARM64, each with a SHA-256 checksum.
 
 Deployment is intentionally not automatic in the initial version. This keeps Cloudflare credentials out of the repository setup and makes the first production release deliberate. A deployment workflow can be added later with a scoped Cloudflare API token and the account ID stored as GitHub Actions secrets.
 
@@ -75,7 +75,7 @@ Deployment is intentionally not automatic in the initial version. This keeps Clo
 Add a project card on `johnnyli.dev` with:
 
 - **Title:** Network Diagnostics Suite
-- **Summary:** Privacy-first browser testing plus a Windows deep probe for throughput, latency distributions, bufferbloat, packet loss, route, DNS, MTU, and TLS diagnostics.
+- **Summary:** Privacy-first browser testing plus a cross-platform native probe for throughput, latency distributions, bufferbloat, packet loss, route, DNS, MTU, and TLS diagnostics.
 - **Live link:** `https://network.johnnyli.dev`
 - **Source link:** `https://github.com/JohnnyZLi/Network-Diagnostics-Suite`
-- **Evidence:** browser engine, Cloudflare Worker, Windows/.NET probe, automated tests, and documented measurement boundaries.
+- **Evidence:** browser engine, Cloudflare Worker, cross-platform .NET probe, operating-system build matrix, automated tests, and documented measurement boundaries.

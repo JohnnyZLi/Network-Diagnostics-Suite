@@ -3,13 +3,13 @@
 [![CI](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
-A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional Windows 11 probe adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, and TCP/TLS diagnostics.
+A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, and TCP/TLS diagnostics.
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them.
 
 ## What it measures
 
-| Measurement | Browser test | Windows deep probe |
+| Measurement | Browser test | Native deep probe |
 | --- | :---: | :---: |
 | Download and upload throughput | Yes | — |
 | Mean, median, min, max, and p95 latency | Yes | Yes |
@@ -43,7 +43,7 @@ Caps are ceilings. A slower connection stops at the profile duration and transfe
 flowchart TD
     Browser["React browser app"] --> Worker["Cloudflare Worker test API"]
     Browser --> Services["Optional reachability targets"]
-    Probe["Windows 11 deep probe"] --> Report["Local JSON report"]
+    Probe["Native deep probe"] --> Report["Local JSON report"]
     Report --> Browser
     Worker --> Result["In-memory result"]
     Services --> Result
@@ -51,7 +51,7 @@ flowchart TD
 
 - **React and TypeScript** render the dashboard and run browser measurements.
 - **Cloudflare Workers** serve the static app and same-origin latency, download, upload, and metadata endpoints.
-- **.NET 10** powers a self-contained Windows 11 x64 command-line probe.
+- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux.
 - Imported deep-probe JSON is read with the browser File API and is not uploaded.
 
 ## Run locally
@@ -74,19 +74,42 @@ npm run build
 npm run probe:test
 ```
 
-## Windows deep probe
+## Native deep probe
 
-Build a self-contained Windows 11 x64 executable:
+CI builds and smoke-tests five self-contained packages on their matching operating systems:
+
+| Package | Intended system |
+| --- | --- |
+| `win-x64` | Windows 11 on x64 |
+| `osx-arm64` | Apple Silicon Mac |
+| `osx-x64` | Intel Mac |
+| `linux-x64` | 64-bit Intel/AMD Linux using glibc |
+| `linux-arm64` | 64-bit ARM Linux using glibc |
+
+Open the latest successful [CI run](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml) to download a 30-day build artifact. Each artifact contains the native binary, license, run/privacy notes, and a SHA-256 checksum.
+
+Build every target locally with the .NET 10 SDK:
 
 ```bash
 npm run probe:build
 ```
 
-Run it from PowerShell or Windows Terminal:
+Individual scripts such as `npm run probe:build:mac-arm64` and `npm run probe:build:linux-x64` build just one target.
+
+Run it from PowerShell or Windows Terminal on Windows:
 
 ```powershell
 .\NetworkDeepProbe.exe
 ```
+
+Run it from Terminal on macOS or Linux:
+
+```bash
+chmod +x NetworkDeepProbe
+./NetworkDeepProbe
+```
+
+The initial macOS CI builds are not Apple-signed or notarized. If macOS blocks the first launch, review the source and checksum, build it locally, or explicitly approve it in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
 
 The probe writes a timestamped JSON report to the current directory. Import that report through the web dashboard to render the deep results.
 
@@ -120,7 +143,7 @@ See [Deployment guide](docs/deployment.md) for the exact workflow, custom-domain
 ```text
 src/                    React application and browser test engine
 worker/                 Cloudflare Worker measurement endpoints
-tools/DeepProbe/        Windows 11 network probe
+tools/DeepProbe/        Cross-platform native network probe
 tools/DeepProbe.Tests/  Probe unit tests
 tests/                  Browser and Worker unit tests
 docs/                   Methodology, privacy, and deployment notes

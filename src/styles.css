@@ -171,9 +171,12 @@ body::before {
 .deep-probe__actions { padding: 30px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
 .deep-probe__actions input { width: 1px; height: 1px; position: absolute; opacity: 0; pointer-events: none; }
 .deep-probe__actions label { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-radius: 9px; color: #071017; background: var(--accent); font-size: 13px; font-weight: 720; cursor: pointer; }
+.deep-probe__actions > a { height: 48px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 9px; color: var(--text); font-size: 12px; text-decoration: none; }
+.deep-probe__actions > a:hover { border-color: var(--accent); color: var(--accent); }
 .deep-probe__actions small { display: block; margin-top: 14px; color: var(--muted); font-size: 9px; text-align: center; }
 .deep-probe__actions p { margin: 14px 0 0; color: var(--red); font-size: 11px; line-height: 1.5; }
 .deep-report { padding: 86px 3.5%; border-bottom: 1px solid var(--line); }
+.report-platform { margin: -7px 0 0; color: var(--muted); font: 400 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .deep-report .section-heading--actions button { padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--muted-strong); background: var(--panel); font-size: 11px; cursor: pointer; }
 .deep-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; padding: 1px; background: var(--line); }
 .deep-summary article { min-width: 0; padding: 22px; background: var(--panel); }

@@ -14,7 +14,12 @@
     "worker:dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "probe:test": "dotnet test tools/DeepProbe.Tests/NetworkDeepProbe.Tests.csproj -c Release",
-    "probe:build": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output artifacts/NetworkDeepProbe"
+    "probe:build": "npm run probe:build:win-x64 && npm run probe:build:mac-arm64 && npm run probe:build:mac-x64 && npm run probe:build:linux-x64 && npm run probe:build:linux-arm64",
+    "probe:build:win-x64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r win-x64 --self-contained true --output artifacts/win-x64",
+    "probe:build:mac-arm64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r osx-arm64 --self-contained true --output artifacts/osx-arm64",
+    "probe:build:mac-x64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r osx-x64 --self-contained true --output artifacts/osx-x64",
+    "probe:build:linux-x64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r linux-x64 --self-contained true --output artifacts/linux-x64",
+    "probe:build:linux-arm64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r linux-arm64 --self-contained true --output artifacts/linux-arm64"
   },
   "dependencies": {
     "react": "19.2.7",

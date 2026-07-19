@@ -54,7 +54,7 @@ export function DeepProbePanel() {
         <div className="deep-probe__intro">
           <span className="eyebrow">Optional local diagnostics</span>
           <h2>Bring the operating-system layer into the report.</h2>
-          <p>Run the Windows 11 deep probe, then open its JSON report here. Parsing happens in this tab; the selected file is never transmitted.</p>
+          <p>Run the native probe on Windows 11, macOS, or Linux, then open its JSON report here. Parsing happens in this tab; the selected file is never transmitted.</p>
         </div>
         <div className="deep-probe__actions">
           <input
@@ -65,6 +65,7 @@ export function DeepProbePanel() {
             id="probe-report"
           />
           <label htmlFor="probe-report">Import probe report <span aria-hidden="true">↗</span></label>
+          <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite#native-deep-probe" target="_blank" rel="noreferrer">Get a native build <span aria-hidden="true">↗</span></a>
           <small>Schema 1.0 · maximum 5 MB · processed locally</small>
           {error && <p role="alert">{error}</p>}
         </div>
@@ -77,8 +78,9 @@ export function DeepProbePanel() {
     <section className="deep-report" id="deep-probe">
       <div className="section-heading section-heading--actions">
         <div>
-          <span className="eyebrow">Local report · {new Date(report.generatedAt).toLocaleString()}</span>
+          <span className="eyebrow">Local report · {report.architecture} · {new Date(report.generatedAt).toLocaleString()}</span>
           <h2>Deep network path</h2>
+          <p className="report-platform">{report.operatingSystem}</p>
         </div>
         <button type="button" onClick={() => setReport(null)}>Close report</button>
       </div>

@@ -66,7 +66,9 @@ Because the requests use `no-cors`, the browser intentionally hides response sta
 
 The Worker returns the servicing edge code, network organization and ASN, HTTP protocol, TLS version, and whether the connection reached Cloudflare over IPv4 or IPv6. It uses the connecting address only to infer the IP version and never returns the address itself.
 
-## Windows deep probe
+## Native deep probe
+
+Windows 11, macOS, and Linux packages run the same .NET measurement engine and emit the same versioned JSON schema. The packages differ only by operating system and CPU runtime. CI runs the unit suite and launches each binary on its target platform before publishing it.
 
 ### ICMP latency and packet loss
 
@@ -104,6 +106,8 @@ It does not issue an HTTP content request after the handshake. The values help d
 
 For active non-loopback, non-tunnel interfaces, the report includes interface name and description, media type, reported link speed, IPv4 MTU, and IPv4/IPv6 support. Link speed is the adapter's negotiated or reported link rate, not measured Internet throughput.
 
+Operating systems expose interface, resolver, and default-gateway metadata differently. The probe uses .NET's native network APIs first and supplements resolver discovery from `/etc/resolv.conf` on macOS and Linux when necessary. Unsupported or unavailable fields remain empty rather than being guessed.
+
 ## Important limitations
 
 - Results describe one device, browser, route, server edge, and moment in time.
@@ -112,3 +116,4 @@ For active non-loopback, non-tunnel interfaces, the report includes interface na
 - Throughput can be limited by the test edge or Worker platform as well as the access connection.
 - A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
 - Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
+- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works.

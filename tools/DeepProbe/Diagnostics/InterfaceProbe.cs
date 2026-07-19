@@ -24,27 +24,30 @@ internal static class InterfaceProbe
         {
             var properties = item.Properties!;
             var ipv4 = TryGetIpv4Properties(properties);
+            var unicastAddresses = TryGetUnicastAddresses(properties);
+            var gateways = TryGetGatewayAddresses(properties);
+            var dnsServers = TryGetDnsAddresses(properties);
             return new NetworkInterfaceReport(
                 item.Network.Name,
                 item.Network.Description,
                 item.Network.NetworkInterfaceType.ToString(),
-                item.Network.Speed > 0 ? item.Network.Speed / 1_000_000 : null,
+                TryGetLinkSpeedMbps(item.Network),
                 ipv4?.Mtu,
                 item.Network.Supports(NetworkInterfaceComponent.IPv4),
                 item.Network.Supports(NetworkInterfaceComponent.IPv6),
                 includeAddresses
-                    ? properties.UnicastAddresses.Select(address => address.Address.ToString()).ToArray()
+                    ? unicastAddresses.Select(address => address.Address.ToString()).ToArray()
                     : null,
                 includeAddresses
-                    ? properties.GatewayAddresses.Select(gateway => gateway.Address.ToString()).ToArray()
+                    ? gateways.Select(gateway => gateway.Address.ToString()).ToArray()
                     : null,
                 includeAddresses
-                    ? properties.DnsAddresses.Select(address => address.ToString()).ToArray()
+                    ? dnsServers.Select(address => address.ToString()).ToArray()
                     : null);
         }).ToArray();
 
         var primaryGateway = candidates
-            .SelectMany(item => item.Properties!.GatewayAddresses)
+            .SelectMany(item => TryGetGatewayAddresses(item.Properties!))
             .Select(gateway => gateway.Address)
             .FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.Any.Equals(address));
 
@@ -54,12 +57,36 @@ internal static class InterfaceProbe
     private static IPInterfaceProperties? TryGetProperties(NetworkInterface network)
     {
         try { return network.GetIPProperties(); }
-        catch (NetworkInformationException) { return null; }
+        catch (Exception error) when (error is NetworkInformationException or PlatformNotSupportedException) { return null; }
     }
 
     private static IPv4InterfaceProperties? TryGetIpv4Properties(IPInterfaceProperties properties)
     {
         try { return properties.GetIPv4Properties(); }
-        catch (NetworkInformationException) { return null; }
+        catch (Exception error) when (error is NetworkInformationException or PlatformNotSupportedException) { return null; }
+    }
+
+    private static long? TryGetLinkSpeedMbps(NetworkInterface network)
+    {
+        try { return network.Speed > 0 ? network.Speed / 1_000_000 : null; }
+        catch (PlatformNotSupportedException) { return null; }
+    }
+
+    private static IReadOnlyList<UnicastIPAddressInformation> TryGetUnicastAddresses(IPInterfaceProperties properties)
+    {
+        try { return properties.UnicastAddresses.ToArray(); }
+        catch (PlatformNotSupportedException) { return []; }
+    }
+
+    private static IReadOnlyList<GatewayIPAddressInformation> TryGetGatewayAddresses(IPInterfaceProperties properties)
+    {
+        try { return properties.GatewayAddresses.ToArray(); }
+        catch (PlatformNotSupportedException) { return []; }
+    }
+
+    private static IReadOnlyList<IPAddress> TryGetDnsAddresses(IPInterfaceProperties properties)
+    {
+        try { return properties.DnsAddresses.ToArray(); }
+        catch (PlatformNotSupportedException) { return []; }
     }
 }

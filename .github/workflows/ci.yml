@@ -27,31 +27,84 @@ jobs:
       - name: Validate Worker bundle
         run: npx wrangler deploy --dry-run --outdir .worker-bundle
 
-  probe-tests:
-    name: Deep probe tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  native-probe:
+    name: ${{ matrix.label }} probe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows 11 x64
+            os: windows-latest
+            rid: win-x64
+            binary: NetworkDeepProbe.exe
+            package: zip
+          - label: macOS Apple Silicon
+            os: macos-latest
+            rid: osx-arm64
+            binary: NetworkDeepProbe
+            package: tar
+          - label: macOS Intel
+            os: macos-15-intel
+            rid: osx-x64
+            binary: NetworkDeepProbe
+            package: tar
+          - label: Linux x64
+            os: ubuntu-latest
+            rid: linux-x64
+            binary: NetworkDeepProbe
+            package: tar
+          - label: Linux ARM64
+            os: ubuntu-24.04-arm
+            rid: linux-arm64
+            binary: NetworkDeepProbe
+            package: tar
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - run: dotnet test tools/DeepProbe.Tests/NetworkDeepProbe.Tests.csproj --configuration Release
-
-  windows-probe:
-    name: Windows 11 x64 probe
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-      - name: Publish self-contained executable
-        run: dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/NetworkDeepProbe
+      - name: Run probe tests on ${{ matrix.label }}
+        run: dotnet test tools/DeepProbe.Tests/NetworkDeepProbe.Tests.csproj --configuration Release
+      - name: Publish native self-contained executable
+        run: dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/${{ matrix.rid }}/publish
+      - name: Stage distribution
+        shell: bash
+        run: |
+          package="artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}"
+          mkdir -p "$package"
+          cp "artifacts/${{ matrix.rid }}/publish/${{ matrix.binary }}" "$package/${{ matrix.binary }}"
+          cp LICENSE "$package/LICENSE.txt"
+          cp tools/DeepProbe/DISTRIBUTION.md "$package/README.md"
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            chmod +x "$package/${{ matrix.binary }}"
+          fi
+      - name: Smoke-test native executable
+        shell: bash
+        run: artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}/${{ matrix.binary }} --help
+      - name: Package Windows distribution
+        if: matrix.package == 'zip'
+        shell: pwsh
+        run: |
+          $archive = "artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}.zip"
+          Compress-Archive -Path "artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}" -DestinationPath $archive
+          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          "$hash  NetworkDeepProbe-${{ matrix.rid }}.zip" | Out-File -Encoding ascii "$archive.sha256"
+      - name: Package Unix distribution
+        if: matrix.package == 'tar'
+        shell: bash
+        run: |
+          archive="artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}.tar.gz"
+          tar -C "artifacts/${{ matrix.rid }}" -czf "$archive" "NetworkDeepProbe-${{ matrix.rid }}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd "artifacts/${{ matrix.rid }}" && sha256sum "NetworkDeepProbe-${{ matrix.rid }}.tar.gz" > "NetworkDeepProbe-${{ matrix.rid }}.tar.gz.sha256")
+          else
+            (cd "artifacts/${{ matrix.rid }}" && shasum -a 256 "NetworkDeepProbe-${{ matrix.rid }}.tar.gz" > "NetworkDeepProbe-${{ matrix.rid }}.tar.gz.sha256")
+          fi
       - uses: actions/upload-artifact@v7
         with:
-          name: NetworkDeepProbe-win-x64
-          path: artifacts/NetworkDeepProbe/NetworkDeepProbe.exe
+          name: NetworkDeepProbe-${{ matrix.rid }}
+          path: artifacts/${{ matrix.rid }}/NetworkDeepProbe-${{ matrix.rid }}.*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

@@ -28,13 +28,13 @@ Cloudflare necessarily receives the network traffic, source address, and ordinar
 
 When the user selects Full or Stress, the browser sends one reachability request to each named provider. Each provider necessarily sees the originating connection and may process it under its own privacy policy. Quick mode does not run this third-party battery.
 
-## Windows deep probe
+## Native deep probe
 
 The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no upload or telemetry code.
 
 The default report includes:
 
-- Test time, Windows version, and CPU architecture.
+- Test time, operating-system description, and CPU architecture.
 - Interface name, description, type, link speed, MTU, and protocol support.
 - ICMP statistics, public traceroute-hop addresses and reverse-DNS names, DNS timings, MTU estimate, and endpoint timing.
 

@@ -44,6 +44,10 @@ internal static class MtuProbe
             {
                 highest = candidate - 1;
             }
+            catch (PlatformNotSupportedException)
+            {
+                return new PathMtuReport(target, null, null, "Path MTU discovery is not supported by this platform runtime.");
+            }
         }
 
         return best is null
