@@ -5,12 +5,12 @@ import { fileURLToPath } from "node:url";
 
 export const SPEED_ASSET_BYTES = 24 * 1024 * 1024;
 export const SPEED_ASSET_NAME = "payload.bin";
-export const SPEED_ASSET_VERSION = "v2";
+export const SPEED_ASSET_VERSION = "v3";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDirectory, "..");
 const outputDirectory = resolve(projectRoot, "public", "speed", SPEED_ASSET_VERSION);
-const key = createHash("sha256").update("network-diagnostics-static-speed-asset-v2").digest();
+const key = createHash("sha256").update("network-diagnostics-static-speed-asset-v3").digest();
 
 async function hasExpectedSize(path) {
   try {
@@ -22,7 +22,7 @@ async function hasExpectedSize(path) {
 
 function createPayload() {
   const iv = Buffer.alloc(16);
-  iv.writeUInt32BE(2, 12);
+  iv.writeUInt32BE(3, 12);
   const cipher = createCipheriv("aes-256-ctr", key, iv);
   const zeros = Buffer.alloc(SPEED_ASSET_BYTES);
   return Buffer.concat([cipher.update(zeros), cipher.final()]);

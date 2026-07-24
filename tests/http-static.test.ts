@@ -4,7 +4,7 @@ import { STATIC_DOWNLOAD_ASSET_BYTES, staticResponseMatchesRequest } from "../sr
 function response(status: number, contentLength: number, contentRange?: string): Response {
   const headers = new Headers({
     "Content-Length": contentLength.toString(),
-    "X-NDS-Payload": "static-edge-v2"
+    "X-NDS-Payload": "static-edge-v3"
   });
   if (contentRange) headers.set("Content-Range", contentRange);
   return new Response(new Uint8Array(1), { status, headers });
