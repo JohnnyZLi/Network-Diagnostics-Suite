@@ -24,7 +24,9 @@ Worker observability is disabled in `wrangler.jsonc`. This prevents project-leve
 
 ### Infrastructure boundary
 
-Cloudflare necessarily receives the network traffic, source address, and ordinary request metadata required to route and protect the Worker. Cloudflare may process that data under its own terms, security controls, and retention practices.
+Cloudflare necessarily receives the network traffic, source address, and ordinary request metadata required to route and protect the application. Cloudflare may process that data under its own terms, security controls, and retention practices.
+
+The main download test uses deterministic binary files deployed as same-origin Cloudflare Workers Static Assets. It does not contact M-Lab or another speed-test provider, and the matching asset requests bypass the project Worker script. The upload, ping, and metadata endpoints remain same-origin Worker requests. This reduces application processing and avoids adding another data recipient, but Cloudflare remains part of the measured path and infrastructure boundary.
 
 When the user selects Full or Stress, the browser sends one reachability request to each named provider. Each provider necessarily sees the originating connection and may process it under its own privacy policy. Quick mode does not run this third-party battery.
 
@@ -47,7 +49,6 @@ The default report omits or redacts:
 
 `--include-addresses` explicitly adds interface IP, gateway, DNS, and private-hop addresses. The report should then be treated as sensitive diagnostic material.
 
-
 ### Optional LAN server/client
 
 `--lan-server` opens a TCP listener on all local interfaces on port 8765 by default and remains active until it is stopped. It accepts only the probe's small command protocol and generated throughput payloads; it does not read files or enumerate the connecting client. The server does not write results or contact the project infrastructure.
@@ -67,7 +68,8 @@ Review a JSON file before posting it publicly. Export and sharing are user-contr
 - Test endpoints accept only their required HTTP methods.
 - Bandwidth endpoints reject ordinary cross-site browser requests.
 - Per-request download and upload sizes are capped.
+- Static throughput files are same-origin, have restrictive response headers, and are individually limited to 24 MiB.
 - Static responses use a restrictive Content Security Policy and security headers.
-- Production deployment should add a Cloudflare rate-limiting rule for the bandwidth endpoints to discourage automated abuse.
+- Production deployment should add a Cloudflare rate-limiting rule for the dynamic bandwidth endpoints to discourage automated abuse.
 
 No client-side control can fully prevent a custom script from making direct requests to a public endpoint. Production limits are therefore part of the deployment model.
