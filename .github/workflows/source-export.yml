@@ -1,0 +1,24 @@
+name: Source export
+
+on:
+  push:
+    branches: [assistant/source-export]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stage source tree
+        run: |
+          mkdir -p source
+          rsync -a --exclude='.git' --exclude='source' ./ source/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: network-diagnostics-source
+          path: source
+          include-hidden-files: true
+          retention-days: 1
