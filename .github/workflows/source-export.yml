@@ -1,26 +1,26 @@
-name: Source export
+name: Apply staged implementation
 
 on:
   push:
     branches: [assistant/source-export]
-  pull_request:
-    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Stage source tree
-        run: |
-          mkdir -p source
-          rsync -a --exclude='.git' --exclude='source' ./ source/
-      - uses: actions/upload-artifact@v7
         with:
-          name: network-diagnostics-source
-          path: source
-          include-hidden-files: true
-          retention-days: 1
+          fetch-depth: 0
+      - name: Apply implementation to validation branch
+        run: |
+          cp automation/path-isolation.patch /tmp/path-isolation.patch
+          git fetch origin main
+          git checkout -B assistant/path-isolation origin/main
+          git apply --index /tmp/path-isolation.patch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add path-isolated LAN throughput diagnostics"
+          git push --force origin HEAD:assistant/path-isolation
