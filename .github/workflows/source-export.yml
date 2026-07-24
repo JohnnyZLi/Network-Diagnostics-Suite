@@ -23,9 +23,9 @@ jobs:
           git fetch origin main
           git checkout -B assistant/path-isolation origin/main
       - name: Check staged patch
-        run: git apply --check --verbose /tmp/path-isolation.patch
+        run: git apply --recount --check --verbose /tmp/path-isolation.patch
       - name: Apply staged patch
-        run: git apply --index /tmp/path-isolation.patch
+        run: git apply --recount --index /tmp/path-isolation.patch
       - name: Commit implementation
         run: |
           git config user.name "github-actions[bot]"
