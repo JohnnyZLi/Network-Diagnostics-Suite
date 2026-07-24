@@ -34,8 +34,10 @@ jobs:
           {
             echo "chunks:"
             wc -c automation/archive/chunk-*
+            sha256sum automation/archive/chunk-*
             echo "combined-base64:"
             wc -c /tmp/path-isolation-files.b64
+            sha256sum /tmp/path-isolation-files.b64
           } > /tmp/archive-diagnostic.txt
           base64 --decode /tmp/path-isolation-files.b64 > /tmp/path-isolation-files.tar.gz
           decode_status=$?
