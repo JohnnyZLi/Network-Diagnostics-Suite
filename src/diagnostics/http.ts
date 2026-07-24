@@ -1,10 +1,12 @@
 import type { EdgeMetadata, UploadReceipt } from "../types/api";
 
-export const STATIC_DOWNLOAD_ASSET_BYTES = 24 * 1024 * 1024;
-export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v3/";
+export const STATIC_DOWNLOAD_STREAM_BYTES = 96 * 1024 * 1024;
+export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v4/";
 
-const STATIC_DOWNLOAD_ASSET = `${STATIC_DOWNLOAD_PATH_PREFIX}payload.bin`;
-const STATIC_PAYLOAD_MARKER = "static-edge-v3";
+const STATIC_DOWNLOAD_STREAM = `${STATIC_DOWNLOAD_PATH_PREFIX}stream`;
+const STATIC_DOWNLOAD_WARM = `${STATIC_DOWNLOAD_PATH_PREFIX}warm`;
+const STATIC_PAYLOAD_MARKER = "stream-edge-v4";
+const WORKER_FALLBACK_BYTES = 32 * 1024 * 1024;
 
 export interface DownloadDeliveryObservation {
   source: "static" | "worker";
@@ -14,6 +16,14 @@ export interface DownloadDeliveryObservation {
 
 export interface DownloadWarmupObservation extends DownloadDeliveryObservation {
   bytes: number;
+  cachedBytes: number;
+}
+
+interface WarmupReceipt {
+  status: string;
+  segmentCount: number;
+  cachedBytes: number;
+  ageSeconds: number | null;
 }
 
 export class TestCancelledError extends Error {
@@ -104,15 +114,6 @@ function isMarkedStaticPayload(response: Response): boolean {
   return response.headers.get("X-NDS-Payload") === STATIC_PAYLOAD_MARKER;
 }
 
-function parseContentRangeLength(value: string | null): number | null {
-  const match = /^bytes\s+(\d+)-(\d+)\/(?:\d+|\*)$/i.exec(value ?? "");
-  if (!match) return null;
-  const start = Number.parseInt(match[1], 10);
-  const end = Number.parseInt(match[2], 10);
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start) return null;
-  return end - start + 1;
-}
-
 function parseNonNegativeInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
   const parsed = Number.parseInt(value, 10);
@@ -131,23 +132,16 @@ function deliveryObservation(response: Response, source: DownloadDeliveryObserva
   return { source, cacheStatus, ageSeconds };
 }
 
-export function staticResponseMatchesRequest(response: Response, requestedBytes: number): boolean {
-  if (!isMarkedStaticPayload(response) || response.body === null) return false;
-
+export function streamResponseMatchesRequest(response: Response): boolean {
+  if (!isMarkedStaticPayload(response) || response.body === null || response.status !== 200) return false;
   const contentLength = Number.parseInt(response.headers.get("Content-Length") ?? "", 10);
-  if (response.status === 206) {
-    return parseContentRangeLength(response.headers.get("Content-Range")) === requestedBytes
-      && contentLength === requestedBytes;
-  }
-
-  return response.status === 200
-    && requestedBytes === STATIC_DOWNLOAD_ASSET_BYTES
-    && contentLength === STATIC_DOWNLOAD_ASSET_BYTES;
+  const logicalBytes = Number.parseInt(response.headers.get("X-NDS-Logical-Bytes") ?? "", 10);
+  return contentLength === STATIC_DOWNLOAD_STREAM_BYTES && logicalBytes === STATIC_DOWNLOAD_STREAM_BYTES;
 }
 
 async function discardResponse(response: Response): Promise<void> {
   try {
-    await response.body?.cancel("response-not-usable-for-requested-range");
+    await response.body?.cancel("response-not-usable-for-speed-test");
   } catch {
     // The response may already be closed. There is nothing else to clean up.
   }
@@ -174,85 +168,82 @@ async function consumeDownload(
   }
 }
 
-async function downloadStaticAsset(
-  size: number,
-  signal: AbortSignal,
-  onBytes: (delta: number) => void
-): Promise<DownloadDeliveryObservation | null> {
-  let response: Response;
-  try {
-    response = await fetch(STATIC_DOWNLOAD_ASSET, {
-      credentials: "omit",
-      headers: size === STATIC_DOWNLOAD_ASSET_BYTES ? undefined : {
-        Range: `bytes=0-${size - 1}`
-      },
-      signal
-    });
-  } catch {
-    if (signal.aborted) throw new TestCancelledError();
-    return null;
-  }
-
-  if (!staticResponseMatchesRequest(response, size)) {
-    await discardResponse(response);
-    return null;
-  }
-
-  const observation = deliveryObservation(response, "static");
-  await consumeDownload(response, size, onBytes);
-  return observation;
-}
-
 async function downloadWorkerChunk(
   size: number,
   signal: AbortSignal,
-  onBytes: (delta: number) => void
-): Promise<DownloadDeliveryObservation> {
+  onBytes: (delta: number) => void,
+  onObservation?: (observation: DownloadDeliveryObservation) => void
+): Promise<void> {
   const response = await fetch(`/api/download?bytes=${size}&n=${crypto.randomUUID()}`, {
     cache: "no-store",
     credentials: "omit",
     signal
   });
   if (!response.ok || !response.body) throw new Error(`Download endpoint returned ${response.status}.`);
-  const observation = deliveryObservation(response, "worker");
+  onObservation?.(deliveryObservation(response, "worker"));
   await consumeDownload(response, size, onBytes);
-  return observation;
 }
 
-export async function downloadChunk(
-  size: number,
+export async function downloadLongStream(
   signal: AbortSignal,
-  onBytes: (delta: number) => void
-): Promise<DownloadDeliveryObservation> {
-  if (size <= 0 || size > STATIC_DOWNLOAD_ASSET_BYTES) {
-    throw new Error(`Download chunk size must be between 1 and ${STATIC_DOWNLOAD_ASSET_BYTES} bytes.`);
-  }
-
-  const staticObservation = await downloadStaticAsset(size, signal, onBytes);
-  if (staticObservation) return staticObservation;
-  return downloadWorkerChunk(size, signal, onBytes);
-}
-
-async function warmStaticDownloadPath(signal: AbortSignal): Promise<DownloadWarmupObservation | null> {
+  onBytes: (delta: number) => void,
+  onObservation: (observation: DownloadDeliveryObservation) => void
+): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(STATIC_DOWNLOAD_ASSET, {
+    response = await fetch(STATIC_DOWNLOAD_STREAM, {
+      cache: "no-store",
       credentials: "omit",
       signal
     });
   } catch {
     if (signal.aborted) throw new TestCancelledError();
-    return null;
+    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+    return;
   }
 
-  if (!staticResponseMatchesRequest(response, STATIC_DOWNLOAD_ASSET_BYTES)) {
+  if (!streamResponseMatchesRequest(response)) {
     await discardResponse(response);
-    return null;
+    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+    return;
   }
 
-  const observation = deliveryObservation(response, "static");
-  await consumeDownload(response, STATIC_DOWNLOAD_ASSET_BYTES, () => undefined);
-  return { ...observation, bytes: STATIC_DOWNLOAD_ASSET_BYTES };
+  onObservation(deliveryObservation(response, "static"));
+  try {
+    await consumeDownload(response, STATIC_DOWNLOAD_STREAM_BYTES, onBytes);
+  } catch (error) {
+    if (signal.aborted) throw new TestCancelledError();
+    throw error;
+  }
+}
+
+async function warmStaticDownloadPath(signal: AbortSignal): Promise<DownloadWarmupObservation | null> {
+  try {
+    const response = await fetch(STATIC_DOWNLOAD_WARM, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "omit",
+      signal
+    });
+    if (!response.ok) return null;
+    const receipt = await response.json() as WarmupReceipt;
+    if (
+      !Number.isSafeInteger(receipt.segmentCount)
+      || receipt.segmentCount <= 0
+      || !Number.isSafeInteger(receipt.cachedBytes)
+      || receipt.cachedBytes < 0
+    ) return null;
+    return {
+      source: "static",
+      cacheStatus: receipt.status?.trim().toUpperCase() || null,
+      ageSeconds: Number.isFinite(receipt.ageSeconds) ? receipt.ageSeconds : null,
+      bytes: 0,
+      cachedBytes: receipt.cachedBytes
+    };
+  } catch {
+    if (signal.aborted) throw new TestCancelledError();
+    return null;
+  }
 }
 
 export async function warmDownloadPath(signal: AbortSignal, concurrency: number): Promise<DownloadWarmupObservation> {
@@ -261,8 +252,14 @@ export async function warmDownloadPath(signal: AbortSignal, concurrency: number)
 
   const streamCount = Math.max(1, Math.min(4, concurrency));
   const bytesPerStream = 2 * 1024 * 1024;
-  const observations = await Promise.all(
-    Array.from({ length: streamCount }, () => downloadWorkerChunk(bytesPerStream, signal, () => undefined))
+  const observations: DownloadDeliveryObservation[] = [];
+  await Promise.all(
+    Array.from({ length: streamCount }, () => downloadWorkerChunk(
+      bytesPerStream,
+      signal,
+      () => undefined,
+      (observation) => observations.push(observation)
+    ))
   );
   const cacheStatus = observations.map((observation) => observation.cacheStatus).find((status) => status !== null) ?? null;
   const ageSeconds = observations.reduce<number | null>((maximum, observation) => {
@@ -273,7 +270,8 @@ export async function warmDownloadPath(signal: AbortSignal, concurrency: number)
     source: "worker",
     cacheStatus,
     ageSeconds,
-    bytes: bytesPerStream * streamCount
+    bytes: bytesPerStream * streamCount,
+    cachedBytes: 0
   };
 }
 
