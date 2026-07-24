@@ -1,6 +1,13 @@
 import { throughputFromTimeline } from "../core/statistics";
 import type { ThroughputSummary, TimedSample } from "../types/diagnostics";
-import { downloadChunk, TestCancelledError, throwIfAborted, uploadChunk } from "./http";
+import {
+  downloadChunk,
+  STATIC_DOWNLOAD_ASSET_BYTES,
+  TestCancelledError,
+  throwIfAborted,
+  uploadChunk,
+  warmDownloadPath
+} from "./http";
 
 interface ThroughputOptions {
   durationMs: number;
@@ -70,11 +77,14 @@ function startTimeline(
 
 export async function runDownload(options: ThroughputOptions): Promise<ThroughputSummary> {
   throwIfAborted(options.signal);
+  await warmDownloadPath(options.signal, options.concurrency);
+  throwIfAborted(options.signal);
+
   const startedAt = performance.now();
   const state: TransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
-  const requestSize = 24 * 1024 * 1024;
+  const requestSize = STATIC_DOWNLOAD_ASSET_BYTES;
 
   const worker = async () => {
     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
