@@ -103,6 +103,7 @@ export function throughputFromTimeline(
   let qualification: ThroughputSummary["qualification"] = "qualified";
   if (capReached && endedEarly) qualification = "cap-limited";
   else if (rampRatio !== null && rampRatio > 1.2) qualification = "still-ramping";
+  else if (rampRatio !== null && rampRatio < 0.8) qualification = "declining";
   else if (stabilityPercent < 50) qualification = "unstable";
 
   return {
