@@ -6,6 +6,7 @@ import {
   createSpeedSegmentCacheKey,
   SPEED_PAYLOAD_MARKER,
   SPEED_SEGMENT_BYTES,
+  SPEED_SEGMENT_COUNT,
   SPEED_STREAM_BYTES,
   speedSegmentPath
 } from "../worker/index";
@@ -44,13 +45,14 @@ describe("Worker-local segmented speed cache", () => {
     expect(cached.headers.get("ETag")).toBe("test-etag");
   });
 
-  it("exposes a browser-uncacheable 96 MiB logical response", () => {
-    const responses = Array.from({ length: 4 }, () => new Response(new Uint8Array([1])));
+  it("exposes a browser-uncacheable logical stream without fixed HTTP framing", () => {
+    const responses = Array.from({ length: SPEED_SEGMENT_COUNT }, () => new Response(new Uint8Array([1])));
     const browser = createBrowserSpeedStreamResponse(responses, "HIT", 8);
 
     expect(browser.headers.get("Cache-Control")).toBe("no-store, no-transform");
-    expect(browser.headers.get("Content-Length")).toBe(SPEED_STREAM_BYTES.toString());
+    expect(browser.headers.get("Content-Length")).toBeNull();
     expect(browser.headers.get("X-NDS-Logical-Bytes")).toBe(SPEED_STREAM_BYTES.toString());
+    expect(browser.headers.get("X-NDS-Segment-Count")).toBe(SPEED_SEGMENT_COUNT.toString());
     expect(browser.headers.get("X-NDS-Cache-Status")).toBe("HIT");
     expect(browser.headers.get("X-NDS-Cache-Age")).toBe("8");
     expect(browser.headers.get("X-NDS-Payload")).toBe(SPEED_PAYLOAD_MARKER);
