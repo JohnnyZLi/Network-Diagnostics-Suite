@@ -3,6 +3,8 @@ name: Source export
 on:
   push:
     branches: [assistant/source-export]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
