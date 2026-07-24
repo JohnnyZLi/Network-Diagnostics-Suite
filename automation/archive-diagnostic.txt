@@ -1,0 +1,40 @@
+chunks:
+ 6000 automation/archive/chunk-00
+ 6000 automation/archive/chunk-01
+12000 automation/archive/chunk-02
+ 6000 automation/archive/chunk-02a
+ 6000 automation/archive/chunk-02b
+12000 automation/archive/chunk-04
+12704 automation/archive/chunk-06
+60704 total
+92ada27020746f7e9bd36842857761afea82c9abda3db81a809aa1ec89dac535  automation/archive/chunk-00
+d114276cdc62127cac33522339c73499e1b6918472d4e1217864b13a58ee90ef  automation/archive/chunk-01
+d0da354e695857a1f6a770f358589ba7871edd3b9bcb0d3e39b7e710549b4358  automation/archive/chunk-02
+c673e783addff9cddf34d8470f74faa0d3553ec412294f54da3226b3f1f889b2  automation/archive/chunk-02a
+d87fb87125126b36ef85df3062cb337096cc5e65bd74c04964a4f4cb15e590f7  automation/archive/chunk-02b
+91cf962fed072f7bb413a9c9fe10741ea2cea63145d881e7e04aa9b4791a6ee3  automation/archive/chunk-04
+4d201921cf51f73f3ba82edae2f84f54d09a38acb1617e9dcbe25cc058b5bda5  automation/archive/chunk-06
+combined-base64:
+60704 /tmp/path-isolation-files.b64
+6b2ddc69f49e7171a60c03d6ed78720e42f0234bcba977b4e93f8775831197cb  /tmp/path-isolation-files.b64
+decode-status: 0
+archive:
+45526 /tmp/path-isolation-files.tar.gz
+e1231de39fe0452f9a198314edcac33cc0b475e9db8a4b6c8577a4235e1c0b72  /tmp/path-isolation-files.tar.gz
+archive-list:
+README.md
+docs/methodology.md
+docs/privacy.md
+src/App.tsx
+src/components/DeepProbePanel.tsx
+src/components/ResultDashboard.tsx
+src/core/statistics.ts
+src/diagnostics/config.ts
+src/diagnostics/throughput.ts
+tar: Skipping to next header
+
+gzip: stdin: invalid compressed data--crc error
+
+gzip: stdin: invalid compressed data--length error
+tar: Child returned status 1
+tar: Error is not recoverable: exiting now
