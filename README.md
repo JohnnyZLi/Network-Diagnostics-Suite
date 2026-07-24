@@ -5,7 +5,7 @@
 
 A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, TCP/TLS diagnostics, and an optional two-machine LAN throughput test that removes the public test server and ISP path.
 
-The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them.
+The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them. The primary browser test stays on the project's own Cloudflare deployment rather than sending results to a public speed-test dataset.
 
 ## What it measures
 
@@ -42,17 +42,20 @@ Caps are ceilings. A slower connection stops at the profile duration and transfe
 
 ```mermaid
 flowchart TD
-    Browser["React browser app"] --> Worker["Cloudflare Worker test API"]
+    Browser["React browser app"] --> Assets["Same-origin Cloudflare static speed assets"]
+    Browser --> Worker["Cloudflare Worker ping, upload, and metadata API"]
     Browser --> Services["Optional reachability targets"]
     LanServer["Optional LAN test server"] --> Probe["Native deep probe client"]
     Probe --> Report["Local JSON report"]
     Report --> Browser
-    Worker --> Result["In-memory result"]
+    Assets --> Result["In-memory result"]
+    Worker --> Result
     Services --> Result
 ```
 
 - **React and TypeScript** render the dashboard and run browser measurements.
-- **Cloudflare Workers** serve the static app and same-origin latency, download, upload, and metadata endpoints.
+- **Cloudflare Workers Static Assets** deliver two deterministic 24 MiB incompressible files directly from the edge for download testing, without invoking the Worker script for matching requests.
+- **Cloudflare Workers** provide same-origin latency, upload, metadata, and fallback download endpoints.
 - **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux, including a local TCP throughput server/client mode.
 - Imported deep-probe JSON is read with the browser File API and is not uploaded.
 
@@ -65,7 +68,7 @@ npm install
 npm run worker:dev
 ```
 
-`worker:dev` builds the app and starts the Worker-backed local environment. `npm run dev` is useful for UI-only work, but the measurement endpoints will not exist in that mode.
+The build creates two ignored deterministic speed payloads under `public/speed/` and copies them into `dist/`. `worker:dev` then starts the Worker-backed local environment. `npm run dev` is useful for UI work and also generates the static payloads, but the dynamic measurement endpoints do not exist in that mode.
 
 Run the automated checks:
 
@@ -131,7 +134,6 @@ NetworkDeepProbe [options]
   --help                Show usage
 ```
 
-
 ### Isolate the local network from the Internet path
 
 A public speed test cannot remove its own server or the route to it. The native probe can separately measure only the local network by using a second machine as a user-controlled endpoint.
@@ -160,13 +162,13 @@ Private and link-local traceroute hops are redacted by default. Interface addres
 
 ## Privacy and accuracy
 
-This project promises **no application-level retention**, not invisibility on the Internet. Cloudflare necessarily processes traffic sent to the Worker, and the opt-in common-service battery sends one request to each named provider. Those providers may process requests under their own policies.
+The main speed path contacts only the project's same-origin Cloudflare deployment. It does not use M-Lab or publish test records to an external speed-test dataset. This project promises **no application-level retention**, not invisibility on the Internet: Cloudflare necessarily processes the traffic, and the opt-in common-service battery sends one request to each named provider.
 
 See [Privacy model](docs/privacy.md) and [Measurement methodology](docs/methodology.md) for the complete data flow, formulas, grading thresholds, and limitations.
 
 ## Deployment
 
-The recommended production location is `network.johnnyli.dev`, linked from the portfolio at `johnnyli.dev`. GitHub Pages can showcase or link to the project but cannot provide the dynamic upload/download endpoints, so the complete app is deployed as a Cloudflare Worker.
+The recommended production location is `network.johnnyli.dev`, linked from the portfolio at `johnnyli.dev`. GitHub Pages can showcase or link to the project but cannot provide the dynamic upload, ping, and metadata endpoints, so the complete app is deployed as a Cloudflare Worker with bundled static assets.
 
 See [Deployment guide](docs/deployment.md) for the exact workflow, custom-domain setup, and production safeguards.
 
@@ -175,6 +177,8 @@ See [Deployment guide](docs/deployment.md) for the exact workflow, custom-domain
 ```text
 src/                    React application and browser test engine
 worker/                 Cloudflare Worker measurement endpoints
+scripts/                Deterministic static speed-payload generation
+public/speed/            Generated same-origin download payloads (ignored)
 tools/DeepProbe/        Cross-platform native network probe
 tools/DeepProbe.Tests/  Probe unit tests
 tests/                  Browser and Worker unit tests
