@@ -26,7 +26,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     downloadDurationMs: 8_000,
     downloadCapBytes: 600 * 1_000_000,
     uploadDurationMs: 8_000,
-    uploadCapBytes: 96 * 1_000_000,
+    uploadCapBytes: 128 * 1_000_000,
     concurrency: 6,
     includeServices: false
   },
@@ -40,7 +40,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     downloadDurationMs: 12_000,
     downloadCapBytes: 900 * 1_000_000,
     uploadDurationMs: 12_000,
-    uploadCapBytes: 192 * 1_000_000,
+    uploadCapBytes: 256 * 1_000_000,
     concurrency: 8,
     includeServices: true
   },
