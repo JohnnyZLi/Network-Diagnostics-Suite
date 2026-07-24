@@ -16,4 +16,4 @@
   Content-Type: application/octet-stream
   Cross-Origin-Resource-Policy: same-origin
   X-Content-Type-Options: nosniff
-  X-NDS-Payload: static-edge-v3
+  X-NDS-Payload: static-segment-v4
