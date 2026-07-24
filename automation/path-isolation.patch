@@ -1,0 +1,1395 @@
+diff --git a/README.md b/README.md
+index aed9009..c5c0144 100644
+--- a/README.md
++++ b/README.md
+@@ -3,7 +3,7 @@
+ [![CI](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml)
+ [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+ 
+-A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, and TCP/TLS diagnostics.
++A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, TCP/TLS diagnostics, and an optional two-machine LAN throughput test that removes the public test server and ISP path.
+ 
+ The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them.
+ 
+@@ -11,7 +11,8 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
+ 
+ | Measurement | Browser test | Native deep probe |
+ | --- | :---: | :---: |
+-| Download and upload throughput | Yes | — |
++| Internet download and upload throughput | Yes | — |
++| Isolated LAN download and upload throughput | — | Yes, with two machines |
+ | Mean, median, min, max, and p95 latency | Yes | Yes |
+ | Consecutive-sample jitter | Yes | Yes |
+ | Idle, download-loaded, and upload-loaded latency | Yes | — |
+@@ -31,9 +32,9 @@ The distinction is intentional: a browser cannot send arbitrary ICMP packets or
+ 
+ | Profile | Approx. time | Download cap | Upload cap | Common-service checks |
+ | --- | ---: | ---: | ---: | :---: |
+-| Quick | 15 seconds | 100 MB | 32 MB | No |
+-| Full | 30 seconds | 300 MB | 96 MB | Yes |
+-| Stress | 45 seconds | 1 GB | 256 MB | Yes, with confirmation |
++| Quick | 20 seconds | 250 MB | 96 MB | No |
++| Full | 35 seconds | 600 MB | 192 MB | Yes |
++| Stress | 60 seconds | 1.5 GB | 512 MB | Yes, with confirmation |
+ 
+ Caps are ceilings. A slower connection stops at the profile duration and transfers less data.
+ 
+@@ -43,14 +44,15 @@ Caps are ceilings. A slower connection stops at the profile duration and transfe
+ flowchart TD
+     Browser["React browser app"] --> Worker["Cloudflare Worker test API"]
+     Browser --> Services["Optional reachability targets"]
+-    Probe["Native deep probe"] --> Report["Local JSON report"]
++    LanServer["Optional LAN test server"] --> Probe["Native deep probe client"]
++    Probe --> Report["Local JSON report"]
+     Report --> Browser
+     Worker --> Result["In-memory result"]
+     Services --> Result
+ ```
+ 
+ - **React and TypeScript** render the dashboard and run browser measurements.
+ - **Cloudflare Workers** serve the static app and same-origin latency, download, upload, and metadata endpoints.
+-- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux.
++- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux, including a local TCP throughput server/client mode.
+ - Imported deep-probe JSON is read with the browser File API and is not uploaded.
+ 
+ ## Run locally
+@@ -121,10 +123,43 @@ NetworkDeepProbe [options]
+   --pings <5-100>       Internet ping count (default: 20)
+   --max-hops <5-64>     Traceroute hop limit (default: 30)
+   --include-addresses   Include local IP, gateway, DNS, and private-hop addresses
++  --lan-server          Run a local throughput server until Ctrl+C
++  --lan-target <host>   Test against a second machine running --lan-server
++  --lan-port <port>     LAN test TCP port (default: 8765)
++  --lan-duration <3-30> Seconds per transfer direction (default: 8)
++  --lan-streams <1-16>  Parallel TCP streams (default: 4)
+   --help                Show usage
+ ```
+ 
++
++### Isolate the local network from the Internet path
++
++A public speed test cannot remove its own server or the route to it. The native probe can separately measure only the local network by using a second machine as a user-controlled endpoint.
++
++On a preferably wired machine on the same LAN:
++
++```bash
++./NetworkDeepProbe --lan-server
++```
++
++The server prints the local addresses that can be used by the client. On the device being tested:
++
++```bash
++./NetworkDeepProbe --lan-target 192.168.1.10
++```
++
++The resulting JSON contains local download, upload, and TCP response timing in addition to the regular Internet diagnostics. Compare the imported LAN result with the browser Internet result:
++
++- Fast LAN plus slower Internet points away from Wi-Fi/Ethernet as the primary bottleneck.
++- Slow LAN means the local link, device, switch, access point, or server can be limiting the Internet test.
++- The LAN result still includes both test devices and their network adapters; it removes the public server, ISP, and transit path, not all endpoint effects.
++
++Allow the selected TCP port through the server machine's local firewall only on trusted networks. Stop the server with Ctrl+C when finished.
++
+ Private and link-local traceroute hops are redacted by default. Interface addresses, gateway addresses, DNS addresses, public IP, MAC address, hostname, and SSID are also omitted by default. Public transit-hop addresses remain because they are the traceroute result.
+ 
+ ## Privacy and accuracy
+diff --git a/docs/methodology.md b/docs/methodology.md
+index b00714f..d39da24 100644
+--- a/docs/methodology.md
++++ b/docs/methodology.md
+@@ -23,13 +23,17 @@ Request loss is not raw packet loss. TCP can retransmit packets beneath the brow
+ 
+ ### Throughput
+ 
+-The download phase runs parallel same-origin streams of incompressible response data. The upload phase sends generated binary request bodies and the Worker reads and discards them. Results use successfully transferred payload bytes and elapsed wall time:
++The download phase runs parallel same-origin streams of incompressible response data. The upload phase sends generated binary request bodies and the Worker reads and discards them. The whole-phase value uses successfully transferred payload bytes and elapsed wall time:
+ 
+ ```text
+ Mbps = transferred bytes × 8 ÷ elapsed seconds ÷ 1,000,000
+ ```
+ 
+-The graph samples recent transfer rate every 250 milliseconds. The displayed stability score is a bounded project metric:
++The graph samples recent transfer rate every 250 milliseconds. The headline steady-state value excludes up to the first second of connection ramp-up, while the report also retains the whole-phase value. This makes short TCP startup effects less dominant without hiding the complete transfer average.
++
++The report marks a direction as **cap-limited** when the byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. These labels describe sample quality; they cannot prove whether a limit came from the access line, route, browser, Worker, or server.
++
++The displayed stability score is a bounded project metric:
+ 
+ ```text
+ stability = clamp(100 - coefficient of variation × 100, 0, 100)
+@@ -72,6 +76,20 @@ The Worker returns the servicing edge code, network organization and ASN, HTTP p
+ 
+ Windows 11, macOS, and Linux packages run the same .NET measurement engine and emit the same versioned JSON schema. The packages differ only by operating system and CPU runtime. CI runs the unit suite and launches each binary on its target platform before publishing it.
+ 
++
++### Isolated LAN throughput
++
++The optional native LAN mode uses a user-controlled second machine instead of a public endpoint. The server listens on TCP port 8765 by default. The client opens parallel TCP streams and measures:
++
++- Eight short TCP request/response samples to the LAN server.
++- Download bytes received during the configured duration.
++- Upload bytes written during the configured duration.
++
++The default transfer duration is eight seconds per direction with four parallel streams. Throughput uses the same decimal megabit formula as the browser result.
++
++This removes the Internet service provider, public transit/peering, and remote test platform from the path. It does not remove the client and server operating systems, their CPUs, network adapters, local firewall, switch, access point, cabling, or TCP implementation. A weak server machine can therefore still cap the LAN result. A wired server with a link rate above the expected client speed is preferred.
++
+ ### ICMP latency and packet loss
+ 
+ The probe sends 20 ICMP Echo Requests to the selected target by default, with a 1.5-second timeout and 120 milliseconds between attempts. The same distribution statistics used by the browser are calculated from replies. This is real ICMP loss for this specific sample and target, though a device may deprioritize or block ICMP while forwarding other traffic normally.
+@@ -112,10 +130,10 @@ Operating systems expose interface, resolver, and default-gateway metadata differ
+ 
+ ## Important limitations
+ 
+-- Results describe one device, browser, route, server edge, and moment in time.
++- Browser results describe one device, browser, route, server edge, and moment in time. LAN results describe two user-controlled devices and the local path between them.
+ - VPNs, content blockers, endpoint security, power-saving modes, CPU load, Wi-Fi contention, and browser scheduling can affect results.
+ - A short sample can miss intermittent faults. Repeat runs at different times and compare wired versus wireless paths.
+-- Throughput can be limited by the test edge or Worker platform as well as the access connection.
++- Browser throughput can be limited by the test edge or Worker platform as well as the access connection. The sample-quality label detects some short-run problems but cannot subtract server capacity mathematically.
+ - A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
+ - Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
+-- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works.
++- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works. A firewall can also block the optional LAN server port.
+diff --git a/docs/privacy.md b/docs/privacy.md
+index 3e4454e..4d8f78a 100644
+--- a/docs/privacy.md
++++ b/docs/privacy.md
+@@ -31,7 +31,7 @@ When the user selects Full or Stress, the browser sends one reachability request
+ 
+ ## Native deep probe
+ 
+-The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no upload or telemetry code.
++The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no telemetry or project-operated upload code. The optional LAN mode intentionally exchanges generated test bytes with a user-selected machine on the local network.
+ 
+ The default report includes:
+ 
+@@ -48,6 +48,15 @@ The default report omits or redacts:
+ 
+ `--include-addresses` explicitly adds interface IP, gateway, DNS, and private-hop addresses. The report should then be treated as sensitive diagnostic material.
+ 
++
++### Optional LAN server/client
++
++`--lan-server` opens a TCP listener on all local interfaces on port 8765 by default and remains active until it is stopped. It accepts only the probe's small command protocol and generated throughput payloads; it does not read files or enumerate the connecting client. The server does not write results or contact the project infrastructure.
++
++`--lan-target` connects to the host explicitly supplied by the user and records its target name, resolved address, port, transfer byte counts, rates, and response timings in the local JSON report. Those fields can reveal a private LAN address, so review the report before sharing it.
++
++Run the LAN server only on a trusted network, permit the port only in the appropriate local firewall profile, and stop it when the test is complete.
++
+ ## Exported results
+ 
+ Browser result exports contain timestamps, measured rates and timings, the network organization/ASN, serving edge, protocol information, and common-service results. Deep-probe reports can contain public network-path addresses and hardware descriptions even with default redaction.
+diff --git a/src/App.tsx b/src/App.tsx
+index f680bf2..598982f 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -22,8 +22,8 @@ const INITIAL_PROGRESS: TestProgress = {
+ function createResultSummary(result: DiagnosticResult): string {
+   return [
+     "Network Diagnostics Suite",
+-    `Download: ${formatRate(result.download.mbps)} Mbps`,
+-    `Upload: ${formatRate(result.upload.mbps)} Mbps`,
++    `Download: ${formatRate(result.download.steadyMbps)} Mbps steady (${formatRate(result.download.mbps)} Mbps whole phase)`,
++    `Upload: ${formatRate(result.upload.steadyMbps)} Mbps steady (${formatRate(result.upload.mbps)} Mbps whole phase)`,
+     `Idle latency: ${formatLatency(result.idleLatency.medianMs)} ms median`,
+     `Jitter: ${formatLatency(result.idleLatency.jitterMs)} ms`,
+     `Request loss: ${result.idleLatency.lossPercent.toFixed(1)}%`,
+diff --git a/src/components/DeepProbePanel.tsx b/src/components/DeepProbePanel.tsx
+index e425c86..9948968 100644
+--- a/src/components/DeepProbePanel.tsx
++++ b/src/components/DeepProbePanel.tsx
+@@ -1,5 +1,5 @@
+ import { useRef, useState } from "react";
+-import { formatLatency } from "../core/format";
++import { formatBytes, formatLatency, formatRate } from "../core/format";
+ import type { DeepProbeReport } from "../types/deep-probe";
+ 
+ function isDeepProbeReport(value: unknown): value is DeepProbeReport {
+@@ -5,7 +5,7 @@ function isDeepProbeReport(value: unknown): value is DeepProbeReport {
+   if (typeof value !== "object" || value === null) return false;
+   const candidate = value as Partial<DeepProbeReport>;
+-  return candidate.schemaVersion === "1.0"
++  return (candidate.schemaVersion === "1.0" || candidate.schemaVersion === "1.1")
+     && typeof candidate.target === "string"
+     && Array.isArray(candidate.interfaces)
+     && Array.isArray(candidate.dnsResolvers)
+@@ -38,7 +38,7 @@ export function DeepProbePanel() {
+     }
+     try {
+       const parsed: unknown = JSON.parse(await file.text());
+-      if (!isDeepProbeReport(parsed)) throw new Error("This is not a Network Deep Probe 1.0 report.");
++      if (!isDeepProbeReport(parsed)) throw new Error("This is not a supported Network Deep Probe report.");
+       setReport(parsed);
+     } catch (caught) {
+       setReport(null);
+@@ -66,7 +66,7 @@ export function DeepProbePanel() {
+           />
+           <label htmlFor="probe-report">Import probe report <span aria-hidden="true">↗</span></label>
+           <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite#native-deep-probe" target="_blank" rel="noreferrer">Get a native build <span aria-hidden="true">↗</span></a>
+-          <small>Schema 1.0 · maximum 5 MB · processed locally</small>
++          <small>Schema 1.0–1.1 · maximum 5 MB · processed locally</small>
+           {error && <p role="alert">{error}</p>}
+         </div>
+       </section>
+@@ -91,11 +91,31 @@ export function DeepProbePanel() {
+       <div className="deep-summary">
+         <article><span>ICMP packet loss</span><strong>{report.internetPing.statistics.lossPercent.toFixed(1)}<small>%</small></strong><p>{report.internetPing.statistics.received} of {report.internetPing.statistics.sent} replies</p></article>
+         <article><span>Internet latency</span><strong>{formatLatency(report.internetPing.statistics.medianMs)}<small>ms</small></strong><p>{formatLatency(report.internetPing.statistics.jitterMs)} ms jitter</p></article>
++        {report.localLink && <article><span>LAN download</span><strong>{formatRate(report.localLink.downloadMbps)}<small>Mbps</small></strong><p>{report.localLink.concurrency} parallel streams</p></article>}
++        {report.localLink && <article><span>LAN upload</span><strong>{formatRate(report.localLink.uploadMbps)}<small>Mbps</small></strong><p>{formatLatency(report.localLink.latency.medianMs)} ms server response</p></article>}
+         <article><span>Route</span><strong>{report.traceRoute.hops.length}<small>hops</small></strong><p>{report.traceRoute.reachedDestination ? "Destination reached" : "Partial path"}</p></article>
+         <article><span>Path MTU</span><strong>{report.pathMtu.estimatedIpv4Mtu ?? "—"}<small>bytes</small></strong><p>{report.pathMtu.status}</p></article>
+         <article><span>Fastest DNS</span><strong>{formatLatency(fastestDns?.medianMs)}<small>ms</small></strong><p>{fastestDns?.name ?? "No resolver answered"}</p></article>
+       </div>
+ 
++      {report.localLink && (
++        <section className="report-panel local-link-panel">
++          <div className="report-panel__heading">
++            <div><span className="eyebrow">Server-side isolation</span><h3>Local-link throughput</h3></div>
++            <p>This result stayed on the local network between this client and a user-hosted native probe server.</p>
++          </div>
++          <div className="scope-grid">
++            <article><span>Download</span><strong>{formatRate(report.localLink.downloadMbps)} Mbps</strong><p>{formatBytes(report.localLink.downloadBytes)} transferred over {report.localLink.durationMs / 1000} seconds.</p></article>
++            <article><span>Upload</span><strong>{formatRate(report.localLink.uploadMbps)} Mbps</strong><p>{formatBytes(report.localLink.uploadBytes)} transferred over {report.localLink.durationMs / 1000} seconds.</p></article>
++            <article><span>LAN endpoint</span><strong>{report.localLink.target}:{report.localLink.port}</strong><p>{report.localLink.resolvedAddress ?? "Address unavailable"} · {report.localLink.concurrency} streams · {formatLatency(report.localLink.latency.medianMs)} ms median response.</p></article>
++          </div>
++        </section>
++      )}
++
+       <section className="report-panel">
+         <div className="report-panel__heading">
+           <div><span className="eyebrow">Internet Control Message Protocol</span><h3>Traceroute to {report.traceRoute.target}</h3></div>
+diff --git a/src/components/ResultDashboard.tsx b/src/components/ResultDashboard.tsx
+index 1ed5b40..c72cfa3 100644
+--- a/src/components/ResultDashboard.tsx
++++ b/src/components/ResultDashboard.tsx
+@@ -1,5 +1,5 @@
+ import { formatBytes, formatLatency, formatRate } from "../core/format";
+-import type { DiagnosticResult, LoadedLatencySummary } from "../types/diagnostics";
++import type { DiagnosticResult, LoadedLatencySummary, ThroughputSummary } from "../types/diagnostics";
+ import { LatencyTable } from "./LatencyTable";
+ import { MetricCard } from "./MetricCard";
+ import { ServiceMatrix } from "./ServiceMatrix";
+@@ -9,6 +9,20 @@ function worstGrade(...summaries: LoadedLatencySummary[]): LoadedLatencySummary["
+ }
+ 
+ 
++function qualificationLabel(summary: ThroughputSummary): string {
++  switch (summary.qualification) {
++    case "cap-limited": return "Profile cap reached early";
++    case "still-ramping": return "Still ramping at finish";
++    case "unstable": return "Variable sample";
++    default: return "Qualified duration sample";
++  }
++}
++
++function qualificationTone(summary: ThroughputSummary): string {
++  return summary.qualification === "qualified" ? "scope-status scope-status--good" : "scope-status scope-status--warn";
++}
++
+ function buildFindings(result: DiagnosticResult): string[] {
+   const findings: string[] = [];
+   const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
+@@ -16,6 +30,9 @@ function buildFindings(result: DiagnosticResult): string[] {
+   if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
+   if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
+   if (worstLoadedIncrease > 30) findings.push("Latency rises materially under load, which suggests queueing or bufferbloat.");
++  if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
++  if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
++  if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
+   if (result.services.some((service) => !service.reachable)) findings.push("At least one common service did not answer the browser reachability check.");
+   if (findings.length === 0) findings.push("No obvious instability appeared in this browser test.");
+   return findings;
+@@ -49,8 +66,8 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDa
+       <div className="metric-grid">
+         <MetricCard
+           label="Download"
+-          value={formatRate(result.download.mbps)}
++          value={formatRate(result.download.steadyMbps)}
+           unit="Mbps"
+-          detail={`${result.download.stabilityPercent.toFixed(0)}% sample stability · ${formatBytes(result.download.bytes)}`}
++          detail={`${formatRate(result.download.mbps)} whole-phase · ${result.download.stabilityPercent.toFixed(0)}% stability · ${formatBytes(result.download.bytes)}`}
+           tone="blue"
+         >
+           <Sparkline samples={result.download.timeline} label="Download throughput" color="var(--blue)" />
+@@ -58,9 +75,9 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDa
+         </MetricCard>
+         <MetricCard
+           label="Upload"
+-          value={formatRate(result.upload.mbps)}
++          value={formatRate(result.upload.steadyMbps)}
+           unit="Mbps"
+-          detail={`${result.upload.stabilityPercent.toFixed(0)}% sample stability · ${formatBytes(result.upload.bytes)}`}
++          detail={`${formatRate(result.upload.mbps)} whole-phase · ${result.upload.stabilityPercent.toFixed(0)}% stability · ${formatBytes(result.upload.bytes)}`}
+           tone="violet"
+         >
+           <Sparkline samples={result.upload.timeline} label="Upload throughput" color="var(--violet)" />
+@@ -82,6 +99,18 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDa
+         />
+       </div>
+ 
++      <section className="report-panel scope-panel">
++        <div className="report-panel__heading">
++          <div><span className="eyebrow">Measurement scope</span><h3>Internet path, not an isolated access-line benchmark</h3></div>
++          <p>The browser result includes this device, the local link, router, Internet service provider, route, and the Cloudflare test edge.</p>
++        </div>
++        <div className="scope-grid">
++          <article><span>Path</span><strong>Internet end to end</strong><p>Remote endpoint and route remain part of the result.</p></article>
++          <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
++          <article><span>Upload sample</span><strong className={qualificationTone(result.upload)}>{qualificationLabel(result.upload)}</strong><p>{result.upload.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
++        </div>
++        <p className="scope-panel__note">To remove the public server and ISP from the equation, run the native probe’s LAN server on a second wired machine and test it with <code>--lan-target</code>.</p>
++      </section>
++
+       <section className="report-panel">
+         <div className="report-panel__heading">
+           <div><span className="eyebrow">Distribution</span><h3>Latency under each condition</h3></div>
+@@ -101,6 +130,7 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDa
+           <span className="eyebrow">Test path</span>
+           <h3>Edge session</h3>
+           <dl>
++            <div><dt>Scope</dt><dd>Internet path · endpoint included</dd></div>
+             <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
+             <div><dt>Edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
+             <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>
+diff --git a/src/core/statistics.ts b/src/core/statistics.ts
+index a21c288..d8339d3 100644
+--- a/src/core/statistics.ts
++++ b/src/core/statistics.ts
+@@ -76,23 +76,49 @@ export function summarizeLoadedLatency(
+   };
+ }
+ 
+-export function throughputFromTimeline(bytes: number, durationMs: number, timeline: TimedSample[]): ThroughputSummary {
++export function throughputFromTimeline(
++  bytes: number,
++  durationMs: number,
++  timeline: TimedSample[],
++  options: { capReached?: boolean; targetDurationMs?: number } = {}
++): ThroughputSummary {
+   const seconds = Math.max(durationMs / 1000, 0.001);
+   const mbps = (bytes * 8) / seconds / 1_000_000;
+-  const values = timeline.map((sample) => sample.value).filter(Number.isFinite);
+-  const average = mean(values) ?? 0;
++  const warmupCutoffMs = Math.min(1_000, durationMs * 0.25);
++  const steadySamples = timeline.filter((sample) => sample.elapsedMs >= warmupCutoffMs && sample.value > 0 && Number.isFinite(sample.value));
++  const values = steadySamples.map((sample) => sample.value);
++  const steadyMbps = mean(values) ?? mbps;
++  const average = steadyMbps;
+   const variance = values.length === 0
+     ? 0
+     : values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
+   const coefficientOfVariation = average <= 0 ? 1 : Math.sqrt(variance) / average;
++  const stabilityPercent = Math.max(0, Math.min(100, 100 - coefficientOfVariation * 100));
++
++  const midpoint = warmupCutoffMs + (Math.max(durationMs - warmupCutoffMs, 0) / 2);
++  const earlyAverage = mean(steadySamples.filter((sample) => sample.elapsedMs < midpoint).map((sample) => sample.value));
++  const lateAverage = mean(steadySamples.filter((sample) => sample.elapsedMs >= midpoint).map((sample) => sample.value));
++  const rampRatio = earlyAverage && lateAverage ? lateAverage / earlyAverage : null;
++  const capReached = options.capReached ?? false;
++  const targetDurationMs = options.targetDurationMs ?? durationMs;
++  const endedEarly = durationMs < targetDurationMs * 0.85;
++
++  let qualification: ThroughputSummary["qualification"] = "qualified";
++  if (capReached && endedEarly) qualification = "cap-limited";
++  else if (rampRatio !== null && rampRatio > 1.2) qualification = "still-ramping";
++  else if (stabilityPercent < 50) qualification = "unstable";
+ 
+   return {
+     mbps,
++    steadyMbps,
+     bytes,
+     durationMs,
+     peakMbps: values.length > 0 ? Math.max(...values) : mbps,
+-    stabilityPercent: Math.max(0, Math.min(100, 100 - coefficientOfVariation * 100)),
++    stabilityPercent,
++    rampRatio,
++    capReached,
++    qualification,
+     timeline
+   };
+ }
+diff --git a/src/diagnostics/config.ts b/src/diagnostics/config.ts
+index dd57f66..576b223 100644
+--- a/src/diagnostics/config.ts
++++ b/src/diagnostics/config.ts
+@@ -22,13 +22,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
+     id: "quick",
+     name: "Quick",
+     description: "Core speed, latency, jitter, request loss, and loaded latency.",
+-    estimatedTime: "about 15 seconds",
++    estimatedTime: "about 20 seconds",
+     idlePingCount: 12,
+     pingIntervalMs: 150,
+-    downloadDurationMs: 6_000,
+-    downloadCapBytes: 100 * 1_000_000,
+-    uploadDurationMs: 6_000,
+-    uploadCapBytes: 32 * 1_000_000,
+-    concurrency: 4,
++    downloadDurationMs: 8_000,
++    downloadCapBytes: 250 * 1_000_000,
++    uploadDurationMs: 8_000,
++    uploadCapBytes: 96 * 1_000_000,
++    concurrency: 6,
+     includeServices: false
+   },
+   standard: {
+@@ -36,13 +36,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
+     id: "standard",
+     name: "Full",
+     description: "Longer throughput runs plus a common-service reachability battery.",
+-    estimatedTime: "about 30 seconds",
++    estimatedTime: "about 35 seconds",
+     idlePingCount: 20,
+     pingIntervalMs: 175,
+-    downloadDurationMs: 10_000,
+-    downloadCapBytes: 300 * 1_000_000,
+-    uploadDurationMs: 10_000,
+-    uploadCapBytes: 96 * 1_000_000,
+-    concurrency: 6,
++    downloadDurationMs: 12_000,
++    downloadCapBytes: 600 * 1_000_000,
++    uploadDurationMs: 12_000,
++    uploadCapBytes: 192 * 1_000_000,
++    concurrency: 8,
+     includeServices: true
+   },
+   extended: {
+@@ -50,13 +50,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
+     id: "extended",
+     name: "Stress",
+     description: "Higher data caps for fast connections and sustained-load behavior.",
+-    estimatedTime: "about 45 seconds",
++    estimatedTime: "about 60 seconds",
+     idlePingCount: 30,
+     pingIntervalMs: 175,
+-    downloadDurationMs: 16_000,
+-    downloadCapBytes: 1_000 * 1_000_000,
+-    uploadDurationMs: 16_000,
+-    uploadCapBytes: 256 * 1_000_000,
+-    concurrency: 8,
++    downloadDurationMs: 20_000,
++    downloadCapBytes: 1_500 * 1_000_000,
++    uploadDurationMs: 20_000,
++    uploadCapBytes: 512 * 1_000_000,
++    concurrency: 10,
+     includeServices: true
+   }
+ };
+diff --git a/src/diagnostics/throughput.ts b/src/diagnostics/throughput.ts
+index e9a5711..8218ab5 100644
+--- a/src/diagnostics/throughput.ts
++++ b/src/diagnostics/throughput.ts
+@@ -19,9 +19,14 @@ interface TransferState {
+ 
+ function createPhaseSignal(parent: AbortSignal, durationMs: number): {
+   signal: AbortSignal;
++  durationReached: () => boolean;
+   stop: () => void;
+ } {
+   const controller = new AbortController();
+-  const timer = window.setTimeout(() => controller.abort("duration-complete"), durationMs);
++  let timedOut = false;
++  const timer = window.setTimeout(() => {
++    timedOut = true;
++    controller.abort("duration-complete");
++  }, durationMs);
+   const onAbort = () => controller.abort(parent.reason);
+   parent.addEventListener("abort", onAbort, { once: true });
+   return {
+     signal: controller.signal,
++    durationReached: () => timedOut,
+     stop: () => {
+       window.clearTimeout(timer);
+       parent.removeEventListener("abort", onAbort);
+@@ -59,7 +64,7 @@ function startTimeline(
+   return {
+     timeline,
+     stop: () => {
+       window.clearInterval(timer);
+-      capture();
++      if (state.bytes !== lastBytes) capture();
+     }
+   };
+ }
+@@ -70,7 +75,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughput
+   const state: TransferState = { bytes: 0, claimedBytes: 0 };
+   const phase = createPhaseSignal(options.signal, options.durationMs);
+   const sampler = startTimeline(state, startedAt, options.onProgress);
+-  const requestSize = 12 * 1024 * 1024;
++  const requestSize = 24 * 1024 * 1024;
+ 
+   const worker = async () => {
+     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
+@@ -95,7 +100,10 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughput
+   }
+   if (options.signal.aborted) throw new TestCancelledError();
+   const durationMs = performance.now() - startedAt;
+-  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline);
++  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
++    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
++    targetDurationMs: options.durationMs
++  });
+ }
+ 
+ export async function runUpload(options: ThroughputOptions): Promise<ThroughputSu
+@@ -104,7 +112,7 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputSu
+   const state: TransferState = { bytes: 0, claimedBytes: 0 };
+   const phase = createPhaseSignal(options.signal, options.durationMs);
+   const sampler = startTimeline(state, startedAt, options.onProgress);
+-  const requestSize = 4 * 1024 * 1024;
++  const requestSize = 8 * 1024 * 1024;
+ 
+   const worker = async () => {
+     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
+@@ -129,5 +137,8 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputSu
+   }
+   if (options.signal.aborted) throw new TestCancelledError();
+   const durationMs = performance.now() - startedAt;
+-  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline);
++  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
++    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
++    targetDurationMs: options.durationMs
++  });
+ }
+diff --git a/src/styles.css b/src/styles.css
+index fca2709..3de4fbf 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -141,6 +141,16 @@ button, input { font: inherit; }
+ .report-panel h3 { margin: 8px 0 0; font-size: 18px; font-weight: 570; }
+ .report-panel__heading > p { max-width: 470px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: right; }
++.scope-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
++.scope-grid article { padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
++.scope-grid article > span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .09em; }
++.scope-grid article > strong { display: block; margin-top: 12px; font-size: 13px; font-weight: 590; }
++.scope-grid article > p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
++.scope-status--good { color: var(--green); }
++.scope-status--warn { color: var(--rust); }
++.scope-panel__note { margin: 18px 0 0; color: var(--muted-strong); font-size: 10px; line-height: 1.55; }
++.scope-panel__note code { padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); font: 500 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+ .latency-table-wrap { overflow-x: auto; }
+ .latency-table { width: 100%; border-collapse: collapse; font: 500 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; }
+ .latency-table th, .latency-table td { padding: 16px 12px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; }
+@@ -278,7 +288,7 @@ button, input { font: inherit; }
+   .hero__facts { display: none; }
+   .test-controls { padding: 20px; }
+   .mode-selector { grid-template-columns: 1fr; }
+   .measurement-preview, .results, .methodology { padding: 72px 0; }
+-  .preview-grid, .methodology-grid, .information-grid, .report-columns, .deep-probe { grid-template-columns: 1fr; }
++  .preview-grid, .methodology-grid, .information-grid, .report-columns, .deep-probe, .scope-grid { grid-template-columns: 1fr; }
+   .metric-grid { grid-template-columns: 1fr; }
+   .metric-card { min-height: 210px; }
+   .section-heading--actions, .report-panel__heading { align-items: flex-start; flex-direction: column; }
+diff --git a/src/types/deep-probe.ts b/src/types/deep-probe.ts
+index 8b035d4..7330b59 100644
+--- a/src/types/deep-probe.ts
++++ b/src/types/deep-probe.ts
+@@ -75,8 +75,22 @@ export interface DeepNetworkInterface {
+   dnsServers?: string[];
+ }
+ 
++export interface DeepLanThroughput {
++  target: string;
++  resolvedAddress?: string;
++  port: number;
++  durationMs: number;
++  concurrency: number;
++  latency: DeepLatencyStatistics;
++  downloadMbps: number;
++  downloadBytes: number;
++  uploadMbps: number;
++  uploadBytes: number;
++}
++
+ export interface DeepProbeReport {
+-  schemaVersion: "1.0";
++  schemaVersion: "1.0" | "1.1";
+   generatedAt: string;
+   target: string;
+   operatingSystem: string;
+@@ -99,4 +113,5 @@ export interface DeepProbeReport {
+     status: string;
+   };
+   serviceEndpoints: DeepTlsEndpoint[];
++  localLink?: DeepLanThroughput;
+ }
+diff --git a/src/types/diagnostics.ts b/src/types/diagnostics.ts
+index 23394f5..f0ca1c8 100644
+--- a/src/types/diagnostics.ts
++++ b/src/types/diagnostics.ts
+@@ -24,12 +24,18 @@ export interface LatencySummary {
+   samples: Array<number | null>;
+ }
+ 
++export type ThroughputQualification = "qualified" | "cap-limited" | "still-ramping" | "unstable";
++
+ export interface ThroughputSummary {
+   mbps: number;
++  steadyMbps: number;
+   bytes: number;
+   durationMs: number;
+   peakMbps: number;
+   stabilityPercent: number;
++  rampRatio: number | null;
++  capReached: boolean;
++  qualification: ThroughputQualification;
+   timeline: TimedSample[];
+ }
+ 
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index dfe9847..d67b1bf 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -10,7 +10,7 @@ describe("test modes", () => {
+   it("requires an explicit stress-test selection for gigabyte downloads", () => {
+     expect(TEST_MODES.quick.downloadCapBytes).toBeLessThan(1_000_000_000);
+     expect(TEST_MODES.standard.downloadCapBytes).toBeLessThan(1_000_000_000);
+-    expect(TEST_MODES.extended.downloadCapBytes).toBe(1_000_000_000);
++    expect(TEST_MODES.extended.downloadCapBytes).toBeGreaterThanOrEqual(1_000_000_000);
+   });
+ 
+   it("does not contact third-party service targets during the quick test", () => {
+diff --git a/tests/statistics.test.ts b/tests/statistics.test.ts
+index 2c74223..13f1016 100644
+--- a/tests/statistics.test.ts
++++ b/tests/statistics.test.ts
+@@ -70,4 +70,32 @@ describe("statistics", () => {
+     expect(summary.peakMbps).toBe(1_100);
+     expect(summary.stabilityPercent).toBeCloseTo(90);
+   });
++
++  it("uses the post-ramp samples for steady-state throughput", () => {
++    const summary = throughputFromTimeline(75_000_000, 2_000, [
++      { elapsedMs: 250, value: 100 },
++      { elapsedMs: 1_000, value: 300 },
++      { elapsedMs: 1_500, value: 300 },
++      { elapsedMs: 2_000, value: 300 }
++    ]);
++
++    expect(summary.mbps).toBe(300);
++    expect(summary.steadyMbps).toBe(300);
++    expect(summary.qualification).toBe("qualified");
++  });
++
++  it("marks a transfer that reaches its cap early", () => {
++    const summary = throughputFromTimeline(25_000_000, 2_000, [
++      { elapsedMs: 1_000, value: 100 },
++      { elapsedMs: 2_000, value: 100 }
++    ], { capReached: true, targetDurationMs: 8_000 });
++
++    expect(summary.capReached).toBe(true);
++    expect(summary.qualification).toBe("cap-limited");
++  });
++
+ });
+diff --git a/tests/worker.test.ts b/tests/worker.test.ts
+index 4b37d11..5d2d8d5 100644
+--- a/tests/worker.test.ts
++++ b/tests/worker.test.ts
+@@ -22,7 +22,7 @@ describe("download endpoint limits", () => {
+ 
+   it("clamps downloads to safe per-request bounds", () => {
+     expect(clampDownloadSize("1")).toBe(1024);
+-    expect(clampDownloadSize("999999999")).toBe(24 * 1024 * 1024);
++    expect(clampDownloadSize("999999999")).toBe(32 * 1024 * 1024);
+     expect(clampDownloadSize("8192")).toBe(8192);
+   });
+ });
+diff --git a/tools/DeepProbe.Tests/ProbeOptionsTests.cs b/tools/DeepProbe.Tests/ProbeOptionsTests.cs
+index 36edff0..ea5b3ad 100644
+--- a/tools/DeepProbe.Tests/ProbeOptionsTests.cs
++++ b/tools/DeepProbe.Tests/ProbeOptionsTests.cs
+@@ -12,6 +12,11 @@ public sealed class ProbeOptionsTests
+         Assert.Equal(20, options.PingCount);
+         Assert.False(options.IncludeAddresses);
++        Assert.Null(options.LanTarget);
++        Assert.False(options.LanServer);
++        Assert.Equal(8765, options.LanPort);
++        Assert.Equal(8, options.LanDurationSeconds);
++        Assert.Equal(4, options.LanConcurrency);
+         Assert.Equal("network-report-20260719-101112.json", options.OutputPath);
+     }
+ 
+@@ -23,7 +28,11 @@ public sealed class ProbeOptionsTests
+             "--pings", "40",
+             "--max-hops", "48",
+-            "--include-addresses"
++            "--include-addresses",
++            "--lan-target", "192.168.1.10",
++            "--lan-port", "9876",
++            "--lan-duration", "12",
++            "--lan-streams", "6"
+         ]);
+ 
+         Assert.Equal("example.com", options.Target);
+@@ -32,11 +41,34 @@ public sealed class ProbeOptionsTests
+         Assert.Equal(40, options.PingCount);
+         Assert.Equal(48, options.MaximumHops);
+         Assert.True(options.IncludeAddresses);
++        Assert.Equal("192.168.1.10", options.LanTarget);
++        Assert.Equal(9876, options.LanPort);
++        Assert.Equal(12, options.LanDurationSeconds);
++        Assert.Equal(6, options.LanConcurrency);
+     }
+ 
++
++    [Fact]
++    public void ParseAcceptsLanServerMode()
++    {
++        var options = ProbeOptions.Parse(["--lan-server", "--lan-port", "9000"]);
++
++        Assert.True(options.LanServer);
++        Assert.Equal(9000, options.LanPort);
++    }
++
++    [Fact]
++    public void ParseRejectsLanServerAndClientTogether()
++    {
++        Assert.Throws<ArgumentException>(() => ProbeOptions.Parse(["--lan-server", "--lan-target", "192.168.1.10"]));
++    }
++
+     [Theory]
+     [InlineData("--pings", "4")]
+     [InlineData("--pings", "101")]
+     [InlineData("--max-hops", "2")]
++    [InlineData("--lan-port", "80")]
++    [InlineData("--lan-duration", "31")]
++    [InlineData("--lan-streams", "0")]
+     public void ParseRejectsUnsafeBounds(string option, string value)
+     {
+         Assert.Throws<ArgumentException>(() => ProbeOptions.Parse([option, value]));
+diff --git a/tools/DeepProbe/DISTRIBUTION.md b/tools/DeepProbe/DISTRIBUTION.md
+index 9819188..1a60dd3 100644
+--- a/tools/DeepProbe/DISTRIBUTION.md
++++ b/tools/DeepProbe/DISTRIBUTION.md
+@@ -17,7 +17,26 @@ chmod +x NetworkDeepProbe
+ ./NetworkDeepProbe
+ ```
+ 
+-Run `NetworkDeepProbe --help` (or `NetworkDeepProbe.exe --help`) for target, output, ping-count, hop-limit, and address-inclusion options.
++Run `NetworkDeepProbe --help` (or `NetworkDeepProbe.exe --help`) for target, output, ping-count, hop-limit, address-inclusion, and LAN-isolation options.
++
++
++## Local-link throughput isolation
++
++Use two machines on the same trusted local network. On a preferably wired machine:
++
++```bash
++./NetworkDeepProbe --lan-server
++```
++
++On the device being tested, replace the address with one printed by the server:
++
++```bash
++./NetworkDeepProbe --lan-target 192.168.1.10
++```
++
++The client writes a normal JSON report containing the LAN result and the regular Internet diagnostics. TCP port 8765 is used by default. Permit it through the server firewall only on trusted networks, and stop the server with Ctrl+C after the test.
+ 
+ ## macOS security notice
+ 
+@@ -27,7 +46,7 @@ The current macOS binaries are open-source CI builds but are not Apple-signed or
+ 
+ ## Privacy
+ 
+-The probe contains no telemetry or upload code. It omits the public IP, MAC address, hostname, SSID, local interface addresses, gateway addresses, local resolver addresses, and private traceroute hops by default. `--include-addresses` deliberately includes the local-address fields, so review that report before sharing it.
++The probe contains no telemetry or project-operated upload code. LAN client mode intentionally sends generated test bytes to the user-selected LAN server, and LAN server mode receives or transmits generated test bytes only while it is running. It omits the public IP, MAC address, hostname, SSID, local interface addresses, gateway addresses, local resolver addresses, and private traceroute hops by default. `--include-addresses` deliberately includes the local-address fields, so review that report before sharing it.
+ 
+ Public traceroute hops and the operating-system/interface descriptions are diagnostic output and can still reveal network or hardware context.
+ 
+diff --git a/tools/DeepProbe/Diagnostics/LanThroughput.cs b/tools/DeepProbe/Diagnostics/LanThroughput.cs
+new file mode 100644
+index 0000000..457244f
+--- /dev/null
++++ b/tools/DeepProbe/Diagnostics/LanThroughput.cs
+@@ -0,0 +1,385 @@
++using System.Buffers;
++using System.Diagnostics;
++using System.Net;
++using System.Net.NetworkInformation;
++using System.Net.Sockets;
++using System.Text;
++using NetworkDeepProbe.Models;
++
++namespace NetworkDeepProbe.Diagnostics;
++
++internal static class LanThroughputServer
++{
++    private const int MaximumCommandBytes = 128;
++    private static readonly byte[] Payload = CreatePayload(1024 * 1024);
++
++    public static async Task RunAsync(int port, CancellationToken cancellationToken)
++    {
++        var listener = new TcpListener(IPAddress.Any, port);
++        listener.Start(128);
++
++        Console.WriteLine("LAN throughput server");
++        Console.WriteLine($"Listening on TCP port {port}. Leave this window open during the client test.");
++        foreach (var address in GetLocalAddresses())
++        {
++            Console.WriteLine($"  Client target: {address}");
++        }
++        Console.WriteLine("Press Ctrl+C to stop.");
++        Console.WriteLine();
++
++        try
++        {
++            while (!cancellationToken.IsCancellationRequested)
++            {
++                var client = await listener.AcceptTcpClientAsync(cancellationToken);
++                _ = HandleClientSafelyAsync(client, cancellationToken);
++            }
++        }
++        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
++        {
++            // Normal shutdown.
++        }
++        finally
++        {
++            listener.Stop();
++        }
++    }
++
++    private static async Task HandleClientSafelyAsync(TcpClient client, CancellationToken serverCancellation)
++    {
++        try
++        {
++            using (client)
++            {
++                ConfigureClient(client);
++                var stream = client.GetStream();
++                var command = await ReadCommandAsync(stream, serverCancellation);
++                var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
++                if (parts.Length == 0 || !string.Equals(parts[0], "NDS/1", StringComparison.Ordinal)) return;
++
++                if (parts.Length == 2 && string.Equals(parts[1], "PING", StringComparison.Ordinal))
++                {
++                    await stream.WriteAsync("PONG\n"u8.ToArray(), serverCancellation);
++                    return;
++                }
++
++                if (parts.Length != 3 || !int.TryParse(parts[2], out var durationMs) || durationMs is < 1000 or > 60000)
++                {
++                    return;
++                }
++
++                if (string.Equals(parts[1], "DOWNLOAD", StringComparison.Ordinal))
++                {
++                    await ServeDownloadAsync(stream, durationMs, serverCancellation);
++                }
++                else if (string.Equals(parts[1], "UPLOAD", StringComparison.Ordinal))
++                {
++                    await ReceiveUploadAsync(stream, durationMs, serverCancellation);
++                }
++            }
++        }
++        catch (Exception error) when (error is IOException or SocketException or OperationCanceledException)
++        {
++            // A throughput client closing a saturated stream is expected.
++        }
++    }
++
++    private static async Task ServeDownloadAsync(NetworkStream stream, int durationMs, CancellationToken cancellationToken)
++    {
++        var started = Stopwatch.GetTimestamp();
++        while (Stopwatch.GetElapsedTime(started).TotalMilliseconds < durationMs)
++        {
++            await stream.WriteAsync(Payload, cancellationToken);
++        }
++    }
++
++    private static async Task ReceiveUploadAsync(NetworkStream stream, int durationMs, CancellationToken cancellationToken)
++    {
++        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
++        timeout.CancelAfter(durationMs + 5000);
++        var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
++        long bytes = 0;
++        try
++        {
++            while (true)
++            {
++                var read = await stream.ReadAsync(buffer, timeout.Token);
++                if (read == 0) break;
++                bytes += read;
++            }
++            var receipt = Encoding.ASCII.GetBytes($"OK {bytes}\n");
++            await stream.WriteAsync(receipt, cancellationToken);
++        }
++        finally
++        {
++            ArrayPool<byte>.Shared.Return(buffer);
++        }
++    }
++
++    private static async Task<string> ReadCommandAsync(NetworkStream stream, CancellationToken cancellationToken)
++    {
++        var buffer = new byte[MaximumCommandBytes];
++        var length = 0;
++        while (length < buffer.Length)
++        {
++            var read = await stream.ReadAsync(buffer.AsMemory(length, 1), cancellationToken);
++            if (read == 0) break;
++            if (buffer[length] == (byte)'\n') break;
++            length += read;
++        }
++        return Encoding.ASCII.GetString(buffer, 0, length).Trim();
++    }
++
++    private static IReadOnlyList<string> GetLocalAddresses()
++    {
++        var addresses = NetworkInterface.GetAllNetworkInterfaces()
++            .Where(network => network.OperationalStatus == OperationalStatus.Up && network.NetworkInterfaceType != NetworkInterfaceType.Loopback)
++            .SelectMany(network => network.GetIPProperties().UnicastAddresses)
++            .Select(address => address.Address)
++            .Where(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
++            .Distinct()
++            .Select(address => address.ToString())
++            .OrderBy(address => address, StringComparer.Ordinal)
++            .ToArray();
++        return addresses.Length == 0 ? ["<this machine's LAN address>"] : addresses;
++    }
++
++    private static byte[] CreatePayload(int size)
++    {
++        var bytes = new byte[size];
++        uint state = 0x6d2b79f5;
++        for (var index = 0; index < bytes.Length; index++)
++        {
++            state ^= state << 13;
++            state ^= state >> 17;
++            state ^= state << 5;
++            bytes[index] = (byte)(state & 0xff);
++        }
++        return bytes;
++    }
++
++    private static void ConfigureClient(TcpClient client)
++    {
++        client.NoDelay = true;
++        client.ReceiveBufferSize = 1024 * 1024;
++        client.SendBufferSize = 1024 * 1024;
++    }
++}
++
++internal static class LanThroughputClient
++{
++    private static readonly byte[] UploadPayload = CreatePayload(256 * 1024);
++
++    public static async Task<LanThroughputReport> RunAsync(
++        string target,
++        int port,
++        int durationSeconds,
++        int concurrency,
++        IProgress<string>? progress,
++        CancellationToken cancellationToken)
++    {
++        var address = await ResolveAsync(target, cancellationToken);
++        progress?.Report($"Checking the local throughput server at {target}:{port}");
++        var latencySamples = new List<double?>();
++        for (var attempt = 0; attempt < 8; attempt++)
++        {
++            latencySamples.Add(await MeasureLatencyAsync(address, port, cancellationToken));
++            if (attempt < 7) await Task.Delay(100, cancellationToken);
++        }
++
++        var durationMs = durationSeconds * 1000;
++        progress?.Report($"Measuring local download with {concurrency} parallel streams");
++        var download = await RunDownloadAsync(address, port, durationMs, concurrency, cancellationToken);
++
++        progress?.Report($"Measuring local upload with {concurrency} parallel streams");
++        var upload = await RunUploadAsync(address, port, durationMs, concurrency, cancellationToken);
++
++        return new LanThroughputReport(
++            target,
++            address.ToString(),
++            port,
++            durationMs,
++            concurrency,
++            Statistics.Summarize(latencySamples),
++            download.Mbps,
++            download.Bytes,
++            upload.Mbps,
++            upload.Bytes);
++    }
++
++    private static async Task<double?> MeasureLatencyAsync(IPAddress address, int port, CancellationToken cancellationToken)
++    {
++        try
++        {
++            using var client = await ConnectAsync(address, port, cancellationToken);
++            var stream = client.GetStream();
++            var started = Stopwatch.GetTimestamp();
++            await stream.WriteAsync("NDS/1 PING\n"u8.ToArray(), cancellationToken);
++            var response = await ReadLineAsync(stream, cancellationToken);
++            return string.Equals(response, "PONG", StringComparison.Ordinal)
++                ? Stopwatch.GetElapsedTime(started).TotalMilliseconds
++                : null;
++        }
++        catch (Exception error) when (error is IOException or SocketException or OperationCanceledException)
++        {
++            if (cancellationToken.IsCancellationRequested) throw;
++            return null;
++        }
++    }
++
++    private static async Task<TransferResult> RunDownloadAsync(
++        IPAddress address,
++        int port,
++        int durationMs,
++        int concurrency,
++        CancellationToken cancellationToken)
++    {
++        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken);
++        var started = Stopwatch.GetTimestamp();
++        try
++        {
++            var tasks = clients.Select(async client =>
++            {
++                var stream = client.GetStream();
++                await stream.WriteAsync(Encoding.ASCII.GetBytes($"NDS/1 DOWNLOAD {durationMs}\n"), cancellationToken);
++                var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
++                long bytes = 0;
++                try
++                {
++                    while (true)
++                    {
++                        var read = await stream.ReadAsync(buffer, cancellationToken);
++                        if (read == 0) break;
++                        bytes += read;
++                    }
++                    return bytes;
++                }
++                finally
++                {
++                    ArrayPool<byte>.Shared.Return(buffer);
++                }
++            }).ToArray();
++            var totals = await Task.WhenAll(tasks);
++            var elapsed = Stopwatch.GetElapsedTime(started);
++            return TransferResult.Create(totals.Sum(), elapsed);
++        }
++        finally
++        {
++            foreach (var client in clients) client.Dispose();
++        }
++    }
++
++    private static async Task<TransferResult> RunUploadAsync(
++        IPAddress address,
++        int port,
++        int durationMs,
++        int concurrency,
++        CancellationToken cancellationToken)
++    {
++        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken);
++        var started = Stopwatch.GetTimestamp();
++        try
++        {
++            var tasks = clients.Select(async client =>
++            {
++                var stream = client.GetStream();
++                await stream.WriteAsync(Encoding.ASCII.GetBytes($"NDS/1 UPLOAD {durationMs}\n"), cancellationToken);
++                long bytes = 0;
++                while (Stopwatch.GetElapsedTime(started).TotalMilliseconds < durationMs)
++                {
++                    await stream.WriteAsync(UploadPayload, cancellationToken);
++                    bytes += UploadPayload.Length;
++                }
++                client.Client.Shutdown(SocketShutdown.Send);
++                _ = await ReadLineAsync(stream, cancellationToken);
++                return bytes;
++            }).ToArray();
++            var totals = await Task.WhenAll(tasks);
++            var elapsed = Stopwatch.GetElapsedTime(started);
++            return TransferResult.Create(totals.Sum(), elapsed);
++        }
++        finally
++        {
++            foreach (var client in clients) client.Dispose();
++        }
++    }
++
++    private static async Task<TcpClient[]> ConnectManyAsync(
++        IPAddress address,
++        int port,
++        int concurrency,
++        CancellationToken cancellationToken)
++    {
++        var tasks = Enumerable.Range(0, concurrency)
++            .Select(_ => ConnectAsync(address, port, cancellationToken))
++            .ToArray();
++        try
++        {
++            return await Task.WhenAll(tasks);
++        }
++        catch
++        {
++            foreach (var task in tasks)
++            {
++                if (task.IsCompletedSuccessfully) task.Result.Dispose();
++            }
++            throw;
++        }
++    }
++
++    private static async Task<TcpClient> ConnectAsync(IPAddress address, int port, CancellationToken cancellationToken)
++    {
++        var client = new TcpClient(address.AddressFamily)
++        {
++            NoDelay = true,
++            ReceiveBufferSize = 1024 * 1024,
++            SendBufferSize = 1024 * 1024
++        };
++        try
++        {
++            await client.ConnectAsync(address, port, cancellationToken);
++            return client;
++        }
++        catch
++        {
++            client.Dispose();
++            throw;
++        }
++    }
++
++    private static async Task<IPAddress> ResolveAsync(string target, CancellationToken cancellationToken)
++    {
++        if (IPAddress.TryParse(target, out var direct)) return direct;
++        var addresses = await Dns.GetHostAddressesAsync(target, cancellationToken);
++        return addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork)
++            ?? addresses.FirstOrDefault()
++            ?? throw new InvalidOperationException($"Could not resolve LAN target {target}.");
++    }
++
++    private static async Task<string> ReadLineAsync(NetworkStream stream, CancellationToken cancellationToken)
++    {
++        var buffer = new byte[128];
++        var length = 0;
++        while (length < buffer.Length)
++        {
++            var read = await stream.ReadAsync(buffer.AsMemory(length, 1), cancellationToken);
++            if (read == 0) break;
++            if (buffer[length] == (byte)'\n') break;
++            length += read;
++        }
++        return Encoding.ASCII.GetString(buffer, 0, length).Trim();
++    }
++
++    private static byte[] CreatePayload(int size)
++    {
++        var bytes = new byte[size];
++        uint state = 0x9e3779b9;
++        for (var index = 0; index < bytes.Length; index++)
++        {
++            state ^= state << 13;
++            state ^= state >> 17;
++            state ^= state << 5;
++            bytes[index] = (byte)(state & 0xff);
++        }
++        return bytes;
++    }
++
++    private sealed record TransferResult(long Bytes, double Mbps)
++    {
++        public static TransferResult Create(long bytes, TimeSpan elapsed)
++        {
++            var seconds = Math.Max(elapsed.TotalSeconds, 0.001);
++            return new TransferResult(bytes, bytes * 8d / seconds / 1_000_000d);
++        }
++    }
++}
+diff --git a/tools/DeepProbe/Diagnostics/ProbeOptions.cs b/tools/DeepProbe/Diagnostics/ProbeOptions.cs
+index 15711e2..6708ea0 100644
+--- a/tools/DeepProbe/Diagnostics/ProbeOptions.cs
++++ b/tools/DeepProbe/Diagnostics/ProbeOptions.cs
+@@ -5,6 +5,11 @@ internal sealed record ProbeOptions(
+     int PingCount,
+     int MaximumHops,
+     bool IncludeAddresses,
++    string? LanTarget,
++    int LanPort,
++    int LanDurationSeconds,
++    int LanConcurrency,
++    bool LanServer,
+     bool ShowHelp)
+ {
+     public static ProbeOptions Parse(string[] args, DateTimeOffset? now = null)
+@@ -15,6 +20,11 @@ internal sealed record ProbeOptions(
+         var pingCount = 20;
+         var maximumHops = 30;
+         var includeAddresses = false;
++        string? lanTarget = null;
++        var lanPort = 8765;
++        var lanDurationSeconds = 8;
++        var lanConcurrency = 4;
++        var lanServer = false;
+         var showHelp = false;
+ 
+         for (var index = 0; index < args.Length; index++)
+@@ -38,6 +48,21 @@ internal sealed record ProbeOptions(
+                 case "--include-addresses":
+                     includeAddresses = true;
+                     break;
++                case "--lan-target":
++                    lanTarget = RequireValue(args, ref index, "--lan-target");
++                    break;
++                case "--lan-port":
++                    lanPort = ParseBoundedInteger(RequireValue(args, ref index, "--lan-port"), 1024, 65535, "--lan-port");
++                    break;
++                case "--lan-duration":
++                    lanDurationSeconds = ParseBoundedInteger(RequireValue(args, ref index, "--lan-duration"), 3, 30, "--lan-duration");
++                    break;
++                case "--lan-streams":
++                    lanConcurrency = ParseBoundedInteger(RequireValue(args, ref index, "--lan-streams"), 1, 16, "--lan-streams");
++                    break;
++                case "--lan-server":
++                    lanServer = true;
++                    break;
+                 case "--help":
+                 case "-h":
+                     showHelp = true;
+@@ -48,7 +73,23 @@ internal sealed record ProbeOptions(
+             }
+         }
+ 
+-        return new ProbeOptions(target, output, pingCount, maximumHops, includeAddresses, showHelp);
++        if (lanServer && lanTarget is not null)
++        {
++            throw new ArgumentException("--lan-server and --lan-target cannot be used together.");
++        }
++
++        return new ProbeOptions(
++            target,
++            output,
++            pingCount,
++            maximumHops,
++            includeAddresses,
++            lanTarget,
++            lanPort,
++            lanDurationSeconds,
++            lanConcurrency,
++            lanServer,
++            showHelp);
+     }
+ 
+     private static string RequireValue(string[] args, ref int index, string option)
+diff --git a/tools/DeepProbe/Diagnostics/ProbeRunner.cs b/tools/DeepProbe/Diagnostics/ProbeRunner.cs
+index 17db436..4726af2 100644
+--- a/tools/DeepProbe/Diagnostics/ProbeRunner.cs
++++ b/tools/DeepProbe/Diagnostics/ProbeRunner.cs
+@@ -55,8 +55,21 @@ internal static class ProbeRunner
+         progress?.Report("Timing common Transport Layer Security endpoints");
+         var serviceEndpoints = await EndpointProbe.RunAsync(cancellationToken);
+ 
++        LanThroughputReport? localLink = null;
++        if (options.LanTarget is not null)
++        {
++            localLink = await LanThroughputClient.RunAsync(
++                options.LanTarget,
++                options.LanPort,
++                options.LanDurationSeconds,
++                options.LanConcurrency,
++                progress,
++                cancellationToken);
++        }
++
+         return new DeepProbeReport(
+-            "1.0",
++            "1.1",
+             DateTimeOffset.UtcNow,
+             options.Target,
+             RuntimeInformation.OSDescription,
+@@ -68,6 +81,7 @@ internal static class ProbeRunner
+             traceRoute,
+             dnsResolvers,
+             pathMtu,
+-            serviceEndpoints);
++            serviceEndpoints,
++            localLink);
+     }
+ }
+diff --git a/tools/DeepProbe/Models/ReportModels.cs b/tools/DeepProbe/Models/ReportModels.cs
+index 2d141ec..5ce94cb 100644
+--- a/tools/DeepProbe/Models/ReportModels.cs
++++ b/tools/DeepProbe/Models/ReportModels.cs
+@@ -72,6 +72,18 @@ internal sealed record PathMtuReport(
+     int? EstimatedIpv4Mtu,
+     string Status);
+ 
++internal sealed record LanThroughputReport(
++    string Target,
++    string? ResolvedAddress,
++    int Port,
++    int DurationMs,
++    int Concurrency,
++    LatencyStatistics Latency,
++    double DownloadMbps,
++    long DownloadBytes,
++    double UploadMbps,
++    long UploadBytes);
++
+ internal sealed record DeepProbeReport(
+     string SchemaVersion,
+     DateTimeOffset GeneratedAt,
+@@ -85,4 +97,5 @@ internal sealed record DeepProbeReport(
+     TraceRouteReport TraceRoute,
+     IReadOnlyList<DnsResolverReport> DnsResolvers,
+     PathMtuReport PathMtu,
+-    IReadOnlyList<TlsEndpointReport> ServiceEndpoints);
++    IReadOnlyList<TlsEndpointReport> ServiceEndpoints,
++    LanThroughputReport? LocalLink);
+diff --git a/tools/DeepProbe/Program.cs b/tools/DeepProbe/Program.cs
+index 1ce73d8..6931801 100644
+--- a/tools/DeepProbe/Program.cs
++++ b/tools/DeepProbe/Program.cs
+@@ -36,6 +36,23 @@ internal static class ProbeProgram
+             cancellation.Cancel();
+         };
+ 
++        if (options.LanServer)
++        {
++            try
++            {
++                await LanThroughputServer.RunAsync(options.LanPort, cancellation.Token);
++                return 0;
++            }
++            catch (Exception error) when (error is not OperationCanceledException)
++            {
++                Console.Error.WriteLine($"LAN server failed: {error.Message}");
++                return 1;
++            }
++        }
++
+         Console.WriteLine("Network Deep Probe");
+         Console.WriteLine("Local-only collection; public IP, MAC address, hostname, and SSID are omitted.");
+         Console.WriteLine();
+@@ -75,6 +92,11 @@ internal static class ProbeProgram
+         Console.WriteLine("  --max-hops <5-64>     Traceroute hop limit (default: 30)");
+         Console.WriteLine("  --include-addresses   Include local IP, gateway, and DNS addresses");
++        Console.WriteLine();
++        Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
++        Console.WriteLine("  --lan-server          Run the local throughput server until Ctrl+C");
++        Console.WriteLine("  --lan-target <host>   Test against a machine running --lan-server");
++        Console.WriteLine("  --lan-port <port>     Server/client TCP port (default: 8765)");
++        Console.WriteLine("  --lan-duration <3-30> Seconds per transfer direction (default: 8)");
++        Console.WriteLine("  --lan-streams <1-16>  Parallel TCP streams (default: 4)");
+         Console.WriteLine();
+         Console.WriteLine("  --help                Show this help");
+         Console.WriteLine();
+diff --git a/worker/index.ts b/worker/index.ts
+index 982af63..799652c 100644
+--- a/worker/index.ts
++++ b/worker/index.ts
+@@ -17,9 +17,9 @@ type WorkerRequest = Request & { cf?: CloudflareRequestProperties };
+ 
+ const DOWNLOAD_MIN_BYTES = 1_024;
+-const DOWNLOAD_MAX_BYTES = 24 * 1024 * 1024;
+-const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+-const CHUNK_SIZE = 64 * 1024;
++const DOWNLOAD_MAX_BYTES = 32 * 1024 * 1024;
++const UPLOAD_MAX_BYTES = 16 * 1024 * 1024;
++const CHUNK_SIZE = 1024 * 1024;
+ 
+ const streamChunk = createIncompressibleChunk(CHUNK_SIZE);
