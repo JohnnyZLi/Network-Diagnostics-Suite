@@ -2,13 +2,16 @@ import { throughputFromTimeline } from "../core/statistics";
 import type {
   DownloadDeliverySummary,
   DownloadRequestGenerationSummary,
+  DownloadStreamRejection,
   ThroughputSummary,
-  TimedSample
+  TimedSample,
+  UploadRequestGenerationSummary
 } from "../types/diagnostics";
 import {
   downloadLongStream,
   type DownloadDeliveryObservation,
   type DownloadWarmupObservation,
+  sleep,
   STATIC_DOWNLOAD_PATH_PREFIX,
   STATIC_DOWNLOAD_STREAM_BYTES,
   TestCancelledError,
@@ -39,6 +42,8 @@ interface MutableGenerationSummary {
 }
 
 const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]);
+const UPLOAD_REQUEST_BYTES = 16 * 1024 * 1024;
+const UPLOAD_INITIAL_STAGGER_MS = 40;
 
 function createPhaseSignal(parent: AbortSignal, durationMs: number): {
   signal: AbortSignal;
@@ -120,9 +125,21 @@ function collectDownloadProtocols(startedAt: number): string[] {
   return [...protocols].sort();
 }
 
+async function waitForPhaseDelay(ms: number, signal: AbortSignal): Promise<boolean> {
+  if (ms <= 0) return true;
+  try {
+    await sleep(ms, signal);
+    return true;
+  } catch (error) {
+    if (signal.aborted) return false;
+    throw error;
+  }
+}
+
 export function summarizeDownloadDelivery(
   warmup: DownloadWarmupObservation,
   observations: DownloadDeliveryObservation[],
+  rejections: DownloadStreamRejection[],
   protocols: string[],
   requestCounts: {
     started: number;
@@ -153,6 +170,8 @@ export function summarizeDownloadDelivery(
   return {
     staticRequests: observations.filter((observation) => observation.source === "static").length,
     workerFallbackRequests: observations.filter((observation) => observation.source === "worker").length,
+    rejectedStaticRequests: rejections.length,
+    streamRejections: rejections,
     cacheStatusCounts,
     edgeCacheServedPercent: knownCacheStatuses === 0 ? null : (edgeServed / knownCacheStatuses) * 100,
     maxAgeSeconds,
@@ -181,6 +200,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
   const observations: DownloadDeliveryObservation[] = [];
+  const rejections: DownloadStreamRejection[] = [];
   const generationMap = new Map<number, MutableGenerationSummary>();
   let startedRequests = 0;
   let completedRequests = 0;
@@ -203,7 +223,8 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
             generationSummary.bytes += delta;
             if (state.bytes >= options.capBytes) phase.reachCap();
           },
-          (observation) => observations.push(observation)
+          (observation) => observations.push(observation),
+          (rejection) => rejections.push(rejection)
         );
         completedRequests += 1;
       } catch (error) {
@@ -235,6 +256,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
     delivery: summarizeDownloadDelivery(
       warmup,
       observations,
+      rejections,
       collectDownloadProtocols(transportStartedAt),
       {
         started: startedRequests,
@@ -252,33 +274,68 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputS
   const state: UploadTransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
-  const requestSize = 8 * 1024 * 1024;
+  const generationMap = new Map<number, MutableGenerationSummary>();
+  let startedRequests = 0;
+  let completedRequests = 0;
+  let replacementRequests = 0;
 
-  const worker = async () => {
+  const worker = async (workerIndex: number) => {
+    if (!await waitForPhaseDelay(workerIndex * UPLOAD_INITIAL_STAGGER_MS, phase.signal)) return;
+
+    let generation = 0;
     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
-      const size = Math.min(requestSize, options.capBytes - state.claimedBytes);
+      const size = Math.min(UPLOAD_REQUEST_BYTES, options.capBytes - state.claimedBytes);
+      if (size <= 0) break;
       state.claimedBytes += size;
+
+      const generationSummary = generationMap.get(generation) ?? { requests: 0, bytes: 0 };
+      generationSummary.requests += 1;
+      generationMap.set(generation, generationSummary);
+      startedRequests += 1;
+      if (generation > 0) replacementRequests += 1;
+
       try {
         await uploadChunk(size, phase.signal, (delta) => {
           state.bytes += delta;
+          generationSummary.bytes += delta;
+          if (state.bytes >= options.capBytes) phase.reachCap();
         });
+        completedRequests += 1;
       } catch (error) {
         if (phase.signal.aborted) break;
         throw error;
       }
+
+      generation += 1;
+      const restartDelayMs = 20 + ((workerIndex * 17 + generation * 13) % 36);
+      if (!await waitForPhaseDelay(restartDelayMs, phase.signal)) break;
     }
   };
 
   try {
-    await Promise.all(Array.from({ length: options.concurrency }, worker));
+    await Promise.all(Array.from({ length: options.concurrency }, (_, index) => worker(index)));
   } finally {
     phase.stop();
     sampler.stop();
   }
   if (options.signal.aborted) throw new TestCancelledError();
   const durationMs = performance.now() - startedAt;
-  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
-    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
-    targetDurationMs: options.durationMs
-  });
+  const generations: UploadRequestGenerationSummary[] = [...generationMap.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([generation, values]) => ({ generation, ...values }));
+  return {
+    ...throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
+      capReached: phase.capReached(),
+      targetDurationMs: options.durationMs
+    }),
+    uploadDelivery: {
+      requestSizeBytes: UPLOAD_REQUEST_BYTES,
+      initialStaggerMs: UPLOAD_INITIAL_STAGGER_MS,
+      startedRequests,
+      completedRequests,
+      replacementRequests,
+      interruptedRequests: Math.max(0, startedRequests - completedRequests),
+      requestGenerations: generations
+    }
+  };
 }
