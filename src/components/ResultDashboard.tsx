@@ -14,6 +14,7 @@ function qualificationLabel(summary: ThroughputSummary): string {
   switch (summary.qualification) {
     case "cap-limited": return "Profile cap reached early";
     case "still-ramping": return "Still ramping at finish";
+    case "declining": return "Declined during sample";
     case "unstable": return "Variable sample";
     default: return "Qualified duration sample";
   }
@@ -37,9 +38,18 @@ function cacheBreakdown(delivery: DownloadDeliverySummary | undefined): string {
 
 function warmupDescription(delivery: DownloadDeliverySummary | undefined): string {
   if (!delivery) return "Unavailable";
-  const source = delivery.warmupSource === "static" ? "static asset" : "Worker fallback";
   const status = delivery.warmupCacheStatus ? ` · ${delivery.warmupCacheStatus}` : "";
-  return `${formatBytes(delivery.warmupBytes)} ${source}${status}`;
+  if (delivery.warmupSource === "static") {
+    return `${formatBytes(delivery.warmupCachedBytes)} primed inside edge${status}`;
+  }
+  return `${formatBytes(delivery.warmupBytes)} browser fallback${status}`;
+}
+
+function requestGenerationDescription(delivery: DownloadDeliverySummary | undefined): string {
+  if (!delivery || delivery.requestGenerations.length === 0) return "Unavailable";
+  return delivery.requestGenerations
+    .map((generation) => `G${generation.generation}: ${generation.requests} req · ${formatBytes(generation.bytes)}`)
+    .join(" · ");
 }
 
 function buildFindings(result: DiagnosticResult): string[] {
@@ -52,7 +62,9 @@ function buildFindings(result: DiagnosticResult): string[] {
   if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
-  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests fell back to the Worker stream instead of the static edge asset.");
+  if (result.download.qualification === "declining" || result.upload.qualification === "declining") findings.push("At least one direction slowed materially during the measured phase, so its average hides a declining second half.");
+  if (delivery && delivery.replacementRequests > 0) findings.push("One or more long-lived download responses completed early and required a replacement request.");
+  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests fell back to the dynamically generated Worker stream.");
   if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
     findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
   }
@@ -158,6 +170,10 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unknown"}</dd></div>
             <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
             <div><dt>Cache warm-up</dt><dd>{warmupDescription(delivery)}</dd></div>
+            <div><dt>Logical response</dt><dd>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</dd></div>
+            <div><dt>Request lifecycle</dt><dd>{delivery ? `${delivery.startedRequests} started · ${delivery.completedRequests} completed · ${delivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
+            <div><dt>Replacement requests</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Generation bytes</dt><dd>{requestGenerationDescription(delivery)}</dd></div>
             <div><dt>Worker fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
             <div><dt>Data transferred</dt><dd>{formatBytes(result.dataUsedBytes)}</dd></div>
           </dl>
