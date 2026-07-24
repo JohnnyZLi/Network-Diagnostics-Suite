@@ -30,7 +30,7 @@ When the user selects Full or Stress, the browser sends one reachability request
 
 ## Native deep probe
 
-The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no upload or telemetry code.
+The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no telemetry or project-operated upload code. The optional LAN mode intentionally exchanges generated test bytes with a user-selected machine on the local network.
 
 The default report includes:
 
@@ -46,6 +46,15 @@ The default report omits or redacts:
 - Private, carrier-grade NAT, loopback, and link-local traceroute-hop addresses.
 
 `--include-addresses` explicitly adds interface IP, gateway, DNS, and private-hop addresses. The report should then be treated as sensitive diagnostic material.
+
+
+### Optional LAN server/client
+
+`--lan-server` opens a TCP listener on all local interfaces on port 8765 by default and remains active until it is stopped. It accepts only the probe's small command protocol and generated throughput payloads; it does not read files or enumerate the connecting client. The server does not write results or contact the project infrastructure.
+
+`--lan-target` connects to the host explicitly supplied by the user and records its target name, resolved address, port, transfer byte counts, rates, and response timings in the local JSON report. Those fields can reveal a private LAN address, so review the report before sharing it.
+
+Run the LAN server only on a trusted network, permit the port only in the appropriate local firewall profile, and stop it when the test is complete.
 
 ## Exported results
 

@@ -53,8 +53,20 @@ internal static class ProbeRunner
         progress?.Report("Timing common Transport Layer Security endpoints");
         var serviceEndpoints = await EndpointProbe.RunAsync(cancellationToken);
 
+        LanThroughputReport? localLink = null;
+        if (options.LanTarget is not null)
+        {
+            localLink = await LanThroughputClient.RunAsync(
+                options.LanTarget,
+                options.LanPort,
+                options.LanDurationSeconds,
+                options.LanConcurrency,
+                progress,
+                cancellationToken);
+        }
+
         return new DeepProbeReport(
-            "1.0",
+            "1.1",
             DateTimeOffset.UtcNow,
             options.Target,
             RuntimeInformation.OSDescription,
@@ -66,6 +78,7 @@ internal static class ProbeRunner
             traceRoute,
             dnsResolvers,
             pathMtu,
-            serviceEndpoints);
+            serviceEndpoints,
+            localLink);
     }
 }

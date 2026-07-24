@@ -3,7 +3,7 @@
 [![CI](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
-A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, and TCP/TLS diagnostics.
+A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, TCP/TLS diagnostics, and an optional two-machine LAN throughput test that removes the public test server and ISP path.
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them.
 
@@ -11,7 +11,8 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
 
 | Measurement | Browser test | Native deep probe |
 | --- | :---: | :---: |
-| Download and upload throughput | Yes | — |
+| Internet download and upload throughput | Yes | — |
+| Isolated LAN download and upload throughput | — | Yes, with two machines |
 | Mean, median, min, max, and p95 latency | Yes | Yes |
 | Consecutive-sample jitter | Yes | Yes |
 | Idle, download-loaded, and upload-loaded latency | Yes | — |
@@ -31,9 +32,9 @@ The distinction is intentional: a browser cannot send arbitrary ICMP packets or 
 
 | Profile | Approx. time | Download cap | Upload cap | Common-service checks |
 | --- | ---: | ---: | ---: | :---: |
-| Quick | 15 seconds | 100 MB | 32 MB | No |
-| Full | 30 seconds | 300 MB | 96 MB | Yes |
-| Stress | 45 seconds | 1 GB | 256 MB | Yes, with confirmation |
+| Quick | 20 seconds | 250 MB | 96 MB | No |
+| Full | 35 seconds | 600 MB | 192 MB | Yes |
+| Stress | 60 seconds | 1.5 GB | 512 MB | Yes, with confirmation |
 
 Caps are ceilings. A slower connection stops at the profile duration and transfers less data.
 
@@ -43,7 +44,8 @@ Caps are ceilings. A slower connection stops at the profile duration and transfe
 flowchart TD
     Browser["React browser app"] --> Worker["Cloudflare Worker test API"]
     Browser --> Services["Optional reachability targets"]
-    Probe["Native deep probe"] --> Report["Local JSON report"]
+    LanServer["Optional LAN test server"] --> Probe["Native deep probe client"]
+    Probe --> Report["Local JSON report"]
     Report --> Browser
     Worker --> Result["In-memory result"]
     Services --> Result
@@ -51,7 +53,7 @@ flowchart TD
 
 - **React and TypeScript** render the dashboard and run browser measurements.
 - **Cloudflare Workers** serve the static app and same-origin latency, download, upload, and metadata endpoints.
-- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux.
+- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux, including a local TCP throughput server/client mode.
 - Imported deep-probe JSON is read with the browser File API and is not uploaded.
 
 ## Run locally
@@ -121,8 +123,38 @@ NetworkDeepProbe [options]
   --pings <5-100>       Internet ping count (default: 20)
   --max-hops <5-64>     Traceroute hop limit (default: 30)
   --include-addresses   Include local IP, gateway, DNS, and private-hop addresses
+  --lan-server          Run a local throughput server until Ctrl+C
+  --lan-target <host>   Test against a second machine running --lan-server
+  --lan-port <port>     LAN test TCP port (default: 8765)
+  --lan-duration <3-30> Seconds per transfer direction (default: 8)
+  --lan-streams <1-16>  Parallel TCP streams (default: 4)
   --help                Show usage
 ```
+
+
+### Isolate the local network from the Internet path
+
+A public speed test cannot remove its own server or the route to it. The native probe can separately measure only the local network by using a second machine as a user-controlled endpoint.
+
+On a preferably wired machine on the same LAN:
+
+```bash
+./NetworkDeepProbe --lan-server
+```
+
+The server prints the local addresses that can be used by the client. On the device being tested:
+
+```bash
+./NetworkDeepProbe --lan-target 192.168.1.10
+```
+
+The resulting JSON contains local download, upload, and TCP response timing in addition to the regular Internet diagnostics. Compare the imported LAN result with the browser Internet result:
+
+- Fast LAN plus slower Internet points away from Wi-Fi/Ethernet as the primary bottleneck.
+- Slow LAN means the local link, device, switch, access point, or server can be limiting the Internet test.
+- The LAN result still includes both test devices and their network adapters; it removes the public server, ISP, and transit path, not all endpoint effects.
+
+Allow the selected TCP port through the server machine's local firewall only on trusted networks. Stop the server with Ctrl+C when finished.
 
 Private and link-local traceroute hops are redacted by default. Interface addresses, gateway addresses, DNS addresses, public IP, MAC address, hostname, and SSID are also omitted by default. Public transit-hop addresses remain because they are the traceroute result.
 

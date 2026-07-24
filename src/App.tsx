@@ -20,8 +20,8 @@ const INITIAL_PROGRESS: TestProgress = {
 function createResultSummary(result: DiagnosticResult): string {
   return [
     "Network Diagnostics Suite",
-    `Download: ${formatRate(result.download.mbps)} Mbps`,
-    `Upload: ${formatRate(result.upload.mbps)} Mbps`,
+    `Download: ${formatRate(result.download.steadyMbps)} Mbps steady (${formatRate(result.download.mbps)} Mbps whole phase)`,
+    `Upload: ${formatRate(result.upload.steadyMbps)} Mbps steady (${formatRate(result.upload.mbps)} Mbps whole phase)`,
     `Idle latency: ${formatLatency(result.idleLatency.medianMs)} ms median`,
     `Jitter: ${formatLatency(result.idleLatency.jitterMs)} ms`,
     `Request loss: ${result.idleLatency.lossPercent.toFixed(1)}%`,

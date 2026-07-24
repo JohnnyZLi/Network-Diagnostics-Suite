@@ -17,14 +17,20 @@ interface TransferState {
 
 function createPhaseSignal(parent: AbortSignal, durationMs: number): {
   signal: AbortSignal;
+  durationReached: () => boolean;
   stop: () => void;
 } {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort("duration-complete"), durationMs);
+  let timedOut = false;
+  const timer = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort("duration-complete");
+  }, durationMs);
   const onAbort = () => controller.abort(parent.reason);
   parent.addEventListener("abort", onAbort, { once: true });
   return {
     signal: controller.signal,
+    durationReached: () => timedOut,
     stop: () => {
       window.clearTimeout(timer);
       parent.removeEventListener("abort", onAbort);
@@ -57,7 +63,7 @@ function startTimeline(
     timeline,
     stop: () => {
       window.clearInterval(timer);
-      capture();
+      if (state.bytes !== lastBytes) capture();
     }
   };
 }
@@ -68,7 +74,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   const state: TransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
-  const requestSize = 12 * 1024 * 1024;
+  const requestSize = 24 * 1024 * 1024;
 
   const worker = async () => {
     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
@@ -93,7 +99,10 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   }
   if (options.signal.aborted) throw new TestCancelledError();
   const durationMs = performance.now() - startedAt;
-  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline);
+  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
+    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
+    targetDurationMs: options.durationMs
+  });
 }
 
 export async function runUpload(options: ThroughputOptions): Promise<ThroughputSummary> {
@@ -102,7 +111,7 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputS
   const state: TransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
-  const requestSize = 4 * 1024 * 1024;
+  const requestSize = 8 * 1024 * 1024;
 
   const worker = async () => {
     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
@@ -127,5 +136,8 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputS
   }
   if (options.signal.aborted) throw new TestCancelledError();
   const durationMs = performance.now() - startedAt;
-  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline);
+  return throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
+    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
+    targetDurationMs: options.durationMs
+  });
 }

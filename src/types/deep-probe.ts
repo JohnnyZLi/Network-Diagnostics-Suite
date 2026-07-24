@@ -64,8 +64,21 @@ export interface DeepNetworkInterface {
   dnsServers?: string[];
 }
 
+export interface DeepLanThroughput {
+  target: string;
+  resolvedAddress?: string;
+  port: number;
+  durationMs: number;
+  concurrency: number;
+  latency: DeepLatencyStatistics;
+  downloadMbps: number;
+  downloadBytes: number;
+  uploadMbps: number;
+  uploadBytes: number;
+}
+
 export interface DeepProbeReport {
-  schemaVersion: "1.0";
+  schemaVersion: "1.0" | "1.1";
   generatedAt: string;
   target: string;
   operatingSystem: string;
@@ -89,4 +102,5 @@ export interface DeepProbeReport {
     status: string;
   };
   serviceEndpoints: DeepTlsEndpoint[];
+  localLink?: DeepLanThroughput;
 }
