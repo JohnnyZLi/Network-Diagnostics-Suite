@@ -1,10 +1,10 @@
 import type { EdgeMetadata, UploadReceipt } from "../types/api";
 
 export const STATIC_DOWNLOAD_ASSET_BYTES = 24 * 1024 * 1024;
-export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v2/";
+export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v3/";
 
 const STATIC_DOWNLOAD_ASSET = `${STATIC_DOWNLOAD_PATH_PREFIX}payload.bin`;
-const STATIC_PAYLOAD_MARKER = "static-edge-v2";
+const STATIC_PAYLOAD_MARKER = "static-edge-v3";
 
 export interface DownloadDeliveryObservation {
   source: "static" | "worker";
@@ -120,12 +120,15 @@ function parseNonNegativeInteger(value: string | null): number | null {
 }
 
 function deliveryObservation(response: Response, source: DownloadDeliveryObservation["source"]): DownloadDeliveryObservation {
-  const cacheStatus = response.headers.get("CF-Cache-Status")?.trim().toUpperCase() || null;
-  return {
-    source,
-    cacheStatus,
-    ageSeconds: parseNonNegativeInteger(response.headers.get("Age"))
-  };
+  const cacheStatus = (
+    response.headers.get("X-NDS-Cache-Status")
+    ?? response.headers.get("CF-Cache-Status")
+  )?.trim().toUpperCase() || null;
+  const ageSeconds = parseNonNegativeInteger(
+    response.headers.get("X-NDS-Cache-Age")
+    ?? response.headers.get("Age")
+  );
+  return { source, cacheStatus, ageSeconds };
 }
 
 export function staticResponseMatchesRequest(response: Response, requestedBytes: number): boolean {
