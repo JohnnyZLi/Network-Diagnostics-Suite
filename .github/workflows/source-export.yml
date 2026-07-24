@@ -20,16 +20,18 @@ jobs:
         id: archive
         shell: bash
         run: |
-          if [ -f automation/archive/chunk-08 ]; then
+          if [ -f automation/archive/chunk-06 ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Reconstruct implementation archive
+      - name: Reconstruct and verify implementation archive
         if: steps.archive.outputs.ready == 'true'
         run: |
           cat automation/archive/chunk-* > /tmp/path-isolation-files.b64
+          test "$(wc -c < /tmp/path-isolation-files.b64)" -eq 48704
           base64 --decode /tmp/path-isolation-files.b64 > /tmp/path-isolation-files.tar.gz
+          echo "cf6e2fe343d4e8f1f3fe2938ca7c941c9c86831055e45b19858f8e55be2af783  /tmp/path-isolation-files.tar.gz" | sha256sum -c -
           tar -tzf /tmp/path-isolation-files.tar.gz
       - name: Reset validation branch and extract implementation
         if: steps.archive.outputs.ready == 'true'
