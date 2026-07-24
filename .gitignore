@@ -9,6 +9,7 @@ bin/
 obj/
 artifacts/
 public/speed/*.bin
+public/speed/**/*.bin
 *.user
 *.suo
 .DS_Store
