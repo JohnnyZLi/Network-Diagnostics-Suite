@@ -27,7 +27,7 @@ Each measured download request receives one 96 MiB logical response assembled as
 
 The report prioritizes the Worker's deterministic `X-NDS-Cache-Status` and `X-NDS-Cache-Age` headers, while retaining `CF-Cache-Status` and `Age` as fallbacks. It also records Worker-stream fallbacks and the browser Resource Timing `nextHopProtocol` values associated with the speed path. A warm-up `MISS` followed by measured `HIT` responses means the selected data center stored the four segments before the timed phase. If the local Cache API is unavailable, the warm-up or stream is labeled `BYPASS`. If the logical stream cannot be used, the client falls back to the smaller dynamically generated Worker endpoint.
 
-The download byte ceilings are 600 MB for Quick, 1.2 GB for Full, and 3 GB for Stress. They are safety ceilings rather than targets. Reaching a ceiling aborts the active phase and marks the sample cap-limited when it ends substantially before the configured duration.
+The download byte ceilings are 600 MB for Quick, 900 MB for Full, and 3 GB for Stress. They are safety ceilings rather than targets. Reaching a ceiling aborts the active phase and marks the sample cap-limited when it ends substantially before the configured duration.
 
 The upload phase sends generated binary request bodies and the Worker reads and discards them. The whole-phase value uses successfully transferred payload bytes and elapsed wall time:
 
