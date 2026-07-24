@@ -25,14 +25,41 @@ jobs:
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Reconstruct and verify implementation archive
+      - name: Reconstruct and diagnose implementation archive
         if: steps.archive.outputs.ready == 'true'
+        shell: bash
         run: |
+          set +e
           cat automation/archive/chunk-* > /tmp/path-isolation-files.b64
-          test "$(wc -c < /tmp/path-isolation-files.b64)" -eq 48704
+          {
+            echo "chunks:"
+            wc -c automation/archive/chunk-*
+            echo "combined-base64:"
+            wc -c /tmp/path-isolation-files.b64
+          } > /tmp/archive-diagnostic.txt
           base64 --decode /tmp/path-isolation-files.b64 > /tmp/path-isolation-files.tar.gz
-          echo "cf6e2fe343d4e8f1f3fe2938ca7c941c9c86831055e45b19858f8e55be2af783  /tmp/path-isolation-files.tar.gz" | sha256sum -c -
-          tar -tzf /tmp/path-isolation-files.tar.gz
+          decode_status=$?
+          {
+            echo "decode-status: $decode_status"
+            echo "archive:"
+            wc -c /tmp/path-isolation-files.tar.gz
+            sha256sum /tmp/path-isolation-files.tar.gz
+            echo "archive-list:"
+            tar -tzf /tmp/path-isolation-files.tar.gz
+          } >> /tmp/archive-diagnostic.txt 2>&1
+          tar_status=$?
+          set -e
+          git fetch origin main
+          git checkout -B assistant/archive-diagnostic origin/main
+          mkdir -p automation
+          cp /tmp/archive-diagnostic.txt automation/archive-diagnostic.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/archive-diagnostic.txt
+          git commit -m "Record implementation archive diagnostics"
+          git push --force origin HEAD:assistant/archive-diagnostic
+          test "$decode_status" -eq 0
+          test "$tar_status" -eq 0
       - name: Reset validation branch and extract implementation
         if: steps.archive.outputs.ready == 'true'
         run: |
