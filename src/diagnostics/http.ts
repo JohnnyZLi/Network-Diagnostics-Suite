@@ -99,12 +99,39 @@ function staticAssetUrl(): string {
   return `${path}?n=${crypto.randomUUID()}`;
 }
 
-function isStaticPayloadResponse(response: Response): boolean {
-  const marker = response.headers.get("X-NDS-Payload");
-  const contentRange = response.headers.get("Content-Range");
-  return response.ok
-    && response.body !== null
-    && (marker === STATIC_PAYLOAD_MARKER || contentRange?.startsWith("bytes ") === true);
+function isMarkedStaticPayload(response: Response): boolean {
+  return response.headers.get("X-NDS-Payload") === STATIC_PAYLOAD_MARKER;
+}
+
+function parseContentRangeLength(value: string | null): number | null {
+  const match = /^bytes\s+(\d+)-(\d+)\/(?:\d+|\*)$/i.exec(value ?? "");
+  if (!match) return null;
+  const start = Number.parseInt(match[1], 10);
+  const end = Number.parseInt(match[2], 10);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start) return null;
+  return end - start + 1;
+}
+
+export function staticResponseMatchesRequest(response: Response, requestedBytes: number): boolean {
+  if (!isMarkedStaticPayload(response) || response.body === null) return false;
+
+  const contentLength = Number.parseInt(response.headers.get("Content-Length") ?? "", 10);
+  if (response.status === 206) {
+    return parseContentRangeLength(response.headers.get("Content-Range")) === requestedBytes
+      && contentLength === requestedBytes;
+  }
+
+  return response.status === 200
+    && requestedBytes === STATIC_DOWNLOAD_ASSET_BYTES
+    && contentLength === STATIC_DOWNLOAD_ASSET_BYTES;
+}
+
+async function discardResponse(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel("response-not-usable-for-requested-range");
+  } catch {
+    // The response may already be closed. There is nothing else to clean up.
+  }
 }
 
 async function consumeDownload(
@@ -142,7 +169,12 @@ async function downloadStaticAsset(
       },
       signal
     });
-    if (!isStaticPayloadResponse(response)) return false;
+
+    if (!staticResponseMatchesRequest(response, size)) {
+      await discardResponse(response);
+      return false;
+    }
+
     await consumeDownload(response, size, onBytes);
     return true;
   } catch (error) {
@@ -172,8 +204,36 @@ export async function downloadChunk(
   await consumeDownload(response, size, onBytes);
 }
 
+async function warmStaticDownloadPath(signal: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(staticAssetUrl(), {
+      cache: "no-store",
+      credentials: "omit",
+      headers: { Range: "bytes=0-65535" },
+      signal
+    });
+    if (!isMarkedStaticPayload(response) || !response.body) {
+      await discardResponse(response);
+      return false;
+    }
+
+    const reader = response.body.getReader();
+    await reader.read();
+    await reader.cancel("warmup-complete");
+    return true;
+  } catch {
+    if (signal.aborted) throw new TestCancelledError();
+    return false;
+  }
+}
+
 export async function warmDownloadPath(signal: AbortSignal, concurrency: number): Promise<void> {
   const streamCount = Math.max(1, Math.min(4, concurrency));
+  const staticWarmups = await Promise.all(
+    Array.from({ length: streamCount }, () => warmStaticDownloadPath(signal))
+  );
+  if (staticWarmups.every(Boolean)) return;
+
   const warmupBytes = 2 * 1024 * 1024;
   await Promise.all(Array.from({ length: streamCount }, () => downloadChunk(warmupBytes, signal, () => undefined)));
 }
