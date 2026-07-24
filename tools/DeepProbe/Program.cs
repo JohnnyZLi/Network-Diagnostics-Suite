@@ -39,6 +39,20 @@ internal static class ProbeProgram
             cancellation.Cancel();
         };
 
+        if (options.LanServer)
+        {
+            try
+            {
+                await LanThroughputServer.RunAsync(options.LanPort, cancellation.Token);
+                return 0;
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                Console.Error.WriteLine($"LAN server failed: {error.Message}");
+                return 1;
+            }
+        }
+
         Console.WriteLine("Network Deep Probe");
         Console.WriteLine("Local-only collection; public IP, MAC address, hostname, and SSID are omitted.");
         Console.WriteLine();
@@ -76,6 +90,14 @@ internal static class ProbeProgram
         Console.WriteLine("  --pings <5-100>       Internet ping count (default: 20)");
         Console.WriteLine("  --max-hops <5-64>     Traceroute hop limit (default: 30)");
         Console.WriteLine("  --include-addresses   Include local IP, gateway, and DNS addresses");
+        Console.WriteLine();
+        Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
+        Console.WriteLine("  --lan-server          Run the local throughput server until Ctrl+C");
+        Console.WriteLine("  --lan-target <host>   Test against a machine running --lan-server");
+        Console.WriteLine("  --lan-port <port>     Server/client TCP port (default: 8765)");
+        Console.WriteLine("  --lan-duration <3-30> Seconds per transfer direction (default: 8)");
+        Console.WriteLine("  --lan-streams <1-16>  Parallel TCP streams (default: 4)");
+        Console.WriteLine();
         Console.WriteLine("  --help                Show this help");
         Console.WriteLine();
         Console.WriteLine("The default report omits hostname, public IP, MAC address, SSID, and local addresses.");

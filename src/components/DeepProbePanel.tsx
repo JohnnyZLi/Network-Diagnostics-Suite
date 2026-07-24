@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import { formatLatency } from "../core/format";
+import { formatBytes, formatLatency, formatRate } from "../core/format";
 import type { DeepProbeReport } from "../types/deep-probe";
 
 function isDeepProbeReport(value: unknown): value is DeepProbeReport {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<DeepProbeReport>;
-  return candidate.schemaVersion === "1.0"
+  return (candidate.schemaVersion === "1.0" || candidate.schemaVersion === "1.1")
     && typeof candidate.target === "string"
     && Array.isArray(candidate.interfaces)
     && Array.isArray(candidate.dnsResolvers)
@@ -38,7 +38,7 @@ export function DeepProbePanel() {
     }
     try {
       const parsed: unknown = JSON.parse(await file.text());
-      if (!isDeepProbeReport(parsed)) throw new Error("This is not a Network Deep Probe 1.0 report.");
+      if (!isDeepProbeReport(parsed)) throw new Error("This is not a supported Network Deep Probe report.");
       setReport(parsed);
     } catch (caught) {
       setReport(null);
@@ -66,7 +66,7 @@ export function DeepProbePanel() {
           />
           <label htmlFor="probe-report">Import probe report <span aria-hidden="true">↗</span></label>
           <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite#native-deep-probe" target="_blank" rel="noreferrer">Get a native build <span aria-hidden="true">↗</span></a>
-          <small>Schema 1.0 · maximum 5 MB · processed locally</small>
+          <small>Schema 1.0–1.1 · maximum 5 MB · processed locally</small>
           {error && <p role="alert">{error}</p>}
         </div>
       </section>
@@ -88,10 +88,26 @@ export function DeepProbePanel() {
       <div className="deep-summary">
         <article><span>ICMP packet loss</span><strong>{report.internetPing.statistics.lossPercent.toFixed(1)}<small>%</small></strong><p>{report.internetPing.statistics.received} of {report.internetPing.statistics.sent} replies</p></article>
         <article><span>Internet latency</span><strong>{formatLatency(report.internetPing.statistics.medianMs)}<small>ms</small></strong><p>{formatLatency(report.internetPing.statistics.jitterMs)} ms jitter</p></article>
+        {report.localLink && <article><span>LAN download</span><strong>{formatRate(report.localLink.downloadMbps)}<small>Mbps</small></strong><p>{report.localLink.concurrency} parallel streams</p></article>}
+        {report.localLink && <article><span>LAN upload</span><strong>{formatRate(report.localLink.uploadMbps)}<small>Mbps</small></strong><p>{formatLatency(report.localLink.latency.medianMs)} ms server response</p></article>}
         <article><span>Route</span><strong>{report.traceRoute.hops.length}<small>hops</small></strong><p>{report.traceRoute.reachedDestination ? "Destination reached" : "Partial path"}</p></article>
         <article><span>Path MTU</span><strong>{report.pathMtu.estimatedIpv4Mtu ?? "—"}<small>bytes</small></strong><p>{report.pathMtu.status}</p></article>
         <article><span>Fastest DNS</span><strong>{formatLatency(fastestDns?.medianMs)}<small>ms</small></strong><p>{fastestDns?.name ?? "No resolver answered"}</p></article>
       </div>
+
+      {report.localLink && (
+        <section className="report-panel local-link-panel">
+          <div className="report-panel__heading">
+            <div><span className="eyebrow">Server-side isolation</span><h3>Local-link throughput</h3></div>
+            <p>This result stayed on the local network between this client and a user-hosted native probe server.</p>
+          </div>
+          <div className="scope-grid">
+            <article><span>Download</span><strong>{formatRate(report.localLink.downloadMbps)} Mbps</strong><p>{formatBytes(report.localLink.downloadBytes)} transferred over {report.localLink.durationMs / 1000} seconds.</p></article>
+            <article><span>Upload</span><strong>{formatRate(report.localLink.uploadMbps)} Mbps</strong><p>{formatBytes(report.localLink.uploadBytes)} transferred over {report.localLink.durationMs / 1000} seconds.</p></article>
+            <article><span>LAN endpoint</span><strong>{report.localLink.target}:{report.localLink.port}</strong><p>{report.localLink.resolvedAddress ?? "Address unavailable"} · {report.localLink.concurrency} streams · {formatLatency(report.localLink.latency.medianMs)} ms median response.</p></article>
+          </div>
+        </section>
+      )}
 
       <section className="report-panel">
         <div className="report-panel__heading">

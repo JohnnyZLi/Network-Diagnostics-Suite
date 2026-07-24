@@ -73,6 +73,18 @@ internal sealed record PathMtuReport(
     int? EstimatedIpv4Mtu,
     string Status);
 
+internal sealed record LanThroughputReport(
+    string Target,
+    string? ResolvedAddress,
+    int Port,
+    int DurationMs,
+    int Concurrency,
+    LatencyStatistics Latency,
+    double DownloadMbps,
+    long DownloadBytes,
+    double UploadMbps,
+    long UploadBytes);
+
 internal sealed record DeepProbeReport(
     string SchemaVersion,
     DateTimeOffset GeneratedAt,
@@ -86,4 +98,5 @@ internal sealed record DeepProbeReport(
     TraceRouteReport TraceRoute,
     IReadOnlyList<DnsResolverReport> DnsResolvers,
     PathMtuReport PathMtu,
-    IReadOnlyList<TlsEndpointReport> ServiceEndpoints);
+    IReadOnlyList<TlsEndpointReport> ServiceEndpoints,
+    LanThroughputReport? LocalLink);

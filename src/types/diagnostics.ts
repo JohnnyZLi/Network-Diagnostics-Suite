@@ -22,12 +22,18 @@ export interface LatencySummary {
   samples: Array<number | null>;
 }
 
+export type ThroughputQualification = "qualified" | "cap-limited" | "still-ramping" | "unstable";
+
 export interface ThroughputSummary {
   mbps: number;
+  steadyMbps: number;
   bytes: number;
   durationMs: number;
   peakMbps: number;
   stabilityPercent: number;
+  rampRatio: number | null;
+  capReached: boolean;
+  qualification: ThroughputQualification;
   timeline: TimedSample[];
 }
 

@@ -6,6 +6,11 @@ internal sealed record ProbeOptions(
     int PingCount,
     int MaximumHops,
     bool IncludeAddresses,
+    string? LanTarget,
+    int LanPort,
+    int LanDurationSeconds,
+    int LanConcurrency,
+    bool LanServer,
     bool ShowHelp)
 {
     public static ProbeOptions Parse(string[] args, DateTimeOffset? now = null)
@@ -15,6 +20,11 @@ internal sealed record ProbeOptions(
         var pingCount = 20;
         var maximumHops = 30;
         var includeAddresses = false;
+        string? lanTarget = null;
+        var lanPort = 8765;
+        var lanDurationSeconds = 8;
+        var lanConcurrency = 4;
+        var lanServer = false;
         var showHelp = false;
 
         for (var index = 0; index < args.Length; index++)
@@ -36,6 +46,21 @@ internal sealed record ProbeOptions(
                 case "--include-addresses":
                     includeAddresses = true;
                     break;
+                case "--lan-target":
+                    lanTarget = RequireValue(args, ref index, "--lan-target");
+                    break;
+                case "--lan-port":
+                    lanPort = ParseBoundedInteger(RequireValue(args, ref index, "--lan-port"), 1024, 65535, "--lan-port");
+                    break;
+                case "--lan-duration":
+                    lanDurationSeconds = ParseBoundedInteger(RequireValue(args, ref index, "--lan-duration"), 3, 30, "--lan-duration");
+                    break;
+                case "--lan-streams":
+                    lanConcurrency = ParseBoundedInteger(RequireValue(args, ref index, "--lan-streams"), 1, 16, "--lan-streams");
+                    break;
+                case "--lan-server":
+                    lanServer = true;
+                    break;
                 case "--help":
                 case "-h":
                     showHelp = true;
@@ -45,7 +70,23 @@ internal sealed record ProbeOptions(
             }
         }
 
-        return new ProbeOptions(target, output, pingCount, maximumHops, includeAddresses, showHelp);
+        if (lanServer && lanTarget is not null)
+        {
+            throw new ArgumentException("--lan-server and --lan-target cannot be used together.");
+        }
+
+        return new ProbeOptions(
+            target,
+            output,
+            pingCount,
+            maximumHops,
+            includeAddresses,
+            lanTarget,
+            lanPort,
+            lanDurationSeconds,
+            lanConcurrency,
+            lanServer,
+            showHelp);
     }
 
     private static string RequireValue(string[] args, ref int index, string option)

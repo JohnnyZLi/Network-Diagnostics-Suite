@@ -22,7 +22,7 @@ describe("download endpoint limits", () => {
 
   it("clamps downloads to safe per-request bounds", () => {
     expect(clampDownloadSize("1")).toBe(1024);
-    expect(clampDownloadSize("999999999")).toBe(24 * 1024 * 1024);
+    expect(clampDownloadSize("999999999")).toBe(32 * 1024 * 1024);
     expect(clampDownloadSize("8192")).toBe(8192);
   });
 });

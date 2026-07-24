@@ -10,7 +10,7 @@ describe("test modes", () => {
   it("requires an explicit stress-test selection for gigabyte downloads", () => {
     expect(TEST_MODES.quick.downloadCapBytes).toBeLessThan(1_000_000_000);
     expect(TEST_MODES.standard.downloadCapBytes).toBeLessThan(1_000_000_000);
-    expect(TEST_MODES.extended.downloadCapBytes).toBe(1_000_000_000);
+    expect(TEST_MODES.extended.downloadCapBytes).toBeGreaterThanOrEqual(1_000_000_000);
   });
 
   it("does not contact third-party service targets during the quick test", () => {

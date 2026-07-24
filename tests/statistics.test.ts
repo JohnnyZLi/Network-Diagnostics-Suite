@@ -73,4 +73,28 @@ describe("statistics", () => {
     expect(summary.peakMbps).toBe(1_100);
     expect(summary.stabilityPercent).toBeCloseTo(90);
   });
+
+  it("uses the post-ramp samples for steady-state throughput", () => {
+    const summary = throughputFromTimeline(75_000_000, 2_000, [
+      { elapsedMs: 250, value: 100 },
+      { elapsedMs: 1_000, value: 300 },
+      { elapsedMs: 1_500, value: 300 },
+      { elapsedMs: 2_000, value: 300 }
+    ]);
+
+    expect(summary.mbps).toBe(300);
+    expect(summary.steadyMbps).toBe(300);
+    expect(summary.qualification).toBe("qualified");
+  });
+
+  it("marks a transfer that reaches its cap early", () => {
+    const summary = throughputFromTimeline(25_000_000, 2_000, [
+      { elapsedMs: 1_000, value: 100 },
+      { elapsedMs: 2_000, value: 100 }
+    ], { capReached: true, targetDurationMs: 8_000 });
+
+    expect(summary.capReached).toBe(true);
+    expect(summary.qualification).toBe("cap-limited");
+  });
+
 });

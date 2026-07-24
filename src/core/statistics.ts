@@ -73,22 +73,48 @@ export function summarizeLoadedLatency(
   };
 }
 
-export function throughputFromTimeline(bytes: number, durationMs: number, timeline: TimedSample[]): ThroughputSummary {
+export function throughputFromTimeline(
+  bytes: number,
+  durationMs: number,
+  timeline: TimedSample[],
+  options: { capReached?: boolean; targetDurationMs?: number } = {}
+): ThroughputSummary {
   const seconds = Math.max(durationMs / 1000, 0.001);
   const mbps = (bytes * 8) / seconds / 1_000_000;
-  const values = timeline.map((sample) => sample.value).filter(Number.isFinite);
-  const average = mean(values) ?? 0;
+  const warmupCutoffMs = Math.min(1_000, durationMs * 0.25);
+  const steadySamples = timeline.filter((sample) => sample.elapsedMs >= warmupCutoffMs && sample.value > 0 && Number.isFinite(sample.value));
+  const values = steadySamples.map((sample) => sample.value);
+  const steadyMbps = mean(values) ?? mbps;
+  const average = steadyMbps;
   const variance = values.length === 0
     ? 0
     : values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
   const coefficientOfVariation = average <= 0 ? 1 : Math.sqrt(variance) / average;
+  const stabilityPercent = Math.max(0, Math.min(100, 100 - coefficientOfVariation * 100));
+
+  const midpoint = warmupCutoffMs + (Math.max(durationMs - warmupCutoffMs, 0) / 2);
+  const earlyAverage = mean(steadySamples.filter((sample) => sample.elapsedMs < midpoint).map((sample) => sample.value));
+  const lateAverage = mean(steadySamples.filter((sample) => sample.elapsedMs >= midpoint).map((sample) => sample.value));
+  const rampRatio = earlyAverage && lateAverage ? lateAverage / earlyAverage : null;
+  const capReached = options.capReached ?? false;
+  const targetDurationMs = options.targetDurationMs ?? durationMs;
+  const endedEarly = durationMs < targetDurationMs * 0.85;
+
+  let qualification: ThroughputSummary["qualification"] = "qualified";
+  if (capReached && endedEarly) qualification = "cap-limited";
+  else if (rampRatio !== null && rampRatio > 1.2) qualification = "still-ramping";
+  else if (stabilityPercent < 50) qualification = "unstable";
 
   return {
     mbps,
+    steadyMbps,
     bytes,
     durationMs,
     peakMbps: values.length > 0 ? Math.max(...values) : mbps,
-    stabilityPercent: Math.max(0, Math.min(100, 100 - coefficientOfVariation * 100)),
+    stabilityPercent,
+    rampRatio,
+    capReached,
+    qualification,
     timeline
   };
 }

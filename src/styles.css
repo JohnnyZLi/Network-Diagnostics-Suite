@@ -141,6 +141,15 @@ body::before {
 .report-panel__heading { display: flex; justify-content: space-between; align-items: end; gap: 36px; margin-bottom: 25px; }
 .report-panel h3 { margin: 8px 0 0; font-size: 18px; font-weight: 570; }
 .report-panel__heading > p { max-width: 470px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: right; }
+.scope-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scope-grid article { padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.scope-grid article > span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .09em; }
+.scope-grid article > strong { display: block; margin-top: 12px; font-size: 13px; font-weight: 590; }
+.scope-grid article > p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.scope-status--good { color: var(--green); }
+.scope-status--warn { color: var(--rust); }
+.scope-panel__note { margin: 18px 0 0; color: var(--muted-strong); font-size: 10px; line-height: 1.55; }
+.scope-panel__note code { padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); font: 500 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .latency-table-wrap { overflow-x: auto; }
 .latency-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 11px; }
 .latency-table th, .latency-table td { padding: 15px 12px; border-top: 1px solid var(--line); text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 400; }
@@ -278,7 +287,7 @@ footer a:hover { color: var(--text); }
   .progress-stage, .error-panel { margin: 28px 0; }
   .progress-readings { grid-template-columns: 1fr; }
   .measurement-preview, .results, .methodology { padding: 72px 0; }
-  .preview-grid, .methodology-grid, .information-grid, .report-columns, .deep-probe { grid-template-columns: 1fr; }
+  .preview-grid, .methodology-grid, .information-grid, .report-columns, .deep-probe, .scope-grid { grid-template-columns: 1fr; }
   .preview-grid h3, .methodology-grid h3 { margin-top: 42px; }
   .metric-grid { grid-template-columns: 1fr; }
   .metric-card { min-height: 210px; }

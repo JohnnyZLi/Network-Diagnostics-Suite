@@ -21,13 +21,17 @@ Request loss is not raw packet loss. TCP can retransmit packets beneath the brow
 
 ### Throughput
 
-The download phase runs parallel same-origin streams of incompressible response data. The upload phase sends generated binary request bodies and the Worker reads and discards them. Results use successfully transferred payload bytes and elapsed wall time:
+The download phase runs parallel same-origin streams of incompressible response data. The upload phase sends generated binary request bodies and the Worker reads and discards them. The whole-phase value uses successfully transferred payload bytes and elapsed wall time:
 
 ```text
 Mbps = transferred bytes × 8 ÷ elapsed seconds ÷ 1,000,000
 ```
 
-The graph samples recent transfer rate every 250 milliseconds. The displayed stability score is a bounded project metric:
+The graph samples recent transfer rate every 250 milliseconds. The headline steady-state value excludes up to the first second of connection ramp-up, while the report also retains the whole-phase value. This makes short TCP startup effects less dominant without hiding the complete transfer average.
+
+The report marks a direction as **cap-limited** when the byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. These labels describe sample quality; they cannot prove whether a limit came from the access line, route, browser, Worker, or server.
+
+The displayed stability score is a bounded project metric:
 
 ```text
 stability = clamp(100 - coefficient of variation × 100, 0, 100)
@@ -70,6 +74,19 @@ The Worker returns the servicing edge code, network organization and ASN, HTTP p
 
 Windows 11, macOS, and Linux packages run the same .NET measurement engine and emit the same versioned JSON schema. The packages differ only by operating system and CPU runtime. CI runs the unit suite and launches each binary on its target platform before publishing it.
 
+
+### Isolated LAN throughput
+
+The optional native LAN mode uses a user-controlled second machine instead of a public endpoint. The server listens on TCP port 8765 by default. The client opens parallel TCP streams and measures:
+
+- Eight short TCP request/response samples to the LAN server.
+- Download bytes received during the configured duration.
+- Upload bytes written during the configured duration.
+
+The default transfer duration is eight seconds per direction with four parallel streams. Throughput uses the same decimal megabit formula as the browser result.
+
+This removes the Internet service provider, public transit/peering, and remote test platform from the path. It does not remove the client and server operating systems, their CPUs, network adapters, local firewall, switch, access point, cabling, or TCP implementation. A weak server machine can therefore still cap the LAN result. A wired server with a link rate above the expected client speed is preferred.
+
 ### ICMP latency and packet loss
 
 The probe sends 20 ICMP Echo Requests to the selected target by default, with a 1.5-second timeout and 120 milliseconds between attempts. The same distribution statistics used by the browser are calculated from replies. This is real ICMP loss for this specific sample and target, though a device may deprioritize or block ICMP while forwarding other traffic normally.
@@ -110,10 +127,10 @@ Operating systems expose interface, resolver, and default-gateway metadata diffe
 
 ## Important limitations
 
-- Results describe one device, browser, route, server edge, and moment in time.
+- Browser results describe one device, browser, route, server edge, and moment in time. LAN results describe two user-controlled devices and the local path between them.
 - VPNs, content blockers, endpoint security, power-saving modes, CPU load, Wi-Fi contention, and browser scheduling can affect results.
 - A short sample can miss intermittent faults. Repeat runs at different times and compare wired versus wireless paths.
-- Throughput can be limited by the test edge or Worker platform as well as the access connection.
+- Browser throughput can be limited by the test edge or Worker platform as well as the access connection. The sample-quality label detects some short-run problems but cannot subtract server capacity mathematically.
 - A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
 - Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
-- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works.
+- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works. A firewall can also block the optional LAN server port.
