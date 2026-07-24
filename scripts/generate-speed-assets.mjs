@@ -4,12 +4,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SPEED_ASSET_BYTES = 24 * 1024 * 1024;
-export const SPEED_ASSET_NAMES = ["payload-a.bin", "payload-b.bin"];
+export const SPEED_ASSET_NAME = "payload.bin";
+export const SPEED_ASSET_VERSION = "v2";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDirectory, "..");
-const outputDirectory = resolve(projectRoot, "public", "speed");
-const key = createHash("sha256").update("network-diagnostics-static-speed-assets-v1").digest();
+const outputDirectory = resolve(projectRoot, "public", "speed", SPEED_ASSET_VERSION);
+const key = createHash("sha256").update("network-diagnostics-static-speed-asset-v2").digest();
 
 async function hasExpectedSize(path) {
   try {
@@ -19,9 +20,9 @@ async function hasExpectedSize(path) {
   }
 }
 
-function createPayload(index) {
+function createPayload() {
   const iv = Buffer.alloc(16);
-  iv.writeUInt32BE(index + 1, 12);
+  iv.writeUInt32BE(2, 12);
   const cipher = createCipheriv("aes-256-ctr", key, iv);
   const zeros = Buffer.alloc(SPEED_ASSET_BYTES);
   return Buffer.concat([cipher.update(zeros), cipher.final()]);
@@ -29,12 +30,9 @@ function createPayload(index) {
 
 export async function generateSpeedAssets() {
   await mkdir(outputDirectory, { recursive: true });
-
-  for (const [index, name] of SPEED_ASSET_NAMES.entries()) {
-    const path = resolve(outputDirectory, name);
-    if (await hasExpectedSize(path)) continue;
-    await writeFile(path, createPayload(index));
-  }
+  const path = resolve(outputDirectory, SPEED_ASSET_NAME);
+  if (await hasExpectedSize(path)) return;
+  await writeFile(path, createPayload());
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
