@@ -22,8 +22,23 @@ jobs:
         run: |
           git fetch origin main
           git checkout -B assistant/path-isolation origin/main
-      - name: Check staged patch
-        run: git apply --recount --check --verbose /tmp/path-isolation.patch
+      - name: Check staged patch and publish diagnostics
+        run: |
+          set +e
+          git apply --recount --check --verbose /tmp/path-isolation.patch > /tmp/apply-error.txt 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            git checkout -B assistant/apply-diagnostic origin/main
+            mkdir -p automation
+            cp /tmp/apply-error.txt automation/apply-error.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add automation/apply-error.txt
+            git commit -m "Record staged patch failure"
+            git push --force origin HEAD:assistant/apply-diagnostic
+            exit "$status"
+          fi
       - name: Apply staged patch
         run: git apply --recount --index /tmp/path-isolation.patch
       - name: Commit implementation
