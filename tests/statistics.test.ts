@@ -97,4 +97,19 @@ describe("statistics", () => {
     expect(summary.qualification).toBe("cap-limited");
   });
 
+  it("marks a second half below 80 percent of the first half as declining", () => {
+    const summary = throughputFromTimeline(200_000_000, 8_000, [
+      { elapsedMs: 1_000, value: 400 },
+      { elapsedMs: 2_000, value: 400 },
+      { elapsedMs: 3_000, value: 400 },
+      { elapsedMs: 4_000, value: 400 },
+      { elapsedMs: 5_000, value: 250 },
+      { elapsedMs: 6_000, value: 250 },
+      { elapsedMs: 7_000, value: 250 },
+      { elapsedMs: 8_000, value: 250 }
+    ]);
+
+    expect(summary.rampRatio).toBeLessThan(0.8);
+    expect(summary.qualification).toBe("declining");
+  });
 });

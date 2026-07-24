@@ -15,15 +15,20 @@ interface CloudflareRequestProperties {
 }
 
 type WorkerRequest = Request & { cf?: CloudflareRequestProperties };
+type SpeedCacheStatus = "HIT" | "MISS" | "BYPASS";
 
 const DOWNLOAD_MIN_BYTES = 1_024;
 const DOWNLOAD_MAX_BYTES = 32 * 1024 * 1024;
 const UPLOAD_MAX_BYTES = 16 * 1024 * 1024;
 const CHUNK_SIZE = 1024 * 1024;
 
-export const SPEED_ASSET_BYTES = 24 * 1024 * 1024;
-export const SPEED_ASSET_PATH = "/speed/v3/payload.bin";
-export const SPEED_PAYLOAD_MARKER = "static-edge-v3";
+export const SPEED_SEGMENT_BYTES = 24 * 1024 * 1024;
+export const SPEED_SEGMENT_COUNT = 4;
+export const SPEED_STREAM_BYTES = SPEED_SEGMENT_BYTES * SPEED_SEGMENT_COUNT;
+export const SPEED_PATH_PREFIX = "/speed/v4/";
+export const SPEED_STREAM_PATH = `${SPEED_PATH_PREFIX}stream`;
+export const SPEED_WARM_PATH = `${SPEED_PATH_PREFIX}warm`;
+export const SPEED_PAYLOAD_MARKER = "stream-edge-v4";
 const SPEED_CACHE_TTL_SECONDS = 24 * 60 * 60;
 const SPEED_CACHED_AT_HEADER = "X-NDS-Cached-At";
 
@@ -78,39 +83,40 @@ function errorResponse(message: string, status: number, extraHeaders?: HeadersIn
   return Response.json({ error: message }, { status, headers });
 }
 
-function speedAssetUrl(request: Request): URL {
+function speedUrl(request: Request, pathname: string): URL {
   const url = new URL(request.url);
-  url.pathname = SPEED_ASSET_PATH;
+  url.pathname = pathname;
   url.search = "";
   url.hash = "";
   return url;
 }
 
-export function createSpeedCacheKey(request: Request): Request {
-  return new Request(speedAssetUrl(request).toString(), { method: "GET" });
+export function speedSegmentPath(index: number): string {
+  if (!Number.isInteger(index) || index < 0 || index >= SPEED_SEGMENT_COUNT) {
+    throw new RangeError(`Speed segment index must be between 0 and ${SPEED_SEGMENT_COUNT - 1}.`);
+  }
+  return `${SPEED_PATH_PREFIX}segment-${index}.bin`;
 }
 
-export function createSpeedCacheLookupRequest(request: Request): Request {
-  const headers = new Headers();
-  const range = request.headers.get("Range");
-  if (range) headers.set("Range", range);
-  return new Request(speedAssetUrl(request).toString(), { method: "GET", headers });
+export function createSpeedSegmentCacheKey(request: Request, index: number): Request {
+  return new Request(speedUrl(request, speedSegmentPath(index)).toString(), { method: "GET" });
 }
 
-export function createCacheableSpeedResponse(
+export function createCacheableSpeedSegmentResponse(
   assetResponse: Response,
+  index: number,
   cachedAtSeconds = Math.floor(Date.now() / 1000)
 ): Response {
   const headers = new Headers({
     "Accept-Ranges": "bytes",
     "Cache-Control": `public, max-age=${SPEED_CACHE_TTL_SECONDS}`,
     "Content-Encoding": "identity",
-    "Content-Length": SPEED_ASSET_BYTES.toString(),
+    "Content-Length": SPEED_SEGMENT_BYTES.toString(),
     "Content-Type": "application/octet-stream",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Timing-Allow-Origin": "*",
     "X-Content-Type-Options": "nosniff",
-    "X-NDS-Payload": SPEED_PAYLOAD_MARKER,
+    "X-NDS-Segment": index.toString(),
     [SPEED_CACHED_AT_HEADER]: cachedAtSeconds.toString()
   });
 
@@ -122,54 +128,32 @@ export function createCacheableSpeedResponse(
   return new Response(assetResponse.body, { status: 200, headers });
 }
 
-export function createBrowserSpeedResponse(
-  cachedResponse: Response,
-  cacheStatus: "HIT" | "MISS" | "BYPASS",
-  nowSeconds = Math.floor(Date.now() / 1000),
-  headOnly = false
-): Response {
-  const headers = new Headers(cachedResponse.headers);
-  const cachedAt = Number.parseInt(headers.get(SPEED_CACHED_AT_HEADER) ?? "", 10);
-
-  headers.set("Cache-Control", "no-store, no-transform");
-  headers.delete("Cloudflare-CDN-Cache-Control");
-  headers.delete("CDN-Cache-Control");
-  headers.delete("Expires");
-  headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  headers.set("Strict-Transport-Security", "max-age=31536000");
-  headers.set("Timing-Allow-Origin", "*");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-NDS-Payload", SPEED_PAYLOAD_MARKER);
-  headers.set("X-NDS-Cache-Status", cacheStatus);
-  if (Number.isSafeInteger(cachedAt)) {
-    headers.set("X-NDS-Cache-Age", Math.max(0, nowSeconds - cachedAt).toString());
-  }
-  headers.delete(SPEED_CACHED_AT_HEADER);
-
-  return new Response(headOnly ? null : cachedResponse.body, {
-    status: cachedResponse.status,
-    statusText: cachedResponse.statusText,
-    headers
-  });
+interface LoadedSpeedSegment {
+  response: Response;
+  status: SpeedCacheStatus;
+  ageSeconds: number | null;
 }
 
-async function handleSpeedAsset(request: Request, env: Env): Promise<Response> {
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    return errorResponse("Method not allowed", 405, { Allow: "GET, HEAD" });
-  }
-  if (isCrossSite(request)) return errorResponse("Cross-site requests are not accepted", 403);
+function cachedAgeSeconds(response: Response, nowSeconds = Math.floor(Date.now() / 1000)): number | null {
+  const cachedAt = Number.parseInt(response.headers.get(SPEED_CACHED_AT_HEADER) ?? "", 10);
+  return Number.isSafeInteger(cachedAt) ? Math.max(0, nowSeconds - cachedAt) : null;
+}
 
-  const cache = (caches as CacheStorage & { default: Cache }).default;
-  const lookupRequest = createSpeedCacheLookupRequest(request);
-
+async function loadSpeedSegment(
+  request: Request,
+  env: Env,
+  cache: Cache,
+  index: number
+): Promise<LoadedSpeedSegment> {
+  const key = createSpeedSegmentCacheKey(request, index);
   try {
-    const hit = await cache.match(lookupRequest);
-    if (hit) return createBrowserSpeedResponse(hit, "HIT", undefined, request.method === "HEAD");
+    const hit = await cache.match(key);
+    if (hit) return { response: hit, status: "HIT", ageSeconds: cachedAgeSeconds(hit) };
   } catch {
     // Cache API is unavailable in some local and preview environments.
   }
 
-  const assetRequest = new Request(speedAssetUrl(request).toString(), {
+  const assetRequest = new Request(speedUrl(request, speedSegmentPath(index)).toString(), {
     method: "GET",
     headers: { "Accept-Encoding": "identity" }
   });
@@ -178,22 +162,164 @@ async function handleSpeedAsset(request: Request, env: Env): Promise<Response> {
   if (
     assetResponse.status !== 200
     || assetResponse.body === null
-    || (Number.isFinite(declaredLength) && declaredLength !== SPEED_ASSET_BYTES)
+    || (Number.isFinite(declaredLength) && declaredLength !== SPEED_SEGMENT_BYTES)
   ) {
-    await assetResponse.body?.cancel("invalid-speed-asset");
-    return errorResponse("The static speed payload is unavailable", 502);
+    await assetResponse.body?.cancel("invalid-speed-segment");
+    throw new Error(`Static speed segment ${index} is unavailable.`);
   }
 
-  const cacheable = createCacheableSpeedResponse(assetResponse);
+  const cacheable = createCacheableSpeedSegmentResponse(assetResponse, index);
   try {
-    await cache.put(createSpeedCacheKey(request), cacheable.clone());
-    const stored = await cache.match(lookupRequest);
-    if (stored) return createBrowserSpeedResponse(stored, "MISS", undefined, request.method === "HEAD");
+    await cache.put(key, cacheable.clone());
+    const stored = await cache.match(key);
+    if (stored) return { response: stored, status: "MISS", ageSeconds: cachedAgeSeconds(stored) };
   } catch {
-    // Fall through to a direct response while reporting that local edge caching was bypassed.
+    // Fall through to direct asset delivery when the local Cache API cannot retain the segment.
   }
 
-  return createBrowserSpeedResponse(cacheable, "BYPASS", undefined, request.method === "HEAD");
+  return { response: cacheable, status: "BYPASS", ageSeconds: null };
+}
+
+function aggregateCacheStatus(segments: LoadedSpeedSegment[]): SpeedCacheStatus {
+  if (segments.some((segment) => segment.status === "BYPASS")) return "BYPASS";
+  if (segments.some((segment) => segment.status === "MISS")) return "MISS";
+  return "HIT";
+}
+
+function aggregateCacheAge(segments: LoadedSpeedSegment[]): number | null {
+  const ages = segments
+    .map((segment) => segment.ageSeconds)
+    .filter((age): age is number => age !== null);
+  return ages.length > 0 ? Math.max(...ages) : null;
+}
+
+export function createConcatenatedBody(responses: Response[]): ReadableStream<Uint8Array> {
+  let responseIndex = 0;
+  let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      while (responseIndex < responses.length) {
+        if (!activeReader) {
+          const body = responses[responseIndex]?.body;
+          if (!body) {
+            controller.error(new Error(`Speed segment ${responseIndex} did not include a body.`));
+            return;
+          }
+          activeReader = body.getReader();
+        }
+
+        const { done, value } = await activeReader.read();
+        if (done) {
+          activeReader.releaseLock();
+          activeReader = null;
+          responseIndex += 1;
+          continue;
+        }
+
+        controller.enqueue(value);
+        return;
+      }
+
+      controller.close();
+    },
+    async cancel(reason) {
+      if (activeReader) {
+        await activeReader.cancel(reason);
+        activeReader = null;
+      }
+      await Promise.all(
+        responses.slice(responseIndex + 1).map(async (response) => {
+          try {
+            await response.body?.cancel(reason);
+          } catch {
+            // Ignore already-closed segment bodies.
+          }
+        })
+      );
+    }
+  });
+}
+
+export function createBrowserSpeedStreamResponse(
+  responses: Response[],
+  cacheStatus: SpeedCacheStatus,
+  ageSeconds: number | null,
+  headOnly = false
+): Response {
+  const headers = new Headers({
+    "Cache-Control": "no-store, no-transform",
+    "Content-Encoding": "identity",
+    "Content-Length": SPEED_STREAM_BYTES.toString(),
+    "Content-Type": "application/octet-stream",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Strict-Transport-Security": "max-age=31536000",
+    "Timing-Allow-Origin": "*",
+    "X-Content-Type-Options": "nosniff",
+    "X-NDS-Cache-Status": cacheStatus,
+    "X-NDS-Logical-Bytes": SPEED_STREAM_BYTES.toString(),
+    "X-NDS-Payload": SPEED_PAYLOAD_MARKER,
+    "X-NDS-Segment-Count": SPEED_SEGMENT_COUNT.toString()
+  });
+  if (ageSeconds !== null) headers.set("X-NDS-Cache-Age", ageSeconds.toString());
+
+  return new Response(headOnly ? null : createConcatenatedBody(responses), { status: 200, headers });
+}
+
+async function handleSpeedWarm(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return errorResponse("Method not allowed", 405, { Allow: "POST" });
+  if (isCrossSite(request)) return errorResponse("Cross-site requests are not accepted", 403);
+
+  const cache = (caches as CacheStorage & { default: Cache }).default;
+  let segments: LoadedSpeedSegment[];
+  try {
+    segments = await Promise.all(
+      Array.from({ length: SPEED_SEGMENT_COUNT }, (_, index) => loadSpeedSegment(request, env, cache, index))
+    );
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "The speed payload could not be warmed.", 502);
+  }
+
+  const status = aggregateCacheStatus(segments);
+  const ageSeconds = aggregateCacheAge(segments);
+  await Promise.all(segments.map(async ({ response }) => {
+    try {
+      await response.body?.cancel("speed-warm-complete");
+    } catch {
+      // Ignore already-closed cache response bodies.
+    }
+  }));
+
+  return Response.json({
+    status,
+    segmentCount: SPEED_SEGMENT_COUNT,
+    cachedBytes: status === "BYPASS" ? 0 : SPEED_STREAM_BYTES,
+    ageSeconds
+  }, { headers: diagnosticHeaders("application/json; charset=utf-8") });
+}
+
+async function handleSpeedStream(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return errorResponse("Method not allowed", 405, { Allow: "GET, HEAD" });
+  }
+  if (isCrossSite(request)) return errorResponse("Cross-site requests are not accepted", 403);
+
+  const cache = (caches as CacheStorage & { default: Cache }).default;
+  let segments: LoadedSpeedSegment[];
+  try {
+    segments = await Promise.all(
+      Array.from({ length: SPEED_SEGMENT_COUNT }, (_, index) => loadSpeedSegment(request, env, cache, index))
+    );
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "The speed stream is unavailable.", 502);
+  }
+
+  return createBrowserSpeedStreamResponse(
+    segments.map((segment) => segment.response),
+    aggregateCacheStatus(segments),
+    aggregateCacheAge(segments),
+    request.method === "HEAD"
+  );
 }
 
 function handlePing(request: Request): Response {
@@ -289,7 +415,8 @@ export default {
     if (httpsRedirect) return httpsRedirect;
 
     const url = new URL(request.url);
-    if (url.pathname === SPEED_ASSET_PATH) return handleSpeedAsset(request, env);
+    if (url.pathname === SPEED_WARM_PATH) return handleSpeedWarm(request, env);
+    if (url.pathname === SPEED_STREAM_PATH) return handleSpeedStream(request, env);
 
     switch (url.pathname) {
       case "/api/ping":
@@ -305,7 +432,7 @@ export default {
           headers: diagnosticHeaders("application/json; charset=utf-8")
         });
       default:
-        if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/speed/v3/")) {
+        if (url.pathname.startsWith("/api/") || url.pathname.startsWith(SPEED_PATH_PREFIX)) {
           return errorResponse("Not found", 404);
         }
         return env.ASSETS.fetch(request);

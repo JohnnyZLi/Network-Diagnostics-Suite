@@ -1,11 +1,16 @@
 import { throughputFromTimeline } from "../core/statistics";
-import type { DownloadDeliverySummary, ThroughputSummary, TimedSample } from "../types/diagnostics";
+import type {
+  DownloadDeliverySummary,
+  DownloadRequestGenerationSummary,
+  ThroughputSummary,
+  TimedSample
+} from "../types/diagnostics";
 import {
-  downloadChunk,
+  downloadLongStream,
   type DownloadDeliveryObservation,
   type DownloadWarmupObservation,
-  STATIC_DOWNLOAD_ASSET_BYTES,
   STATIC_DOWNLOAD_PATH_PREFIX,
+  STATIC_DOWNLOAD_STREAM_BYTES,
   TestCancelledError,
   throwIfAborted,
   uploadChunk,
@@ -22,7 +27,15 @@ interface ThroughputOptions {
 
 interface TransferState {
   bytes: number;
+}
+
+interface UploadTransferState extends TransferState {
   claimedBytes: number;
+}
+
+interface MutableGenerationSummary {
+  requests: number;
+  bytes: number;
 }
 
 const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]);
@@ -30,10 +43,13 @@ const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]
 function createPhaseSignal(parent: AbortSignal, durationMs: number): {
   signal: AbortSignal;
   durationReached: () => boolean;
+  capReached: () => boolean;
+  reachCap: () => void;
   stop: () => void;
 } {
   const controller = new AbortController();
   let timedOut = false;
+  let capped = false;
   const timer = window.setTimeout(() => {
     timedOut = true;
     controller.abort("duration-complete");
@@ -43,10 +59,16 @@ function createPhaseSignal(parent: AbortSignal, durationMs: number): {
   return {
     signal: controller.signal,
     durationReached: () => timedOut,
+    capReached: () => capped,
+    reachCap: () => {
+      if (controller.signal.aborted) return;
+      capped = true;
+      controller.abort("cap-reached");
+    },
     stop: () => {
       window.clearTimeout(timer);
       parent.removeEventListener("abort", onAbort);
-      controller.abort("phase-complete");
+      if (!controller.signal.aborted) controller.abort("phase-complete");
     }
   };
 }
@@ -101,7 +123,13 @@ function collectDownloadProtocols(startedAt: number): string[] {
 export function summarizeDownloadDelivery(
   warmup: DownloadWarmupObservation,
   observations: DownloadDeliveryObservation[],
-  protocols: string[]
+  protocols: string[],
+  requestCounts: {
+    started: number;
+    completed: number;
+    replacements: number;
+    generations: DownloadRequestGenerationSummary[];
+  }
 ): DownloadDeliverySummary {
   const cacheStatusCounts: Record<string, number> = {};
   let knownCacheStatuses = 0;
@@ -129,7 +157,14 @@ export function summarizeDownloadDelivery(
     edgeCacheServedPercent: knownCacheStatuses === 0 ? null : (edgeServed / knownCacheStatuses) * 100,
     maxAgeSeconds,
     protocols: [...new Set(protocols.filter(Boolean))].sort(),
+    logicalStreamBytes: STATIC_DOWNLOAD_STREAM_BYTES,
+    startedRequests: requestCounts.started,
+    completedRequests: requestCounts.completed,
+    replacementRequests: requestCounts.replacements,
+    interruptedRequests: Math.max(0, requestCounts.started - requestCounts.completed),
+    requestGenerations: requestCounts.generations,
     warmupBytes: warmup.bytes,
+    warmupCachedBytes: warmup.cachedBytes,
     warmupSource: warmup.source,
     warmupCacheStatus: warmup.cacheStatus
   };
@@ -142,25 +177,41 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   throwIfAborted(options.signal);
 
   const startedAt = performance.now();
-  const state: TransferState = { bytes: 0, claimedBytes: 0 };
+  const state: TransferState = { bytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
-  const requestSize = STATIC_DOWNLOAD_ASSET_BYTES;
   const observations: DownloadDeliveryObservation[] = [];
+  const generationMap = new Map<number, MutableGenerationSummary>();
+  let startedRequests = 0;
+  let completedRequests = 0;
+  let replacementRequests = 0;
 
   const worker = async () => {
-    while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
-      const size = Math.min(requestSize, options.capBytes - state.claimedBytes);
-      state.claimedBytes += size;
+    let generation = 0;
+    while (!phase.signal.aborted) {
+      const generationSummary = generationMap.get(generation) ?? { requests: 0, bytes: 0 };
+      generationSummary.requests += 1;
+      generationMap.set(generation, generationSummary);
+      startedRequests += 1;
+      if (generation > 0) replacementRequests += 1;
+
       try {
-        const observation = await downloadChunk(size, phase.signal, (delta) => {
-          state.bytes += delta;
-        });
-        observations.push(observation);
+        await downloadLongStream(
+          phase.signal,
+          (delta) => {
+            state.bytes += delta;
+            generationSummary.bytes += delta;
+            if (state.bytes >= options.capBytes) phase.reachCap();
+          },
+          (observation) => observations.push(observation)
+        );
+        completedRequests += 1;
       } catch (error) {
         if (phase.signal.aborted) break;
         throw error;
       }
+
+      generation += 1;
     }
   };
 
@@ -173,19 +224,32 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   if (options.signal.aborted) throw new TestCancelledError();
   const durationMs = performance.now() - startedAt;
   const summary = throughputFromTimeline(state.bytes, durationMs, sampler.timeline, {
-    capReached: state.claimedBytes >= options.capBytes && !phase.durationReached(),
+    capReached: phase.capReached(),
     targetDurationMs: options.durationMs
   });
+  const generations = [...generationMap.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([generation, values]) => ({ generation, ...values }));
   return {
     ...summary,
-    delivery: summarizeDownloadDelivery(warmup, observations, collectDownloadProtocols(transportStartedAt))
+    delivery: summarizeDownloadDelivery(
+      warmup,
+      observations,
+      collectDownloadProtocols(transportStartedAt),
+      {
+        started: startedRequests,
+        completed: completedRequests,
+        replacements: replacementRequests,
+        generations
+      }
+    )
   };
 }
 
 export async function runUpload(options: ThroughputOptions): Promise<ThroughputSummary> {
   throwIfAborted(options.signal);
   const startedAt = performance.now();
-  const state: TransferState = { bytes: 0, claimedBytes: 0 };
+  const state: UploadTransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
   const requestSize = 8 * 1024 * 1024;

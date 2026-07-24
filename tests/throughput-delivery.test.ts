@@ -1,30 +1,49 @@
 import { describe, expect, it } from "vitest";
 import type { DownloadDeliveryObservation, DownloadWarmupObservation } from "../src/diagnostics/http";
+import { STATIC_DOWNLOAD_STREAM_BYTES } from "../src/diagnostics/http";
 import { summarizeDownloadDelivery } from "../src/diagnostics/throughput";
 
 const warmup: DownloadWarmupObservation = {
   source: "static",
   cacheStatus: "MISS",
   ageSeconds: null,
-  bytes: 24 * 1024 * 1024
+  bytes: 0,
+  cachedBytes: STATIC_DOWNLOAD_STREAM_BYTES
 };
 
 describe("download delivery summary", () => {
-  it("separates warmup cache state from measured edge hits", () => {
+  it("separates server-side warmup from measured edge hits and request generations", () => {
     const observations: DownloadDeliveryObservation[] = [
       { source: "static", cacheStatus: "HIT", ageSeconds: 3 },
       { source: "static", cacheStatus: "HIT", ageSeconds: 4 },
-      { source: "static", cacheStatus: "MISS", ageSeconds: null }
+      { source: "static", cacheStatus: "HIT", ageSeconds: 4 }
     ];
 
-    expect(summarizeDownloadDelivery(warmup, observations, ["h3", "h3", "h2"])).toEqual({
+    expect(summarizeDownloadDelivery(
+      warmup,
+      observations,
+      ["h3", "h3", "h2"],
+      {
+        started: 3,
+        completed: 0,
+        replacements: 0,
+        generations: [{ generation: 0, requests: 3, bytes: 220_000_000 }]
+      }
+    )).toEqual({
       staticRequests: 3,
       workerFallbackRequests: 0,
-      cacheStatusCounts: { HIT: 2, MISS: 1 },
-      edgeCacheServedPercent: (2 / 3) * 100,
+      cacheStatusCounts: { HIT: 3 },
+      edgeCacheServedPercent: 100,
       maxAgeSeconds: 4,
       protocols: ["h2", "h3"],
-      warmupBytes: warmup.bytes,
+      logicalStreamBytes: STATIC_DOWNLOAD_STREAM_BYTES,
+      startedRequests: 3,
+      completedRequests: 0,
+      replacementRequests: 0,
+      interruptedRequests: 3,
+      requestGenerations: [{ generation: 0, requests: 3, bytes: 220_000_000 }],
+      warmupBytes: 0,
+      warmupCachedBytes: STATIC_DOWNLOAD_STREAM_BYTES,
       warmupSource: "static",
       warmupCacheStatus: "MISS"
     });
@@ -36,9 +55,15 @@ describe("download delivery summary", () => {
     ];
 
     const summary = summarizeDownloadDelivery(
-      { source: "worker", cacheStatus: null, ageSeconds: null, bytes: 8 * 1024 * 1024 },
+      { source: "worker", cacheStatus: null, ageSeconds: null, bytes: 8 * 1024 * 1024, cachedBytes: 0 },
       observations,
-      []
+      [],
+      {
+        started: 1,
+        completed: 1,
+        replacements: 0,
+        generations: [{ generation: 0, requests: 1, bytes: 32 * 1024 * 1024 }]
+      }
     );
 
     expect(summary.staticRequests).toBe(0);
