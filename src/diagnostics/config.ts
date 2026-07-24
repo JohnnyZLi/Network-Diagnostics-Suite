@@ -38,7 +38,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     idlePingCount: 20,
     pingIntervalMs: 175,
     downloadDurationMs: 12_000,
-    downloadCapBytes: 1_200 * 1_000_000,
+    downloadCapBytes: 900 * 1_000_000,
     uploadDurationMs: 12_000,
     uploadCapBytes: 192 * 1_000_000,
     concurrency: 8,
