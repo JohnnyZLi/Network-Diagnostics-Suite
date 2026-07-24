@@ -106,10 +106,12 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
   throwIfAborted(options.signal);
   const edge = await metadataPromise;
   const completedAt = new Date();
+  const downloadWarmupBytes = download.throughput.delivery?.warmupBytes ?? 0;
+  const dataUsedBytes = download.throughput.bytes + upload.throughput.bytes + downloadWarmupBytes;
   options.onProgress({
     phase: "complete",
     fraction: 1,
-    bytesTransferred: download.throughput.bytes + upload.throughput.bytes
+    bytesTransferred: dataUsedBytes
   });
 
   return {
@@ -124,7 +126,7 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
     downloadLatency: download.latency,
     uploadLatency: upload.latency,
     services,
-    dataUsedBytes: download.throughput.bytes + upload.throughput.bytes
+    dataUsedBytes
   };
 }
 
