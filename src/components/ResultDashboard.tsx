@@ -1,5 +1,5 @@
 import { formatBytes, formatLatency, formatRate } from "../core/format";
-import type { DiagnosticResult, LoadedLatencySummary, ThroughputSummary } from "../types/diagnostics";
+import type { DiagnosticResult, DownloadDeliverySummary, LoadedLatencySummary, ThroughputSummary } from "../types/diagnostics";
 import { LatencyTable } from "./LatencyTable";
 import { MetricCard } from "./MetricCard";
 import { ServiceMatrix } from "./ServiceMatrix";
@@ -9,7 +9,6 @@ function worstGrade(...summaries: LoadedLatencySummary[]): LoadedLatencySummary[
   const rank: Record<LoadedLatencySummary["grade"], number> = { "—": -1, "A+": 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
   return summaries.reduce((worst, current) => rank[current.grade] > rank[worst] ? current.grade : worst, "—" as LoadedLatencySummary["grade"]);
 }
-
 
 function qualificationLabel(summary: ThroughputSummary): string {
   switch (summary.qualification) {
@@ -24,15 +23,39 @@ function qualificationTone(summary: ThroughputSummary): string {
   return summary.qualification === "qualified" ? "scope-status scope-status--good" : "scope-status scope-status--warn";
 }
 
+function cacheBreakdown(delivery: DownloadDeliverySummary | undefined): string {
+  if (!delivery) return "Unavailable";
+  const statuses = Object.entries(delivery.cacheStatusCounts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([status, count]) => `${status} ${count}`);
+  const percentage = delivery.edgeCacheServedPercent === null
+    ? "cache status unavailable"
+    : `${delivery.edgeCacheServedPercent.toFixed(0)}% edge-served`;
+  const detail = statuses.length > 0 ? ` · ${statuses.join(" · ")}` : "";
+  return `${percentage}${detail}`;
+}
+
+function warmupDescription(delivery: DownloadDeliverySummary | undefined): string {
+  if (!delivery) return "Unavailable";
+  const source = delivery.warmupSource === "static" ? "static asset" : "Worker fallback";
+  const status = delivery.warmupCacheStatus ? ` · ${delivery.warmupCacheStatus}` : "";
+  return `${formatBytes(delivery.warmupBytes)} ${source}${status}`;
+}
+
 function buildFindings(result: DiagnosticResult): string[] {
   const findings: string[] = [];
   const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
+  const delivery = result.download.delivery;
   if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
   if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
   if (worstLoadedIncrease > 30) findings.push("Latency rises materially under load, which suggests queueing or bufferbloat.");
   if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
+  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests fell back to the Worker stream instead of the static edge asset.");
+  if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
+    findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
+  }
   if (result.services.some((service) => !service.reachable)) findings.push("At least one common service did not answer the browser reachability check.");
   if (findings.length === 0) findings.push("No obvious instability appeared in this browser test.");
   return findings;
@@ -48,6 +71,7 @@ interface ResultDashboardProps {
 export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDashboardProps) {
   const grade = worstGrade(result.downloadLatency, result.uploadLatency);
   const findings = buildFindings(result);
+  const delivery = result.download.delivery;
   return (
     <section className="results" aria-labelledby="results-title">
       <div className="section-heading section-heading--actions">
@@ -130,7 +154,11 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
             <div><dt>Edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
             <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>
-            <div><dt>Protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
+            <div><dt>Metadata protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
+            <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unknown"}</dd></div>
+            <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
+            <div><dt>Cache warm-up</dt><dd>{warmupDescription(delivery)}</dd></div>
+            <div><dt>Worker fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
             <div><dt>Data transferred</dt><dd>{formatBytes(result.dataUsedBytes)}</dd></div>
           </dl>
         </section>
