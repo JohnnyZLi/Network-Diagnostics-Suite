@@ -13,8 +13,7 @@
 
 /speed/*
   Cache-Control: no-store, no-transform
-  Cloudflare-CDN-Cache-Control: public, max-age=86400
   Content-Type: application/octet-stream
   Cross-Origin-Resource-Policy: same-origin
   X-Content-Type-Options: nosniff
-  X-NDS-Payload: static-edge-v2
+  X-NDS-Payload: static-edge-v3
