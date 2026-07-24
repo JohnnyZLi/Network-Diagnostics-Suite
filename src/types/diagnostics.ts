@@ -22,7 +22,13 @@ export interface LatencySummary {
   samples: Array<number | null>;
 }
 
-export type ThroughputQualification = "qualified" | "cap-limited" | "still-ramping" | "unstable";
+export type ThroughputQualification = "qualified" | "cap-limited" | "still-ramping" | "declining" | "unstable";
+
+export interface DownloadRequestGenerationSummary {
+  generation: number;
+  requests: number;
+  bytes: number;
+}
 
 export interface DownloadDeliverySummary {
   staticRequests: number;
@@ -31,7 +37,14 @@ export interface DownloadDeliverySummary {
   edgeCacheServedPercent: number | null;
   maxAgeSeconds: number | null;
   protocols: string[];
+  logicalStreamBytes: number;
+  startedRequests: number;
+  completedRequests: number;
+  replacementRequests: number;
+  interruptedRequests: number;
+  requestGenerations: DownloadRequestGenerationSummary[];
   warmupBytes: number;
+  warmupCachedBytes: number;
   warmupSource: "static" | "worker";
   warmupCacheStatus: string | null;
 }
