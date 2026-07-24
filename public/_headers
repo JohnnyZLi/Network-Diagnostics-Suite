@@ -12,8 +12,9 @@
   Cache-Control: public, max-age=31536000, immutable
 
 /speed/*
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Cache-Control: no-store, no-transform
+  Cloudflare-CDN-Cache-Control: public, max-age=86400
   Content-Type: application/octet-stream
   Cross-Origin-Resource-Policy: same-origin
   X-Content-Type-Options: nosniff
-  X-NDS-Payload: static-edge-v1
+  X-NDS-Payload: static-edge-v2

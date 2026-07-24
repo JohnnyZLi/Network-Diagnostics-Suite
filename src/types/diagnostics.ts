@@ -24,6 +24,18 @@ export interface LatencySummary {
 
 export type ThroughputQualification = "qualified" | "cap-limited" | "still-ramping" | "unstable";
 
+export interface DownloadDeliverySummary {
+  staticRequests: number;
+  workerFallbackRequests: number;
+  cacheStatusCounts: Record<string, number>;
+  edgeCacheServedPercent: number | null;
+  maxAgeSeconds: number | null;
+  protocols: string[];
+  warmupBytes: number;
+  warmupSource: "static" | "worker";
+  warmupCacheStatus: string | null;
+}
+
 export interface ThroughputSummary {
   mbps: number;
   steadyMbps: number;
@@ -35,6 +47,7 @@ export interface ThroughputSummary {
   capReached: boolean;
   qualification: ThroughputQualification;
   timeline: TimedSample[];
+  delivery?: DownloadDeliverySummary;
 }
 
 export interface LoadedLatencySummary extends LatencySummary {

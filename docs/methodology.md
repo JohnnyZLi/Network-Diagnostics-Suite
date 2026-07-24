@@ -21,7 +21,11 @@ Request loss is not raw packet loss. TCP can retransmit packets beneath the brow
 
 ### Throughput
 
-The download phase uses two deterministic, incompressible 24 MiB files deployed with the application as Cloudflare Workers Static Assets. Range requests select the exact number of bytes needed for each stream. Those requests match real static files and therefore bypass the Worker script instead of asking JavaScript to generate every response. A small parallel warm-up transfer establishes the active path before the measured clock starts. If the static assets are unavailable, the client falls back to the same-origin Worker streaming endpoint.
+The download phase uses one deterministic, incompressible 24 MiB, versioned file deployed with the application as a Cloudflare Workers Static Asset. Full-size transfers use the fixed asset URL directly; only a final partial transfer uses a byte range. Matching static requests bypass the Worker script instead of asking JavaScript to generate every response. If the static asset or an exact partial response is unavailable, the client falls back to the same-origin Worker streaming endpoint.
+
+The response separates browser and edge cache policy. `Cache-Control: no-store` prevents the browser from satisfying a measured request from its local HTTP cache, while `Cloudflare-CDN-Cache-Control` allows Cloudflare to retain the versioned payload at the edge. Before measurement begins, the client fully downloads the asset once so a cold edge can be populated. The warm-up traffic is excluded from throughput calculations but included in total reported data use.
+
+The report records measured `CF-Cache-Status` values, the largest observed `Age` value, any Worker fallbacks, and the browser Resource Timing `nextHopProtocol` values associated with the speed asset. A warm-up `MISS` followed by measured `HIT` responses means the initial request populated the selected edge cache. These fields describe delivery behavior; they do not prove where every byte was sourced internally within Cloudflare.
 
 The upload phase sends generated binary request bodies and the Worker reads and discards them. The whole-phase value uses successfully transferred payload bytes and elapsed wall time:
 
@@ -132,6 +136,8 @@ Operating systems expose interface, resolver, and default-gateway metadata diffe
 - VPNs, content blockers, endpoint security, power-saving modes, CPU load, Wi-Fi contention, and browser scheduling can affect results.
 - A short sample can miss intermittent faults. Repeat runs at different times and compare wired versus wireless paths.
 - Static edge delivery removes Worker response-generation overhead, but browser throughput can still be limited by the selected Cloudflare edge and its route to the ISP. No first-party Internet test can mathematically subtract its own network path.
+- Several same-origin HTTP requests may share one HTTP/2 or HTTP/3 connection and congestion controller. The browser test reports aggregate application throughput but does not claim a specific number of independent transport connections.
+- Cache headers and Resource Timing expose useful evidence, but browser and CDN internals can still change independently of this application.
 - A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
 - Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
 - Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works. A firewall can also block the optional LAN server port.
