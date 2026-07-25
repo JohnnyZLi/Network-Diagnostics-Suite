@@ -5,8 +5,8 @@
   --content-gutter: 24px;
 }
 
-/* Keep the ambient grid across the page, but anchor the warm light to the top
-   of the document so it no longer follows the user into lower sections. */
+/* Anchor the warm light to the top of the document so it does not follow
+   the user into lower sections. */
 body::before {
   position: absolute;
   inset: 0 0 auto;
@@ -20,19 +20,6 @@ body::before {
   background-size: 100% 100%;
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 58%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 0%, black 58%, transparent 100%);
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(23, 23, 20, .028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 20, .028) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, .72) 72%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, .72) 72%, transparent 100%);
 }
 
 .app-shell {
