@@ -15,9 +15,9 @@ interface TestControlsProps {
 }
 
 const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
-  auto: { name: "Automatic", detail: "R2 with safe fallback" },
-  "r2-direct": { name: "R2 direct", detail: "Require direct edge object" },
-  "worker-stream": { name: "Worker", detail: "Comparison only" }
+  auto: { name: "Automatic", detail: "R2 + fallback" },
+  "r2-direct": { name: "Direct R2", detail: "R2 only" },
+  "worker-stream": { name: "Worker", detail: "Worker only" }
 };
 
 export function TestControls({
