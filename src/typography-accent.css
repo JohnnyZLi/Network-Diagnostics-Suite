@@ -1,4 +1,4 @@
-/* Terracotta is the sole decorative typography accent.
+/* Terracotta is the decorative typography accent.
    Data series, category markers, grades, and semantic states retain their colors. */
 
 .text-blue,
@@ -7,7 +7,11 @@
   color: var(--accent);
 }
 
-.preview-grid article h3,
+/* Condition cards use neutral headings; their category labels retain structure. */
+.preview-grid article h3 {
+  color: var(--text);
+}
+
 .methodology-grid article h3,
 .deep-probe__intro h2,
 .information-panel h2,
