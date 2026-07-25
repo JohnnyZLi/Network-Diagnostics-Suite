@@ -22,6 +22,35 @@ body::before {
   mask-image: linear-gradient(to bottom, black 0%, black 58%, transparent 100%);
 }
 
+/* Portfolio-family dot texture: document-anchored and confined to the open
+   hero area so report cards and tables retain clean reading surfaces. */
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(1060px, 108vh);
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    rgba(63, 61, 56, .034) 1px,
+    transparent 1.2px
+  );
+  background-position: 2px 2px;
+  background-size: 40px 40px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, .72) 48%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, .72) 48%,
+    transparent 100%
+  );
+}
+
 .app-shell {
   width: 100%;
   margin: 0;
@@ -62,7 +91,8 @@ main > .error-panel {
 }
 
 /* Local diagnostics: flat full-width band, centered two-column composition,
-   and one restrained pool of warmth behind the actual action card. */
+   one restrained pool of warmth, and a barely visible dot field behind the
+   open space rather than the dense report surfaces. */
 .deep-probe {
   width: 100%;
   min-height: 470px;
@@ -88,6 +118,35 @@ main > .error-panel {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(165, 93, 69, .065), transparent 69%);
   pointer-events: none;
+}
+
+.deep-probe::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    rgba(63, 61, 56, .018) 1px,
+    transparent 1.2px
+  );
+  background-position: 2px 2px;
+  background-size: 42px 42px;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, .52) 18%,
+    rgba(0, 0, 0, .34) 62%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, .52) 18%,
+    rgba(0, 0, 0, .34) 62%,
+    transparent 100%
+  );
 }
 
 .deep-probe > * {
@@ -135,6 +194,11 @@ footer > a { grid-column: 4; }
 @media (max-width: 760px) {
   :root { --content-gutter: 12px; }
 
+  body::after {
+    height: 820px;
+    background-size: 36px 36px;
+  }
+
   .site-header {
     grid-template-columns: var(--content-gutter) minmax(0, 1fr) auto var(--content-gutter);
   }
@@ -161,6 +225,20 @@ footer > a { grid-column: 4; }
     top: 62%;
   }
 
+  .deep-probe::after {
+    background-size: 38px 38px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, .3),
+      transparent 88%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, .3),
+      transparent 88%
+    );
+  }
+
   .information-grid {
     grid-template-columns: minmax(0, 1fr);
     padding-inline: var(--content-gutter);
@@ -180,5 +258,9 @@ footer > a { grid-column: 4; }
 }
 
 @media (prefers-contrast: more) {
-  .deep-probe::before { display: none; }
+  body::after,
+  .deep-probe::before,
+  .deep-probe::after {
+    display: none;
+  }
 }
