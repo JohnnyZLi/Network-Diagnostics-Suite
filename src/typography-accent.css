@@ -1,0 +1,16 @@
+/* Terracotta is the sole decorative typography accent.
+   Data series, category markers, grades, and semantic states retain their colors. */
+
+.text-blue,
+.text-violet,
+.text-green {
+  color: var(--accent);
+}
+
+.preview-grid article h3,
+.methodology-grid article h3,
+.deep-probe__intro h2,
+.information-panel h2,
+.transfer-direction > header > small {
+  color: var(--accent);
+}
