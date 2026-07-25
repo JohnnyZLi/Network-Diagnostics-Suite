@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles.css";
 import "./history.css";
 import "./report-details.css";
+import "./ui-polish.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
