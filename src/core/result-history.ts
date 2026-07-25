@@ -13,8 +13,11 @@ function isDiagnosticResult(value: unknown): value is DiagnosticResult {
   if (!isRecord(value)) return false;
   if (typeof value.id !== "string" || typeof value.startedAt !== "string" || typeof value.completedAt !== "string") return false;
   if (!isRecord(value.download) || !isRecord(value.upload) || !isRecord(value.downloadLatency)) return false;
-  return Number.isFinite(value.download.steadyMbps)
+  return typeof value.download.steadyMbps === "number"
+    && Number.isFinite(value.download.steadyMbps)
+    && typeof value.download.stabilityPercent === "number"
     && Number.isFinite(value.download.stabilityPercent)
+    && typeof value.upload.steadyMbps === "number"
     && Number.isFinite(value.upload.steadyMbps);
 }
 
