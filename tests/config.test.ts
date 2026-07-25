@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TEST_MODES } from "../src/diagnostics/config";
 import { UPLOAD_REQUEST_TIMEOUT_MS } from "../src/diagnostics/http";
+import { uploadRequestBytesForDuration } from "../src/diagnostics/throughput";
 
 describe("test modes", () => {
   it("keeps the quick test below the full test data caps", () => {
@@ -21,6 +22,12 @@ describe("test modes", () => {
   it("keeps Stress upload concurrency within the proven Full-test level", () => {
     expect(TEST_MODES.extended.uploadConcurrency).toBeLessThanOrEqual(TEST_MODES.standard.uploadConcurrency);
     expect(TEST_MODES.extended.concurrency).toBeGreaterThan(TEST_MODES.extended.uploadConcurrency);
+  });
+
+  it("uses longer request bodies for the sustained Stress upload phase", () => {
+    expect(uploadRequestBytesForDuration(TEST_MODES.quick.uploadDurationMs)).toBe(16 * 1024 * 1024);
+    expect(uploadRequestBytesForDuration(TEST_MODES.standard.uploadDurationMs)).toBe(16 * 1024 * 1024);
+    expect(uploadRequestBytesForDuration(TEST_MODES.extended.uploadDurationMs)).toBe(32 * 1024 * 1024);
   });
 
   it("does not contact third-party service targets during the quick test", () => {

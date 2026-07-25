@@ -28,7 +28,7 @@ type SpeedCacheStatus = "HIT" | "MISS" | "BYPASS";
 
 const DOWNLOAD_MIN_BYTES = 1_024;
 const DOWNLOAD_MAX_BYTES = 32 * 1024 * 1024;
-const UPLOAD_MAX_BYTES = 16 * 1024 * 1024;
+const UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
 const CHUNK_SIZE = 1024 * 1024;
 
 export const SPEED_SEGMENT_BYTES = 24 * 1024 * 1024;

@@ -60,7 +60,12 @@ interface SelectedDownloadPath {
 
 const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]);
 const UPLOAD_REQUEST_BYTES = 16 * 1024 * 1024;
+const STRESS_UPLOAD_REQUEST_BYTES = 32 * 1024 * 1024;
 const UPLOAD_INITIAL_STAGGER_MS = 40;
+
+export function uploadRequestBytesForDuration(durationMs: number): number {
+  return durationMs >= 20_000 ? STRESS_UPLOAD_REQUEST_BYTES : UPLOAD_REQUEST_BYTES;
+}
 
 function createPhaseSignal(parent: AbortSignal, durationMs: number): {
   signal: AbortSignal;
@@ -356,6 +361,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
 export async function runUpload(options: ThroughputOptions): Promise<ThroughputSummary> {
   throwIfAborted(options.signal);
   const startedAt = performance.now();
+  const requestBytes = uploadRequestBytesForDuration(options.durationMs);
   const state: UploadTransferState = { bytes: 0, claimedBytes: 0 };
   const phase = createPhaseSignal(options.signal, options.durationMs);
   const sampler = startTimeline(state, startedAt, options.onProgress);
@@ -369,7 +375,7 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputS
 
     let generation = 0;
     while (!phase.signal.aborted && state.claimedBytes < options.capBytes) {
-      const size = Math.min(UPLOAD_REQUEST_BYTES, options.capBytes - state.claimedBytes);
+      const size = Math.min(requestBytes, options.capBytes - state.claimedBytes);
       if (size <= 0) break;
       state.claimedBytes += size;
 
@@ -414,7 +420,7 @@ export async function runUpload(options: ThroughputOptions): Promise<ThroughputS
       targetDurationMs: options.durationMs
     }),
     uploadDelivery: {
-      requestSizeBytes: UPLOAD_REQUEST_BYTES,
+      requestSizeBytes: requestBytes,
       initialStaggerMs: UPLOAD_INITIAL_STAGGER_MS,
       startedRequests,
       completedRequests,
