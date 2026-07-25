@@ -13,6 +13,7 @@ export interface TestModeConfig {
   uploadDurationMs: number;
   uploadCapBytes: number;
   concurrency: number;
+  uploadConcurrency: number;
   includeServices: boolean;
 }
 
@@ -30,6 +31,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadDurationMs: 8_000,
     uploadCapBytes: 128 * 1_000_000,
     concurrency: 6,
+    uploadConcurrency: 6,
     includeServices: false
   },
   standard: {
@@ -45,6 +47,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadDurationMs: 12_000,
     uploadCapBytes: 256 * 1_000_000,
     concurrency: 8,
+    uploadConcurrency: 8,
     includeServices: true
   },
   extended: {
@@ -60,6 +63,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadDurationMs: 20_000,
     uploadCapBytes: 512 * 1_000_000,
     concurrency: 10,
+    uploadConcurrency: 8,
     includeServices: true
   }
 };
