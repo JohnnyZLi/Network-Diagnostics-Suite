@@ -1,6 +1,7 @@
 import { summarizeLatency, summarizeLoadedLatency } from "../core/statistics";
 import type {
   DiagnosticResult,
+  DownloadPathPreference,
   LatencySummary,
   TestMode,
   TestProgress,
@@ -14,6 +15,7 @@ import { runDownload, runUpload } from "./throughput";
 
 interface RunTestOptions {
   mode: TestMode;
+  downloadPath: DownloadPathPreference;
   signal: AbortSignal;
   onProgress: (progress: TestProgress) => void;
 }
@@ -48,6 +50,7 @@ async function runLoadedPhase(
       capBytes,
       concurrency: config.concurrency,
       signal: options.signal,
+      downloadPath: kind === "download" ? options.downloadPath : undefined,
       onProgress: (liveMbps, bytesTransferred) => {
         const elapsedFraction = Math.min(1, bytesTransferred / Math.max(capBytes, 1));
         options.onProgress({
