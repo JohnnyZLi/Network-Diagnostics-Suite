@@ -1,0 +1,14 @@
+/* Exact dot texture used by johnnyli.dev. Imported after the layout overrides. */
+body {
+  background:
+    radial-gradient(rgba(23, 23, 20, 0.035) 0.55px, transparent 0.7px),
+    var(--bg);
+  background-size: 5px 5px;
+}
+
+/* Disable the earlier approximations so only the portfolio pattern remains. */
+body::after,
+.deep-probe::after {
+  display: none;
+  content: none;
+}
