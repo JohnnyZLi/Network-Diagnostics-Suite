@@ -19,6 +19,12 @@
 .advanced-path summary::after { content: "+"; color: var(--muted); font-size: 15px; }
 .advanced-path[open] summary::after { content: "−"; }
 .advanced-path .path-selector { margin: 0 8px 8px; }
+.advanced-path .mode-option { min-height: 62px; }
+.advanced-path .mode-option small {
+  white-space: normal;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .path-recommendation { color: var(--green); }
 
 .recent-results {
