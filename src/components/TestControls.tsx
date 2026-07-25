@@ -1,22 +1,32 @@
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
-import type { TestMode } from "../types/diagnostics";
+import type { DownloadPathPreference, TestMode } from "../types/diagnostics";
 
 interface TestControlsProps {
   mode: TestMode;
+  downloadPath: DownloadPathPreference;
   running: boolean;
   stressConfirmed: boolean;
   onModeChange: (mode: TestMode) => void;
+  onDownloadPathChange: (path: DownloadPathPreference) => void;
   onStressConfirmed: (confirmed: boolean) => void;
   onStart: () => void;
   onCancel: () => void;
 }
 
+const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
+  auto: { name: "Auto", detail: "R2 preferred" },
+  "r2-direct": { name: "R2 direct", detail: "Bypass Worker" },
+  "worker-stream": { name: "Worker", detail: "Current path" }
+};
+
 export function TestControls({
   mode,
+  downloadPath,
   running,
   stressConfirmed,
   onModeChange,
+  onDownloadPathChange,
   onStressConfirmed,
   onStart,
   onCancel
@@ -45,10 +55,29 @@ export function TestControls({
         ))}
       </div>
 
+      <div className="eyebrow path-label">Download path</div>
+      <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
+        {(Object.keys(DOWNLOAD_PATHS) as DownloadPathPreference[]).map((option) => (
+          <button
+            className={downloadPath === option ? "mode-option mode-option--active" : "mode-option"}
+            type="button"
+            role="radio"
+            aria-checked={downloadPath === option}
+            disabled={running}
+            onClick={() => onDownloadPathChange(option)}
+            key={option}
+          >
+            <span>{DOWNLOAD_PATHS[option].name}</span>
+            <small>{DOWNLOAD_PATHS[option].detail}</small>
+          </button>
+        ))}
+      </div>
+
       <div className="test-controls__summary">
         <p>{config.description}</p>
         <dl>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
+          <div><dt>Download</dt><dd>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
           <div><dt>Storage</dt><dd>None</dd></div>
         </dl>
