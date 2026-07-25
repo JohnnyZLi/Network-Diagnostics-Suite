@@ -18,6 +18,11 @@ describe("test modes", () => {
     expect(UPLOAD_REQUEST_TIMEOUT_MS).toBeGreaterThan(TEST_MODES.extended.uploadDurationMs);
   });
 
+  it("keeps Stress upload concurrency within the proven Full-test level", () => {
+    expect(TEST_MODES.extended.uploadConcurrency).toBeLessThanOrEqual(TEST_MODES.standard.uploadConcurrency);
+    expect(TEST_MODES.extended.concurrency).toBeGreaterThan(TEST_MODES.extended.uploadConcurrency);
+  });
+
   it("does not contact third-party service targets during the quick test", () => {
     expect(TEST_MODES.quick.includeServices).toBe(false);
     expect(TEST_MODES.standard.includeServices).toBe(true);
