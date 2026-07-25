@@ -55,7 +55,8 @@ export default function App() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [history, setHistory] = useState<DiagnosticResult[]>(() => loadRecentResults());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [stressConfirmed, setStressConfirmed] = useState(false);
+  const [dataConfirmed, setDataConfirmed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -127,6 +128,8 @@ export default function App() {
     setHistory([]);
   };
 
+  const closeMobileNav = () => setMobileNavOpen(false);
+
   return (
     <>
       <MotionObserver />
@@ -136,12 +139,27 @@ export default function App() {
           <span className="wordmark__mark" aria-hidden="true"><i /><i /><i /></span>
           <span>Network Diagnostics</span>
         </a>
-        <nav aria-label="Primary navigation">
-          <a href="#methodology">Methodology</a>
-          <a href="#privacy">Privacy</a>
-          <a href="https://github.com/JohnnyZLi" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        <nav
+          className={mobileNavOpen ? "site-nav site-nav--open" : "site-nav"}
+          id="primary-navigation"
+          aria-label="Primary navigation"
+        >
+          <a href="#methodology" onClick={closeMobileNav}>Methodology</a>
+          <a href="#privacy" onClick={closeMobileNav}>Privacy</a>
+          <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer" onClick={closeMobileNav}>Source <span aria-hidden="true">↗</span></a>
         </nav>
-        <a className="privacy-status" href="https://johnnyli.dev" aria-label="Return to Johnny Li portfolio">← Portfolio</a>
+        <div className="header-actions">
+          <a className="privacy-status" href="https://johnnyli.dev" aria-label="Return to Johnny Li portfolio">← Portfolio</a>
+          <button
+            className="nav-toggle"
+            type="button"
+            aria-expanded={mobileNavOpen}
+            aria-controls="primary-navigation"
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            {mobileNavOpen ? "Close" : "Menu"}
+          </button>
+        </div>
       </header>
 
       <main>
@@ -161,13 +179,13 @@ export default function App() {
             mode={mode}
             downloadPath={downloadPath}
             running={runState === "running"}
-            stressConfirmed={stressConfirmed}
+            dataConfirmed={dataConfirmed}
             onModeChange={(nextMode) => {
               setMode(nextMode);
-              if (nextMode !== "extended") setStressConfirmed(false);
+              setDataConfirmed(false);
             }}
             onDownloadPathChange={setDownloadPath}
-            onStressConfirmed={setStressConfirmed}
+            onDataConfirmed={setDataConfirmed}
             onStart={startTest}
             onCancel={cancelTest}
           />
@@ -197,7 +215,7 @@ export default function App() {
           <section className="measurement-preview" aria-label="Available measurements">
             <div className="section-heading">
               <span className="eyebrow">Beyond a single number</span>
-              <h2>One run, three network conditions.</h2>
+              <h2>One run, <em className="text-blue">three network conditions.</em></h2>
               <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
             </div>
             <div className="preview-grid">
@@ -219,7 +237,7 @@ export default function App() {
         <section className="methodology" id="methodology">
           <div className="section-heading">
             <span className="eyebrow">Measurement contract</span>
-            <h2>Every number says what it actually measured.</h2>
+            <h2>Every number says <em className="text-violet">what it actually measured.</em></h2>
           </div>
           <div className="methodology-grid">
             <article><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
@@ -236,7 +254,7 @@ export default function App() {
       <footer>
         <span>Network Diagnostics Suite</span>
         <p>Open source · no analytics · no accounts · local-only report history</p>
-        <a href="https://johnnyli.dev">Back to johnnyli.dev ↗</a>
+        <a href="https://johnnyli.dev">Back to johnnyli.dev</a>
       </footer>
       </div>
     </>
