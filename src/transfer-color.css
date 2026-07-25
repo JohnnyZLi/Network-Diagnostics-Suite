@@ -1,4 +1,8 @@
-/* Restrained color accents for the detailed transfer report. */
+/* Category color is used as a marker, not as a surface treatment. */
+
+.transfer-panel .text-violet {
+  color: var(--accent);
+}
 
 .transfer-summary-grid article {
   position: relative;
@@ -11,53 +15,71 @@
 .transfer-summary-grid article::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  opacity: .68;
+  inset: auto;
+  top: 20px;
+  right: 20px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  opacity: .78;
 }
 
 .transfer-summary-grid article:nth-child(1)::before { background: var(--accent); }
 .transfer-summary-grid article:nth-child(2)::before { background: var(--blue); }
 .transfer-summary-grid article:nth-child(3)::before { background: var(--violet); }
 
-.transfer-summary-grid article:nth-child(1) > span,
-.transfer-summary-grid article:nth-child(1) > strong { color: var(--accent); }
+.transfer-summary-grid article > span {
+  color: var(--muted);
+  opacity: 1;
+}
 
-.transfer-summary-grid article:nth-child(2) > span,
-.transfer-summary-grid article:nth-child(2) > strong { color: var(--blue); }
-
-.transfer-summary-grid article:nth-child(3) > span,
-.transfer-summary-grid article:nth-child(3) > strong { color: var(--violet); }
-
-.transfer-summary-grid article > span { opacity: .8; }
-.transfer-summary-grid article > strong { opacity: .94; }
+.transfer-summary-grid article > strong {
+  color: var(--text);
+  opacity: 1;
+}
 
 .transfer-direction[aria-labelledby="download-transfer-title"],
 .transfer-direction[aria-labelledby="upload-transfer-title"] {
   border-color: var(--line-strong);
   background: rgba(251, 248, 242, .72);
+  box-shadow: none;
 }
 
-.transfer-direction[aria-labelledby="download-transfer-title"] {
-  box-shadow: inset 0 3px 0 rgba(61, 100, 180, .58);
+.transfer-direction__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
 }
 
-.transfer-direction[aria-labelledby="upload-transfer-title"] {
-  box-shadow: inset 0 3px 0 rgba(116, 82, 176, .56);
+.transfer-direction__eyebrow::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: .82;
 }
 
-.transfer-direction[aria-labelledby="download-transfer-title"] .transfer-direction__eyebrow,
+.transfer-direction[aria-labelledby="download-transfer-title"] .transfer-direction__eyebrow::after {
+  background: var(--blue);
+}
+
+.transfer-direction[aria-labelledby="upload-transfer-title"] .transfer-direction__eyebrow::after {
+  background: var(--violet);
+}
+
 .transfer-direction[aria-labelledby="download-transfer-title"] > header > small {
   color: var(--blue);
 }
 
-.transfer-direction[aria-labelledby="upload-transfer-title"] .transfer-direction__eyebrow,
 .transfer-direction[aria-labelledby="upload-transfer-title"] > header > small {
   color: var(--violet);
 }
 
 .transfer-direction h4,
-.transfer-direction .transfer-detail h5 {
+.transfer-direction .transfer-detail h5,
+.transfer-direction .transfer-card strong,
+.transfer-direction .transfer-fact-list dd {
   color: var(--text);
 }
 
@@ -70,16 +92,6 @@
 .transfer-direction .transfer-card p {
   color: var(--muted);
   opacity: 1;
-}
-
-.transfer-direction[aria-labelledby="download-transfer-title"] .transfer-card strong,
-.transfer-direction[aria-labelledby="download-transfer-title"] .transfer-fact-list dd {
-  color: var(--blue);
-}
-
-.transfer-direction[aria-labelledby="upload-transfer-title"] .transfer-card strong,
-.transfer-direction[aria-labelledby="upload-transfer-title"] .transfer-fact-list dd {
-  color: var(--violet);
 }
 
 .transfer-direction .transfer-fact-list div {
