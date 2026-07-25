@@ -9,7 +9,7 @@ interface ServiceTarget {
   successNote: string;
 }
 
-const SERVICE_TARGETS: ServiceTarget[] = [
+export const SERVICE_TARGETS: ServiceTarget[] = [
   {
     id: "cloudflare",
     name: "Cloudflare",
