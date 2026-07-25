@@ -6,10 +6,10 @@ interface TestControlsProps {
   mode: TestMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
-  stressConfirmed: boolean;
+  dataConfirmed: boolean;
   onModeChange: (mode: TestMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
-  onStressConfirmed: (confirmed: boolean) => void;
+  onDataConfirmed: (confirmed: boolean) => void;
   onStart: () => void;
   onCancel: () => void;
 }
@@ -24,16 +24,16 @@ export function TestControls({
   mode,
   downloadPath,
   running,
-  stressConfirmed,
+  dataConfirmed,
   onModeChange,
   onDownloadPathChange,
-  onStressConfirmed,
+  onDataConfirmed,
   onStart,
   onCancel
 }: TestControlsProps) {
   const config = TEST_MODES[mode];
   const transferCap = config.downloadCapBytes + config.uploadCapBytes;
-  const requiresConfirmation = mode === "extended";
+  const requiresConfirmation = mode !== "quick";
 
   return (
     <section className="test-controls" aria-labelledby="test-controls-title">
@@ -86,14 +86,21 @@ export function TestControls({
         </div>
       </details>
 
+      {!running && (
+        <div className={`data-use-note data-use-note--${mode}`}>
+          <strong>Data use</strong>
+          <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
+        </div>
+      )}
+
       {requiresConfirmation && !running && (
         <label className="data-confirmation">
           <input
             type="checkbox"
-            checked={stressConfirmed}
-            onChange={(event) => onStressConfirmed(event.target.checked)}
+            checked={dataConfirmed}
+            onChange={(event) => onDataConfirmed(event.target.checked)}
           />
-          <span>I understand this test may transfer up to {formatBytes(transferCap)}.</span>
+          <span>I understand this {config.name.toLowerCase()} test may transfer up to {formatBytes(transferCap)}.</span>
         </label>
       )}
 
@@ -106,10 +113,10 @@ export function TestControls({
           type="button"
           className="run-button"
           onClick={onStart}
-          disabled={requiresConfirmation && !stressConfirmed}
+          disabled={requiresConfirmation && !dataConfirmed}
         >
           Run {config.name.toLowerCase()} test
-          <span aria-hidden="true">↗</span>
+          <span aria-hidden="true">→</span>
         </button>
       )}
     </section>
