@@ -2,6 +2,8 @@ import type { EdgeMetadata } from "./api";
 
 export type TestMode = "quick" | "standard" | "extended";
 export type TestPhase = "idle" | "download" | "upload" | "services" | "complete";
+export type DownloadPathPreference = "auto" | "r2-direct" | "worker-stream";
+export type DownloadImplementation = "r2-direct-v1" | "worker-stream-v4";
 
 export interface TimedSample {
   elapsedMs: number;
@@ -39,7 +41,14 @@ export type DownloadStreamRejectionReason =
   | "wrong-segment-count"
   | "wrong-content-length"
   | "truncated-body"
-  | "stream-error";
+  | "stream-error"
+  | "r2-fetch-error"
+  | "r2-status"
+  | "r2-missing-body"
+  | "r2-wrong-size"
+  | "r2-wrong-range"
+  | "r2-truncated-body"
+  | "r2-stream-error";
 
 export interface DownloadStreamRejection {
   reason: DownloadStreamRejectionReason;
@@ -49,9 +58,18 @@ export interface DownloadStreamRejection {
   segmentCount: number | null;
   contentLength: number | null;
   receivedBytes: number | null;
+  contentRange?: string | null;
 }
 
 export interface DownloadDeliverySummary {
+  requestedPath: DownloadPathPreference;
+  selectedPath: DownloadImplementation;
+  pathFallbackReason: string | null;
+  r2Origin: string;
+  r2ObjectBytes: number;
+  r2RangeBytes: number;
+  r2ProbeStatus: "available" | "unavailable" | "not-requested";
+  r2Requests: number;
   staticRequests: number;
   workerFallbackRequests: number;
   rejectedStaticRequests: number;
@@ -68,7 +86,7 @@ export interface DownloadDeliverySummary {
   requestGenerations: DownloadRequestGenerationSummary[];
   warmupBytes: number;
   warmupCachedBytes: number;
-  warmupSource: "static" | "worker";
+  warmupSource: "r2" | "static" | "worker";
   warmupCacheStatus: string | null;
 }
 
