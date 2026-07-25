@@ -8,6 +8,7 @@ export const R2_DOWNLOAD_ORIGIN = "https://speed.johnnyli.dev";
 export const R2_DOWNLOAD_OBJECT_PATH = "/network-diagnostics-speed-v1.bin";
 export const R2_DOWNLOAD_OBJECT_BYTES = 256 * 1024 * 1024;
 export const R2_DOWNLOAD_RANGE_BYTES = 192 * 1024 * 1024;
+export const UPLOAD_REQUEST_TIMEOUT_MS = 30_000;
 
 const STATIC_DOWNLOAD_STREAM = `${STATIC_DOWNLOAD_PATH_PREFIX}stream`;
 const STATIC_DOWNLOAD_WARM = `${STATIC_DOWNLOAD_PATH_PREFIX}warm`;
@@ -510,7 +511,10 @@ export function uploadChunk(
 
     xhr.open("POST", `/api/upload?n=${crypto.randomUUID()}`);
     xhr.responseType = "json";
-    xhr.timeout = 15_000;
+    // The Stress profile can keep ten 16 MiB uploads in flight. At an aggregate
+    // rate near 80–100 Mbps, an individual request can legitimately take more
+    // than 15 seconds. The phase AbortSignal still ends all requests on time.
+    xhr.timeout = UPLOAD_REQUEST_TIMEOUT_MS;
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.upload.onprogress = (event) => {
       const delta = Math.max(0, event.loaded - reportedBytes);
