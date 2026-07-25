@@ -11,6 +11,12 @@ import { MetricCard } from "./MetricCard";
 import { ServiceMatrix } from "./ServiceMatrix";
 import { Sparkline } from "./Sparkline";
 
+interface GenerationSummary {
+  generation: number;
+  requests: number;
+  bytes: number;
+}
+
 function worstGrade(...summaries: LoadedLatencySummary[]): LoadedLatencySummary["grade"] {
   const rank: Record<LoadedLatencySummary["grade"], number> = { "—": -1, "A+": 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
   return summaries.reduce((worst, current) => rank[current.grade] > rank[worst] ? current.grade : worst, "—" as LoadedLatencySummary["grade"]);
@@ -38,11 +44,69 @@ function downloadMetricDetail(summary: ThroughputSummary): string {
   return `${formatRate(summary.mbps)} whole-phase · ${summary.stabilityPercent.toFixed(0)}% stability · ${formatBytes(summary.bytes)}`;
 }
 
-function sampleDescription(summary: ThroughputSummary): string {
-  if (!summary.samples || summary.samples.length === 0) return "Single sustained sample";
-  return summary.samples
-    .map((sample) => `S${sample.sample} ${formatRate(sample.steadyMbps)} Mbps · ${sample.stabilityPercent.toFixed(0)}%`)
-    .join(" · ");
+function DownloadSampleCards({ summary }: { summary: ThroughputSummary }) {
+  if (!summary.samples || summary.samples.length === 0) {
+    return <p className="transfer-detail__empty">Single sustained sample</p>;
+  }
+
+  return (
+    <ul className="transfer-card-grid transfer-card-grid--samples" aria-label="Download sample results">
+      {summary.samples.map((sample) => (
+        <li className="transfer-card" key={sample.sample}>
+          <span>Sample {sample.sample}</span>
+          <strong>{formatRate(sample.steadyMbps)} <small>Mbps</small></strong>
+          <p>{sample.stabilityPercent.toFixed(0)}% stability</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function LifecycleCards({
+  label,
+  started,
+  completed,
+  interrupted
+}: {
+  label: string;
+  started: number;
+  completed: number;
+  interrupted: number;
+}) {
+  return (
+    <ul className="transfer-card-grid transfer-card-grid--lifecycle" aria-label={`${label} request lifecycle`}>
+      <li className="transfer-card">
+        <span>Started</span>
+        <strong>{started}</strong>
+      </li>
+      <li className="transfer-card">
+        <span>Completed</span>
+        <strong>{completed}</strong>
+      </li>
+      <li className="transfer-card">
+        <span>Stopped at phase end</span>
+        <strong>{interrupted}</strong>
+      </li>
+    </ul>
+  );
+}
+
+function GenerationCards({ generations }: { generations: GenerationSummary[] }) {
+  if (generations.length === 0) {
+    return <p className="transfer-detail__empty">Unavailable</p>;
+  }
+
+  return (
+    <ul className="transfer-card-grid transfer-card-grid--generations" aria-label="Request generations">
+      {generations.map((generation) => (
+        <li className="transfer-card" key={generation.generation}>
+          <span>Generation {generation.generation}</span>
+          <strong>{generation.requests} {generation.requests === 1 ? "request" : "requests"}</strong>
+          <p>{formatBytes(generation.bytes)}</p>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function cacheBreakdown(delivery: DownloadDeliverySummary | undefined): string {
@@ -72,20 +136,6 @@ function warmupDescription(delivery: DownloadDeliverySummary | undefined): strin
 function pathDescription(delivery: DownloadDeliverySummary | undefined): string {
   if (!delivery) return "Unavailable";
   return delivery.selectedPath === "r2-direct-v1" ? "R2 custom domain · direct" : "Worker-composed stream";
-}
-
-function requestGenerationDescription(delivery: DownloadDeliverySummary | undefined): string {
-  if (!delivery || delivery.requestGenerations.length === 0) return "Unavailable";
-  return delivery.requestGenerations
-    .map((generation) => `G${generation.generation}: ${generation.requests} req · ${formatBytes(generation.bytes)}`)
-    .join(" · ");
-}
-
-function uploadGenerationDescription(delivery: UploadDeliverySummary | undefined): string {
-  if (!delivery || delivery.requestGenerations.length === 0) return "Unavailable";
-  return delivery.requestGenerations
-    .map((generation) => `G${generation.generation}: ${generation.requests} req · ${formatBytes(generation.bytes)}`)
-    .join(" · ");
 }
 
 function rejectionDescription(delivery: DownloadDeliverySummary | undefined): string {
@@ -204,26 +254,109 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <div><dt>Requested download path</dt><dd>{delivery?.requestedPath ?? "Unavailable"}</dd></div>
             <div><dt>Selected download path</dt><dd>{pathDescription(delivery)}</dd></div>
             <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unavailable"}</dd></div>
-            <div><dt>Download aggregation</dt><dd>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0}` : "Single sample"}</dd></div>
-            <div><dt>Download samples</dt><dd>{sampleDescription(result.download)}</dd></div>
             <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
             <div><dt>Path probe</dt><dd>{warmupDescription(delivery)}</dd></div>
-            <div><dt>Logical response</dt><dd>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</dd></div>
-            <div><dt>R2 requests</dt><dd>{delivery?.r2Requests ?? "Unavailable"}</dd></div>
-            <div><dt>Worker stream requests</dt><dd>{delivery?.staticRequests ?? "Unavailable"}</dd></div>
-            <div><dt>Rejected responses</dt><dd>{rejectionDescription(delivery)}</dd></div>
-            <div><dt>Download lifecycle</dt><dd>{delivery ? `${delivery.startedRequests} started · ${delivery.completedRequests} completed · ${delivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
-            <div><dt>Download replacements</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
-            <div><dt>Download generations</dt><dd>{requestGenerationDescription(delivery)}</dd></div>
-            <div><dt>Dynamic fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
-            <div><dt>Upload request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
-            <div><dt>Upload lifecycle</dt><dd>{uploadDelivery ? `${uploadDelivery.startedRequests} started · ${uploadDelivery.completedRequests} completed · ${uploadDelivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
-            <div><dt>Upload replacements</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
-            <div><dt>Upload generations</dt><dd>{uploadGenerationDescription(uploadDelivery)}</dd></div>
-            <div><dt>Data transferred</dt><dd>{formatBytes(result.dataUsedBytes)}</dd></div>
           </dl>
         </section>
       </div>
+
+      <section className="report-panel transfer-panel">
+        <div className="report-panel__heading">
+          <div><span className="eyebrow">Transfer details</span><h3>How the sustained requests ran</h3></div>
+          <p>Requests shown as stopped at phase end were still transferring when the timed measurement ended. That is expected during a sustained test.</p>
+        </div>
+
+        <div className="transfer-summary-grid">
+          <article>
+            <span>Total data</span>
+            <strong>{formatBytes(result.dataUsedBytes)}</strong>
+          </article>
+          <article>
+            <span>Download response size</span>
+            <strong>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</strong>
+          </article>
+          <article>
+            <span>Upload request size</span>
+            <strong>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</strong>
+          </article>
+        </div>
+
+        <div className="transfer-direction-grid">
+          <section className="transfer-direction" aria-labelledby="download-transfer-title">
+            <header>
+              <div>
+                <span className="transfer-direction__eyebrow">Download</span>
+                <h4 id="download-transfer-title">Sample and request activity</h4>
+              </div>
+              <small>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0}` : "Single sample"}</small>
+            </header>
+
+            <div className="transfer-detail">
+              <h5>Sample results</h5>
+              <DownloadSampleCards summary={result.download} />
+            </div>
+
+            <div className="transfer-detail">
+              <h5>Request lifecycle</h5>
+              {delivery ? (
+                <LifecycleCards
+                  label="Download"
+                  started={delivery.startedRequests}
+                  completed={delivery.completedRequests}
+                  interrupted={delivery.interruptedRequests}
+                />
+              ) : <p className="transfer-detail__empty">Unavailable</p>}
+            </div>
+
+            <div className="transfer-detail">
+              <h5>Request generations</h5>
+              <GenerationCards generations={delivery?.requestGenerations ?? []} />
+            </div>
+
+            <dl className="transfer-fact-list">
+              <div><dt>R2 requests</dt><dd>{delivery?.r2Requests ?? "Unavailable"}</dd></div>
+              <div><dt>Worker stream requests</dt><dd>{delivery?.staticRequests ?? "Unavailable"}</dd></div>
+              <div><dt>Rejected responses</dt><dd>{rejectionDescription(delivery)}</dd></div>
+              <div><dt>Replacement requests</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
+              <div><dt>Dynamic fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
+            </dl>
+          </section>
+
+          <section className="transfer-direction" aria-labelledby="upload-transfer-title">
+            <header>
+              <div>
+                <span className="transfer-direction__eyebrow">Upload</span>
+                <h4 id="upload-transfer-title">Request activity</h4>
+              </div>
+              <small>{formatRate(result.upload.steadyMbps)} Mbps steady</small>
+            </header>
+
+            <div className="transfer-detail">
+              <h5>Request lifecycle</h5>
+              {uploadDelivery ? (
+                <LifecycleCards
+                  label="Upload"
+                  started={uploadDelivery.startedRequests}
+                  completed={uploadDelivery.completedRequests}
+                  interrupted={uploadDelivery.interruptedRequests}
+                />
+              ) : <p className="transfer-detail__empty">Unavailable</p>}
+            </div>
+
+            <div className="transfer-detail">
+              <h5>Request generations</h5>
+              <GenerationCards generations={uploadDelivery?.requestGenerations ?? []} />
+            </div>
+
+            <dl className="transfer-fact-list">
+              <div><dt>Request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
+              <div><dt>Initial stagger</dt><dd>{uploadDelivery ? `${uploadDelivery.initialStaggerMs} ms` : "Unavailable"}</dd></div>
+              <div><dt>Replacement requests</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
+              <div><dt>Transferred</dt><dd>{formatBytes(result.upload.bytes)}</dd></div>
+            </dl>
+          </section>
+        </div>
+      </section>
 
       {result.services.length > 0 && (
         <section className="report-panel">
