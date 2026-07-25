@@ -64,7 +64,7 @@ export function DeepProbePanel() {
             onChange={(event) => void importFile(event.target.files?.[0])}
             id="probe-report"
           />
-          <label htmlFor="probe-report">Import probe report <span aria-hidden="true">↗</span></label>
+          <label htmlFor="probe-report">Import probe report <span aria-hidden="true">⇧</span></label>
           <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite#native-deep-probe" target="_blank" rel="noreferrer">Get a native build <span aria-hidden="true">↗</span></a>
           <small>Schema 1.0–1.1 · maximum 5 MB · processed locally</small>
           {error && <p role="alert">{error}</p>}
