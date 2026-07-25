@@ -63,7 +63,8 @@ describe("download delivery summary", () => {
       marker: "stream-edge-v4",
       logicalBytes: STATIC_DOWNLOAD_STREAM_BYTES,
       segmentCount: 4,
-      contentLength: 32 * 1024 * 1024
+      contentLength: 32 * 1024 * 1024,
+      receivedBytes: null
     }];
 
     const summary = summarizeDownloadDelivery(

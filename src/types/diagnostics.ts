@@ -37,7 +37,9 @@ export type DownloadStreamRejectionReason =
   | "wrong-marker"
   | "wrong-logical-size"
   | "wrong-segment-count"
-  | "wrong-content-length";
+  | "wrong-content-length"
+  | "truncated-body"
+  | "stream-error";
 
 export interface DownloadStreamRejection {
   reason: DownloadStreamRejectionReason;
@@ -46,6 +48,7 @@ export interface DownloadStreamRejection {
   logicalBytes: number | null;
   segmentCount: number | null;
   contentLength: number | null;
+  receivedBytes: number | null;
 }
 
 export interface DownloadDeliverySummary {

@@ -14,6 +14,15 @@ interface CloudflareRequestProperties {
   tlsVersion?: unknown;
 }
 
+interface ByteStreamPair {
+  readable: ReadableStream<Uint8Array>;
+  writable: WritableStream<Uint8Array>;
+}
+
+interface FixedLengthStreamConstructor {
+  new(length: number | bigint): ByteStreamPair;
+}
+
 type WorkerRequest = Request & { cf?: CloudflareRequestProperties };
 type SpeedCacheStatus = "HIT" | "MISS" | "BYPASS";
 
@@ -193,52 +202,51 @@ function aggregateCacheAge(segments: LoadedSpeedSegment[]): number | null {
   return ages.length > 0 ? Math.max(...ages) : null;
 }
 
+function createSpeedOutputStream(): ByteStreamPair {
+  const FixedLengthStream = (
+    globalThis as typeof globalThis & { FixedLengthStream?: FixedLengthStreamConstructor }
+  ).FixedLengthStream;
+  if (FixedLengthStream) return new FixedLengthStream(SPEED_STREAM_BYTES);
+  return new TransformStream<Uint8Array, Uint8Array>();
+}
+
+async function pipeSpeedSegments(
+  responses: Response[],
+  writable: WritableStream<Uint8Array>
+): Promise<void> {
+  for (const [index, response] of responses.entries()) {
+    if (!response.body) throw new Error(`Speed segment ${index} did not include a body.`);
+    await response.body.pipeTo(writable, { preventClose: true });
+  }
+
+  const writer = writable.getWriter();
+  try {
+    await writer.close();
+  } finally {
+    writer.releaseLock();
+  }
+}
+
 export function createConcatenatedBody(responses: Response[]): ReadableStream<Uint8Array> {
-  let responseIndex = 0;
-  let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      while (responseIndex < responses.length) {
-        if (!activeReader) {
-          const body = responses[responseIndex]?.body;
-          if (!body) {
-            controller.error(new Error(`Speed segment ${responseIndex} did not include a body.`));
-            return;
-          }
-          activeReader = body.getReader();
-        }
-
-        const { done, value } = await activeReader.read();
-        if (done) {
-          activeReader.releaseLock();
-          activeReader = null;
-          responseIndex += 1;
-          continue;
-        }
-
-        controller.enqueue(value);
-        return;
-      }
-
-      controller.close();
-    },
-    async cancel(reason) {
-      if (activeReader) {
-        await activeReader.cancel(reason);
-        activeReader = null;
-      }
-      await Promise.all(
-        responses.slice(responseIndex + 1).map(async (response) => {
-          try {
-            await response.body?.cancel(reason);
-          } catch {
-            // Ignore already-closed segment bodies.
-          }
-        })
-      );
+  const { readable, writable } = createSpeedOutputStream();
+  void pipeSpeedSegments(responses, writable).catch(async (error) => {
+    try {
+      await writable.abort(error);
+    } catch {
+      // The stream may already be closed or aborted by pipeTo.
     }
   });
+  return readable;
+}
+
+async function cancelSpeedResponses(responses: Response[]): Promise<void> {
+  await Promise.all(responses.map(async (response) => {
+    try {
+      await response.body?.cancel("head-request-complete");
+    } catch {
+      // Ignore already-closed segment bodies.
+    }
+  }));
 }
 
 export function createBrowserSpeedStreamResponse(
@@ -258,11 +266,16 @@ export function createBrowserSpeedStreamResponse(
     "X-NDS-Cache-Status": cacheStatus,
     "X-NDS-Logical-Bytes": SPEED_STREAM_BYTES.toString(),
     "X-NDS-Payload": SPEED_PAYLOAD_MARKER,
-    "X-NDS-Segment-Count": SPEED_SEGMENT_COUNT.toString()
+    "X-NDS-Segment-Count": SPEED_SEGMENT_COUNT.toString(),
+    "X-NDS-Stream-Mode": "fixed-length-pipe-v1"
   });
   if (ageSeconds !== null) headers.set("X-NDS-Cache-Age", ageSeconds.toString());
 
-  return new Response(headOnly ? null : createConcatenatedBody(responses), { status: 200, headers });
+  if (headOnly) {
+    void cancelSpeedResponses(responses);
+    return new Response(null, { status: 200, headers });
+  }
+  return new Response(createConcatenatedBody(responses), { status: 200, headers });
 }
 
 async function handleSpeedWarm(request: Request, env: Env): Promise<Response> {
