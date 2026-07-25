@@ -157,26 +157,57 @@ function buildFindings(result: DiagnosticResult): string[] {
   const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
   const delivery = result.download.delivery;
   const uploadDelivery = result.upload.uploadDelivery;
-  if (result.download.aggregation === "median" && (result.download.samples?.length ?? 0) > 1) findings.push(`The displayed download rate is the median of ${result.download.samples?.length ?? 0} shorter samples, reducing sensitivity to one unusually fast or slow interval.`);
+
   if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
   if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
-  if (worstLoadedIncrease > 30) findings.push("Latency rises materially under load, which suggests queueing or bufferbloat.");
-  if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
-  if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
+  if (worstLoadedIncrease > 30) findings.push(`Latency rose by as much as ${formatLatency(worstLoadedIncrease)} ms under load, which suggests queueing or bufferbloat.`);
+  if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap before the timed sample finished.");
+  if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap before the timed sample finished.");
   if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
   if (result.download.qualification === "declining" || result.upload.qualification === "declining") findings.push("At least one direction slowed materially during the measured phase, so its average hides a declining second half.");
-  if (delivery?.pathFallbackReason) findings.push(`Download path fallback: ${delivery.pathFallbackReason}`);
-  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more download responses failed validation; rejection details are included in the exported report.");
+  if (delivery?.pathFallbackReason) findings.push(`The preferred download path fell back: ${delivery.pathFallbackReason}`);
+  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more download responses failed validation.");
   if (delivery && delivery.replacementRequests > 0) findings.push("One or more long-lived download responses completed early and required a replacement request.");
   if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests used the dynamically generated Worker fallback.");
   if (uploadDelivery && uploadDelivery.replacementRequests > 0) findings.push("One or more upload requests completed during the phase and required a replacement request.");
   if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
     findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
   }
-  if (delivery?.selectedPath === "r2-direct-v1" && delivery.protocols.length === 0) findings.push("The browser did not expose the direct R2 transport protocol; verify the Timing-Allow-Origin response header.");
+  if (delivery?.selectedPath === "r2-direct-v1" && delivery.protocols.length === 0) findings.push("The browser did not expose the direct R2 transport protocol.");
   if (result.services.some((service) => !service.reachable)) findings.push("At least one common service did not answer the browser reachability check.");
   if (findings.length === 0) findings.push("No obvious instability appeared in this browser test.");
   return findings;
+}
+
+function buildRecommendations(result: DiagnosticResult): string[] {
+  const recommendations = new Set<string>();
+  const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
+
+  if (result.idleLatency.lossPercent > 0 || (result.idleLatency.jitterMs ?? 0) > 20) {
+    recommendations.add("Repeat the test over Ethernet, or close to the access point, to separate Wi-Fi conditions from the wider Internet path.");
+  }
+  if (worstLoadedIncrease > 30) {
+    recommendations.add("Enable Smart Queue Management on the router, or limit heavy uploads and downloads, then compare the loaded-latency grade again.");
+  }
+  if (result.download.qualification === "cap-limited" || result.upload.qualification === "cap-limited") {
+    recommendations.add("Use a longer profile when you need a more representative result for a fast connection.");
+  }
+  if (
+    result.download.qualification === "still-ramping"
+    || result.upload.qualification === "still-ramping"
+    || result.download.qualification === "declining"
+    || result.upload.qualification === "declining"
+  ) {
+    recommendations.add("Run the test again after background traffic settles; compare several runs rather than relying on one transient sample.");
+  }
+  if (result.services.some((service) => !service.reachable)) {
+    recommendations.add("Retry the unreachable service directly before treating the result as an outage; browser privacy controls and extensions can also block these checks.");
+  }
+  if (recommendations.size === 0) {
+    recommendations.add("No immediate change is suggested. Save this report as a baseline and compare it with a future run if the connection feels worse.");
+  }
+
+  return [...recommendations].slice(0, 4);
 }
 
 interface ResultDashboardProps {
@@ -189,14 +220,16 @@ interface ResultDashboardProps {
 export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDashboardProps) {
   const grade = worstGrade(result.downloadLatency, result.uploadLatency);
   const findings = buildFindings(result);
+  const recommendations = buildRecommendations(result);
   const delivery = result.download.delivery;
   const uploadDelivery = result.upload.uploadDelivery;
+
   return (
     <section className="results" aria-labelledby="results-title">
       <div className="section-heading section-heading--actions">
         <div>
           <span className="eyebrow">Completed {new Date(result.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-          <h2 id="results-title">Connection report</h2>
+          <h2 id="results-title">Connection <em className="text-accent">report</em></h2>
         </div>
         <div className="result-actions">
           <button type="button" onClick={onCopy}>{copyLabel}</button>
@@ -215,158 +248,177 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
         <MetricCard label="Loaded-latency grade" value={grade} detail={`+${formatLatency(Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0))} ms worst case`} tone="neutral" />
       </div>
 
-      <section className="report-panel scope-panel">
-        <div className="report-panel__heading">
-          <div><span className="eyebrow">Measurement scope</span><h3>Internet path, not an isolated access-line benchmark</h3></div>
-          <p>The browser result includes this device, the local link, router, Internet service provider, route, and the selected Cloudflare test endpoint.</p>
-        </div>
-        <div className="scope-grid">
-          <article><span>Path</span><strong>{pathDescription(delivery)}</strong><p>Remote endpoint and route remain part of the result.</p></article>
-          <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0} samples.` : result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
-          <article><span>Upload sample</span><strong className={qualificationTone(result.upload)}>{qualificationLabel(result.upload)}</strong><p>{result.upload.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
-        </div>
-        <p className="scope-panel__note">To remove the public server and ISP from the equation, run the native probe’s LAN server on a second wired machine and test it with <code>--lan-target</code>.</p>
-      </section>
+      <div className="report-columns report-columns--priority">
+        <section className="report-panel findings-panel report-panel--accent">
+          <span className="eyebrow">Interpretation</span>
+          <h3 className="text-accent">What stood out</h3>
+          <ul>{findings.map((finding) => <li key={finding}>{finding}</li>)}</ul>
+        </section>
+        <section className="report-panel recommendations-panel report-panel--green">
+          <span className="eyebrow">Next steps</span>
+          <h3 className="text-green">What to try next</h3>
+          <ul>{recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul>
+        </section>
+      </div>
 
-      <section className="report-panel">
+      <section className="report-panel latency-panel">
         <div className="report-panel__heading">
-          <div><span className="eyebrow">Distribution</span><h3>Latency under each condition</h3></div>
+          <div><span className="eyebrow">Distribution</span><h3><span className="text-violet">Latency</span> under each condition</h3></div>
           <p>Request loss is a browser-level timeout rate, not raw Internet Protocol packet loss.</p>
         </div>
         <LatencyTable idle={result.idleLatency} download={result.downloadLatency} upload={result.uploadLatency} />
       </section>
 
-      <div className="report-columns">
-        <section className="report-panel findings-panel">
-          <span className="eyebrow">Interpretation</span>
-          <h3>What stood out</h3>
-          <ul>{findings.map((finding) => <li key={finding}>{finding}</li>)}</ul>
-        </section>
-        <section className="report-panel edge-panel">
-          <span className="eyebrow">Test path</span>
-          <h3>Edge session</h3>
-          <dl>
-            <div><dt>Scope</dt><dd>Internet path · endpoint included</dd></div>
-            <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
-            <div><dt>Worker edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
-            <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>
-            <div><dt>Metadata protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
-            <div><dt>Requested download path</dt><dd>{delivery?.requestedPath ?? "Unavailable"}</dd></div>
-            <div><dt>Selected download path</dt><dd>{pathDescription(delivery)}</dd></div>
-            <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unavailable"}</dd></div>
-            <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
-            <div><dt>Path probe</dt><dd>{warmupDescription(delivery)}</dd></div>
-          </dl>
-        </section>
-      </div>
+      <details className="technical-details">
+        <summary>
+          <span>
+            <span className="eyebrow">Advanced report</span>
+            <strong><span className="text-blue">Technical measurement details</span></strong>
+            <small>Scope, edge path, cache behavior, request lifecycle, and service reachability.</small>
+          </span>
+          <span className="technical-details__action" aria-hidden="true">Expand</span>
+        </summary>
 
-      <section className="report-panel transfer-panel">
-        <div className="report-panel__heading">
-          <div><span className="eyebrow">Transfer details</span><h3>How the sustained requests ran</h3></div>
-          <p>Requests shown as stopped at phase end were still transferring when the timed measurement ended. That is expected during a sustained test.</p>
-        </div>
-
-        <div className="transfer-summary-grid">
-          <article>
-            <span>Total data</span>
-            <strong>{formatBytes(result.dataUsedBytes)}</strong>
-          </article>
-          <article>
-            <span>Download response size</span>
-            <strong>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</strong>
-          </article>
-          <article>
-            <span>Upload request size</span>
-            <strong>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</strong>
-          </article>
-        </div>
-
-        <div className="transfer-direction-grid">
-          <section className="transfer-direction" aria-labelledby="download-transfer-title">
-            <header>
-              <div>
-                <span className="transfer-direction__eyebrow">Download</span>
-                <h4 id="download-transfer-title">Sample and request activity</h4>
-              </div>
-              <small>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0}` : "Single sample"}</small>
-            </header>
-
-            <div className="transfer-detail">
-              <h5>Sample results</h5>
-              <DownloadSampleCards summary={result.download} />
+        <div className="technical-details__content">
+          <section className="report-panel scope-panel">
+            <div className="report-panel__heading">
+              <div><span className="eyebrow">Measurement scope</span><h3><span className="text-amber">Internet path</span>, not an isolated access-line benchmark</h3></div>
+              <p>The browser result includes this device, the local link, router, Internet service provider, route, and the selected Cloudflare test endpoint.</p>
             </div>
-
-            <div className="transfer-detail">
-              <h5>Request lifecycle</h5>
-              {delivery ? (
-                <LifecycleCards
-                  label="Download"
-                  started={delivery.startedRequests}
-                  completed={delivery.completedRequests}
-                  interrupted={delivery.interruptedRequests}
-                />
-              ) : <p className="transfer-detail__empty">Unavailable</p>}
+            <div className="scope-grid">
+              <article><span>Path</span><strong>{pathDescription(delivery)}</strong><p>Remote endpoint and route remain part of the result.</p></article>
+              <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0} samples.` : result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
+              <article><span>Upload sample</span><strong className={qualificationTone(result.upload)}>{qualificationLabel(result.upload)}</strong><p>{result.upload.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
             </div>
+            <p className="scope-panel__note">To remove the public server and ISP from the equation, run the native probe’s LAN server on a second wired machine and test it with <code>--lan-target</code>.</p>
+          </section>
 
-            <div className="transfer-detail">
-              <h5>Request generations</h5>
-              <GenerationCards generations={delivery?.requestGenerations ?? []} />
-            </div>
-
-            <dl className="transfer-fact-list">
-              <div><dt>R2 requests</dt><dd>{delivery?.r2Requests ?? "Unavailable"}</dd></div>
-              <div><dt>Worker stream requests</dt><dd>{delivery?.staticRequests ?? "Unavailable"}</dd></div>
-              <div><dt>Rejected responses</dt><dd>{rejectionDescription(delivery)}</dd></div>
-              <div><dt>Replacement requests</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
-              <div><dt>Dynamic fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
+          <section className="report-panel edge-panel">
+            <span className="eyebrow">Test path</span>
+            <h3 className="text-blue">Edge session</h3>
+            <dl>
+              <div><dt>Scope</dt><dd>Internet path · endpoint included</dd></div>
+              <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
+              <div><dt>Worker edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
+              <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>
+              <div><dt>Metadata protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
+              <div><dt>Requested download path</dt><dd>{delivery?.requestedPath ?? "Unavailable"}</dd></div>
+              <div><dt>Selected download path</dt><dd>{pathDescription(delivery)}</dd></div>
+              <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unavailable"}</dd></div>
+              <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
+              <div><dt>Path probe</dt><dd>{warmupDescription(delivery)}</dd></div>
             </dl>
           </section>
 
-          <section className="transfer-direction" aria-labelledby="upload-transfer-title">
-            <header>
-              <div>
-                <span className="transfer-direction__eyebrow">Upload</span>
-                <h4 id="upload-transfer-title">Request activity</h4>
-              </div>
-              <small>{formatRate(result.upload.steadyMbps)} Mbps steady</small>
-            </header>
-
-            <div className="transfer-detail">
-              <h5>Request lifecycle</h5>
-              {uploadDelivery ? (
-                <LifecycleCards
-                  label="Upload"
-                  started={uploadDelivery.startedRequests}
-                  completed={uploadDelivery.completedRequests}
-                  interrupted={uploadDelivery.interruptedRequests}
-                />
-              ) : <p className="transfer-detail__empty">Unavailable</p>}
+          <section className="report-panel transfer-panel">
+            <div className="report-panel__heading">
+              <div><span className="eyebrow">Transfer details</span><h3>How the <span className="text-violet">sustained requests</span> ran</h3></div>
+              <p>Requests shown as stopped at phase end were still transferring when the timed measurement ended. That is expected during a sustained test.</p>
             </div>
 
-            <div className="transfer-detail">
-              <h5>Request generations</h5>
-              <GenerationCards generations={uploadDelivery?.requestGenerations ?? []} />
+            <div className="transfer-summary-grid">
+              <article>
+                <span>Total data</span>
+                <strong>{formatBytes(result.dataUsedBytes)}</strong>
+              </article>
+              <article>
+                <span>Download response size</span>
+                <strong>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</strong>
+              </article>
+              <article>
+                <span>Upload request size</span>
+                <strong>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</strong>
+              </article>
             </div>
 
-            <dl className="transfer-fact-list">
-              <div><dt>Request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
-              <div><dt>Initial stagger</dt><dd>{uploadDelivery ? `${uploadDelivery.initialStaggerMs} ms` : "Unavailable"}</dd></div>
-              <div><dt>Replacement requests</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
-              <div><dt>Transferred</dt><dd>{formatBytes(result.upload.bytes)}</dd></div>
-            </dl>
+            <div className="transfer-direction-grid">
+              <section className="transfer-direction" aria-labelledby="download-transfer-title">
+                <header>
+                  <div>
+                    <span className="transfer-direction__eyebrow">Download</span>
+                    <h4 id="download-transfer-title">Sample and request activity</h4>
+                  </div>
+                  <small>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0}` : "Single sample"}</small>
+                </header>
+
+                <div className="transfer-detail">
+                  <h5>Sample results</h5>
+                  <DownloadSampleCards summary={result.download} />
+                </div>
+
+                <div className="transfer-detail">
+                  <h5>Request lifecycle</h5>
+                  {delivery ? (
+                    <LifecycleCards
+                      label="Download"
+                      started={delivery.startedRequests}
+                      completed={delivery.completedRequests}
+                      interrupted={delivery.interruptedRequests}
+                    />
+                  ) : <p className="transfer-detail__empty">Unavailable</p>}
+                </div>
+
+                <div className="transfer-detail">
+                  <h5>Request generations</h5>
+                  <GenerationCards generations={delivery?.requestGenerations ?? []} />
+                </div>
+
+                <dl className="transfer-fact-list">
+                  <div><dt>R2 requests</dt><dd>{delivery?.r2Requests ?? "Unavailable"}</dd></div>
+                  <div><dt>Worker stream requests</dt><dd>{delivery?.staticRequests ?? "Unavailable"}</dd></div>
+                  <div><dt>Rejected responses</dt><dd>{rejectionDescription(delivery)}</dd></div>
+                  <div><dt>Replacement requests</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
+                  <div><dt>Dynamic fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
+                </dl>
+              </section>
+
+              <section className="transfer-direction" aria-labelledby="upload-transfer-title">
+                <header>
+                  <div>
+                    <span className="transfer-direction__eyebrow">Upload</span>
+                    <h4 id="upload-transfer-title">Request activity</h4>
+                  </div>
+                  <small>{formatRate(result.upload.steadyMbps)} Mbps steady</small>
+                </header>
+
+                <div className="transfer-detail">
+                  <h5>Request lifecycle</h5>
+                  {uploadDelivery ? (
+                    <LifecycleCards
+                      label="Upload"
+                      started={uploadDelivery.startedRequests}
+                      completed={uploadDelivery.completedRequests}
+                      interrupted={uploadDelivery.interruptedRequests}
+                    />
+                  ) : <p className="transfer-detail__empty">Unavailable</p>}
+                </div>
+
+                <div className="transfer-detail">
+                  <h5>Request generations</h5>
+                  <GenerationCards generations={uploadDelivery?.requestGenerations ?? []} />
+                </div>
+
+                <dl className="transfer-fact-list">
+                  <div><dt>Request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
+                  <div><dt>Initial stagger</dt><dd>{uploadDelivery ? `${uploadDelivery.initialStaggerMs} ms` : "Unavailable"}</dd></div>
+                  <div><dt>Replacement requests</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
+                  <div><dt>Transferred</dt><dd>{formatBytes(result.upload.bytes)}</dd></div>
+                </dl>
+              </section>
+            </div>
           </section>
-        </div>
-      </section>
 
-      {result.services.length > 0 && (
-        <section className="report-panel">
-          <div className="report-panel__heading">
-            <div><span className="eyebrow">Full battery</span><h3>Common-service reachability</h3></div>
-            <p>Each service receives one ordinary, cache-bypassed request and may process it under its own privacy policy.</p>
-          </div>
-          <ServiceMatrix services={result.services} />
-        </section>
-      )}
+          {result.services.length > 0 && (
+            <section className="report-panel">
+              <div className="report-panel__heading">
+                <div><span className="eyebrow">Full battery</span><h3><span className="text-green">Common-service</span> reachability</h3></div>
+                <p>Each service receives one ordinary, cache-bypassed request and may process it under its own privacy policy.</p>
+              </div>
+              <ServiceMatrix services={result.services} />
+            </section>
+          )}
+        </div>
+      </details>
     </section>
   );
 }

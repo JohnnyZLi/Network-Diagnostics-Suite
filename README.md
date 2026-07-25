@@ -30,13 +30,13 @@ The distinction is intentional: a browser cannot send arbitrary ICMP packets or 
 
 ## Test profiles
 
-| Profile | Approx. time | Download cap | Upload cap | Common-service checks |
-| --- | ---: | ---: | ---: | :---: |
-| Quick | 20 seconds | 250 MB | 96 MB | No |
-| Full | 35 seconds | 600 MB | 192 MB | Yes |
-| Stress | 60 seconds | 1.5 GB | 512 MB | Yes, with confirmation |
+| Profile | Approx. time | Download cap | Upload cap | Maximum combined transfer | Common-service checks |
+| --- | ---: | ---: | ---: | ---: | :---: |
+| Quick | 20 seconds | 600 MB | 128 MB | 728 MB | No |
+| Full | 35 seconds | 900 MB | 256 MB | 1.156 GB | Yes |
+| Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes, with confirmation |
 
-Caps are ceilings. A slower connection stops at the profile duration and transfers less data.
+Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows the selected profile's maximum transfer before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
 
 ## Architecture
 
