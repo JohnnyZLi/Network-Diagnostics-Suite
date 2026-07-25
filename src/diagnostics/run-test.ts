@@ -227,7 +227,7 @@ async function runLoadedPhase(
       throughput = await runUpload({
         durationMs: config.uploadDurationMs,
         capBytes: config.uploadCapBytes,
-        concurrency: config.concurrency,
+        concurrency: config.uploadConcurrency,
         signal: options.signal,
         onProgress: (liveMbps, bytesTransferred) => {
           const elapsedFraction = Math.min(1, bytesTransferred / Math.max(config.uploadCapBytes, 1));
