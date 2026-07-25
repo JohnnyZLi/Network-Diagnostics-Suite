@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "id": "network-diagnostics-browser-download",
+      "allowed": {
+        "origins": [
+          "https://network.johnnyli.dev",
+          "http://localhost:5173"
+        ],
+        "methods": [
+          "GET",
+          "HEAD"
+        ],
+        "headers": [
+          "Range"
+        ]
+      },
+      "exposeHeaders": [
+        "Age",
+        "CF-Cache-Status",
+        "Content-Length",
+        "Content-Range",
+        "ETag"
+      ],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
