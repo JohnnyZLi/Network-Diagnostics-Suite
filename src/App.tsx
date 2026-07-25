@@ -7,7 +7,7 @@ import { MotionObserver } from "./components/MotionObserver";
 import { ProgressStage } from "./components/ProgressStage";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
-import type { DiagnosticResult, TestMode, TestProgress } from "./types/diagnostics";
+import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress } from "./types/diagnostics";
 
 type RunState = "idle" | "running" | "complete" | "error";
 
@@ -18,9 +18,11 @@ const INITIAL_PROGRESS: TestProgress = {
 };
 
 function createResultSummary(result: DiagnosticResult): string {
+  const downloadPath = result.download.delivery?.selectedPath ?? "unknown";
   return [
     "Network Diagnostics Suite",
     `Download: ${formatRate(result.download.steadyMbps)} Mbps steady (${formatRate(result.download.mbps)} Mbps whole phase)`,
+    `Download path: ${downloadPath}`,
     `Upload: ${formatRate(result.upload.steadyMbps)} Mbps steady (${formatRate(result.upload.mbps)} Mbps whole phase)`,
     `Idle latency: ${formatLatency(result.idleLatency.medianMs)} ms median`,
     `Jitter: ${formatLatency(result.idleLatency.jitterMs)} ms`,
@@ -32,6 +34,7 @@ function createResultSummary(result: DiagnosticResult): string {
 
 export default function App() {
   const [mode, setMode] = useState<TestMode>("quick");
+  const [downloadPath, setDownloadPath] = useState<DownloadPathPreference>("auto");
   const [runState, setRunState] = useState<RunState>("idle");
   const [progress, setProgress] = useState<TestProgress>(INITIAL_PROGRESS);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
@@ -54,6 +57,7 @@ export default function App() {
     try {
       const nextResult = await runDiagnosticTest({
         mode,
+        downloadPath,
         signal: controller.signal,
         onProgress: (next) => setProgress((previous) => {
           if (next.phase !== previous.phase) return next;
@@ -133,12 +137,14 @@ export default function App() {
 
           <TestControls
             mode={mode}
+            downloadPath={downloadPath}
             running={runState === "running"}
             stressConfirmed={stressConfirmed}
             onModeChange={(nextMode) => {
               setMode(nextMode);
               if (nextMode !== "extended") setStressConfirmed(false);
             }}
+            onDownloadPathChange={setDownloadPath}
             onStressConfirmed={setStressConfirmed}
             onStart={startTest}
             onCancel={cancelTest}
@@ -151,7 +157,7 @@ export default function App() {
           <section className="error-panel" role="alert">
             <span>Test interrupted</span>
             <h2>The measurement endpoint did not finish the request.</h2>
-            <p>{errorMessage} Check the connection, disable any content blocker for this page, and try again.</p>
+            <p>{errorMessage} Check the connection and try again.</p>
             <button type="button" onClick={startTest}>Try again</button>
           </section>
         )}
