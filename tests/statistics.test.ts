@@ -87,6 +87,23 @@ describe("statistics", () => {
     expect(summary.qualification).toBe("qualified");
   });
 
+  it("ignores a sub-100ms terminal interval instead of reporting a false spike", () => {
+    const summary = throughputFromTimeline(233_535_488, 20_001, [
+      { elapsedMs: 1_000, value: 95 },
+      { elapsedMs: 2_000, value: 100 },
+      { elapsedMs: 3_000, value: 90 },
+      { elapsedMs: 19_998.3, value: 96 },
+      { elapsedMs: 20_001, value: 1_101.4 }
+    ]);
+
+    expect(summary.timeline).toHaveLength(4);
+    expect(summary.timeline.at(-1)?.elapsedMs).toBe(19_998.3);
+    expect(summary.peakMbps).toBe(100);
+    expect(summary.steadyMbps).toBeCloseTo(95.25);
+    expect(summary.stabilityPercent).toBeGreaterThan(95);
+    expect(summary.qualification).toBe("qualified");
+  });
+
   it("marks a transfer that reaches its cap early", () => {
     const summary = throughputFromTimeline(25_000_000, 2_000, [
       { elapsedMs: 1_000, value: 100 },
