@@ -4,14 +4,20 @@ import type { DownloadStreamRejection } from "../types/diagnostics";
 export const STATIC_DOWNLOAD_STREAM_BYTES = 96 * 1024 * 1024;
 export const STATIC_DOWNLOAD_SEGMENT_COUNT = 4;
 export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v4/";
+export const R2_DOWNLOAD_ORIGIN = "https://speed.johnnyli.dev";
+export const R2_DOWNLOAD_OBJECT_PATH = "/network-diagnostics-speed-v1.bin";
+export const R2_DOWNLOAD_OBJECT_BYTES = 256 * 1024 * 1024;
+export const R2_DOWNLOAD_RANGE_BYTES = 192 * 1024 * 1024;
 
 const STATIC_DOWNLOAD_STREAM = `${STATIC_DOWNLOAD_PATH_PREFIX}stream`;
 const STATIC_DOWNLOAD_WARM = `${STATIC_DOWNLOAD_PATH_PREFIX}warm`;
 const STATIC_PAYLOAD_MARKER = "stream-edge-v4";
 const WORKER_FALLBACK_BYTES = 32 * 1024 * 1024;
+const R2_RANGE_STRIDE_BYTES = 6 * 1024 * 1024;
+const R2_RANGE_SLOT_COUNT = 10;
 
 export interface DownloadDeliveryObservation {
-  source: "static" | "worker";
+  source: "r2" | "static" | "worker";
   cacheStatus: string | null;
   ageSeconds: number | null;
 }
@@ -21,11 +27,23 @@ export interface DownloadWarmupObservation extends DownloadDeliveryObservation {
   cachedBytes: number;
 }
 
+export interface R2DownloadProbe {
+  available: boolean;
+  reason: string | null;
+  warmup: DownloadWarmupObservation;
+}
+
 interface WarmupReceipt {
   status: string;
   segmentCount: number;
   cachedBytes: number;
   ageSeconds: number | null;
+}
+
+interface ParsedContentRange {
+  start: number;
+  end: number;
+  total: number;
 }
 
 class IncompleteDownloadError extends Error {
@@ -129,6 +147,16 @@ function parseNonNegativeInteger(value: string | null): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+function parseContentRange(value: string | null): ParsedContentRange | null {
+  const match = /^bytes\s+(\d+)-(\d+)\/(\d+)$/i.exec(value ?? "");
+  if (!match) return null;
+  const start = Number.parseInt(match[1], 10);
+  const end = Number.parseInt(match[2], 10);
+  const total = Number.parseInt(match[3], 10);
+  if (![start, end, total].every(Number.isSafeInteger) || start < 0 || end < start || total <= end) return null;
+  return { start, end, total };
+}
+
 function deliveryObservation(response: Response, source: DownloadDeliveryObservation["source"]): DownloadDeliveryObservation {
   const cacheStatus = (
     response.headers.get("X-NDS-Cache-Status")
@@ -149,7 +177,8 @@ function streamSnapshot(
     marker: response.headers.get("X-NDS-Payload"),
     logicalBytes: parseNonNegativeInteger(response.headers.get("X-NDS-Logical-Bytes")),
     segmentCount: parseNonNegativeInteger(response.headers.get("X-NDS-Segment-Count")),
-    contentLength: parseNonNegativeInteger(response.headers.get("Content-Length"))
+    contentLength: parseNonNegativeInteger(response.headers.get("Content-Length")),
+    contentRange: response.headers.get("Content-Range")
   };
 }
 
@@ -249,6 +278,7 @@ export async function downloadLongStream(
       logicalBytes: null,
       segmentCount: null,
       contentLength: null,
+      contentRange: null,
       receivedBytes: null
     });
     await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
@@ -277,6 +307,129 @@ export async function downloadLongStream(
       });
       await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
       return;
+    }
+    throw error;
+  }
+}
+
+function r2Range(workerIndex: number, generation: number): { start: number; end: number } {
+  const slot = (workerIndex + generation * 3) % R2_RANGE_SLOT_COUNT;
+  const start = slot * R2_RANGE_STRIDE_BYTES;
+  return { start, end: start + R2_DOWNLOAD_RANGE_BYTES - 1 };
+}
+
+export async function probeR2DownloadPath(signal: AbortSignal): Promise<R2DownloadProbe> {
+  const timed = createTimedSignal(signal, 4_000);
+  try {
+    const response = await fetch(`${R2_DOWNLOAD_ORIGIN}${R2_DOWNLOAD_OBJECT_PATH}`, {
+      method: "HEAD",
+      credentials: "omit",
+      signal: timed.signal
+    });
+    const contentLength = parseNonNegativeInteger(response.headers.get("Content-Length"));
+    const available = response.ok && contentLength === R2_DOWNLOAD_OBJECT_BYTES;
+    return {
+      available,
+      reason: available
+        ? null
+        : `R2 probe returned ${response.status} with ${contentLength ?? "unknown"} bytes.`,
+      warmup: {
+        ...deliveryObservation(response, "r2"),
+        bytes: 0,
+        cachedBytes: available ? R2_DOWNLOAD_OBJECT_BYTES : 0
+      }
+    };
+  } catch {
+    if (signal.aborted) throw new TestCancelledError();
+    return {
+      available: false,
+      reason: "The direct R2 hostname could not be reached with the required CORS policy.",
+      warmup: {
+        source: "r2",
+        cacheStatus: null,
+        ageSeconds: null,
+        bytes: 0,
+        cachedBytes: 0
+      }
+    };
+  } finally {
+    timed.dispose();
+  }
+}
+
+export async function downloadR2Range(
+  workerIndex: number,
+  generation: number,
+  signal: AbortSignal,
+  onBytes: (delta: number) => void,
+  onObservation: (observation: DownloadDeliveryObservation) => void,
+  onRejection: (rejection: DownloadStreamRejection) => void
+): Promise<boolean> {
+  const range = r2Range(workerIndex, generation);
+  let response: Response;
+  try {
+    response = await fetch(`${R2_DOWNLOAD_ORIGIN}${R2_DOWNLOAD_OBJECT_PATH}`, {
+      credentials: "omit",
+      headers: { Range: `bytes=${range.start}-${range.end}` },
+      signal
+    });
+  } catch {
+    if (signal.aborted) throw new TestCancelledError();
+    onRejection({
+      reason: "r2-fetch-error",
+      status: 0,
+      marker: null,
+      logicalBytes: R2_DOWNLOAD_OBJECT_BYTES,
+      segmentCount: null,
+      contentLength: null,
+      contentRange: null,
+      receivedBytes: null
+    });
+    return false;
+  }
+
+  const snapshot = streamSnapshot(response);
+  const parsedRange = parseContentRange(response.headers.get("Content-Range"));
+  const contentLengthHeader = response.headers.get("Content-Length");
+  const validLength = contentLengthHeader === null || snapshot.contentLength === R2_DOWNLOAD_RANGE_BYTES;
+  if (response.status !== 206) {
+    onRejection({ reason: "r2-status", ...snapshot, receivedBytes: null });
+    await discardResponse(response);
+    return false;
+  }
+  if (response.body === null) {
+    onRejection({ reason: "r2-missing-body", ...snapshot, receivedBytes: null });
+    return false;
+  }
+  if (!validLength) {
+    onRejection({ reason: "r2-wrong-size", ...snapshot, receivedBytes: null });
+    await discardResponse(response);
+    return false;
+  }
+  if (
+    parsedRange === null
+    || parsedRange.start !== range.start
+    || parsedRange.end !== range.end
+    || parsedRange.total !== R2_DOWNLOAD_OBJECT_BYTES
+  ) {
+    onRejection({ reason: "r2-wrong-range", ...snapshot, receivedBytes: null });
+    await discardResponse(response);
+    return false;
+  }
+
+  onObservation(deliveryObservation(response, "r2"));
+  try {
+    await consumeDownload(response, R2_DOWNLOAD_RANGE_BYTES, onBytes);
+    return true;
+  } catch (error) {
+    if (signal.aborted) throw new TestCancelledError();
+    if (error instanceof IncompleteDownloadError) {
+      onRejection({
+        reason: error.streamFailed ? "r2-stream-error" : "r2-truncated-body",
+        ...snapshot,
+        receivedBytes: error.receivedBytes
+      });
+      return false;
     }
     throw error;
   }
