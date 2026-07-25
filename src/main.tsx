@@ -5,6 +5,7 @@ import "./styles.css";
 import "./history.css";
 import "./report-details.css";
 import "./ui-polish.css";
+import "./transfer-color.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
