@@ -8,6 +8,13 @@ function requireHeader(response, name) {
   return value;
 }
 
+function requireTimingAccess(response) {
+  const value = requireHeader(response, "Timing-Allow-Origin");
+  if (value !== origin && value !== "*") {
+    throw new Error(`Timing-Allow-Origin did not permit ${origin}.`);
+  }
+}
+
 const head = await fetch(endpoint, {
   method: "HEAD",
   headers: { Origin: origin }
@@ -19,6 +26,7 @@ if (Number.parseInt(requireHeader(head, "Content-Length"), 10) !== expectedBytes
 if (requireHeader(head, "Access-Control-Allow-Origin") !== origin) {
   throw new Error("The R2 CORS policy did not allow the production app origin.");
 }
+requireTimingAccess(head);
 
 const range = await fetch(endpoint, {
   headers: {
@@ -30,6 +38,7 @@ if (range.status !== 206) throw new Error(`Range request returned ${range.status
 if (requireHeader(range, "Content-Range") !== `bytes 0-1023/${expectedBytes}`) {
   throw new Error("The R2 endpoint returned an unexpected Content-Range.");
 }
+requireTimingAccess(range);
 if ((await range.arrayBuffer()).byteLength !== 1024) {
   throw new Error("The R2 endpoint did not return the requested 1024-byte range.");
 }
@@ -38,5 +47,6 @@ console.log(JSON.stringify({
   endpoint,
   headCacheStatus: head.headers.get("CF-Cache-Status"),
   rangeCacheStatus: range.headers.get("CF-Cache-Status"),
-  age: range.headers.get("Age")
+  age: range.headers.get("Age"),
+  timingAllowOrigin: range.headers.get("Timing-Allow-Origin")
 }, null, 2));
