@@ -20,7 +20,8 @@
         "CF-Cache-Status",
         "Content-Length",
         "Content-Range",
-        "ETag"
+        "ETag",
+        "Timing-Allow-Origin"
       ],
       "maxAgeSeconds": 3600
     }

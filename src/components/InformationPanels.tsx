@@ -3,8 +3,8 @@ export function InformationPanels() {
     <section className="information-grid">
       <article className="information-panel">
         <span className="eyebrow">Privacy model</span>
-        <h2>Nothing is retained.</h2>
-        <p>The application has no accounts, cookies, analytics, database, advertising, or telemetry. Results exist only in this browser tab unless you export them.</p>
+        <h2>No server-side result history.</h2>
+        <p>The application has no accounts, analytics, database, advertising, or telemetry. It keeps up to 12 recent reports in this browser's local storage so useful runs are not lost; clearing site data or using the history control removes them.</p>
         <ul className="plain-list">
           <li><span>01</span> Cloudflare processes the test traffic but Worker request logging is disabled.</li>
           <li><span>02</span> The tool never displays, stores, or returns your public IP address.</li>

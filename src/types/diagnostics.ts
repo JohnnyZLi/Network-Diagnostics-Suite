@@ -106,6 +106,19 @@ export interface UploadDeliverySummary {
   requestGenerations: UploadRequestGenerationSummary[];
 }
 
+export interface ThroughputSampleSummary {
+  sample: number;
+  mbps: number;
+  steadyMbps: number;
+  bytes: number;
+  durationMs: number;
+  peakMbps: number;
+  stabilityPercent: number;
+  rampRatio: number | null;
+  capReached: boolean;
+  qualification: ThroughputQualification;
+}
+
 export interface ThroughputSummary {
   mbps: number;
   steadyMbps: number;
@@ -117,6 +130,8 @@ export interface ThroughputSummary {
   capReached: boolean;
   qualification: ThroughputQualification;
   timeline: TimedSample[];
+  aggregation?: "single" | "median";
+  samples?: ThroughputSampleSummary[];
   delivery?: DownloadDeliverySummary;
   uploadDelivery?: UploadDeliverySummary;
 }

@@ -30,6 +30,21 @@ function qualificationTone(summary: ThroughputSummary): string {
   return summary.qualification === "qualified" ? "scope-status scope-status--good" : "scope-status scope-status--warn";
 }
 
+function downloadMetricDetail(summary: ThroughputSummary): string {
+  const sampleCount = summary.samples?.length ?? 0;
+  if (summary.aggregation === "median" && sampleCount > 1) {
+    return `${formatRate(summary.mbps)} median whole-sample · ${sampleCount} samples · ${summary.stabilityPercent.toFixed(0)}% median stability · ${formatBytes(summary.bytes)}`;
+  }
+  return `${formatRate(summary.mbps)} whole-phase · ${summary.stabilityPercent.toFixed(0)}% stability · ${formatBytes(summary.bytes)}`;
+}
+
+function sampleDescription(summary: ThroughputSummary): string {
+  if (!summary.samples || summary.samples.length === 0) return "Single sustained sample";
+  return summary.samples
+    .map((sample) => `S${sample.sample} ${formatRate(sample.steadyMbps)} Mbps · ${sample.stabilityPercent.toFixed(0)}%`)
+    .join(" · ");
+}
+
 function cacheBreakdown(delivery: DownloadDeliverySummary | undefined): string {
   if (!delivery) return "Unavailable";
   const statuses = Object.entries(delivery.cacheStatusCounts)
@@ -92,6 +107,7 @@ function buildFindings(result: DiagnosticResult): string[] {
   const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
   const delivery = result.download.delivery;
   const uploadDelivery = result.upload.uploadDelivery;
+  if (result.download.aggregation === "median" && (result.download.samples?.length ?? 0) > 1) findings.push(`The displayed download rate is the median of ${result.download.samples?.length ?? 0} shorter samples, reducing sensitivity to one unusually fast or slow interval.`);
   if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
   if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
   if (worstLoadedIncrease > 30) findings.push("Latency rises materially under load, which suggests queueing or bufferbloat.");
@@ -107,6 +123,7 @@ function buildFindings(result: DiagnosticResult): string[] {
   if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
     findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
   }
+  if (delivery?.selectedPath === "r2-direct-v1" && delivery.protocols.length === 0) findings.push("The browser did not expose the direct R2 transport protocol; verify the Timing-Allow-Origin response header.");
   if (result.services.some((service) => !service.reachable)) findings.push("At least one common service did not answer the browser reachability check.");
   if (findings.length === 0) findings.push("No obvious instability appeared in this browser test.");
   return findings;
@@ -138,37 +155,14 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
       </div>
 
       <div className="metric-grid">
-        <MetricCard
-          label="Download"
-          value={formatRate(result.download.steadyMbps)}
-          unit="Mbps"
-          detail={`${formatRate(result.download.mbps)} whole-phase · ${result.download.stabilityPercent.toFixed(0)}% stability · ${formatBytes(result.download.bytes)}`}
-          tone="blue"
-        >
+        <MetricCard label="Download" value={formatRate(result.download.steadyMbps)} unit="Mbps" detail={downloadMetricDetail(result.download)} tone="blue">
           <Sparkline samples={result.download.timeline} label="Download throughput" color="var(--blue)" />
         </MetricCard>
-        <MetricCard
-          label="Upload"
-          value={formatRate(result.upload.steadyMbps)}
-          unit="Mbps"
-          detail={`${formatRate(result.upload.mbps)} whole-phase · ${result.upload.stabilityPercent.toFixed(0)}% stability · ${formatBytes(result.upload.bytes)}`}
-          tone="violet"
-        >
+        <MetricCard label="Upload" value={formatRate(result.upload.steadyMbps)} unit="Mbps" detail={`${formatRate(result.upload.mbps)} whole-phase · ${result.upload.stabilityPercent.toFixed(0)}% stability · ${formatBytes(result.upload.bytes)}`} tone="violet">
           <Sparkline samples={result.upload.timeline} label="Upload throughput" color="var(--violet)" />
         </MetricCard>
-        <MetricCard
-          label="Idle latency"
-          value={formatLatency(result.idleLatency.medianMs)}
-          unit="ms"
-          detail={`${formatLatency(result.idleLatency.minMs)} min · ${formatLatency(result.idleLatency.maxMs)} max`}
-          tone="green"
-        />
-        <MetricCard
-          label="Loaded-latency grade"
-          value={grade}
-          detail={`+${formatLatency(Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0))} ms worst case`}
-          tone="neutral"
-        />
+        <MetricCard label="Idle latency" value={formatLatency(result.idleLatency.medianMs)} unit="ms" detail={`${formatLatency(result.idleLatency.minMs)} min · ${formatLatency(result.idleLatency.maxMs)} max`} tone="green" />
+        <MetricCard label="Loaded-latency grade" value={grade} detail={`+${formatLatency(Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0))} ms worst case`} tone="neutral" />
       </div>
 
       <section className="report-panel scope-panel">
@@ -178,7 +172,7 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
         </div>
         <div className="scope-grid">
           <article><span>Path</span><strong>{pathDescription(delivery)}</strong><p>Remote endpoint and route remain part of the result.</p></article>
-          <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
+          <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0} samples.` : result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
           <article><span>Upload sample</span><strong className={qualificationTone(result.upload)}>{qualificationLabel(result.upload)}</strong><p>{result.upload.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
         </div>
         <p className="scope-panel__note">To remove the public server and ISP from the equation, run the native probe’s LAN server on a second wired machine and test it with <code>--lan-target</code>.</p>
@@ -209,7 +203,9 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <div><dt>Metadata protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
             <div><dt>Requested download path</dt><dd>{delivery?.requestedPath ?? "Unavailable"}</dd></div>
             <div><dt>Selected download path</dt><dd>{pathDescription(delivery)}</dd></div>
-            <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unknown"}</dd></div>
+            <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unavailable"}</dd></div>
+            <div><dt>Download aggregation</dt><dd>{result.download.aggregation === "median" ? `Median of ${result.download.samples?.length ?? 0}` : "Single sample"}</dd></div>
+            <div><dt>Download samples</dt><dd>{sampleDescription(result.download)}</dd></div>
             <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
             <div><dt>Path probe</dt><dd>{warmupDescription(delivery)}</dd></div>
             <div><dt>Logical response</dt><dd>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</dd></div>

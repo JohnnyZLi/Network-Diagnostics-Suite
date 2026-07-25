@@ -21,27 +21,31 @@ Request loss is not raw packet loss. TCP can retransmit packets beneath the brow
 
 ### Throughput
 
-The download phase uses four deterministic, incompressible 24 MiB files deployed with the application as Cloudflare Workers Static Assets. Before measurement begins, the client calls a same-origin warm-up endpoint. The Worker retrieves any missing segment through the static-assets binding and stores a full cacheable copy in `caches.default`, which is local to the Cloudflare data center handling the request. This server-side warm-up does not transfer the 96 MiB payload across the user's connection.
+The normal download path uses a deterministic, incompressible 256 MiB object in Cloudflare R2 through the bucket custom domain `speed.johnnyli.dev`. A browser probe checks the object size and required CORS contract before the timed condition begins. Automatic mode prefers this direct path and falls back to the Worker stream if the probe fails. The explicit Worker path remains available under advanced controls for comparison.
 
-Each measured download request receives one 96 MiB logical response assembled from the four cached segments. The Worker pipes each segment body sequentially into a Cloudflare `FixedLengthStream`, allowing the runtime to enforce the complete logical byte count without manually constructing HTTP framing. Local test environments fall back to an ordinary `TransformStream`. The browser validates project-owned `X-NDS-Payload`, `X-NDS-Logical-Bytes`, and `X-NDS-Segment-Count` metadata; an exact runtime-provided `Content-Length` is supporting evidence. The browser response is marked `Cache-Control: no-store`, so the browser's local HTTP cache cannot satisfy a measured transfer.
+Parallel browser workers request distinct 192 MiB byte ranges from the same R2 object. The ranges are large enough to remain open for most connections, while distinct offsets prevent all parallel requests from being identical. Cloudflare edge caching is forced by a Cache Rule with a one-day Edge TTL, while Browser TTL bypass and the object's `Cache-Control: no-store, no-transform` prevent the browser cache from satisfying a measured transfer.
 
-Quick, Full, and Stress start six, eight, and ten download requests respectively. A request normally remains open until the timed phase ends. If a very fast connection finishes all 96 MiB early, that worker may open a replacement response. The report records started, completed, interrupted, and replacement requests plus bytes by request generation. If a static stream fails validation or ends early, the report preserves the rejection reason, HTTP status, relevant response metadata, and received byte count before using the smaller dynamically generated Worker fallback. A single truncated stream therefore does not terminate the complete test.
+Quick, Full, and Stress start six, eight, and ten parallel download requests respectively. Each profile divides its configured download duration and byte ceiling across three consecutive samples. The displayed whole-sample rate, steady-state rate, and stability are the medians of those three samples. Total transferred bytes and total download duration remain sums across all samples. Peak rate is the maximum observed interval across the set.
 
-The report prioritizes the Worker's deterministic `X-NDS-Cache-Status` and `X-NDS-Cache-Age` headers, while retaining `CF-Cache-Status` and `Age` as fallbacks. It also records Worker-stream fallbacks and the browser Resource Timing `nextHopProtocol` values associated with the speed path. A warm-up `MISS` followed by measured `HIT` responses means the selected data center stored the four segments before the timed phase. If the local Cache API is unavailable, the warm-up or stream is labeled `BYPASS`.
+A median of three short samples is less sensitive to one unusually fast or slow interval than a single run of the same total duration. It does not eliminate route, radio, browser, or congestion variability, and the exported report retains every sample's rate, stability, qualification, duration, and byte count.
 
-The download byte ceilings are 600 MB for Quick, 900 MB for Full, and 3 GB for Stress. They are safety ceilings rather than targets. Reaching a ceiling aborts the active phase and marks the sample cap-limited when it ends substantially before the configured duration.
+If an R2 range fails validation or ends early, that worker uses the Worker stream for the remainder of that request and the report preserves the fallback reason. The Worker comparison path uses four deterministic, incompressible 24 MiB Static Assets. The Worker retrieves missing segments through the static-assets binding, stores full cacheable copies in its local `caches.default`, and pipes them sequentially into a Cloudflare `FixedLengthStream` to create a 96 MiB logical response. A truncated or invalid Worker response is recorded before using the smaller dynamically generated fallback.
+
+The report records cache status, cache age, direct R2 requests, Worker stream requests, dynamic fallbacks, response rejections, started/completed/interrupted requests, replacement requests, and bytes by request generation. `Timing-Allow-Origin` on the R2 response permits Resource Timing to expose `nextHopProtocol`; without it, the transfer still works but the cross-origin protocol normally remains unavailable.
+
+The download byte ceilings are 600 MB for Quick, 900 MB for Full, and 3 GB for Stress. They are safety ceilings rather than targets and are divided across the three samples. Reaching a sample's portion of the ceiling aborts that sample and marks it cap-limited when it ends substantially before its configured duration.
 
 The upload phase sends generated binary request bodies and the Worker reads and discards them. Upload workers use 16 MiB requests, begin 40 milliseconds apart, and apply a small deterministic delay before replacement requests. This reduces synchronized request turnover without hiding request boundaries. The report records upload request generations and completed, interrupted, and replacement requests. Quick and Full use 128 MB and 256 MB upload safety ceilings respectively; Stress uses 512 MB.
 
-The whole-phase value uses successfully transferred payload bytes and elapsed wall time:
+Each individual throughput sample uses successfully transferred payload bytes and elapsed wall time:
 
 ```text
 Mbps = transferred bytes × 8 ÷ elapsed seconds ÷ 1,000,000
 ```
 
-The graph samples recent transfer rate every 250 milliseconds. The headline steady-state value excludes up to the first second of the measured phase, while the report also retains the whole-phase value. The pre-measurement edge warm-up and the steady-state calculation make startup effects less dominant without hiding the complete measured-phase average.
+The graph samples recent transfer rate every 250 milliseconds. Each sample's steady-state value excludes up to its first second, while the report also retains the complete sample average. The median headline is computed only after all three download samples finish.
 
-The report marks a direction as **cap-limited** when the byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, **declining** when the latter half is below 80% of the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. These labels describe sample quality; they cannot prove whether a limit came from the access line, route, browser, Cloudflare edge, or test implementation.
+A sample is marked **cap-limited** when its byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, **declining** when the latter half is below 80% of the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. The aggregate download report carries the most cautionary qualification among its three samples.
 
 The displayed stability score is a bounded project metric:
 
@@ -53,7 +57,7 @@ It is useful for comparing runs but is not an industry certification.
 
 ### Loaded latency and bufferbloat signal
 
-Latency requests continue while download traffic saturates the connection and again while upload traffic saturates it. Added delay is:
+Latency requests continue throughout all three download samples and again while upload traffic saturates the connection. Added delay is:
 
 ```text
 added delay = max(0, loaded median - idle median)
@@ -80,7 +84,7 @@ Because the requests use `no-cors`, the browser intentionally hides response sta
 
 ### Edge context
 
-The Worker returns the servicing edge code, network organization and ASN, HTTP protocol, TLS version, and whether the connection reached Cloudflare over IPv4 or IPv6. It uses the connecting address only to infer the IP version and never returns the address itself.
+The Worker returns the servicing edge code, network organization and ASN, HTTP protocol, TLS version, and whether the connection reached Cloudflare over IPv4 or IPv6. It uses the connecting address only to infer the IP version and never returns the address itself. The R2 download may terminate at the same or a different Cloudflare edge; Resource Timing reports its protocol when the browser and response headers permit it.
 
 ## Native deep probe
 
@@ -140,13 +144,13 @@ Operating systems expose interface, resolver, and default-gateway metadata diffe
 
 - Browser results describe one device, browser, route, Cloudflare edge, and moment in time. LAN results describe two user-controlled devices and the local path between them.
 - VPNs, content blockers, endpoint security, power-saving modes, CPU load, Wi-Fi contention, and browser scheduling can affect results.
-- A short sample can miss intermittent faults. Repeat runs at different times and compare wired versus wireless paths.
-- Worker-local cache delivery removes repeated static-asset retrieval after a successful warm-up, but browser throughput can still be limited by the selected Cloudflare edge, its transport behavior, and its route to the ISP. No first-party Internet test can mathematically subtract its own network path.
-- The Cache API is local to the data center handling the request and does not replicate stored segments globally. A test routed to a different Cloudflare data center needs its own warm-up.
-- The Worker pipes cached segments without assembling the 96 MiB response in memory, but it still participates in the response path and can affect delivery.
-- Several same-origin HTTP requests may share one HTTP/2 or HTTP/3 connection and congestion controller. The browser test reports aggregate application throughput but does not claim a specific number of independent transport connections.
-- HTTP framing headers can be inserted, removed, or rewritten by intermediaries. The client therefore relies on versioned application metadata and records any conflict instead of silently treating a fallback as a successful static-stream measurement.
-- Cache headers and Resource Timing expose useful evidence, but browser and CDN internals can still change independently of this application.
+- Three samples reduce sensitivity to a single interval but do not turn a short browser test into a capacity guarantee. Repeat runs at different times and compare wired versus wireless paths.
+- Direct R2 delivery removes Worker response composition from the normal data path, but throughput can still be limited by the selected Cloudflare edge, its transport behavior, and its route to the ISP.
+- R2 edge cache contents and Worker Cache API contents are location-dependent. A test routed to a different Cloudflare data center may need a new cache fill.
+- The Worker comparison path still participates in the response path and can affect delivery even when its input segments are cached.
+- Several requests may share one HTTP/2 or HTTP/3 connection and congestion controller. The browser test reports aggregate application throughput but does not claim a specific number of independent transport connections.
+- HTTP framing and cache headers can be inserted, removed, or rewritten by intermediaries. The client validates exact byte ranges or versioned application metadata and records conflicts instead of silently accepting them.
+- Cache headers and Resource Timing expose useful evidence, but browser and CDN internals can change independently of this application.
 - A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
 - Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
 - Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works. A firewall can also block the optional LAN server port.
