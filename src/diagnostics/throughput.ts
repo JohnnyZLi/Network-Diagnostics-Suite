@@ -1,6 +1,8 @@
 import { throughputFromTimeline } from "../core/statistics";
 import type {
   DownloadDeliverySummary,
+  DownloadImplementation,
+  DownloadPathPreference,
   DownloadRequestGenerationSummary,
   DownloadStreamRejection,
   ThroughputSummary,
@@ -9,8 +11,14 @@ import type {
 } from "../types/diagnostics";
 import {
   downloadLongStream,
+  downloadR2Range,
   type DownloadDeliveryObservation,
   type DownloadWarmupObservation,
+  probeR2DownloadPath,
+  R2_DOWNLOAD_OBJECT_BYTES,
+  R2_DOWNLOAD_OBJECT_PATH,
+  R2_DOWNLOAD_ORIGIN,
+  R2_DOWNLOAD_RANGE_BYTES,
   sleep,
   STATIC_DOWNLOAD_PATH_PREFIX,
   STATIC_DOWNLOAD_STREAM_BYTES,
@@ -25,6 +33,7 @@ interface ThroughputOptions {
   capBytes: number;
   concurrency: number;
   signal: AbortSignal;
+  downloadPath?: DownloadPathPreference;
   onProgress?: (mbps: number, bytes: number) => void;
 }
 
@@ -39,6 +48,14 @@ interface UploadTransferState extends TransferState {
 interface MutableGenerationSummary {
   requests: number;
   bytes: number;
+}
+
+interface SelectedDownloadPath {
+  requestedPath: DownloadPathPreference;
+  selectedPath: DownloadImplementation;
+  warmup: DownloadWarmupObservation;
+  r2ProbeStatus: "available" | "unavailable" | "not-requested";
+  fallbackReason: string | null;
 }
 
 const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]);
@@ -115,9 +132,9 @@ function collectDownloadProtocols(startedAt: number): string[] {
     if (entry.startTime < startedAt || !entry.nextHopProtocol) continue;
     try {
       const url = new URL(entry.name, window.location.href);
-      if (url.origin === window.location.origin && url.pathname.startsWith(STATIC_DOWNLOAD_PATH_PREFIX)) {
-        protocols.add(entry.nextHopProtocol);
-      }
+      const isWorkerPath = url.origin === window.location.origin && url.pathname.startsWith(STATIC_DOWNLOAD_PATH_PREFIX);
+      const isR2Path = url.origin === R2_DOWNLOAD_ORIGIN && url.pathname === R2_DOWNLOAD_OBJECT_PATH;
+      if (isWorkerPath || isR2Path) protocols.add(entry.nextHopProtocol);
     } catch {
       // Ignore malformed resource timing names supplied by the browser.
     }
@@ -136,8 +153,43 @@ async function waitForPhaseDelay(ms: number, signal: AbortSignal): Promise<boole
   }
 }
 
+async function selectDownloadPath(
+  requestedPath: DownloadPathPreference,
+  signal: AbortSignal,
+  concurrency: number
+): Promise<SelectedDownloadPath> {
+  if (requestedPath === "worker-stream") {
+    return {
+      requestedPath,
+      selectedPath: "worker-stream-v4",
+      warmup: await warmDownloadPath(signal, concurrency),
+      r2ProbeStatus: "not-requested",
+      fallbackReason: null
+    };
+  }
+
+  const probe = await probeR2DownloadPath(signal);
+  if (probe.available) {
+    return {
+      requestedPath,
+      selectedPath: "r2-direct-v1",
+      warmup: probe.warmup,
+      r2ProbeStatus: "available",
+      fallbackReason: null
+    };
+  }
+
+  return {
+    requestedPath,
+    selectedPath: "worker-stream-v4",
+    warmup: await warmDownloadPath(signal, concurrency),
+    r2ProbeStatus: "unavailable",
+    fallbackReason: probe.reason
+  };
+}
+
 export function summarizeDownloadDelivery(
-  warmup: DownloadWarmupObservation,
+  path: SelectedDownloadPath,
   observations: DownloadDeliveryObservation[],
   rejections: DownloadStreamRejection[],
   protocols: string[],
@@ -146,7 +198,8 @@ export function summarizeDownloadDelivery(
     completed: number;
     replacements: number;
     generations: DownloadRequestGenerationSummary[];
-  }
+  },
+  runtimeFallbackReason: string | null
 ): DownloadDeliverySummary {
   const cacheStatusCounts: Record<string, number> = {};
   let knownCacheStatuses = 0;
@@ -154,7 +207,7 @@ export function summarizeDownloadDelivery(
   let maxAgeSeconds: number | null = null;
 
   for (const observation of observations) {
-    if (observation.source !== "static") continue;
+    if (observation.source === "worker") continue;
     if (observation.cacheStatus) {
       cacheStatusCounts[observation.cacheStatus] = (cacheStatusCounts[observation.cacheStatus] ?? 0) + 1;
       knownCacheStatuses += 1;
@@ -168,6 +221,14 @@ export function summarizeDownloadDelivery(
   }
 
   return {
+    requestedPath: path.requestedPath,
+    selectedPath: path.selectedPath,
+    pathFallbackReason: runtimeFallbackReason ?? path.fallbackReason,
+    r2Origin: R2_DOWNLOAD_ORIGIN,
+    r2ObjectBytes: R2_DOWNLOAD_OBJECT_BYTES,
+    r2RangeBytes: R2_DOWNLOAD_RANGE_BYTES,
+    r2ProbeStatus: path.r2ProbeStatus,
+    r2Requests: observations.filter((observation) => observation.source === "r2").length,
     staticRequests: observations.filter((observation) => observation.source === "static").length,
     workerFallbackRequests: observations.filter((observation) => observation.source === "worker").length,
     rejectedStaticRequests: rejections.length,
@@ -176,23 +237,23 @@ export function summarizeDownloadDelivery(
     edgeCacheServedPercent: knownCacheStatuses === 0 ? null : (edgeServed / knownCacheStatuses) * 100,
     maxAgeSeconds,
     protocols: [...new Set(protocols.filter(Boolean))].sort(),
-    logicalStreamBytes: STATIC_DOWNLOAD_STREAM_BYTES,
+    logicalStreamBytes: path.selectedPath === "r2-direct-v1" ? R2_DOWNLOAD_RANGE_BYTES : STATIC_DOWNLOAD_STREAM_BYTES,
     startedRequests: requestCounts.started,
     completedRequests: requestCounts.completed,
     replacementRequests: requestCounts.replacements,
     interruptedRequests: Math.max(0, requestCounts.started - requestCounts.completed),
     requestGenerations: requestCounts.generations,
-    warmupBytes: warmup.bytes,
-    warmupCachedBytes: warmup.cachedBytes,
-    warmupSource: warmup.source,
-    warmupCacheStatus: warmup.cacheStatus
+    warmupBytes: path.warmup.bytes,
+    warmupCachedBytes: path.warmup.cachedBytes,
+    warmupSource: path.warmup.source,
+    warmupCacheStatus: path.warmup.cacheStatus
   };
 }
 
 export async function runDownload(options: ThroughputOptions): Promise<ThroughputSummary> {
   throwIfAborted(options.signal);
   const transportStartedAt = performance.now();
-  const warmup = await warmDownloadPath(options.signal, options.concurrency);
+  const path = await selectDownloadPath(options.downloadPath ?? "auto", options.signal, options.concurrency);
   throwIfAborted(options.signal);
 
   const startedAt = performance.now();
@@ -205,8 +266,15 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   let startedRequests = 0;
   let completedRequests = 0;
   let replacementRequests = 0;
+  let runtimeFallbackReason: string | null = null;
 
-  const worker = async () => {
+  const addBytes = (generationSummary: MutableGenerationSummary, delta: number) => {
+    state.bytes += delta;
+    generationSummary.bytes += delta;
+    if (state.bytes >= options.capBytes) phase.reachCap();
+  };
+
+  const worker = async (workerIndex: number) => {
     let generation = 0;
     while (!phase.signal.aborted) {
       const generationSummary = generationMap.get(generation) ?? { requests: 0, bytes: 0 };
@@ -216,16 +284,32 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
       if (generation > 0) replacementRequests += 1;
 
       try {
-        await downloadLongStream(
-          phase.signal,
-          (delta) => {
-            state.bytes += delta;
-            generationSummary.bytes += delta;
-            if (state.bytes >= options.capBytes) phase.reachCap();
-          },
-          (observation) => observations.push(observation),
-          (rejection) => rejections.push(rejection)
-        );
+        if (path.selectedPath === "r2-direct-v1") {
+          const completed = await downloadR2Range(
+            workerIndex,
+            generation,
+            phase.signal,
+            (delta) => addBytes(generationSummary, delta),
+            (observation) => observations.push(observation),
+            (rejection) => rejections.push(rejection)
+          );
+          if (!completed && !phase.signal.aborted) {
+            runtimeFallbackReason ??= "At least one direct R2 range failed, so that worker used the Worker stream for the remainder of the request.";
+            await downloadLongStream(
+              phase.signal,
+              (delta) => addBytes(generationSummary, delta),
+              (observation) => observations.push(observation),
+              (rejection) => rejections.push(rejection)
+            );
+          }
+        } else {
+          await downloadLongStream(
+            phase.signal,
+            (delta) => addBytes(generationSummary, delta),
+            (observation) => observations.push(observation),
+            (rejection) => rejections.push(rejection)
+          );
+        }
         completedRequests += 1;
       } catch (error) {
         if (phase.signal.aborted) break;
@@ -237,7 +321,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   };
 
   try {
-    await Promise.all(Array.from({ length: options.concurrency }, worker));
+    await Promise.all(Array.from({ length: options.concurrency }, (_, index) => worker(index)));
   } finally {
     phase.stop();
     sampler.stop();
@@ -254,7 +338,7 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
   return {
     ...summary,
     delivery: summarizeDownloadDelivery(
-      warmup,
+      path,
       observations,
       rejections,
       collectDownloadProtocols(transportStartedAt),
@@ -263,7 +347,8 @@ export async function runDownload(options: ThroughputOptions): Promise<Throughpu
         completed: completedRequests,
         replacements: replacementRequests,
         generations
-      }
+      },
+      runtimeFallbackReason
     )
   };
 }
