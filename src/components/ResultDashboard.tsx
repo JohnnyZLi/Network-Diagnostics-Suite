@@ -45,10 +45,18 @@ function cacheBreakdown(delivery: DownloadDeliverySummary | undefined): string {
 function warmupDescription(delivery: DownloadDeliverySummary | undefined): string {
   if (!delivery) return "Unavailable";
   const status = delivery.warmupCacheStatus ? ` · ${delivery.warmupCacheStatus}` : "";
+  if (delivery.warmupSource === "r2") {
+    return `${formatBytes(delivery.r2ObjectBytes)} availability probe${status}`;
+  }
   if (delivery.warmupSource === "static") {
     return `${formatBytes(delivery.warmupCachedBytes)} primed inside edge${status}`;
   }
   return `${formatBytes(delivery.warmupBytes)} browser fallback${status}`;
+}
+
+function pathDescription(delivery: DownloadDeliverySummary | undefined): string {
+  if (!delivery) return "Unavailable";
+  return delivery.selectedPath === "r2-direct-v1" ? "R2 custom domain · direct" : "Worker-composed stream";
 }
 
 function requestGenerationDescription(delivery: DownloadDeliverySummary | undefined): string {
@@ -91,9 +99,10 @@ function buildFindings(result: DiagnosticResult): string[] {
   if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
   if (result.download.qualification === "declining" || result.upload.qualification === "declining") findings.push("At least one direction slowed materially during the measured phase, so its average hides a declining second half.");
-  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more long-lived download responses failed validation; rejection details are included in the exported report.");
+  if (delivery?.pathFallbackReason) findings.push(`Download path fallback: ${delivery.pathFallbackReason}`);
+  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more download responses failed validation; rejection details are included in the exported report.");
   if (delivery && delivery.replacementRequests > 0) findings.push("One or more long-lived download responses completed early and required a replacement request.");
-  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests fell back to the dynamically generated Worker stream.");
+  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests used the dynamically generated Worker fallback.");
   if (uploadDelivery && uploadDelivery.replacementRequests > 0) findings.push("One or more upload requests completed during the phase and required a replacement request.");
   if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
     findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
@@ -165,10 +174,10 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
       <section className="report-panel scope-panel">
         <div className="report-panel__heading">
           <div><span className="eyebrow">Measurement scope</span><h3>Internet path, not an isolated access-line benchmark</h3></div>
-          <p>The browser result includes this device, the local link, router, Internet service provider, route, and the Cloudflare test edge.</p>
+          <p>The browser result includes this device, the local link, router, Internet service provider, route, and the selected Cloudflare test endpoint.</p>
         </div>
         <div className="scope-grid">
-          <article><span>Path</span><strong>Internet end to end</strong><p>Remote endpoint and route remain part of the result.</p></article>
+          <article><span>Path</span><strong>{pathDescription(delivery)}</strong><p>Remote endpoint and route remain part of the result.</p></article>
           <article><span>Download sample</span><strong className={qualificationTone(result.download)}>{qualificationLabel(result.download)}</strong><p>{result.download.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
           <article><span>Upload sample</span><strong className={qualificationTone(result.upload)}>{qualificationLabel(result.upload)}</strong><p>{result.upload.capReached ? "The configured byte ceiling was reached." : "The configured duration ended the transfer."}</p></article>
         </div>
@@ -195,18 +204,22 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
           <dl>
             <div><dt>Scope</dt><dd>Internet path · endpoint included</dd></div>
             <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
-            <div><dt>Edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
+            <div><dt>Worker edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
             <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>
             <div><dt>Metadata protocol</dt><dd>{result.edge?.protocol ?? "Unknown"}</dd></div>
+            <div><dt>Requested download path</dt><dd>{delivery?.requestedPath ?? "Unavailable"}</dd></div>
+            <div><dt>Selected download path</dt><dd>{pathDescription(delivery)}</dd></div>
             <div><dt>Download protocol</dt><dd>{delivery?.protocols.length ? delivery.protocols.join(" · ") : "Unknown"}</dd></div>
             <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
-            <div><dt>Cache warm-up</dt><dd>{warmupDescription(delivery)}</dd></div>
+            <div><dt>Path probe</dt><dd>{warmupDescription(delivery)}</dd></div>
             <div><dt>Logical response</dt><dd>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</dd></div>
-            <div><dt>Rejected static streams</dt><dd>{rejectionDescription(delivery)}</dd></div>
+            <div><dt>R2 requests</dt><dd>{delivery?.r2Requests ?? "Unavailable"}</dd></div>
+            <div><dt>Worker stream requests</dt><dd>{delivery?.staticRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Rejected responses</dt><dd>{rejectionDescription(delivery)}</dd></div>
             <div><dt>Download lifecycle</dt><dd>{delivery ? `${delivery.startedRequests} started · ${delivery.completedRequests} completed · ${delivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
             <div><dt>Download replacements</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
             <div><dt>Download generations</dt><dd>{requestGenerationDescription(delivery)}</dd></div>
-            <div><dt>Worker fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Dynamic fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
             <div><dt>Upload request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
             <div><dt>Upload lifecycle</dt><dd>{uploadDelivery ? `${uploadDelivery.startedRequests} started · ${uploadDelivery.completedRequests} completed · ${uploadDelivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
             <div><dt>Upload replacements</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
