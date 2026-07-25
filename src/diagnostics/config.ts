@@ -9,6 +9,7 @@ export interface TestModeConfig {
   pingIntervalMs: number;
   downloadDurationMs: number;
   downloadCapBytes: number;
+  downloadSamples: number;
   uploadDurationMs: number;
   uploadCapBytes: number;
   concurrency: number;
@@ -19,12 +20,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
   quick: {
     id: "quick",
     name: "Quick",
-    description: "Core speed, latency, jitter, request loss, and loaded latency.",
+    description: "Core speed, latency, jitter, request loss, and loaded latency with a median of three download samples.",
     estimatedTime: "about 20 seconds",
     idlePingCount: 12,
     pingIntervalMs: 150,
     downloadDurationMs: 8_000,
     downloadCapBytes: 600 * 1_000_000,
+    downloadSamples: 3,
     uploadDurationMs: 8_000,
     uploadCapBytes: 128 * 1_000_000,
     concurrency: 6,
@@ -33,12 +35,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
   standard: {
     id: "standard",
     name: "Full",
-    description: "Longer throughput runs plus a common-service reachability battery.",
+    description: "Three download samples, a longer upload run, and a common-service reachability battery.",
     estimatedTime: "about 35 seconds",
     idlePingCount: 20,
     pingIntervalMs: 175,
     downloadDurationMs: 12_000,
     downloadCapBytes: 900 * 1_000_000,
+    downloadSamples: 3,
     uploadDurationMs: 12_000,
     uploadCapBytes: 256 * 1_000_000,
     concurrency: 8,
@@ -47,12 +50,13 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
   extended: {
     id: "extended",
     name: "Stress",
-    description: "Higher data caps for fast connections and sustained-load behavior.",
+    description: "Three sustained download samples with higher data caps for fast connections and queueing behavior.",
     estimatedTime: "about 60 seconds",
     idlePingCount: 30,
     pingIntervalMs: 175,
     downloadDurationMs: 20_000,
     downloadCapBytes: 3_000 * 1_000_000,
+    downloadSamples: 3,
     uploadDurationMs: 20_000,
     uploadCapBytes: 512 * 1_000_000,
     concurrency: 10,
