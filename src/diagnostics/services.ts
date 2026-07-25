@@ -5,15 +5,53 @@ interface ServiceTarget {
   id: string;
   name: string;
   url: string;
+  requestMode: "same-origin" | "no-cors";
+  successNote: string;
 }
 
 const SERVICE_TARGETS: ServiceTarget[] = [
-  { id: "cloudflare", name: "Cloudflare", url: "https://www.cloudflare.com/cdn-cgi/trace" },
-  { id: "google", name: "Google", url: "https://www.google.com/generate_204" },
-  { id: "microsoft", name: "Microsoft", url: "https://www.microsoft.com/favicon.ico" },
-  { id: "github", name: "GitHub", url: "https://github.githubassets.com/favicons/favicon.svg" },
-  { id: "apple", name: "Apple", url: "https://www.apple.com/library/test/success.html" },
-  { id: "amazon", name: "Amazon", url: "https://www.amazon.com/favicon.ico" }
+  {
+    id: "cloudflare",
+    name: "Cloudflare",
+    url: "/api/ping",
+    requestMode: "same-origin",
+    successNote: "First-party Cloudflare Worker request"
+  },
+  {
+    id: "google",
+    name: "Google",
+    url: "https://www.google.com/generate_204",
+    requestMode: "no-cors",
+    successNote: "Opaque browser request; reachability only"
+  },
+  {
+    id: "microsoft",
+    name: "Microsoft",
+    url: "https://www.microsoft.com/favicon.ico",
+    requestMode: "no-cors",
+    successNote: "Opaque browser request; reachability only"
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    url: "https://github.githubassets.com/favicons/favicon.svg",
+    requestMode: "no-cors",
+    successNote: "Opaque browser request; reachability only"
+  },
+  {
+    id: "apple",
+    name: "Apple",
+    url: "https://www.apple.com/library/test/success.html",
+    requestMode: "no-cors",
+    successNote: "Opaque browser request; reachability only"
+  },
+  {
+    id: "amazon",
+    name: "Amazon",
+    url: "https://www.amazon.com/favicon.ico",
+    requestMode: "no-cors",
+    successNote: "Opaque browser request; reachability only"
+  }
 ];
 
 async function checkService(target: ServiceTarget, signal: AbortSignal): Promise<ServiceCheckResult> {
@@ -21,7 +59,7 @@ async function checkService(target: ServiceTarget, signal: AbortSignal): Promise
   const started = performance.now();
   try {
     await fetch(`${target.url}${target.url.includes("?") ? "&" : "?"}n=${crypto.randomUUID()}`, {
-      mode: "no-cors",
+      mode: target.requestMode,
       cache: "no-store",
       credentials: "omit",
       referrerPolicy: "no-referrer",
@@ -32,7 +70,7 @@ async function checkService(target: ServiceTarget, signal: AbortSignal): Promise
       name: target.name,
       reachable: true,
       durationMs: performance.now() - started,
-      note: "Opaque browser request; reachability only"
+      note: target.successNote
     };
   } catch {
     if (signal.aborted) throw new TestCancelledError();
