@@ -1,0 +1,197 @@
+/* Full-width page bands with centered content rails. Imported after all component styles. */
+
+:root {
+  --content-max: 1360px;
+  --content-gutter: 24px;
+}
+
+/* Keep the ambient grid across the page, but anchor the warm light to the top
+   of the document so it no longer follows the user into lower sections. */
+body::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(980px, 100vh);
+  background-image: radial-gradient(
+    circle at 76% 12%,
+    rgba(217, 184, 165, .46),
+    rgba(165, 93, 69, .085) 29%,
+    transparent 54%
+  );
+  background-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 58%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black 58%, transparent 100%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(23, 23, 20, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 23, 20, .028) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, .72) 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, .72) 72%, transparent 100%);
+}
+
+.app-shell {
+  width: 100%;
+  margin: 0;
+}
+
+/* Full-width sticky header with its three content columns aligned to the
+   same 1360px rail used by the body sections. */
+.site-header {
+  width: 100%;
+  grid-template-columns:
+    max(var(--content-gutter), calc((100vw - var(--content-max)) / 2))
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr)
+    max(var(--content-gutter), calc((100vw - var(--content-max)) / 2));
+}
+
+.site-header .wordmark { grid-column: 2; }
+.site-header .site-nav { grid-column: 3; }
+.site-header .header-actions { grid-column: 4; }
+
+/* Existing primary sections remain on the original content rail while the
+   page canvas and the lower editorial bands span the viewport. */
+main > .hero,
+main > .measurement-preview,
+main > .results,
+main > .recent-results,
+main > .methodology,
+main > .deep-report {
+  width: min(calc(100% - (var(--content-gutter) * 2)), var(--content-max));
+  margin-inline: auto;
+}
+
+main > .progress-stage,
+main > .error-panel {
+  width: min(calc(100% - (var(--content-gutter) * 2)), var(--content-max));
+  margin-inline: auto;
+}
+
+/* Local diagnostics: flat full-width band, centered two-column composition,
+   and one restrained pool of warmth behind the actual action card. */
+.deep-probe {
+  width: 100%;
+  min-height: 470px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 755px) minmax(360px, 525px);
+  justify-content: center;
+  gap: 80px;
+  padding: 84px var(--content-gutter);
+  background: transparent;
+}
+
+.deep-probe::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 540px;
+  height: 540px;
+  right: max(var(--content-gutter), calc((100vw - var(--content-max)) / 2));
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(165, 93, 69, .065), transparent 69%);
+  pointer-events: none;
+}
+
+.deep-probe > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Editorial information band: no cards, no gradients, only structural
+   hairlines and the existing typographic accents. */
+.information-grid {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 680px));
+  justify-content: center;
+  gap: 0;
+  padding-inline: var(--content-gutter);
+  background: transparent;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.information-panel,
+.information-panel--probe {
+  background: transparent;
+}
+
+.information-panel--probe {
+  border-left: 1px solid var(--line);
+}
+
+/* Full-width footer with content aligned to the same rail as the header. */
+footer {
+  width: 100%;
+  grid-template-columns:
+    max(var(--content-gutter), calc((100vw - var(--content-max)) / 2))
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr)
+    max(var(--content-gutter), calc((100vw - var(--content-max)) / 2));
+}
+
+footer > span { grid-column: 2; }
+footer > p { grid-column: 3; }
+footer > a { grid-column: 4; }
+
+@media (max-width: 760px) {
+  :root { --content-gutter: 12px; }
+
+  .site-header {
+    grid-template-columns: var(--content-gutter) minmax(0, 1fr) auto var(--content-gutter);
+  }
+
+  .site-header .wordmark { grid-column: 2; }
+  .site-header .header-actions { grid-column: 3; }
+
+  .site-header .site-nav {
+    right: var(--content-gutter);
+    left: var(--content-gutter);
+  }
+
+  .deep-probe {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 42px;
+    padding: 72px var(--content-gutter);
+  }
+
+  .deep-probe::before {
+    width: 400px;
+    height: 400px;
+    right: -150px;
+    top: 62%;
+  }
+
+  .information-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: var(--content-gutter);
+  }
+
+  .information-panel--probe {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  footer {
+    grid-template-columns: var(--content-gutter) minmax(0, 1fr) auto var(--content-gutter);
+  }
+
+  footer > span { grid-column: 2; }
+  footer > a { grid-column: 3; }
+}
+
+@media (prefers-contrast: more) {
+  .deep-probe::before { display: none; }
+}
