@@ -1,6 +1,8 @@
 import type { EdgeMetadata, UploadReceipt } from "../types/api";
+import type { DownloadStreamRejection } from "../types/diagnostics";
 
 export const STATIC_DOWNLOAD_STREAM_BYTES = 96 * 1024 * 1024;
+export const STATIC_DOWNLOAD_SEGMENT_COUNT = 4;
 export const STATIC_DOWNLOAD_PATH_PREFIX = "/speed/v4/";
 
 const STATIC_DOWNLOAD_STREAM = `${STATIC_DOWNLOAD_PATH_PREFIX}stream`;
@@ -110,10 +112,6 @@ export async function fetchMetadata(signal: AbortSignal): Promise<EdgeMetadata |
   }
 }
 
-function isMarkedStaticPayload(response: Response): boolean {
-  return response.headers.get("X-NDS-Payload") === STATIC_PAYLOAD_MARKER;
-}
-
 function parseNonNegativeInteger(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
   const parsed = Number.parseInt(value, 10);
@@ -132,11 +130,37 @@ function deliveryObservation(response: Response, source: DownloadDeliveryObserva
   return { source, cacheStatus, ageSeconds };
 }
 
+function streamSnapshot(response: Response): Omit<DownloadStreamRejection, "reason"> {
+  return {
+    status: response.status,
+    marker: response.headers.get("X-NDS-Payload"),
+    logicalBytes: parseNonNegativeInteger(response.headers.get("X-NDS-Logical-Bytes")),
+    segmentCount: parseNonNegativeInteger(response.headers.get("X-NDS-Segment-Count")),
+    contentLength: parseNonNegativeInteger(response.headers.get("Content-Length"))
+  };
+}
+
+export function inspectStreamResponse(response: Response): DownloadStreamRejection | null {
+  const snapshot = streamSnapshot(response);
+  if (response.status !== 200) return { reason: "status", ...snapshot };
+  if (response.body === null) return { reason: "missing-body", ...snapshot };
+  if (snapshot.marker !== STATIC_PAYLOAD_MARKER) return { reason: "wrong-marker", ...snapshot };
+  if (snapshot.logicalBytes !== STATIC_DOWNLOAD_STREAM_BYTES) {
+    return { reason: "wrong-logical-size", ...snapshot };
+  }
+  if (snapshot.segmentCount !== STATIC_DOWNLOAD_SEGMENT_COUNT) {
+    return { reason: "wrong-segment-count", ...snapshot };
+  }
+
+  const contentLengthHeader = response.headers.get("Content-Length");
+  if (contentLengthHeader !== null && snapshot.contentLength !== STATIC_DOWNLOAD_STREAM_BYTES) {
+    return { reason: "wrong-content-length", ...snapshot };
+  }
+  return null;
+}
+
 export function streamResponseMatchesRequest(response: Response): boolean {
-  if (!isMarkedStaticPayload(response) || response.body === null || response.status !== 200) return false;
-  const contentLength = Number.parseInt(response.headers.get("Content-Length") ?? "", 10);
-  const logicalBytes = Number.parseInt(response.headers.get("X-NDS-Logical-Bytes") ?? "", 10);
-  return contentLength === STATIC_DOWNLOAD_STREAM_BYTES && logicalBytes === STATIC_DOWNLOAD_STREAM_BYTES;
+  return inspectStreamResponse(response) === null;
 }
 
 async function discardResponse(response: Response): Promise<void> {
@@ -187,7 +211,8 @@ async function downloadWorkerChunk(
 export async function downloadLongStream(
   signal: AbortSignal,
   onBytes: (delta: number) => void,
-  onObservation: (observation: DownloadDeliveryObservation) => void
+  onObservation: (observation: DownloadDeliveryObservation) => void,
+  onRejection: (rejection: DownloadStreamRejection) => void
 ): Promise<void> {
   let response: Response;
   try {
@@ -198,11 +223,21 @@ export async function downloadLongStream(
     });
   } catch {
     if (signal.aborted) throw new TestCancelledError();
+    onRejection({
+      reason: "fetch-error",
+      status: 0,
+      marker: null,
+      logicalBytes: null,
+      segmentCount: null,
+      contentLength: null
+    });
     await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
     return;
   }
 
-  if (!streamResponseMatchesRequest(response)) {
+  const rejection = inspectStreamResponse(response);
+  if (rejection) {
+    onRejection(rejection);
     await discardResponse(response);
     await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
     return;
@@ -229,7 +264,7 @@ async function warmStaticDownloadPath(signal: AbortSignal): Promise<DownloadWarm
     const receipt = await response.json() as WarmupReceipt;
     if (
       !Number.isSafeInteger(receipt.segmentCount)
-      || receipt.segmentCount <= 0
+      || receipt.segmentCount !== STATIC_DOWNLOAD_SEGMENT_COUNT
       || !Number.isSafeInteger(receipt.cachedBytes)
       || receipt.cachedBytes < 0
     ) return null;

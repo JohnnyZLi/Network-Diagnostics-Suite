@@ -250,7 +250,6 @@ export function createBrowserSpeedStreamResponse(
   const headers = new Headers({
     "Cache-Control": "no-store, no-transform",
     "Content-Encoding": "identity",
-    "Content-Length": SPEED_STREAM_BYTES.toString(),
     "Content-Type": "application/octet-stream",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Strict-Transport-Security": "max-age=31536000",

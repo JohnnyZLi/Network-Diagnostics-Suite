@@ -1,5 +1,11 @@
 import { formatBytes, formatLatency, formatRate } from "../core/format";
-import type { DiagnosticResult, DownloadDeliverySummary, LoadedLatencySummary, ThroughputSummary } from "../types/diagnostics";
+import type {
+  DiagnosticResult,
+  DownloadDeliverySummary,
+  LoadedLatencySummary,
+  ThroughputSummary,
+  UploadDeliverySummary
+} from "../types/diagnostics";
 import { LatencyTable } from "./LatencyTable";
 import { MetricCard } from "./MetricCard";
 import { ServiceMatrix } from "./ServiceMatrix";
@@ -52,10 +58,32 @@ function requestGenerationDescription(delivery: DownloadDeliverySummary | undefi
     .join(" · ");
 }
 
+function uploadGenerationDescription(delivery: UploadDeliverySummary | undefined): string {
+  if (!delivery || delivery.requestGenerations.length === 0) return "Unavailable";
+  return delivery.requestGenerations
+    .map((generation) => `G${generation.generation}: ${generation.requests} req · ${formatBytes(generation.bytes)}`)
+    .join(" · ");
+}
+
+function rejectionDescription(delivery: DownloadDeliverySummary | undefined): string {
+  if (!delivery) return "Unavailable";
+  if (delivery.rejectedStaticRequests === 0) return "0";
+  const counts = new Map<string, number>();
+  for (const rejection of delivery.streamRejections) {
+    counts.set(rejection.reason, (counts.get(rejection.reason) ?? 0) + 1);
+  }
+  const details = [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([reason, count]) => `${reason} ${count}`)
+    .join(" · ");
+  return `${delivery.rejectedStaticRequests} · ${details}`;
+}
+
 function buildFindings(result: DiagnosticResult): string[] {
   const findings: string[] = [];
   const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
   const delivery = result.download.delivery;
+  const uploadDelivery = result.upload.uploadDelivery;
   if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
   if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
   if (worstLoadedIncrease > 30) findings.push("Latency rises materially under load, which suggests queueing or bufferbloat.");
@@ -63,8 +91,10 @@ function buildFindings(result: DiagnosticResult): string[] {
   if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap early; use Full or Stress for a longer high-speed sample.");
   if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
   if (result.download.qualification === "declining" || result.upload.qualification === "declining") findings.push("At least one direction slowed materially during the measured phase, so its average hides a declining second half.");
+  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more long-lived download responses failed validation; rejection details are included in the exported report.");
   if (delivery && delivery.replacementRequests > 0) findings.push("One or more long-lived download responses completed early and required a replacement request.");
   if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests fell back to the dynamically generated Worker stream.");
+  if (uploadDelivery && uploadDelivery.replacementRequests > 0) findings.push("One or more upload requests completed during the phase and required a replacement request.");
   if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
     findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
   }
@@ -84,6 +114,7 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
   const grade = worstGrade(result.downloadLatency, result.uploadLatency);
   const findings = buildFindings(result);
   const delivery = result.download.delivery;
+  const uploadDelivery = result.upload.uploadDelivery;
   return (
     <section className="results" aria-labelledby="results-title">
       <div className="section-heading section-heading--actions">
@@ -171,10 +202,15 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <div><dt>Edge cache</dt><dd>{cacheBreakdown(delivery)}</dd></div>
             <div><dt>Cache warm-up</dt><dd>{warmupDescription(delivery)}</dd></div>
             <div><dt>Logical response</dt><dd>{delivery ? formatBytes(delivery.logicalStreamBytes) : "Unavailable"}</dd></div>
-            <div><dt>Request lifecycle</dt><dd>{delivery ? `${delivery.startedRequests} started · ${delivery.completedRequests} completed · ${delivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
-            <div><dt>Replacement requests</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
-            <div><dt>Generation bytes</dt><dd>{requestGenerationDescription(delivery)}</dd></div>
+            <div><dt>Rejected static streams</dt><dd>{rejectionDescription(delivery)}</dd></div>
+            <div><dt>Download lifecycle</dt><dd>{delivery ? `${delivery.startedRequests} started · ${delivery.completedRequests} completed · ${delivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
+            <div><dt>Download replacements</dt><dd>{delivery?.replacementRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Download generations</dt><dd>{requestGenerationDescription(delivery)}</dd></div>
             <div><dt>Worker fallbacks</dt><dd>{delivery?.workerFallbackRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Upload request size</dt><dd>{uploadDelivery ? formatBytes(uploadDelivery.requestSizeBytes) : "Unavailable"}</dd></div>
+            <div><dt>Upload lifecycle</dt><dd>{uploadDelivery ? `${uploadDelivery.startedRequests} started · ${uploadDelivery.completedRequests} completed · ${uploadDelivery.interruptedRequests} phase-ended` : "Unavailable"}</dd></div>
+            <div><dt>Upload replacements</dt><dd>{uploadDelivery?.replacementRequests ?? "Unavailable"}</dd></div>
+            <div><dt>Upload generations</dt><dd>{uploadGenerationDescription(uploadDelivery)}</dd></div>
             <div><dt>Data transferred</dt><dd>{formatBytes(result.dataUsedBytes)}</dd></div>
           </dl>
         </section>

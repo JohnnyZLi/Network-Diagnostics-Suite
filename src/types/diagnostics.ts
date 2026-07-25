@@ -30,9 +30,29 @@ export interface DownloadRequestGenerationSummary {
   bytes: number;
 }
 
+export type DownloadStreamRejectionReason =
+  | "fetch-error"
+  | "status"
+  | "missing-body"
+  | "wrong-marker"
+  | "wrong-logical-size"
+  | "wrong-segment-count"
+  | "wrong-content-length";
+
+export interface DownloadStreamRejection {
+  reason: DownloadStreamRejectionReason;
+  status: number;
+  marker: string | null;
+  logicalBytes: number | null;
+  segmentCount: number | null;
+  contentLength: number | null;
+}
+
 export interface DownloadDeliverySummary {
   staticRequests: number;
   workerFallbackRequests: number;
+  rejectedStaticRequests: number;
+  streamRejections: DownloadStreamRejection[];
   cacheStatusCounts: Record<string, number>;
   edgeCacheServedPercent: number | null;
   maxAgeSeconds: number | null;
@@ -49,6 +69,22 @@ export interface DownloadDeliverySummary {
   warmupCacheStatus: string | null;
 }
 
+export interface UploadRequestGenerationSummary {
+  generation: number;
+  requests: number;
+  bytes: number;
+}
+
+export interface UploadDeliverySummary {
+  requestSizeBytes: number;
+  initialStaggerMs: number;
+  startedRequests: number;
+  completedRequests: number;
+  replacementRequests: number;
+  interruptedRequests: number;
+  requestGenerations: UploadRequestGenerationSummary[];
+}
+
 export interface ThroughputSummary {
   mbps: number;
   steadyMbps: number;
@@ -61,6 +97,7 @@ export interface ThroughputSummary {
   qualification: ThroughputQualification;
   timeline: TimedSample[];
   delivery?: DownloadDeliverySummary;
+  uploadDelivery?: UploadDeliverySummary;
 }
 
 export interface LoadedLatencySummary extends LatencySummary {
