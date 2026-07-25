@@ -7,14 +7,20 @@
   color: var(--accent);
 }
 
-/* Condition cards use neutral headings; their category labels retain structure. */
-.preview-grid article h3 {
+/* Match the existing nth-child specificity so these headings are truly neutral. */
+.preview-grid article:nth-child(1) h3,
+.preview-grid article:nth-child(2) h3,
+.preview-grid article:nth-child(3) h3 {
   color: var(--text);
 }
 
 .methodology-grid article h3,
 .deep-probe__intro h2,
-.information-panel h2,
 .transfer-direction > header > small {
+  color: var(--accent);
+}
+
+/* Match the existing first-child selector so the privacy heading becomes terracotta. */
+.information-panel:first-child h2 {
   color: var(--accent);
 }
