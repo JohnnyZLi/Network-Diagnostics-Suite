@@ -8,9 +8,10 @@ import "./ui-polish.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";
 import "./portfolio-dots.css";
+import "./typography-accent.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>
+  </StrictMode>,
 );
