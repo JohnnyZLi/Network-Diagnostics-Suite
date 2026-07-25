@@ -35,7 +35,7 @@ The report records cache status, cache age, direct R2 requests, Worker stream re
 
 The download byte ceilings are 600 MB for Quick, 900 MB for Full, and 3 GB for Stress. They are safety ceilings rather than targets and are divided across the three samples. Reaching a sample's portion of the ceiling aborts that sample and marks it cap-limited when it ends substantially before its configured duration.
 
-The upload phase sends generated binary request bodies and the Worker reads and discards them. Upload workers use 16 MiB requests, begin 40 milliseconds apart, and apply a small deterministic delay before replacement requests. This reduces synchronized request turnover without hiding request boundaries. The report records upload request generations and completed, interrupted, and replacement requests. Quick and Full use 128 MB and 256 MB upload safety ceilings respectively; Stress uses 512 MB.
+The upload phase sends generated binary request bodies and the Worker reads and discards them. Upload workers use 16 MiB requests for Quick and Full and 32 MiB requests for Stress, begin 40 milliseconds apart, and apply a small deterministic delay before replacement requests. This reduces synchronized request turnover without hiding request boundaries. The report records upload request generations and completed, interrupted, and replacement requests. Quick and Full use 128 MB and 256 MB upload safety ceilings respectively; Stress uses 512 MB.
 
 Each individual throughput sample uses successfully transferred payload bytes and elapsed wall time:
 
@@ -43,7 +43,7 @@ Each individual throughput sample uses successfully transferred payload bytes an
 Mbps = transferred bytes × 8 ÷ elapsed seconds ÷ 1,000,000
 ```
 
-The graph samples recent transfer rate every 250 milliseconds. Each sample's steady-state value excludes up to its first second, while the report also retains the complete sample average. The median headline is computed only after all three download samples finish.
+The graph samples recent transfer rate every 250 milliseconds. Each sample's steady-state value excludes up to its first second, while the report also retains the complete sample average. A terminal interval shorter than 100 milliseconds is omitted from the graph and interval statistics because dividing a few final progress bytes by only a few milliseconds can create a false rate spike; those bytes remain included in the whole-phase average. The median headline is computed only after all three download samples finish.
 
 A sample is marked **cap-limited** when its byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, **declining** when the latter half is below 80% of the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. The aggregate download report carries the most cautionary qualification among its three samples.
 
@@ -78,79 +78,12 @@ The grade is a compact interpretation of queueing delay, not a standards-body ra
 
 ### Common-service battery
 
-Full and Stress profiles make one cache-bypassed, credential-free, no-referrer browser request to each of these targets: Cloudflare, Google, Microsoft, GitHub, Apple, and Amazon.
+Full and Stress profiles make one cache-bypassed, credential-free, no-referrer browser request to each of these targets: Cloudflare, Google, Microsoft, GitHub, Apple, and Amazon. The Cloudflare entry uses the deployed first-party `/api/ping` Worker; the other five are external opaque requests.
 
-Because the requests use `no-cors`, the browser intentionally hides response status and content. The app can only report whether the fetch completed before the timeout and how long the browser waited. A failure does not prove that the service is down.
+Because the external requests use `no-cors`, the browser intentionally hides response status and content. The app can only report whether the fetch completed before the timeout and how long the browser waited. A failure does not prove that the service is down.
 
 ### Edge context
 
 The Worker returns the servicing edge code, network organization and ASN, HTTP protocol, TLS version, and whether the connection reached Cloudflare over IPv4 or IPv6. It uses the connecting address only to infer the IP version and never returns the address itself. The R2 download may terminate at the same or a different Cloudflare edge; Resource Timing reports its protocol when the browser and response headers permit it.
 
 ## Native deep probe
-
-Windows 11, macOS, and Linux packages run the same .NET measurement engine and emit the same versioned JSON schema. The packages differ only by operating system and CPU runtime. CI runs the unit suite and launches each binary on its target platform before publishing it.
-
-### Isolated LAN throughput
-
-The optional native LAN mode uses a user-controlled second machine instead of a public endpoint. The server listens on TCP port 8765 by default. The client opens parallel TCP streams and measures:
-
-- Eight short TCP request/response samples to the LAN server.
-- Download bytes received during the configured duration.
-- Upload bytes written during the configured duration.
-
-The default transfer duration is eight seconds per direction with four parallel streams. Throughput uses the same decimal megabit formula as the browser result.
-
-This removes the Internet service provider, public transit/peering, and remote test platform from the path. It does not remove the client and server operating systems, their CPUs, network adapters, local firewall, switch, access point, cabling, or TCP implementation. A weak server machine can therefore still cap the LAN result. A wired server with a link rate above the expected client speed is preferred.
-
-### ICMP latency and packet loss
-
-The probe sends 20 ICMP Echo Requests to the selected target by default, with a 1.5-second timeout and 120 milliseconds between attempts. The same distribution statistics used by the browser are calculated from replies. This is real ICMP loss for this specific sample and target, though a device may deprioritize or block ICMP while forwarding other traffic normally.
-
-If a default gateway is available, the probe also sends up to 12 pings to it. Comparing gateway loss/latency with Internet loss/latency helps separate a local-link problem from an upstream problem.
-
-### Traceroute
-
-The probe sends three ICMP probes for each time-to-live value from 1 through 30 by default. Each probe waits up to 1.2 seconds. Reverse DNS lookup is limited to 600 milliseconds per responding hop.
-
-An unanswered hop is not automatically broken: routers often rate-limit or ignore expired-TTL responses while still forwarding traffic. Private, carrier-grade NAT, loopback, and link-local addresses are hidden unless `--include-addresses` is supplied.
-
-### DNS resolver timing
-
-The probe sends five direct UDP port 53 A-record queries for `example.com` to up to two active system resolvers and to Cloudflare (`1.1.1.1`), Google (`8.8.8.8`), and Quad9 (`9.9.9.9`). It validates the transaction ID, success response code, and nonzero answer count.
-
-Some networks intentionally block third-party resolvers. A failed public-resolver test can therefore describe policy rather than an outage.
-
-### Path MTU estimate
-
-For IPv4 targets, the probe performs a binary search using ICMP Echo Requests with the Don't Fragment flag. It searches payload sizes 512 through 1472 bytes and adds 28 bytes for the IPv4 and ICMP headers. This estimate depends on ICMP behavior and is not available for IPv6 in the current version.
-
-### DNS, TCP, and TLS phases
-
-For six common HTTPS endpoints, the probe separately times:
-
-1. Hostname resolution.
-2. TCP connection to port 443.
-3. TLS handshake and negotiated application protocol.
-
-It does not issue an HTTP content request after the handshake. The values help distinguish resolver delay, transport connection delay, and TLS negotiation delay.
-
-### Interface facts
-
-For active non-loopback, non-tunnel interfaces, the report includes interface name and description, media type, reported link speed, IPv4 MTU, and IPv4/IPv6 support. Link speed is the adapter's negotiated or reported link rate, not measured Internet throughput.
-
-Operating systems expose interface, resolver, and default-gateway metadata differently. The probe uses .NET's native network APIs first and supplements resolver discovery from `/etc/resolv.conf` on macOS and Linux when necessary. Unsupported or unavailable fields remain empty rather than being guessed.
-
-## Important limitations
-
-- Browser results describe one device, browser, route, Cloudflare edge, and moment in time. LAN results describe two user-controlled devices and the local path between them.
-- VPNs, content blockers, endpoint security, power-saving modes, CPU load, Wi-Fi contention, and browser scheduling can affect results.
-- Three samples reduce sensitivity to a single interval but do not turn a short browser test into a capacity guarantee. Repeat runs at different times and compare wired versus wireless paths.
-- Direct R2 delivery removes Worker response composition from the normal data path, but throughput can still be limited by the selected Cloudflare edge, its transport behavior, and its route to the ISP.
-- R2 edge cache contents and Worker Cache API contents are location-dependent. A test routed to a different Cloudflare data center may need a new cache fill.
-- The Worker comparison path still participates in the response path and can affect delivery even when its input segments are cached.
-- Several requests may share one HTTP/2 or HTTP/3 connection and congestion controller. The browser test reports aggregate application throughput but does not claim a specific number of independent transport connections.
-- HTTP framing and cache headers can be inserted, removed, or rewritten by intermediaries. The client validates exact byte ranges or versioned application metadata and records conflicts instead of silently accepting them.
-- Cache headers and Resource Timing expose useful evidence, but browser and CDN internals can change independently of this application.
-- A reachable common service does not prove all of that service is healthy; an unreachable target does not prove a global outage.
-- Traceroute shows the reply path visible to ICMP TTL probes, not necessarily every forwarding decision or the return path.
-- Host firewalls, container policies, and operating-system ICMP permissions can prevent ping, traceroute, or path-MTU replies even while ordinary web traffic works. A firewall can also block the optional LAN server port.

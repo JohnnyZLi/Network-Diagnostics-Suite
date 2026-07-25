@@ -1,5 +1,7 @@
 import type { LatencySummary, LoadedLatencySummary, TimedSample, ThroughputSummary } from "../types/diagnostics";
 
+export const MIN_THROUGHPUT_SAMPLE_INTERVAL_MS = 100;
+
 export function mean(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -73,6 +75,21 @@ export function summarizeLoadedLatency(
   };
 }
 
+export function sanitizeThroughputTimeline(timeline: TimedSample[]): TimedSample[] {
+  const sanitized: TimedSample[] = [];
+  let previousElapsedMs = 0;
+
+  for (const sample of timeline) {
+    if (!Number.isFinite(sample.elapsedMs)) continue;
+    const intervalMs = sample.elapsedMs - previousElapsedMs;
+    previousElapsedMs = sample.elapsedMs;
+    if (!Number.isFinite(sample.value) || intervalMs < MIN_THROUGHPUT_SAMPLE_INTERVAL_MS) continue;
+    sanitized.push(sample);
+  }
+
+  return sanitized;
+}
+
 export function throughputFromTimeline(
   bytes: number,
   durationMs: number,
@@ -81,8 +98,9 @@ export function throughputFromTimeline(
 ): ThroughputSummary {
   const seconds = Math.max(durationMs / 1000, 0.001);
   const mbps = (bytes * 8) / seconds / 1_000_000;
+  const sanitizedTimeline = sanitizeThroughputTimeline(timeline);
   const warmupCutoffMs = Math.min(1_000, durationMs * 0.25);
-  const steadySamples = timeline.filter((sample) => sample.elapsedMs >= warmupCutoffMs && sample.value > 0 && Number.isFinite(sample.value));
+  const steadySamples = sanitizedTimeline.filter((sample) => sample.elapsedMs >= warmupCutoffMs && sample.value > 0);
   const values = steadySamples.map((sample) => sample.value);
   const steadyMbps = mean(values) ?? mbps;
   const average = steadyMbps;
@@ -116,6 +134,6 @@ export function throughputFromTimeline(
     rampRatio,
     capReached,
     qualification,
-    timeline
+    timeline: sanitizedTimeline
   };
 }
