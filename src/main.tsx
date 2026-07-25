@@ -6,6 +6,7 @@ import "./history.css";
 import "./report-details.css";
 import "./ui-polish.css";
 import "./transfer-color.css";
+import "./full-bleed-layout.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
