@@ -15,9 +15,9 @@ interface TestControlsProps {
 }
 
 const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
-  auto: { name: "Auto", detail: "R2 preferred" },
-  "r2-direct": { name: "R2 direct", detail: "Bypass Worker" },
-  "worker-stream": { name: "Worker", detail: "Current path" }
+  auto: { name: "Automatic", detail: "R2 with safe fallback" },
+  "r2-direct": { name: "R2 direct", detail: "Require direct edge object" },
+  "worker-stream": { name: "Worker", detail: "Comparison only" }
 };
 
 export function TestControls({
@@ -55,33 +55,36 @@ export function TestControls({
         ))}
       </div>
 
-      <div className="eyebrow path-label">Download path</div>
-      <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
-        {(Object.keys(DOWNLOAD_PATHS) as DownloadPathPreference[]).map((option) => (
-          <button
-            className={downloadPath === option ? "mode-option mode-option--active" : "mode-option"}
-            type="button"
-            role="radio"
-            aria-checked={downloadPath === option}
-            disabled={running}
-            onClick={() => onDownloadPathChange(option)}
-            key={option}
-          >
-            <span>{DOWNLOAD_PATHS[option].name}</span>
-            <small>{DOWNLOAD_PATHS[option].detail}</small>
-          </button>
-        ))}
-      </div>
-
       <div className="test-controls__summary">
         <p>{config.description}</p>
         <dl>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-          <div><dt>Download</dt><dd>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
-          <div><dt>Storage</dt><dd>None</dd></div>
+          <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
         </dl>
       </div>
+
+      <details className="advanced-path">
+        <summary>Advanced download path</summary>
+        <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
+          {(Object.keys(DOWNLOAD_PATHS) as DownloadPathPreference[]).map((option) => (
+            <button
+              className={downloadPath === option ? "mode-option mode-option--active" : "mode-option"}
+              type="button"
+              role="radio"
+              aria-checked={downloadPath === option}
+              disabled={running}
+              onClick={() => onDownloadPathChange(option)}
+              key={option}
+            >
+              <span>{DOWNLOAD_PATHS[option].name}</span>
+              <small>{DOWNLOAD_PATHS[option].detail}</small>
+            </button>
+          ))}
+        </div>
+      </details>
 
       {requiresConfirmation && !running && (
         <label className="data-confirmation">
