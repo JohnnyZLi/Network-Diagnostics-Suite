@@ -3,6 +3,7 @@ dist/
 coverage/
 .wrangler/
 .worker-bundle/
+.r2-speed/
 worker-configuration.d.ts
 *.tsbuildinfo
 bin/
