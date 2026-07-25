@@ -28,6 +28,17 @@ interface WarmupReceipt {
   ageSeconds: number | null;
 }
 
+class IncompleteDownloadError extends Error {
+  constructor(
+    readonly receivedBytes: number,
+    readonly expectedBytes: number,
+    readonly streamFailed: boolean
+  ) {
+    super(`Download endpoint returned ${receivedBytes} bytes; expected ${expectedBytes}.`);
+    this.name = "IncompleteDownloadError";
+  }
+}
+
 export class TestCancelledError extends Error {
   constructor() {
     super("The diagnostic test was cancelled.");
@@ -130,7 +141,9 @@ function deliveryObservation(response: Response, source: DownloadDeliveryObserva
   return { source, cacheStatus, ageSeconds };
 }
 
-function streamSnapshot(response: Response): Omit<DownloadStreamRejection, "reason"> {
+function streamSnapshot(
+  response: Response
+): Omit<DownloadStreamRejection, "reason" | "receivedBytes"> {
   return {
     status: response.status,
     marker: response.headers.get("X-NDS-Payload"),
@@ -142,19 +155,21 @@ function streamSnapshot(response: Response): Omit<DownloadStreamRejection, "reas
 
 export function inspectStreamResponse(response: Response): DownloadStreamRejection | null {
   const snapshot = streamSnapshot(response);
-  if (response.status !== 200) return { reason: "status", ...snapshot };
-  if (response.body === null) return { reason: "missing-body", ...snapshot };
-  if (snapshot.marker !== STATIC_PAYLOAD_MARKER) return { reason: "wrong-marker", ...snapshot };
+  if (response.status !== 200) return { reason: "status", ...snapshot, receivedBytes: null };
+  if (response.body === null) return { reason: "missing-body", ...snapshot, receivedBytes: null };
+  if (snapshot.marker !== STATIC_PAYLOAD_MARKER) {
+    return { reason: "wrong-marker", ...snapshot, receivedBytes: null };
+  }
   if (snapshot.logicalBytes !== STATIC_DOWNLOAD_STREAM_BYTES) {
-    return { reason: "wrong-logical-size", ...snapshot };
+    return { reason: "wrong-logical-size", ...snapshot, receivedBytes: null };
   }
   if (snapshot.segmentCount !== STATIC_DOWNLOAD_SEGMENT_COUNT) {
-    return { reason: "wrong-segment-count", ...snapshot };
+    return { reason: "wrong-segment-count", ...snapshot, receivedBytes: null };
   }
 
   const contentLengthHeader = response.headers.get("Content-Length");
   if (contentLengthHeader !== null && snapshot.contentLength !== STATIC_DOWNLOAD_STREAM_BYTES) {
-    return { reason: "wrong-content-length", ...snapshot };
+    return { reason: "wrong-content-length", ...snapshot, receivedBytes: null };
   }
   return null;
 }
@@ -176,19 +191,23 @@ async function consumeDownload(
   expectedBytes: number,
   onBytes: (delta: number) => void
 ): Promise<void> {
-  if (!response.body) throw new Error("Download response did not include a body.");
+  if (!response.body) throw new IncompleteDownloadError(0, expectedBytes, true);
 
   let receivedBytes = 0;
   const reader = response.body.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    receivedBytes += value.byteLength;
-    onBytes(value.byteLength);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      onBytes(value.byteLength);
+    }
+  } catch {
+    throw new IncompleteDownloadError(receivedBytes, expectedBytes, true);
   }
 
   if (receivedBytes !== expectedBytes) {
-    throw new Error(`Download endpoint returned ${receivedBytes} bytes; expected ${expectedBytes}.`);
+    throw new IncompleteDownloadError(receivedBytes, expectedBytes, false);
   }
 }
 
@@ -229,7 +248,8 @@ export async function downloadLongStream(
       marker: null,
       logicalBytes: null,
       segmentCount: null,
-      contentLength: null
+      contentLength: null,
+      receivedBytes: null
     });
     await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
     return;
@@ -243,11 +263,21 @@ export async function downloadLongStream(
     return;
   }
 
+  const snapshot = streamSnapshot(response);
   onObservation(deliveryObservation(response, "static"));
   try {
     await consumeDownload(response, STATIC_DOWNLOAD_STREAM_BYTES, onBytes);
   } catch (error) {
     if (signal.aborted) throw new TestCancelledError();
+    if (error instanceof IncompleteDownloadError) {
+      onRejection({
+        reason: error.streamFailed ? "stream-error" : "truncated-body",
+        ...snapshot,
+        receivedBytes: error.receivedBytes
+      });
+      await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+      return;
+    }
     throw error;
   }
 }
