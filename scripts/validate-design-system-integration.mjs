@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 const main = await readFile(resolve("src/main.tsx"), "utf8");
 const app = await readFile(resolve("src/App.tsx"), "utf8");
+const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
+const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
 const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
 const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
 const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
@@ -25,6 +27,7 @@ const requiredImports = [
   "./history.css",
   "./report-details.css",
   "./ui-polish.css",
+  "./test-controls.css",
   "./transfer-color.css",
   "./full-bleed-layout.css",
   "./design-system-adapter.css",
@@ -80,6 +83,27 @@ for (const [url, current] of ownedSites) {
   if (!match || match.length !== 1) fail(`Expected one site-switcher link for ${url}.`);
   if (/\btarget=/.test(match[0])) fail(`Owned-site link must stay in the same tab: ${url}.`);
   if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
+}
+
+for (const contract of [
+  "function compactEstimatedTime",
+  '.replace(/^about\\s+/i, "≈")',
+  '.replace(/\\s+seconds?$/i, " sec")',
+  "aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}",
+  '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
+]) {
+  if (!testControls.includes(contract)) fail(`Test profile label contract is incomplete: ${contract}.`);
+}
+for (const contract of [
+  "grid-template-columns: repeat(3, minmax(0, 1fr));",
+  "min-height: 68px;",
+  "overflow: hidden;",
+  "text-overflow: ellipsis;",
+  "white-space: nowrap;",
+  "@media (max-width: 760px)",
+  "grid-template-columns: 1fr;",
+]) {
+  if (!testControlStyles.includes(contract)) fail(`Test profile layout contract is incomplete: ${contract}.`);
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
