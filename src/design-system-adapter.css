@@ -1,0 +1,150 @@
+/* Network Diagnostics expression of the shared Johnny Li design system.
+   Product charts, measurements, and semantic data colors remain local. */
+
+:root {
+  font-family: var(--jl-font-ui);
+  --bg: var(--jl-color-canvas);
+  --panel: var(--jl-color-surface);
+  --panel-strong: var(--jl-color-surface-strong);
+  --panel-soft: var(--jl-color-surface-muted);
+  --line: var(--jl-color-rule);
+  --line-strong: var(--jl-color-rule-strong);
+  --text: var(--jl-color-ink);
+  --muted: var(--jl-color-muted);
+  --muted-strong: var(--jl-color-text);
+  --accent: var(--jl-color-accent);
+  --radius: var(--jl-radius-xl);
+  --ease-out: var(--jl-motion-ease-out);
+  --content-max: var(--jl-layout-content-max);
+  --content-gutter: var(--jl-layout-gutter);
+}
+
+body {
+  background:
+    radial-gradient(var(--jl-color-canvas-dot) 0.55px, transparent 0.7px),
+    var(--bg);
+  background-size: 5px 5px;
+}
+
+body::after,
+.deep-probe::after {
+  display: none;
+  content: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--jl-color-focus-ring);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px var(--_jl-focus-gap-color);
+}
+
+.site-header {
+  min-height: var(--jl-layout-header-height);
+  height: auto;
+  border-bottom-color: var(--jl-color-rule);
+  background: var(--jl-color-canvas);
+}
+
+.wordmark {
+  gap: var(--jl-space-2);
+  font-family: var(--jl-font-ui);
+}
+
+.wordmark > a:first-child {
+  color: var(--jl-color-ink);
+  white-space: nowrap;
+}
+
+.wordmark__product {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jl-space-3);
+  color: var(--jl-color-ink);
+  white-space: nowrap;
+}
+
+.wordmark__product:hover,
+.wordmark__product:focus-visible {
+  text-decoration: none;
+}
+
+.wordmark__mark {
+  border-color: var(--jl-color-rule-strong);
+  border-radius: var(--jl-radius-sm);
+  background: var(--jl-color-surface);
+  box-shadow: var(--jl-shadow-low);
+}
+
+.header-actions {
+  gap: var(--jl-space-2);
+}
+
+.jl-site-switcher__button {
+  min-height: var(--jl-control-height-md);
+  padding-inline: var(--jl-space-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.jl-site-menu {
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.text-blue,
+.text-violet,
+.text-green {
+  color: var(--accent);
+}
+
+.preview-grid article:nth-child(1) h3,
+.preview-grid article:nth-child(2) h3,
+.preview-grid article:nth-child(3) h3 {
+  color: var(--text);
+}
+
+.methodology-grid article h3,
+.deep-probe__intro h2,
+.transfer-direction > header > small {
+  color: var(--accent);
+}
+
+.information-panel:first-child h2 {
+  color: var(--accent);
+}
+
+.information-panel--probe h2 {
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    min-height: 68px;
+  }
+
+  .jl-site-switcher__button {
+    min-height: var(--jl-control-height-sm);
+    padding-inline: var(--jl-space-2);
+  }
+}
+
+@media (max-width: 560px) {
+  .wordmark.jl-site-identity {
+    flex-wrap: nowrap;
+  }
+
+  .wordmark > a:first-child,
+  .wordmark .jl-site-identity__separator {
+    display: none;
+  }
+
+  .wordmark .jl-site-identity__product {
+    flex-basis: auto;
+  }
+
+  .wordmark__product > span:last-child {
+    font-size: 12px;
+  }
+}
