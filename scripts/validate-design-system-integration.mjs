@@ -46,6 +46,10 @@ for (const obsolete of ["portfolio-dots.css", "typography-accent.css"]) {
   }
 }
 
+const menuStart = app.indexOf('id="owned-sites-menu"');
+const menuEnd = app.indexOf("</ul>", menuStart);
+if (menuStart < 0 || menuEnd < 0) fail("Owned-sites menu markup is missing.");
+const menu = app.slice(menuStart, menuEnd);
 const ownedSites = [
   ["https://johnnyli.dev", false],
   ["https://network.johnnyli.dev", true],
@@ -53,8 +57,8 @@ const ownedSites = [
 ];
 for (const [url, current] of ownedSites) {
   const escaped = url.replaceAll(".", "\\.");
-  const match = app.match(new RegExp(`<a[^>]*href=\"${escaped}\"[^>]*>`, "g"));
-  if (!match || match.length !== 1) fail(`Expected one owned-site link for ${url}.`);
+  const match = menu.match(new RegExp(`<a[^>]*href=\"${escaped}\"[^>]*>`, "g"));
+  if (!match || match.length !== 1) fail(`Expected one site-switcher link for ${url}.`);
   if (/\btarget=/.test(match[0])) fail(`Owned-site link must stay in the same tab: ${url}.`);
   if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
 }
