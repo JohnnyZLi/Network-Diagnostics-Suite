@@ -7,6 +7,12 @@ A privacy-first connection-quality test that reports more than a headline downlo
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them. The primary browser test stays on the project's own Cloudflare deployment rather than sending results to a public speed-test dataset.
 
+## Design system
+
+The browser application consumes Johnny Li Web Design System v1.3.4 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens and shared foundations against that source and checks the global header, exact dot canvas, focus treatment, compact navigation, and test-profile layout contract.
+
+Network-specific charts, measurements, test controls, progress states, and semantic data encodings remain owned by this repository.
+
 ## What it measures
 
 | Measurement | Browser test | Native deep probe |
@@ -36,7 +42,7 @@ The distinction is intentional: a browser cannot send arbitrary ICMP packets or 
 | Full | 35 seconds | 900 MB | 256 MB | 1.156 GB | Yes |
 | Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes, with confirmation |
 
-Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows the selected profile's maximum transfer before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
+Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows each profile's maximum combined transfer in the selector and repeats the selected maximum before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
 
 ## Architecture
 
@@ -73,6 +79,8 @@ The build creates two ignored deterministic speed payloads under `public/speed/`
 Run the automated checks:
 
 ```bash
+npm run design-system:check
+npm run design-system:integration
 npm run typecheck
 npm test
 npm run build
@@ -98,93 +106,3 @@ Build every target locally with the .NET 10 SDK:
 ```bash
 npm run probe:build
 ```
-
-Individual scripts such as `npm run probe:build:mac-arm64` and `npm run probe:build:linux-x64` build just one target.
-
-Run it from PowerShell or Windows Terminal on Windows:
-
-```powershell
-.\NetworkDeepProbe.exe
-```
-
-Run it from Terminal on macOS or Linux:
-
-```bash
-chmod +x NetworkDeepProbe
-./NetworkDeepProbe
-```
-
-The initial macOS CI builds are not Apple-signed or notarized. If macOS blocks the first launch, review the source and checksum, build it locally, or explicitly approve it in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
-
-The probe writes a timestamped JSON report to the current directory. Import that report through the web dashboard to render the deep results.
-
-```text
-NetworkDeepProbe [options]
-
-  --target <host>       Ping and traceroute target (default: 1.1.1.1)
-  --output <file>       JSON report path
-  --pings <5-100>       Internet ping count (default: 20)
-  --max-hops <5-64>     Traceroute hop limit (default: 30)
-  --include-addresses   Include local IP, gateway, DNS, and private-hop addresses
-  --lan-server          Run a local throughput server until Ctrl+C
-  --lan-target <host>   Test against a second machine running --lan-server
-  --lan-port <port>     LAN test TCP port (default: 8765)
-  --lan-duration <3-30> Seconds per transfer direction (default: 8)
-  --lan-streams <1-16>  Parallel TCP streams (default: 4)
-  --help                Show usage
-```
-
-### Isolate the local network from the Internet path
-
-A public speed test cannot remove its own server or the route to it. The native probe can separately measure only the local network by using a second machine as a user-controlled endpoint.
-
-On a preferably wired machine on the same LAN:
-
-```bash
-./NetworkDeepProbe --lan-server
-```
-
-The server prints the local addresses that can be used by the client. On the device being tested:
-
-```bash
-./NetworkDeepProbe --lan-target 192.168.1.10
-```
-
-The resulting JSON contains local download, upload, and TCP response timing in addition to the regular Internet diagnostics. Compare the imported LAN result with the browser Internet result:
-
-- Fast LAN plus slower Internet points away from Wi-Fi/Ethernet as the primary bottleneck.
-- Slow LAN means the local link, device, switch, access point, or server can be limiting the Internet test.
-- The LAN result still includes both test devices and their network adapters; it removes the public server, ISP, and transit path, not all endpoint effects.
-
-Allow the selected TCP port through the server machine's local firewall only on trusted networks. Stop the server with Ctrl+C when finished.
-
-Private and link-local traceroute hops are redacted by default. Interface addresses, gateway addresses, DNS addresses, public IP, MAC address, hostname, and SSID are also omitted by default. Public transit-hop addresses remain because they are the traceroute result.
-
-## Privacy and accuracy
-
-The main speed path contacts only the project's same-origin Cloudflare deployment. It does not use M-Lab or publish test records to an external speed-test dataset. This project promises **no application-level retention**, not invisibility on the Internet: Cloudflare necessarily processes the traffic, and the opt-in common-service battery sends one request to each named provider.
-
-See [Privacy model](docs/privacy.md) and [Measurement methodology](docs/methodology.md) for the complete data flow, formulas, grading thresholds, and limitations.
-
-## Deployment
-
-The recommended production location is `network.johnnyli.dev`, linked from the portfolio at `johnnyli.dev`. GitHub Pages can showcase or link to the project but cannot provide the dynamic upload, ping, and metadata endpoints, so the complete app is deployed as a Cloudflare Worker with bundled static assets.
-
-See [Deployment guide](docs/deployment.md) for the exact workflow, custom-domain setup, and production safeguards.
-
-## Repository map
-
-```text
-src/                    React application and browser test engine
-worker/                 Cloudflare Worker measurement endpoints
-scripts/                Deterministic static speed-payload generation
-public/speed/            Generated same-origin download payloads (ignored)
-tools/DeepProbe/        Cross-platform native network probe
-tools/DeepProbe.Tests/  Probe unit tests
-tests/                  Browser and Worker unit tests
-docs/                   Methodology, privacy, and deployment notes
-```
-
-## License
-
-[MIT](LICENSE) © 2026 Johnny Li
