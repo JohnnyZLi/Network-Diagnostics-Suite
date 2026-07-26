@@ -1,0 +1,132 @@
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: calc(var(--jl-layout-header-height) + var(--jl-space-4));
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --_jl-focus-gap-color: var(--jl-color-focus-gap-light);
+  }
+
+  body {
+    background:
+      radial-gradient(var(--jl-color-canvas-dot) 0.55px, transparent 0.7px),
+      var(--jl-color-canvas);
+    background-size: 5px 5px;
+    color: var(--jl-color-ink);
+    font-family: var(--jl-font-ui);
+    line-height: var(--jl-type-body-leading);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--jl-color-selection-background);
+    color: var(--jl-color-selection-text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--jl-color-focus-ring);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px var(--_jl-focus-gap-color);
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :disabled {
+    cursor: not-allowed;
+    opacity: var(--jl-control-disabled-opacity);
+  }
+
+  .jl-surface-inverse,
+  [data-jl-surface="inverse"] {
+    --_jl-focus-gap-color: var(--jl-color-focus-gap-dark);
+  }
+
+  .jl-surface-accent,
+  [data-jl-surface="accent"] {
+    --_jl-focus-gap-color: var(--jl-color-on-accent);
+  }
+}
+
+@layer utilities {
+  .jl-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .jl-touch-target {
+    min-width: var(--jl-control-height-md);
+    min-height: var(--jl-control-height-md);
+  }
+
+  .jl-break-anywhere {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+}
