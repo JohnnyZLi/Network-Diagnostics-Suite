@@ -50,7 +50,7 @@ body::after,
   font-family: var(--jl-font-ui);
 }
 
-.wordmark > a:first-child {
+.wordmark > span:first-child {
   color: var(--jl-color-ink);
   white-space: nowrap;
 }
@@ -135,7 +135,7 @@ body::after,
     flex-wrap: nowrap;
   }
 
-  .wordmark > a:first-child,
+  .wordmark > span:first-child,
   .wordmark .jl-site-identity__separator {
     display: none;
   }
@@ -146,5 +146,11 @@ body::after,
 
   .wordmark__product > span:last-child {
     font-size: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .wordmark__product > span:last-child {
+    display: none;
   }
 }
