@@ -52,6 +52,7 @@ body::after,
 }
 
 .site-header .wordmark {
+  grid-column: 1;
   gap: 10px;
   align-items: baseline;
   color: var(--jl-color-ink);
@@ -78,6 +79,7 @@ body::after,
 }
 
 .site-header .site-nav {
+  grid-column: 2;
   gap: clamp(var(--jl-space-6), 3vw, var(--jl-space-12));
   justify-self: end;
   color: var(--jl-color-ink);
@@ -103,6 +105,7 @@ body::after,
 }
 
 .site-header .header-actions {
+  grid-column: 3;
   gap: var(--jl-space-2);
   justify-self: end;
 }
