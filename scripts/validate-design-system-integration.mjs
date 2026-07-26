@@ -12,8 +12,8 @@ const fail = (message) => {
   throw new Error(message);
 };
 
-if (version.version !== "1.3.3") fail("Network Diagnostics must consume Web Design System v1.3.3.");
-if (!source.includes("5eeb2effcffb0c11f93e683f178ab80d7456bde4")) {
+if (version.version !== "1.3.4") fail("Network Diagnostics must consume Web Design System v1.3.4.");
+if (!source.includes("27f83fa7333903a38c2c5ca36ed0455fa71598fc")) {
   fail("Design-system source commit is not pinned.");
 }
 
@@ -96,14 +96,23 @@ if (!adapter.includes("display: block;") || !adapter.includes("grid-template-col
 for (const forbidden of ["var(--jl-layout-portfolio-max)", ".jl-site-switcher__button", "text-transform: uppercase"]) {
   if (adapter.includes(forbidden)) fail(`Network must not re-own shared header styling: ${forbidden}.`);
 }
+if (/^\s*@layer\b/m.test(identityStyles)) {
+  fail("Shared header must remain unlayered so Network button resets cannot override it.");
+}
 for (const contract of [
   ".jl-global-header__inner",
-  "min-height: var(--jl-layout-header-height)",
   "grid-template-columns: auto minmax(0, 1fr) auto",
-  "font-size: 1.125rem",
-  "text-transform: none",
+  "width: 88px;",
+  "height: var(--jl-control-height-md);",
+  "font-family: var(--jl-font-ui);",
+  "font-size: 13px;",
+  "font-weight: 700;",
+  "line-height: 1;",
+  '.jl-site-switcher__button > [aria-hidden="true"]',
+  "border-right: 2px solid currentColor;",
+  "border-bottom: 2px solid currentColor;",
 ]) {
-  if (!identityStyles.includes(contract)) fail(`Shared header package contract is incomplete: ${contract}.`);
+  if (!identityStyles.includes(contract)) fail(`Shared Sites control contract is incomplete: ${contract}.`);
 }
 
 console.log("Network Diagnostics design-system integration passed.");
