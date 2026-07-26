@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const main = await readFile(resolve("src/main.tsx"), "utf8");
 const app = await readFile(resolve("src/App.tsx"), "utf8");
 const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
+const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
 const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
 const source = await readFile(resolve("src/design-system/SOURCE.md"), "utf8");
 
@@ -11,8 +12,8 @@ const fail = (message) => {
   throw new Error(message);
 };
 
-if (version.version !== "1.3.2") fail("Network Diagnostics must consume Web Design System v1.3.2.");
-if (!source.includes("1999e51c5b3f340ab6360cf958ac24d77203d140")) {
+if (version.version !== "1.3.3") fail("Network Diagnostics must consume Web Design System v1.3.3.");
+if (!source.includes("5eeb2effcffb0c11f93e683f178ab80d7456bde4")) {
   fail("Design-system source commit is not pinned.");
 }
 
@@ -63,8 +64,16 @@ for (const [url, current] of ownedSites) {
   if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
 }
 
-for (const hook of ["owned-sites-menu", "siteSwitcherRef", "setSitesOpen", "jl-site-switcher__button"]) {
-  if (!app.includes(hook)) fail(`Missing site-switcher integration hook: ${hook}.`);
+for (const hook of [
+  "Johnny Li",
+  "jl-site-identity__separator",
+  "jl-site-identity__product",
+  "owned-sites-menu",
+  "siteSwitcherRef",
+  "setSitesOpen",
+  "jl-site-switcher__button",
+]) {
+  if (!app.includes(hook)) fail(`Missing shared-header integration hook: ${hook}.`);
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
@@ -75,5 +84,24 @@ for (const alias of requiredAliases) {
 }
 if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
 if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
+for (const contract of [
+  "min-height: var(--jl-layout-header-height)",
+  "var(--jl-layout-portfolio-max)",
+  "var(--jl-layout-gutter)",
+  "font-size: 1.125rem",
+  ".wordmark__mark {\n  display: none;",
+]) {
+  if (!adapter.includes(contract)) fail(`Network header is not aligned to the shared contract: ${contract}.`);
+}
+if (adapter.includes("text-transform: uppercase")) {
+  fail("Network must not uppercase the shared Sites control.");
+}
+for (const contract of [
+  ".jl-global-header__inner",
+  "grid-template-columns: auto minmax(0, 1fr) auto",
+  "text-transform: none",
+]) {
+  if (!identityStyles.includes(contract)) fail(`Shared header package contract is incomplete: ${contract}.`);
+}
 
 console.log("Network Diagnostics design-system integration passed.");
