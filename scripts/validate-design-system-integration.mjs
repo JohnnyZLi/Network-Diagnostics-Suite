@@ -1,0 +1,75 @@
+import { access, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const main = await readFile(resolve("src/main.tsx"), "utf8");
+const app = await readFile(resolve("src/App.tsx"), "utf8");
+const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
+const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
+const source = await readFile(resolve("src/design-system/SOURCE.md"), "utf8");
+
+const fail = (message) => {
+  throw new Error(message);
+};
+
+if (version.version !== "1.3.2") fail("Network Diagnostics must consume Web Design System v1.3.2.");
+if (!source.includes("1999e51c5b3f340ab6360cf958ac24d77203d140")) {
+  fail("Design-system source commit is not pinned.");
+}
+
+const requiredImports = [
+  "./design-system/tokens.css",
+  "./design-system/foundations.css",
+  "./design-system/site-identity.css",
+  "./styles.css",
+  "./history.css",
+  "./report-details.css",
+  "./ui-polish.css",
+  "./transfer-color.css",
+  "./full-bleed-layout.css",
+  "./design-system-adapter.css",
+];
+let previousPosition = -1;
+for (const stylesheet of requiredImports) {
+  const position = main.indexOf(`import \"${stylesheet}\"`);
+  if (position < 0) fail(`Missing stylesheet import ${stylesheet}.`);
+  if (position <= previousPosition) fail(`Stylesheet order is incorrect at ${stylesheet}.`);
+  previousPosition = position;
+}
+
+for (const obsolete of ["portfolio-dots.css", "typography-accent.css"]) {
+  if (main.includes(obsolete)) fail(`Obsolete override remains imported: ${obsolete}.`);
+  try {
+    await access(resolve("src", obsolete));
+    fail(`Obsolete override file still exists: ${obsolete}.`);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Obsolete override")) throw error;
+  }
+}
+
+const ownedSites = [
+  ["https://johnnyli.dev", false],
+  ["https://network.johnnyli.dev", true],
+  ["https://rolepacket.johnnyli.dev", false],
+];
+for (const [url, current] of ownedSites) {
+  const escaped = url.replaceAll(".", "\\.");
+  const match = app.match(new RegExp(`<a[^>]*href=\"${escaped}\"[^>]*>`, "g"));
+  if (!match || match.length !== 1) fail(`Expected one owned-site link for ${url}.`);
+  if (/\btarget=/.test(match[0])) fail(`Owned-site link must stay in the same tab: ${url}.`);
+  if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
+}
+
+for (const hook of ["owned-sites-menu", "siteSwitcherRef", "setSitesOpen", "jl-site-switcher__button"]) {
+  if (!app.includes(hook)) fail(`Missing site-switcher integration hook: ${hook}.`);
+}
+
+const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
+for (const alias of requiredAliases) {
+  if (!new RegExp(`${alias}:\\s*var\\(--jl-`).test(adapter)) {
+    fail(`Network role ${alias} is not mapped to a shared token.`);
+  }
+}
+if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
+if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
+
+console.log("Network Diagnostics design-system integration passed.");
