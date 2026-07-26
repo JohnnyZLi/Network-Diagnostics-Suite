@@ -9,9 +9,9 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
 
 ## Design system
 
-The browser application consumes Johnny Li Web Design System v1.4.0 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens, global foundations, header, and page-content stylesheet against that source.
+The browser application consumes Johnny Li Web Design System v1.3.4 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens and shared foundations against that source and checks the global header, exact dot canvas, focus treatment, compact navigation, and test-profile layout contract.
 
-Idle, running, error, completed-report, saved-history, methodology, privacy, local-probe import, and imported-report states use the shared page, section, prose, panel, metric, callout, action, table, and responsive contracts. Network-specific charts, measurements, test logic, progress data, and analytical encodings remain owned by this repository.
+Network-specific charts, measurements, test controls, progress states, and semantic data encodings remain owned by this repository.
 
 ## What it measures
 

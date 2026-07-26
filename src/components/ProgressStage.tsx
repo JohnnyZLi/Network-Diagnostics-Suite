@@ -16,7 +16,7 @@ interface ProgressStageProps {
 export function ProgressStage({ progress }: ProgressStageProps) {
   const percentage = Math.round(Math.min(1, Math.max(0, progress.fraction)) * 100);
   return (
-    <section className="progress-stage jl-panel" aria-live="polite">
+    <section className="progress-stage" aria-live="polite">
       <div className="progress-stage__topline">
         <span className="activity-indicator" aria-hidden="true"><i /><i /><i /></span>
         <span>{PHASE_LABELS[progress.phase]}</span>
@@ -25,18 +25,18 @@ export function ProgressStage({ progress }: ProgressStageProps) {
       <div className="progress-track" aria-label={`${percentage}% complete`}>
         <span style={{ width: `${percentage}%` }} />
       </div>
-      <div className="progress-readings jl-metric-grid">
-        <div className="jl-metric">
-          <span className="jl-metric__label">Live throughput</span>
-          <strong className="jl-metric__value">{formatRate(progress.liveMbps)} <small>Mbps</small></strong>
+      <div className="progress-readings">
+        <div>
+          <span>Live throughput</span>
+          <strong>{formatRate(progress.liveMbps)} <small>Mbps</small></strong>
         </div>
-        <div className="jl-metric">
-          <span className="jl-metric__label">Live latency</span>
-          <strong className="jl-metric__value">{formatLatency(progress.liveLatencyMs)} <small>ms</small></strong>
+        <div>
+          <span>Live latency</span>
+          <strong>{formatLatency(progress.liveLatencyMs)} <small>ms</small></strong>
         </div>
-        <div className="jl-metric">
-          <span className="jl-metric__label">Transferred</span>
-          <strong className="jl-metric__value">{formatBytes(progress.bytesTransferred)}</strong>
+        <div>
+          <span>Transferred</span>
+          <strong>{formatBytes(progress.bytesTransferred)}</strong>
         </div>
       </div>
     </section>
