@@ -47,19 +47,21 @@ export function TestControls({
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
+          const optionTransferCap = optionConfig.downloadCapBytes + optionConfig.uploadCapBytes;
           return (
             <button
               className={mode === option ? "mode-option mode-option--active" : "mode-option"}
               type="button"
               role="radio"
               aria-checked={mode === option}
-              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
+              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}, up to ${formatBytes(optionTransferCap)}`}
               disabled={running}
               onClick={() => onModeChange(option)}
               key={option}
             >
               <span>{optionConfig.name}</span>
               <small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>
+              <small className="mode-option__cap" aria-hidden="true">≤ {formatBytes(optionTransferCap)}</small>
             </button>
           );
         })}
