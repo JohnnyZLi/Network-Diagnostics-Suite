@@ -154,7 +154,7 @@ export default function App() {
   return (
     <>
       <MotionObserver />
-      <div className="app-shell">
+      <div className="app-shell jl-page">
         <header className="site-header jl-global-header">
           <div className="jl-global-header__inner">
             <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
@@ -210,15 +210,15 @@ export default function App() {
         </header>
 
         <main>
-          <section className="hero">
-            <div className="hero__copy">
-              <span className="eyebrow">Browser test + local deep probe</span>
-              <h1>Measure the connection,<br /><em>not just the headline speed.</em></h1>
-              <p>Throughput is only one part of a usable network. Test latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account. Recent reports stay only in this browser.</p>
-              <div className="hero__facts">
-                <div><strong>3</strong><span>download samples</span></div>
-                <div><strong>6</strong><span>service targets</span></div>
-                <div><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
+          <section className="hero jl-page-hero" aria-labelledby="network-title">
+            <div className="hero__copy jl-stack">
+              <span className="eyebrow jl-eyebrow">Browser test + local deep probe</span>
+              <h1 className="jl-page-title" id="network-title">Measure the connection,<br /><em>not just the headline speed.</em></h1>
+              <p className="jl-page-lede">Throughput is only one part of a usable network. Test latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account. Recent reports stay only in this browser.</p>
+              <div className="hero__facts jl-page-meta">
+                <div className="jl-meta-item"><strong>3</strong><span>download samples</span></div>
+                <div className="jl-meta-item"><strong>6</strong><span>service targets</span></div>
+                <div className="jl-meta-item"><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
               </div>
             </div>
 
@@ -241,11 +241,11 @@ export default function App() {
           {runState === "running" && <ProgressStage progress={progress} />}
 
           {runState === "error" && (
-            <section className="error-panel" role="alert">
-              <span>Test interrupted</span>
+            <section className="error-panel jl-callout jl-callout--danger" role="alert">
+              <span className="jl-eyebrow">Test interrupted</span>
               <h2>The measurement endpoint did not finish the request.</h2>
               <p>{errorMessage} Check the connection and try again.</p>
-              <button type="button" onClick={startTest}>Try again</button>
+              <button className="jl-button" type="button" onClick={startTest}>Try again</button>
             </section>
           )}
 
@@ -259,16 +259,18 @@ export default function App() {
           )}
 
           {!result && runState !== "running" && runState !== "error" && (
-            <section className="measurement-preview" aria-label="Available measurements">
-              <div className="section-heading">
-                <span className="eyebrow">Beyond a single number</span>
-                <h2>One run, <em className="text-blue">three network conditions.</em></h2>
-                <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
+            <section className="measurement-preview jl-page-section" aria-label="Available measurements">
+              <div className="section-heading jl-page-section__header">
+                <div>
+                  <span className="eyebrow jl-eyebrow">Beyond a single number</span>
+                  <h2>One run, <em className="text-blue">three network conditions.</em></h2>
+                  <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
+                </div>
               </div>
-              <div className="preview-grid">
-                <article><span>01 / Idle</span><h3>Baseline quality</h3><p>Median, mean, minimum, maximum, 95th percentile, jitter, and request timeouts.</p></article>
-                <article><span>02 / Downstream</span><h3>Loaded responsiveness</h3><p>Three parallel-stream samples report a median download rate alongside loaded latency and stability.</p></article>
-                <article><span>03 / Upstream</span><h3>Queue pressure</h3><p>Upload saturation reveals call and gaming delays that an unloaded ping cannot show.</p></article>
+              <div className="preview-grid jl-grid-3 jl-responsive-region">
+                <article className="jl-panel"><span>01 / Idle</span><h3>Baseline quality</h3><p>Median, mean, minimum, maximum, 95th percentile, jitter, and request timeouts.</p></article>
+                <article className="jl-panel"><span>02 / Downstream</span><h3>Loaded responsiveness</h3><p>Three parallel-stream samples report a median download rate alongside loaded latency and stability.</p></article>
+                <article className="jl-panel"><span>03 / Upstream</span><h3>Queue pressure</h3><p>Upload saturation reveals call and gaming delays that an unloaded ping cannot show.</p></article>
               </div>
             </section>
           )}
@@ -281,16 +283,18 @@ export default function App() {
             onClear={clearHistory}
           />
 
-          <section className="methodology" id="methodology">
-            <div className="section-heading">
-              <span className="eyebrow">Measurement contract</span>
-              <h2>Every number says <em className="text-violet">what it actually measured.</em></h2>
+          <section className="methodology jl-page-section" id="methodology">
+            <div className="section-heading jl-page-section__header">
+              <div>
+                <span className="eyebrow jl-eyebrow">Measurement contract</span>
+                <h2>Every number says <em className="text-violet">what it actually measured.</em></h2>
+              </div>
             </div>
-            <div className="methodology-grid">
-              <article><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
-              <article><span>RTT</span><h3>Round-trip latency</h3><p>High-resolution elapsed time for an uncached request to the nearest configured test edge, summarized as a distribution.</p></article>
-              <article><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer direction.</p></article>
-              <article><span>RATE</span><h3>Application throughput</h3><p>The displayed download is the median of three successful payload-rate samples; upload remains one sustained phase.</p></article>
+            <div className="methodology-grid jl-grid-4 jl-responsive-region">
+              <article className="jl-panel"><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
+              <article className="jl-panel"><span>RTT</span><h3>Round-trip latency</h3><p>High-resolution elapsed time for an uncached request to the nearest configured test edge, summarized as a distribution.</p></article>
+              <article className="jl-panel"><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer direction.</p></article>
+              <article className="jl-panel"><span>RATE</span><h3>Application throughput</h3><p>The displayed download is the median of three successful payload-rate samples; upload remains one sustained phase.</p></article>
             </div>
           </section>
 
@@ -298,7 +302,7 @@ export default function App() {
           <div id="privacy"><InformationPanels /></div>
         </main>
 
-        <footer>
+        <footer className="jl-prose">
           <span>Network Diagnostics Suite</span>
           <p>Open source · no analytics · no accounts · local-only report history</p>
           <a href="https://johnnyli.dev">Back to johnnyli.dev</a>

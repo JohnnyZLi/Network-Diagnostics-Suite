@@ -44,19 +44,19 @@ function pathLabel(result: DiagnosticResult): string {
 
 function ComparisonCard({ name, statistics }: { name: string; statistics: PathStatistics | null }) {
   return (
-    <article className="comparison-card">
+    <article className="comparison-card jl-panel">
       <div className="comparison-card__heading">
         <span>{name}</span>
         <small>{statistics ? `${statistics.count} saved run${statistics.count === 1 ? "" : "s"}` : "No saved runs"}</small>
       </div>
       {statistics ? (
-        <dl>
-          <div><dt>Median download</dt><dd>{formatRate(statistics.downloadMbps)} Mbps</dd></div>
-          <div><dt>Median stability</dt><dd>{statistics.stabilityPercent.toFixed(0)}%</dd></div>
-          <div><dt>Median loaded delay</dt><dd>+{formatLatency(statistics.loadedLatencyMs)} ms</dd></div>
+        <dl className="jl-page-meta">
+          <div className="jl-meta-item"><dt>Median download</dt><dd>{formatRate(statistics.downloadMbps)} Mbps</dd></div>
+          <div className="jl-meta-item"><dt>Median stability</dt><dd>{statistics.stabilityPercent.toFixed(0)}%</dd></div>
+          <div className="jl-meta-item"><dt>Median loaded delay</dt><dd>+{formatLatency(statistics.loadedLatencyMs)} ms</dd></div>
         </dl>
       ) : (
-        <p>Run this path once to add it to the local comparison.</p>
+        <div className="jl-empty-state"><p>Run this path once to add it to the local comparison.</p></div>
       )}
     </article>
   );
@@ -77,30 +77,30 @@ export function RecentResultsPanel({
     : null;
 
   return (
-    <section className="recent-results" aria-labelledby="recent-results-title">
-      <div className="section-heading section-heading--actions">
+    <section className="recent-results jl-page-section" aria-labelledby="recent-results-title">
+      <div className="section-heading section-heading--actions jl-page-section__header">
         <div>
-          <span className="eyebrow">Stored only in this browser</span>
+          <span className="eyebrow jl-eyebrow">Stored only in this browser</span>
           <h2 id="recent-results-title">Recent reports and path comparison</h2>
           <p>The newest 12 completed reports stay in local storage on this device. Nothing is uploaded to an application database.</p>
         </div>
-        <button className="history-clear" type="button" onClick={onClear}>Clear local history</button>
+        <button className="history-clear jl-button" type="button" onClick={onClear}>Clear local history</button>
       </div>
 
-      <div className="comparison-grid">
+      <div className="comparison-grid jl-grid-2 jl-responsive-region">
         <ComparisonCard name="R2 direct" statistics={r2} />
         <ComparisonCard name="Worker comparison" statistics={worker} />
       </div>
       {r2Advantage !== null && (
-        <p className="comparison-note">
+        <p className="comparison-note jl-callout jl-callout--info">
           The saved median R2 download is {Math.abs(r2Advantage).toFixed(0)}% {r2Advantage >= 0 ? "faster" : "slower"} than the saved Worker median.
         </p>
       )}
 
-      <div className="history-list" role="list">
+      <div className="history-list jl-stack jl-stack--tight" role="list">
         {results.map((saved) => (
           <article
-            className={saved.id === currentResultId ? "history-row history-row--current" : "history-row"}
+            className={saved.id === currentResultId ? "history-row history-row--current jl-panel" : "history-row jl-panel"}
             key={saved.id}
             role="listitem"
           >
@@ -108,14 +108,14 @@ export function RecentResultsPanel({
               <strong>{new Date(saved.startedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</strong>
               <span>{pathLabel(saved)} · {saved.mode}</span>
             </div>
-            <dl>
-              <div><dt>Down</dt><dd>{formatRate(saved.download.steadyMbps)} Mbps</dd></div>
-              <div><dt>Stability</dt><dd>{saved.download.stabilityPercent.toFixed(0)}%</dd></div>
-              <div><dt>Loaded</dt><dd>+{formatLatency(saved.downloadLatency.increaseMs)} ms</dd></div>
+            <dl className="jl-page-meta">
+              <div className="jl-meta-item"><dt>Down</dt><dd>{formatRate(saved.download.steadyMbps)} Mbps</dd></div>
+              <div className="jl-meta-item"><dt>Stability</dt><dd>{saved.download.stabilityPercent.toFixed(0)}%</dd></div>
+              <div className="jl-meta-item"><dt>Loaded</dt><dd>+{formatLatency(saved.downloadLatency.increaseMs)} ms</dd></div>
             </dl>
-            <div className="history-row__actions">
-              <button type="button" onClick={() => onOpen(saved)}>Open</button>
-              <button type="button" onClick={() => onExport(saved)}>Export</button>
+            <div className="history-row__actions jl-actions">
+              <button className="jl-button" type="button" onClick={() => onOpen(saved)}>Open</button>
+              <button className="jl-button" type="button" onClick={() => onExport(saved)}>Export</button>
             </div>
           </article>
         ))}
