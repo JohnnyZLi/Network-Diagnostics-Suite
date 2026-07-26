@@ -155,155 +155,154 @@ export default function App() {
     <>
       <MotionObserver />
       <div className="app-shell">
-      <header className="site-header">
-        <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
-          <span>Johnny Li</span>
-          <span className="jl-site-identity__separator" aria-hidden="true">/</span>
-          <a className="wordmark__product jl-site-identity__product" href="/" aria-current="page" aria-label="Network Diagnostics home">
-            <span className="wordmark__mark" aria-hidden="true"><i /><i /><i /></span>
-            <span>Network Diagnostics</span>
-          </a>
-        </div>
-        <nav
-          className={mobileNavOpen ? "site-nav site-nav--open" : "site-nav"}
-          id="primary-navigation"
-          aria-label="Primary navigation"
-        >
-          <a href="#methodology" onClick={closeMobileNav}>Methodology</a>
-          <a href="#privacy" onClick={closeMobileNav}>Privacy</a>
-          <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer" onClick={closeMobileNav}>Source <span aria-hidden="true">↗</span></a>
-        </nav>
-        <div className="header-actions">
-          <div className="jl-site-switcher" ref={siteSwitcherRef}>
-            <button
-              className="jl-site-switcher__button"
-              ref={siteSwitcherButtonRef}
-              type="button"
-              aria-expanded={sitesOpen}
-              aria-controls="owned-sites-menu"
-              onClick={() => {
-                setMobileNavOpen(false);
-                setSitesOpen((open) => !open);
-              }}
+        <header className="site-header jl-global-header">
+          <div className="jl-global-header__inner">
+            <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
+              <a className="jl-site-identity__owner" href="https://johnnyli.dev">Johnny Li</a>
+              <span className="jl-site-identity__separator" aria-hidden="true">/</span>
+              <a className="wordmark__product jl-site-identity__product" href="/" aria-current="page">Network Diagnostics</a>
+            </div>
+            <nav
+              className={mobileNavOpen ? "site-nav site-nav--open jl-global-header__nav" : "site-nav jl-global-header__nav"}
+              id="primary-navigation"
+              aria-label="Primary navigation"
             >
-              <span>Sites</span>
-              <span aria-hidden="true">⌄</span>
-            </button>
-            <ul className="jl-site-menu" id="owned-sites-menu" hidden={!sitesOpen}>
-              <li><a href="https://johnnyli.dev" onClick={() => setSitesOpen(false)}>Portfolio</a></li>
-              <li><a href="https://network.johnnyli.dev" aria-current="page" onClick={() => setSitesOpen(false)}>Network Diagnostics</a></li>
-              <li><a href="https://rolepacket.johnnyli.dev" onClick={() => setSitesOpen(false)}>RolePacket</a></li>
-            </ul>
-          </div>
-          <button
-            className="nav-toggle"
-            type="button"
-            aria-expanded={mobileNavOpen}
-            aria-controls="primary-navigation"
-            onClick={() => {
-              setSitesOpen(false);
-              setMobileNavOpen((open) => !open);
-            }}
-          >
-            {mobileNavOpen ? "Close" : "Menu"}
-          </button>
-        </div>
-      </header>
-
-      <main>
-        <section className="hero">
-          <div className="hero__copy">
-            <span className="eyebrow">Browser test + local deep probe</span>
-            <h1>Measure the connection,<br /><em>not just the headline speed.</em></h1>
-            <p>Throughput is only one part of a usable network. Test latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account. Recent reports stay only in this browser.</p>
-            <div className="hero__facts">
-              <div><strong>3</strong><span>download samples</span></div>
-              <div><strong>6</strong><span>service targets</span></div>
-              <div><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
+              <a href="#methodology" onClick={closeMobileNav}>Methodology</a>
+              <a href="#privacy" onClick={closeMobileNav}>Privacy</a>
+              <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer" onClick={closeMobileNav}>Source <span aria-hidden="true">↗</span></a>
+            </nav>
+            <div className="header-actions jl-global-header__actions">
+              <div className="jl-site-switcher" ref={siteSwitcherRef}>
+                <button
+                  className="jl-site-switcher__button"
+                  ref={siteSwitcherButtonRef}
+                  type="button"
+                  aria-expanded={sitesOpen}
+                  aria-controls="owned-sites-menu"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    setSitesOpen((open) => !open);
+                  }}
+                >
+                  <span>Sites</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <ul className="jl-site-menu" id="owned-sites-menu" hidden={!sitesOpen}>
+                  <li><a href="https://johnnyli.dev" onClick={() => setSitesOpen(false)}>Portfolio</a></li>
+                  <li><a href="https://network.johnnyli.dev" aria-current="page" onClick={() => setSitesOpen(false)}>Network Diagnostics</a></li>
+                  <li><a href="https://rolepacket.johnnyli.dev" onClick={() => setSitesOpen(false)}>RolePacket</a></li>
+                </ul>
+              </div>
+              <button
+                className="nav-toggle"
+                type="button"
+                aria-expanded={mobileNavOpen}
+                aria-controls="primary-navigation"
+                onClick={() => {
+                  setSitesOpen(false);
+                  setMobileNavOpen((open) => !open);
+                }}
+              >
+                {mobileNavOpen ? "Close" : "Menu"}
+              </button>
             </div>
           </div>
+        </header>
 
-          <TestControls
-            mode={mode}
-            downloadPath={downloadPath}
-            running={runState === "running"}
-            dataConfirmed={dataConfirmed}
-            onModeChange={(nextMode) => {
-              setMode(nextMode);
-              setDataConfirmed(false);
-            }}
-            onDownloadPathChange={setDownloadPath}
-            onDataConfirmed={setDataConfirmed}
-            onStart={startTest}
-            onCancel={cancelTest}
-          />
-        </section>
+        <main>
+          <section className="hero">
+            <div className="hero__copy">
+              <span className="eyebrow">Browser test + local deep probe</span>
+              <h1>Measure the connection,<br /><em>not just the headline speed.</em></h1>
+              <p>Throughput is only one part of a usable network. Test latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account. Recent reports stay only in this browser.</p>
+              <div className="hero__facts">
+                <div><strong>3</strong><span>download samples</span></div>
+                <div><strong>6</strong><span>service targets</span></div>
+                <div><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
+              </div>
+            </div>
 
-        {runState === "running" && <ProgressStage progress={progress} />}
-
-        {runState === "error" && (
-          <section className="error-panel" role="alert">
-            <span>Test interrupted</span>
-            <h2>The measurement endpoint did not finish the request.</h2>
-            <p>{errorMessage} Check the connection and try again.</p>
-            <button type="button" onClick={startTest}>Try again</button>
+            <TestControls
+              mode={mode}
+              downloadPath={downloadPath}
+              running={runState === "running"}
+              dataConfirmed={dataConfirmed}
+              onModeChange={(nextMode) => {
+                setMode(nextMode);
+                setDataConfirmed(false);
+              }}
+              onDownloadPathChange={setDownloadPath}
+              onDataConfirmed={setDataConfirmed}
+              onStart={startTest}
+              onCancel={cancelTest}
+            />
           </section>
-        )}
 
-        {result && (
-          <ResultDashboard
-            result={result}
-            onExport={exportResult}
-            onCopy={copyResult}
-            copyLabel={copyLabel}
+          {runState === "running" && <ProgressStage progress={progress} />}
+
+          {runState === "error" && (
+            <section className="error-panel" role="alert">
+              <span>Test interrupted</span>
+              <h2>The measurement endpoint did not finish the request.</h2>
+              <p>{errorMessage} Check the connection and try again.</p>
+              <button type="button" onClick={startTest}>Try again</button>
+            </section>
+          )}
+
+          {result && (
+            <ResultDashboard
+              result={result}
+              onExport={exportResult}
+              onCopy={copyResult}
+              copyLabel={copyLabel}
+            />
+          )}
+
+          {!result && runState !== "running" && runState !== "error" && (
+            <section className="measurement-preview" aria-label="Available measurements">
+              <div className="section-heading">
+                <span className="eyebrow">Beyond a single number</span>
+                <h2>One run, <em className="text-blue">three network conditions.</em></h2>
+                <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
+              </div>
+              <div className="preview-grid">
+                <article><span>01 / Idle</span><h3>Baseline quality</h3><p>Median, mean, minimum, maximum, 95th percentile, jitter, and request timeouts.</p></article>
+                <article><span>02 / Downstream</span><h3>Loaded responsiveness</h3><p>Three parallel-stream samples report a median download rate alongside loaded latency and stability.</p></article>
+                <article><span>03 / Upstream</span><h3>Queue pressure</h3><p>Upload saturation reveals call and gaming delays that an unloaded ping cannot show.</p></article>
+              </div>
+            </section>
+          )}
+
+          <RecentResultsPanel
+            results={history}
+            currentResultId={result?.id ?? null}
+            onOpen={openSavedResult}
+            onExport={downloadResultFile}
+            onClear={clearHistory}
           />
-        )}
 
-        {!result && runState !== "running" && runState !== "error" && (
-          <section className="measurement-preview" aria-label="Available measurements">
+          <section className="methodology" id="methodology">
             <div className="section-heading">
-              <span className="eyebrow">Beyond a single number</span>
-              <h2>One run, <em className="text-blue">three network conditions.</em></h2>
-              <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
+              <span className="eyebrow">Measurement contract</span>
+              <h2>Every number says <em className="text-violet">what it actually measured.</em></h2>
             </div>
-            <div className="preview-grid">
-              <article><span>01 / Idle</span><h3>Baseline quality</h3><p>Median, mean, minimum, maximum, 95th percentile, jitter, and request timeouts.</p></article>
-              <article><span>02 / Downstream</span><h3>Loaded responsiveness</h3><p>Three parallel-stream samples report a median download rate alongside loaded latency and stability.</p></article>
-              <article><span>03 / Upstream</span><h3>Queue pressure</h3><p>Upload saturation reveals call and gaming delays that an unloaded ping cannot show.</p></article>
+            <div className="methodology-grid">
+              <article><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
+              <article><span>RTT</span><h3>Round-trip latency</h3><p>High-resolution elapsed time for an uncached request to the nearest configured test edge, summarized as a distribution.</p></article>
+              <article><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer direction.</p></article>
+              <article><span>RATE</span><h3>Application throughput</h3><p>The displayed download is the median of three successful payload-rate samples; upload remains one sustained phase.</p></article>
             </div>
           </section>
-        )}
 
-        <RecentResultsPanel
-          results={history}
-          currentResultId={result?.id ?? null}
-          onOpen={openSavedResult}
-          onExport={downloadResultFile}
-          onClear={clearHistory}
-        />
+          <DeepProbePanel />
+          <div id="privacy"><InformationPanels /></div>
+        </main>
 
-        <section className="methodology" id="methodology">
-          <div className="section-heading">
-            <span className="eyebrow">Measurement contract</span>
-            <h2>Every number says <em className="text-violet">what it actually measured.</em></h2>
-          </div>
-          <div className="methodology-grid">
-            <article><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
-            <article><span>RTT</span><h3>Round-trip latency</h3><p>High-resolution elapsed time for an uncached request to the nearest configured test edge, summarized as a distribution.</p></article>
-            <article><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer direction.</p></article>
-            <article><span>RATE</span><h3>Application throughput</h3><p>The displayed download is the median of three successful payload-rate samples; upload remains one sustained phase.</p></article>
-          </div>
-        </section>
-
-        <DeepProbePanel />
-        <div id="privacy"><InformationPanels /></div>
-      </main>
-
-      <footer>
-        <span>Network Diagnostics Suite</span>
-        <p>Open source · no analytics · no accounts · local-only report history</p>
-        <a href="https://johnnyli.dev">Back to johnnyli.dev</a>
-      </footer>
+        <footer>
+          <span>Network Diagnostics Suite</span>
+          <p>Open source · no analytics · no accounts · local-only report history</p>
+          <a href="https://johnnyli.dev">Back to johnnyli.dev</a>
+        </footer>
       </div>
     </>
   );
