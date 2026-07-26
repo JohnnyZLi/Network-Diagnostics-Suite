@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const sourceCommit = "ed00dc3897813ea049101926780a443d20dd22c5";
+const sourceCommit = "8a223a383fe1f41000c2fbe34ac5f92c73a1e710";
 const sourceRoot = `https://raw.githubusercontent.com/JohnnyZLi/Web-Design-System/${sourceCommit}`;
 const write = process.argv.includes("--write");
 const files = [
@@ -9,6 +9,7 @@ const files = [
   ["styles/foundations.css", "src/design-system/foundations.css"],
   ["styles/site-identity.css", "src/design-system/site-identity.css"],
   ["styles/content.css", "src/design-system/content.css"],
+  ["styles/content-guard.css", "src/design-system/content-guard.css"],
   ["version.json", "src/design-system/version.json"],
 ];
 
