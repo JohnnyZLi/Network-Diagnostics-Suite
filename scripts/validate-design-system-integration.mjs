@@ -47,6 +47,24 @@ for (const obsolete of ["portfolio-dots.css", "typography-accent.css"]) {
   }
 }
 
+for (const hook of [
+  'className="site-header jl-global-header"',
+  'className="jl-global-header__inner"',
+  'className="wordmark jl-site-identity"',
+  'className="jl-site-identity__owner"',
+  'className="jl-site-identity__separator"',
+  'className="wordmark__product jl-site-identity__product"',
+  "jl-global-header__nav",
+  'className="header-actions jl-global-header__actions"',
+  "owned-sites-menu",
+  "siteSwitcherRef",
+  "setSitesOpen",
+  "jl-site-switcher__button",
+]) {
+  if (!app.includes(hook)) fail(`Missing shared global-header hook: ${hook}.`);
+}
+if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");
+
 const menuStart = app.indexOf('id="owned-sites-menu"');
 const menuEnd = app.indexOf("</ul>", menuStart);
 if (menuStart < 0 || menuEnd < 0) fail("Owned-sites menu markup is missing.");
@@ -64,18 +82,6 @@ for (const [url, current] of ownedSites) {
   if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
 }
 
-for (const hook of [
-  "Johnny Li",
-  "jl-site-identity__separator",
-  "jl-site-identity__product",
-  "owned-sites-menu",
-  "siteSwitcherRef",
-  "setSitesOpen",
-  "jl-site-switcher__button",
-]) {
-  if (!app.includes(hook)) fail(`Missing shared-header integration hook: ${hook}.`);
-}
-
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
 for (const alias of requiredAliases) {
   if (!new RegExp(`${alias}:\\s*var\\(--jl-`).test(adapter)) {
@@ -84,21 +90,17 @@ for (const alias of requiredAliases) {
 }
 if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
 if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
-for (const contract of [
-  "min-height: var(--jl-layout-header-height)",
-  "var(--jl-layout-portfolio-max)",
-  "var(--jl-layout-gutter)",
-  "font-size: 1.125rem",
-  ".wordmark__mark {\n  display: none;",
-]) {
-  if (!adapter.includes(contract)) fail(`Network header is not aligned to the shared contract: ${contract}.`);
+if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
+  fail("Network legacy header geometry is not neutralized.");
 }
-if (adapter.includes("text-transform: uppercase")) {
-  fail("Network must not uppercase the shared Sites control.");
+for (const forbidden of ["var(--jl-layout-portfolio-max)", ".jl-site-switcher__button", "text-transform: uppercase"]) {
+  if (adapter.includes(forbidden)) fail(`Network must not re-own shared header styling: ${forbidden}.`);
 }
 for (const contract of [
   ".jl-global-header__inner",
+  "min-height: var(--jl-layout-header-height)",
   "grid-template-columns: auto minmax(0, 1fr) auto",
+  "font-size: 1.125rem",
   "text-transform: none",
 ]) {
   if (!identityStyles.includes(contract)) fail(`Shared header package contract is incomplete: ${contract}.`);
