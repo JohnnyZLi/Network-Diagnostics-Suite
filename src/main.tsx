@@ -12,6 +12,7 @@ import "./ui-polish.css";
 import "./test-controls.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";
+import "./design-system/content-guard.css";
 import "./design-system-adapter.css";
 import "./content-system.css";
 
