@@ -20,6 +20,12 @@ const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: str
   "worker-stream": { name: "Worker", detail: "Worker only" }
 };
 
+function compactEstimatedTime(value: string): string {
+  return value
+    .replace(/^about\s+/i, "≈")
+    .replace(/\s+seconds?$/i, " sec");
+}
+
 export function TestControls({
   mode,
   downloadPath,
@@ -39,20 +45,24 @@ export function TestControls({
     <section className="test-controls" aria-labelledby="test-controls-title">
       <div className="eyebrow" id="test-controls-title">Test profile</div>
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
-        {(Object.keys(TEST_MODES) as TestMode[]).map((option) => (
-          <button
-            className={mode === option ? "mode-option mode-option--active" : "mode-option"}
-            type="button"
-            role="radio"
-            aria-checked={mode === option}
-            disabled={running}
-            onClick={() => onModeChange(option)}
-            key={option}
-          >
-            <span>{TEST_MODES[option].name}</span>
-            <small>{TEST_MODES[option].estimatedTime}</small>
-          </button>
-        ))}
+        {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
+          const optionConfig = TEST_MODES[option];
+          return (
+            <button
+              className={mode === option ? "mode-option mode-option--active" : "mode-option"}
+              type="button"
+              role="radio"
+              aria-checked={mode === option}
+              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
+              disabled={running}
+              onClick={() => onModeChange(option)}
+              key={option}
+            >
+              <span>{optionConfig.name}</span>
+              <small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>
+            </button>
+          );
+        })}
       </div>
 
       <div className="test-controls__summary">
