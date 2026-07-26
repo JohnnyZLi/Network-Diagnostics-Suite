@@ -1,0 +1,6 @@
+{
+  "name": "@johnnyzli/web-design-system",
+  "version": "1.3.2",
+  "status": "implementation-candidate",
+  "tokenSource": "tokens/tokens.tokens.json"
+}
