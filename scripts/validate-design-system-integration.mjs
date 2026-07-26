@@ -87,16 +87,17 @@ for (const [url, current] of ownedSites) {
 
 for (const contract of [
   "function compactEstimatedTime",
-  '.replace(/^about\\s+/i, "≈")',
-  '.replace(/\\s+seconds?$/i, " sec")',
-  "aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}",
+  "const optionTransferCap = optionConfig.downloadCapBytes + optionConfig.uploadCapBytes",
+  "up to ${formatBytes(optionTransferCap)}",
   '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
+  '<small className="mode-option__cap" aria-hidden="true">≤ {formatBytes(optionTransferCap)}</small>',
 ]) {
   if (!testControls.includes(contract)) fail(`Test profile label contract is incomplete: ${contract}.`);
 }
 for (const contract of [
   "grid-template-columns: repeat(3, minmax(0, 1fr));",
-  "min-height: 68px;",
+  "min-height: 84px;",
+  ".mode-option__cap",
   "overflow: hidden;",
   "text-overflow: ellipsis;",
   "white-space: nowrap;",
@@ -114,6 +115,19 @@ for (const alias of requiredAliases) {
 }
 if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
 if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
+if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) {
+  fail("The legacy visible grid is not disabled.");
+}
+for (const compactNavContract of [
+  "Product navigation becomes a compact secondary row instead of disappearing.",
+  ".site-header .site-nav--open",
+  "position: absolute;",
+  "top: 100%;",
+  "display: flex;",
+  "border-bottom: 1px solid var(--jl-color-rule);",
+]) {
+  if (!adapter.includes(compactNavContract)) fail(`Compact Network navigation is incomplete: ${compactNavContract}.`);
+}
 if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
   fail("Network legacy header geometry is not neutralized.");
 }

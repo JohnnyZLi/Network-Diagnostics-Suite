@@ -7,6 +7,12 @@ A privacy-first connection-quality test that reports more than a headline downlo
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them. The primary browser test stays on the project's own Cloudflare deployment rather than sending results to a public speed-test dataset.
 
+## Design system
+
+The browser application consumes Johnny Li Web Design System v1.3.4 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens and shared foundations against that source and checks the global header, exact dot canvas, focus treatment, compact navigation, and test-profile layout contract.
+
+Network-specific charts, measurements, test controls, progress states, and semantic data encodings remain owned by this repository.
+
 ## What it measures
 
 | Measurement | Browser test | Native deep probe |
@@ -36,7 +42,7 @@ The distinction is intentional: a browser cannot send arbitrary ICMP packets or 
 | Full | 35 seconds | 900 MB | 256 MB | 1.156 GB | Yes |
 | Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes, with confirmation |
 
-Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows the selected profile's maximum transfer before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
+Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows each profile's maximum combined transfer in the selector and repeats the selected maximum before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
 
 ## Architecture
 
@@ -73,6 +79,8 @@ The build creates two ignored deterministic speed payloads under `public/speed/`
 Run the automated checks:
 
 ```bash
+npm run design-system:check
+npm run design-system:integration
 npm run typecheck
 npm test
 npm run build

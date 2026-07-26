@@ -26,6 +26,8 @@ body {
   background-size: 5px 5px;
 }
 
+/* The exact dot canvas must not be combined with the legacy visible grid. */
+body::before,
 body::after,
 .deep-probe::after {
   display: none;
@@ -137,12 +139,26 @@ body::after,
 }
 
 @media (max-width: 900px) {
-  .site-header .site-nav {
-    display: none;
+  .site-header {
+    margin-bottom: 46px;
   }
 
+  /* Product navigation becomes a compact secondary row instead of disappearing. */
+  .site-header .site-nav,
   .site-header .site-nav--open {
-    display: none;
+    min-height: 46px;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    display: flex;
+    gap: clamp(var(--jl-space-4), 5vw, var(--jl-space-8));
+    align-items: center;
+    justify-content: center;
+    padding-inline: var(--jl-layout-gutter);
+    border-bottom: 1px solid var(--jl-color-rule);
+    background: var(--jl-color-canvas);
+    font-size: 0.82rem;
   }
 
   .nav-toggle {
@@ -153,9 +169,18 @@ body::after,
 @media (max-width: 560px) {
   .site-header {
     min-height: 68px;
+    margin-bottom: 44px;
   }
 
   .site-header .wordmark {
     font-size: var(--jl-type-body-size);
+  }
+
+  .site-header .site-nav,
+  .site-header .site-nav--open {
+    min-height: 44px;
+    gap: var(--jl-space-4);
+    padding-inline: var(--jl-space-4);
+    font-size: 0.76rem;
   }
 }
