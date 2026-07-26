@@ -3,7 +3,7 @@
 Do not edit these files directly.
 
 Package: @johnnyzli/web-design-system
-Version: 1.3.2
-Source commit: 1999e51c5b3f340ab6360cf958ac24d77203d140
+Version: 1.3.3
+Source commit: 5eeb2effcffb0c11f93e683f178ab80d7456bde4
 
 Validate with `npm run design-system:check`.
