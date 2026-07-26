@@ -21,6 +21,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Validate pinned design-system assets
+        run: npm run design-system:check
+      - name: Validate design-system integration
+        run: npm run design-system:integration
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

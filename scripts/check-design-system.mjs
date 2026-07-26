@@ -1,0 +1,42 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
+const sourceCommit = "1999e51c5b3f340ab6360cf958ac24d77203d140";
+const sourceRoot = `https://raw.githubusercontent.com/JohnnyZLi/Web-Design-System/${sourceCommit}`;
+const write = process.argv.includes("--write");
+const files = [
+  ["tokens/tokens.css", "src/design-system/tokens.css"],
+  ["styles/foundations.css", "src/design-system/foundations.css"],
+  ["styles/site-identity.css", "src/design-system/site-identity.css"],
+  ["version.json", "src/design-system/version.json"],
+];
+
+const normalize = (value) => value.replaceAll("\r\n", "\n");
+
+for (const [source, destination] of files) {
+  const response = await fetch(`${sourceRoot}/${source}`);
+  if (!response.ok) {
+    throw new Error(`Unable to fetch ${source}: ${response.status} ${response.statusText}`);
+  }
+
+  const expected = normalize(await response.text());
+  const destinationPath = resolve(destination);
+
+  if (write) {
+    await mkdir(dirname(destinationPath), { recursive: true });
+    await writeFile(destinationPath, expected, "utf8");
+    continue;
+  }
+
+  const actual = normalize(await readFile(destinationPath, "utf8"));
+  if (actual !== expected) {
+    throw new Error(`${destination} drifted from Web Design System commit ${sourceCommit}.`);
+  }
+}
+
+const sourceMetadata = await readFile(resolve("src/design-system/SOURCE.md"), "utf8");
+if (!sourceMetadata.includes(sourceCommit)) {
+  throw new Error("Design-system source metadata is not pinned to the validated commit.");
+}
+
+console.log(`${write ? "Synced" : "Validated"} Web Design System v1.3.2 at ${sourceCommit}.`);

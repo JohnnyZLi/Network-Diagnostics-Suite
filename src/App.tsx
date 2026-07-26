@@ -57,10 +57,31 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dataConfirmed, setDataConfirmed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sitesOpen, setSitesOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
   const controllerRef = useRef<AbortController | null>(null);
+  const siteSwitcherRef = useRef<HTMLDivElement | null>(null);
+  const siteSwitcherButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => () => controllerRef.current?.abort("page-unmounted"), []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!siteSwitcherRef.current?.contains(event.target as Node)) setSitesOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setSitesOpen(false);
+      siteSwitcherButtonRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const startTest = async () => {
     controllerRef.current?.abort("new-test");
@@ -135,10 +156,14 @@ export default function App() {
       <MotionObserver />
       <div className="app-shell">
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="Network Diagnostics Suite home">
-          <span className="wordmark__mark" aria-hidden="true"><i /><i /><i /></span>
-          <span>Network Diagnostics</span>
-        </a>
+        <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
+          <span>Johnny Li</span>
+          <span className="jl-site-identity__separator" aria-hidden="true">/</span>
+          <a className="wordmark__product jl-site-identity__product" href="/" aria-current="page" aria-label="Network Diagnostics home">
+            <span className="wordmark__mark" aria-hidden="true"><i /><i /><i /></span>
+            <span>Network Diagnostics</span>
+          </a>
+        </div>
         <nav
           className={mobileNavOpen ? "site-nav site-nav--open" : "site-nav"}
           id="primary-navigation"
@@ -149,13 +174,36 @@ export default function App() {
           <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer" onClick={closeMobileNav}>Source <span aria-hidden="true">↗</span></a>
         </nav>
         <div className="header-actions">
-          <a className="privacy-status" href="https://johnnyli.dev" aria-label="Return to Johnny Li portfolio">← Portfolio</a>
+          <div className="jl-site-switcher" ref={siteSwitcherRef}>
+            <button
+              className="jl-site-switcher__button"
+              ref={siteSwitcherButtonRef}
+              type="button"
+              aria-expanded={sitesOpen}
+              aria-controls="owned-sites-menu"
+              onClick={() => {
+                setMobileNavOpen(false);
+                setSitesOpen((open) => !open);
+              }}
+            >
+              <span>Sites</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+            <ul className="jl-site-menu" id="owned-sites-menu" hidden={!sitesOpen}>
+              <li><a href="https://johnnyli.dev" onClick={() => setSitesOpen(false)}>Portfolio</a></li>
+              <li><a href="https://network.johnnyli.dev" aria-current="page" onClick={() => setSitesOpen(false)}>Network Diagnostics</a></li>
+              <li><a href="https://rolepacket.johnnyli.dev" onClick={() => setSitesOpen(false)}>RolePacket</a></li>
+            </ul>
+          </div>
           <button
             className="nav-toggle"
             type="button"
             aria-expanded={mobileNavOpen}
             aria-controls="primary-navigation"
-            onClick={() => setMobileNavOpen((open) => !open)}
+            onClick={() => {
+              setSitesOpen(false);
+              setMobileNavOpen((open) => !open);
+            }}
           >
             {mobileNavOpen ? "Close" : "Menu"}
           </button>
