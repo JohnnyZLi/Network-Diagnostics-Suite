@@ -11,7 +11,7 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, unit, detail, tone = "neutral", children }: MetricCardProps) {
   return (
-    <article className={`metric-card metric-card--${tone} jl-panel`}>
+    <article className={`metric-card metric-card--${tone}`}>
       <div className="metric-card__header">
         <span>{label}</span>
         <span className="metric-card__dot" aria-hidden="true" />

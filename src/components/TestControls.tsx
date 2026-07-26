@@ -42,8 +42,8 @@ export function TestControls({
   const requiresConfirmation = mode !== "quick";
 
   return (
-    <section className="test-controls jl-panel jl-responsive-region" aria-labelledby="test-controls-title">
-      <div className="eyebrow jl-eyebrow" id="test-controls-title">Test profile</div>
+    <section className="test-controls" aria-labelledby="test-controls-title">
+      <div className="eyebrow" id="test-controls-title">Test profile</div>
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
@@ -67,14 +67,14 @@ export function TestControls({
         })}
       </div>
 
-      <div className="test-controls__summary jl-prose">
+      <div className="test-controls__summary">
         <p>{config.description}</p>
-        <dl className="jl-page-meta">
-          <div className="jl-meta-item"><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-          <div className="jl-meta-item"><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div className="jl-meta-item"><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
-          <div className="jl-meta-item"><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
-          <div className="jl-meta-item"><dt>Storage</dt><dd>12 reports · this browser</dd></div>
+        <dl>
+          <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
+          <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
+          <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
+          <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
         </dl>
       </div>
 
@@ -99,7 +99,7 @@ export function TestControls({
       </details>
 
       {!running && (
-        <div className={`data-use-note data-use-note--${mode} jl-callout`}>
+        <div className={`data-use-note data-use-note--${mode}`}>
           <strong>Data use</strong>
           <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
         </div>
@@ -117,13 +117,13 @@ export function TestControls({
       )}
 
       {running ? (
-        <button type="button" className="run-button run-button--cancel jl-button" onClick={onCancel}>
+        <button type="button" className="run-button run-button--cancel" onClick={onCancel}>
           Stop test
         </button>
       ) : (
         <button
           type="button"
-          className="run-button jl-button jl-button--primary"
+          className="run-button"
           onClick={onStart}
           disabled={requiresConfirmation && !dataConfirmed}
         >
