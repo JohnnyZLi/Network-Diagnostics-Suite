@@ -4,6 +4,7 @@ import App from "./App";
 import "./design-system/tokens.css";
 import "./design-system/foundations.css";
 import "./design-system/site-identity.css";
+import "./design-system/content.css";
 import "./styles.css";
 import "./history.css";
 import "./report-details.css";
@@ -12,6 +13,7 @@ import "./test-controls.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";
 import "./design-system-adapter.css";
+import "./content-system.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
