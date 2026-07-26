@@ -1,28 +1,40 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const main = await readFile(resolve("src/main.tsx"), "utf8");
-const app = await readFile(resolve("src/App.tsx"), "utf8");
-const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
-const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
-const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
-const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
-const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
-const source = await readFile(resolve("src/design-system/SOURCE.md"), "utf8");
+const read = (path) => readFile(resolve(path), "utf8");
+const main = await read("src/main.tsx");
+const app = await read("src/App.tsx");
+const testControls = await read("src/components/TestControls.tsx");
+const progress = await read("src/components/ProgressStage.tsx");
+const metricCard = await read("src/components/MetricCard.tsx");
+const recentResults = await read("src/components/RecentResultsPanel.tsx");
+const information = await read("src/components/InformationPanels.tsx");
+const deepProbe = await read("src/components/DeepProbePanel.tsx");
+const latencyTable = await read("src/components/LatencyTable.tsx");
+const serviceMatrix = await read("src/components/ServiceMatrix.tsx");
+const resultDashboard = await read("src/components/ResultDashboard.tsx");
+const testControlStyles = await read("src/test-controls.css");
+const adapter = await read("src/design-system-adapter.css");
+const contentAdapter = await read("src/content-system.css");
+const identityStyles = await read("src/design-system/site-identity.css");
+const contentStyles = await read("src/design-system/content.css");
+const version = JSON.parse(await read("src/design-system/version.json"));
+const source = await read("src/design-system/SOURCE.md");
 
 const fail = (message) => {
   throw new Error(message);
 };
 
-if (version.version !== "1.3.4") fail("Network Diagnostics must consume Web Design System v1.3.4.");
-if (!source.includes("27f83fa7333903a38c2c5ca36ed0455fa71598fc")) {
-  fail("Design-system source commit is not pinned.");
+if (version.version !== "1.4.0") fail("Network Diagnostics must consume Web Design System v1.4.0.");
+if (!source.includes("ed00dc3897813ea049101926780a443d20dd22c5")) {
+  fail("Design-system source commit is not pinned to the reviewed v1.4.0 release.");
 }
 
 const requiredImports = [
   "./design-system/tokens.css",
   "./design-system/foundations.css",
   "./design-system/site-identity.css",
+  "./design-system/content.css",
   "./styles.css",
   "./history.css",
   "./report-details.css",
@@ -31,6 +43,7 @@ const requiredImports = [
   "./transfer-color.css",
   "./full-bleed-layout.css",
   "./design-system-adapter.css",
+  "./content-system.css",
 ];
 let previousPosition = -1;
 for (const stylesheet of requiredImports) {
@@ -91,8 +104,12 @@ for (const contract of [
   "up to ${formatBytes(optionTransferCap)}",
   '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
   '<small className="mode-option__cap" aria-hidden="true">≤ {formatBytes(optionTransferCap)}</small>',
+  "jl-panel jl-responsive-region",
+  "jl-page-meta",
+  "jl-callout",
+  "jl-button jl-button--primary",
 ]) {
-  if (!testControls.includes(contract)) fail(`Test profile label contract is incomplete: ${contract}.`);
+  if (!testControls.includes(contract)) fail(`Test-profile content contract is incomplete: ${contract}.`);
 }
 for (const contract of [
   "grid-template-columns: repeat(3, minmax(0, 1fr));",
@@ -104,7 +121,24 @@ for (const contract of [
   "@media (max-width: 760px)",
   "grid-template-columns: 1fr;",
 ]) {
-  if (!testControlStyles.includes(contract)) fail(`Test profile layout contract is incomplete: ${contract}.`);
+  if (!testControlStyles.includes(contract)) fail(`Test-profile layout contract is incomplete: ${contract}.`);
+}
+
+const stateContracts = [
+  [app, ["app-shell jl-page", "hero jl-page-hero", "jl-page-title", "jl-page-lede", "jl-page-meta", "error-panel jl-callout jl-callout--danger", "measurement-preview jl-page-section", "preview-grid jl-grid-3", "methodology jl-page-section", "methodology-grid jl-grid-4"]],
+  [progress, ["progress-stage jl-panel", "progress-readings jl-metric-grid", "jl-metric__value", "jl-metric__label"]],
+  [metricCard, ["metric-card--${tone} jl-panel"]],
+  [recentResults, ["recent-results jl-page-section", "comparison-card jl-panel", "jl-page-meta", "jl-empty-state", "history-list jl-stack", "history-row--current jl-panel", "history-row__actions jl-actions"]],
+  [information, ["information-grid jl-grid-2", "information-panel jl-panel", "jl-prose", "probe-status jl-callout jl-callout--info"]],
+  [deepProbe, ["deep-probe jl-page-section", "jl-page-lede", "jl-actions", "jl-button jl-button--primary", "jl-callout jl-callout--danger", "deep-summary jl-metric-grid", "report-panel local-link-panel jl-panel", "scope-grid jl-grid-3", "deep-table-wrap jl-table-region", "report-columns jl-grid-2", "interface-grid jl-grid-3"]],
+  [latencyTable, ["latency-table-wrap jl-table-region"]],
+  [serviceMatrix, ["service-grid jl-grid-3", "jl-callout jl-callout--success", "jl-callout jl-callout--danger"]],
+  [resultDashboard, ["metric-grid", "findings-panel", "recommendations-panel", "technical-details"]],
+];
+for (const [sourceText, contracts] of stateContracts) {
+  for (const contract of contracts) {
+    if (!sourceText.includes(contract)) fail(`Network state is not bound to shared content role: ${contract}.`);
+  }
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
@@ -115,9 +149,7 @@ for (const alias of requiredAliases) {
 }
 if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
 if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
-if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) {
-  fail("The legacy visible grid is not disabled.");
-}
+if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) fail("The legacy visible grid is not disabled.");
 for (const compactNavContract of [
   "Product navigation becomes a compact secondary row instead of disappearing.",
   ".site-header .site-nav--open",
@@ -128,29 +160,52 @@ for (const compactNavContract of [
 ]) {
   if (!adapter.includes(compactNavContract)) fail(`Compact Network navigation is incomplete: ${compactNavContract}.`);
 }
-if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
-  fail("Network legacy header geometry is not neutralized.");
-}
 for (const forbidden of ["var(--jl-layout-portfolio-max)", ".jl-site-switcher__button", "text-transform: uppercase"]) {
   if (adapter.includes(forbidden)) fail(`Network must not re-own shared header styling: ${forbidden}.`);
 }
-if (/^\s*@layer\b/m.test(identityStyles)) {
-  fail("Shared header must remain unlayered so Network button resets cannot override it.");
+
+for (const contract of [
+  ".jl-page__inner",
+  ".jl-page-hero__grid",
+  ".jl-page-meta",
+  ".jl-page-section__header",
+  ".jl-content-grid",
+  ".jl-prose",
+  ".jl-panel",
+  ".jl-process-list",
+  ".jl-metric-grid",
+  ".jl-callout--success",
+  ".jl-button--primary",
+  ".jl-table-region",
+  ".jl-empty-state",
+  "@media (max-width: 560px)",
+  "@media (forced-colors: active)",
+]) {
+  if (!contentStyles.includes(contract)) fail(`Shared page-content contract is incomplete: ${contract}.`);
 }
 for (const contract of [
-  ".jl-global-header__inner",
-  "grid-template-columns: auto minmax(0, 1fr) auto",
-  "width: 88px;",
-  "height: var(--jl-control-height-md);",
-  "font-family: var(--jl-font-ui);",
-  "font-size: 13px;",
-  "font-weight: 700;",
-  "line-height: 1;",
-  '.jl-site-switcher__button > [aria-hidden="true"]',
-  "border-right: 2px solid currentColor;",
-  "border-bottom: 2px solid currentColor;",
+  ".hero__copy",
+  ".test-controls",
+  ".progress-stage",
+  ".error-panel",
+  ".results > .metric-grid",
+  ".findings-panel",
+  ".recommendations-panel",
+  ".technical-details",
+  ".history-list",
+  ".information-grid",
+  ".deep-probe",
+  ".deep-table-wrap",
+  ".latency-table-wrap",
+  ".service-matrix-wrap",
+  "@media (max-width: 560px)",
+  "@media (forced-colors: active)",
 ]) {
-  if (!identityStyles.includes(contract)) fail(`Shared Sites control contract is incomplete: ${contract}.`);
+  if (!contentAdapter.includes(contract)) fail(`Network content adapter does not cover route/state: ${contract}.`);
 }
+if (/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla)\(/.test(contentAdapter)) {
+  fail("Network content adapter contains raw shared colors.");
+}
+if (/^\s*@layer\b/m.test(identityStyles)) fail("Shared header must remain unlayered so Network resets cannot override it.");
 
-console.log("Network Diagnostics design-system integration passed.");
+console.log("Web Design System v1.4.0 content integration passed for every Network Diagnostics state.");
