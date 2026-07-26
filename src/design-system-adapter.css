@@ -49,7 +49,7 @@ body::after,
     minmax(0, 1fr)
     auto
     max(var(--jl-layout-gutter), calc((100vw - var(--jl-layout-portfolio-max)) / 2));
-  gap: clamp(var(--jl-space-4), 2.5vw, var(--jl-space-8));
+  gap: 0;
   border-bottom: 1px solid var(--jl-color-rule);
   background: var(--jl-color-canvas);
   -webkit-backdrop-filter: none;
@@ -60,6 +60,7 @@ body::after,
   grid-column: 2;
   gap: 10px;
   align-items: baseline;
+  margin-right: clamp(var(--jl-space-4), 2.5vw, var(--jl-space-8));
   color: var(--jl-color-ink);
   font-family: var(--jl-font-ui);
   font-size: 1.125rem;
@@ -128,6 +129,7 @@ body::after,
   grid-column: 4;
   gap: var(--jl-space-2);
   justify-self: end;
+  margin-left: clamp(var(--jl-space-4), 2.5vw, var(--jl-space-8));
 }
 
 .text-blue,
@@ -159,15 +161,16 @@ body::after,
 @media (max-width: 900px) {
   .site-header {
     grid-template-columns: var(--jl-layout-gutter) minmax(0, 1fr) auto var(--jl-layout-gutter);
-    gap: var(--jl-space-3);
   }
 
   .site-header .wordmark {
     grid-column: 2;
+    margin-right: var(--jl-space-3);
   }
 
   .site-header .header-actions {
     grid-column: 3;
+    margin-left: var(--jl-space-3);
   }
 
   .site-header .site-nav {
