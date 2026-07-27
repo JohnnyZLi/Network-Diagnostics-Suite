@@ -226,7 +226,7 @@ export function TestControls({
             You’ll be asked again if this profile’s transfer cap increases.
           </p>
           <div className="data-confirmation-dialog__actions">
-            <button type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
+            <button autoFocus type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
               Cancel
             </button>
             <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary" onClick={confirmStart}>
