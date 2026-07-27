@@ -8,7 +8,7 @@
 .metric-card__detail {
   position: relative;
   z-index: 1;
-  padding-bottom: 12px;
+  margin-bottom: 12px;
 }
 
 .metric-card .sparkline {
