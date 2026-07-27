@@ -96,15 +96,18 @@ export function TestControls({
         </div>
       </details>
 
-      {!running && (
-        <div className={`data-use-note data-use-note--${mode}`}>
-          <strong>Data use</strong>
-          <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
-        </div>
-      )}
+      <div className={`data-use-note data-use-note--${mode}`}>
+        <strong>Data use</strong>
+        <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
+      </div>
 
       <div className="data-confirmation-slot">
-        {requiresConfirmation && !running && (
+        {running ? (
+          <p className="data-confirmation-status">
+            <span className="data-confirmation-status__mark" aria-hidden="true">•</span>
+            <span>Test in progress. You can stop it at any time.</span>
+          </p>
+        ) : requiresConfirmation ? (
           <label className="data-confirmation">
             <input
               type="checkbox"
@@ -113,6 +116,11 @@ export function TestControls({
             />
             <span>I understand this {config.name.toLowerCase()} test uses significant data.</span>
           </label>
+        ) : (
+          <p className="data-confirmation-status">
+            <span className="data-confirmation-status__mark" aria-hidden="true">✓</span>
+            <span>Quick test can start immediately—no confirmation required.</span>
+          </p>
         )}
       </div>
 
