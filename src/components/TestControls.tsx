@@ -136,7 +136,6 @@ export function TestControls({
               key={option}
             >
               <span>{optionConfig.name}</span>
-              <small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>
             </button>
           );
         })}
@@ -145,6 +144,7 @@ export function TestControls({
       <div className="test-controls__summary">
         <p>{config.description}</p>
         <dl>
+          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
