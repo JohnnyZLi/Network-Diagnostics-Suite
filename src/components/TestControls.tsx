@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import type { DownloadPathPreference, TestMode } from "../types/diagnostics";
@@ -6,10 +7,8 @@ interface TestControlsProps {
   mode: TestMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
-  dataConfirmed: boolean;
   onModeChange: (mode: TestMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
-  onDataConfirmed: (confirmed: boolean) => void;
   onStart: () => void;
   onCancel: () => void;
 }
@@ -30,16 +29,40 @@ export function TestControls({
   mode,
   downloadPath,
   running,
-  dataConfirmed,
   onModeChange,
   onDownloadPathChange,
-  onDataConfirmed,
   onStart,
   onCancel
 }: TestControlsProps) {
   const config = TEST_MODES[mode];
   const transferCap = config.downloadCapBytes + config.uploadCapBytes;
   const requiresConfirmation = mode !== "quick";
+  const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
+  const runButtonRef = useRef<HTMLButtonElement | null>(null);
+  const restoreRunButtonFocusRef = useRef(true);
+
+  const closeConfirmationDialog = () => {
+    confirmationDialogRef.current?.close();
+  };
+
+  const requestStart = () => {
+    if (!requiresConfirmation) {
+      onStart();
+      return;
+    }
+
+    const dialog = confirmationDialogRef.current;
+    if (dialog && !dialog.open) {
+      restoreRunButtonFocusRef.current = true;
+      dialog.showModal();
+    }
+  };
+
+  const confirmStart = () => {
+    restoreRunButtonFocusRef.current = false;
+    confirmationDialogRef.current?.close();
+    onStart();
+  };
 
   return (
     <section className="test-controls" aria-labelledby="test-controls-title">
@@ -101,44 +124,54 @@ export function TestControls({
         <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
       </div>
 
-      <div className="data-confirmation-slot">
-        {running ? (
-          <p className="data-confirmation-status">
-            <span className="data-confirmation-status__mark" aria-hidden="true">•</span>
-            <span>Test in progress. You can stop it at any time.</span>
-          </p>
-        ) : requiresConfirmation ? (
-          <label className="data-confirmation">
-            <input
-              type="checkbox"
-              checked={dataConfirmed}
-              onChange={(event) => onDataConfirmed(event.target.checked)}
-            />
-            <span>I understand this {config.name.toLowerCase()} test uses significant data.</span>
-          </label>
-        ) : (
-          <p className="data-confirmation-status">
-            <span className="data-confirmation-status__mark" aria-hidden="true">✓</span>
-            <span>Quick test can start immediately—no confirmation required.</span>
-          </p>
-        )}
-      </div>
-
       {running ? (
         <button type="button" className="run-button run-button--cancel" onClick={onCancel}>
           Stop test
         </button>
       ) : (
         <button
+          ref={runButtonRef}
           type="button"
           className="run-button"
-          onClick={onStart}
-          disabled={requiresConfirmation && !dataConfirmed}
+          aria-haspopup={requiresConfirmation ? "dialog" : undefined}
+          aria-controls={requiresConfirmation ? "data-confirmation-dialog" : undefined}
+          onClick={requestStart}
         >
           Run {config.name.toLowerCase()} test
           <span aria-hidden="true">→</span>
         </button>
       )}
+
+      <dialog
+        className={`data-confirmation-dialog data-confirmation-dialog--${mode}`}
+        id="data-confirmation-dialog"
+        ref={confirmationDialogRef}
+        aria-labelledby="data-confirmation-dialog-title"
+        aria-describedby="data-confirmation-dialog-description"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeConfirmationDialog();
+        }}
+        onClose={() => {
+          if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
+          restoreRunButtonFocusRef.current = true;
+        }}
+      >
+        <div className="data-confirmation-dialog__content">
+          <span className="eyebrow">Confirm data use</span>
+          <h2 id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
+          <p id="data-confirmation-dialog-description">
+            This test may transfer up to {formatBytes(transferCap)}. Avoid running it on metered or cellular connections.
+          </p>
+          <div className="data-confirmation-dialog__actions">
+            <button type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
+              Cancel
+            </button>
+            <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary" onClick={confirmStart}>
+              Run {config.name.toLowerCase()} test
+            </button>
+          </div>
+        </div>
+      </dialog>
     </section>
   );
 }
