@@ -13,6 +13,7 @@ import "./metric-card-layout.css";
 import "./test-controls.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";
+import "./hero-layout.css";
 import "./design-system-adapter.css";
 
 installCompactNavigationEscape();

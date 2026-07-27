@@ -30,7 +30,7 @@ jobs:
           done
           cat /tmp/network-preview.log
           exit 1
-      - name: Verify result-card separation and remembered confirmations
+      - name: Verify hero, result-card, and confirmation behavior
         run: |
           mkdir -p ui-regression
           node <<'NODE'
@@ -43,6 +43,30 @@ jobs:
             ['mobile', { width: 390, height: 844 }],
           ];
 
+          const readHeroGeometry = async (page) => page.evaluate(() => {
+            const hero = document.querySelector('.hero');
+            const copy = document.querySelector('.hero__copy');
+            const controls = document.querySelector('.test-controls');
+            if (!(hero instanceof HTMLElement) || !(copy instanceof HTMLElement) || !(controls instanceof HTMLElement)) return null;
+            const heroRect = hero.getBoundingClientRect();
+            const copyRect = copy.getBoundingClientRect();
+            const controlsRect = controls.getBoundingClientRect();
+            const copyStyle = getComputedStyle(copy);
+            return {
+              heroTop: heroRect.top,
+              heroBottom: heroRect.bottom,
+              heroHeight: heroRect.height,
+              copyTop: copyRect.top,
+              copyBottom: copyRect.bottom,
+              copyHeight: copyRect.height,
+              controlsTop: controlsRect.top,
+              controlsBottom: controlsRect.bottom,
+              position: copyStyle.position,
+              stickyTop: Number.parseFloat(copyStyle.top),
+              scrollY: window.scrollY,
+            };
+          });
+
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const failures = [];
@@ -51,6 +75,53 @@ jobs:
               const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
               const page = await context.newPage();
               await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+
+              const heroInitial = await readHeroGeometry(page);
+              if (!heroInitial) {
+                failures.push(`${name}: hero geometry did not render`);
+              } else if (name === 'desktop') {
+                if (Math.abs(heroInitial.copyTop - heroInitial.controlsTop) > 1) {
+                  failures.push(`desktop: hero copy top ${heroInitial.copyTop}px does not align with controls top ${heroInitial.controlsTop}px`);
+                }
+                if (heroInitial.position !== 'sticky') failures.push(`desktop: hero copy position is ${heroInitial.position}, expected sticky`);
+                if (!Number.isFinite(heroInitial.stickyTop)) failures.push('desktop: sticky top could not be resolved');
+
+                const stickyScroll = Math.max(0, heroInitial.copyTop - heroInitial.stickyTop) + 80;
+                await page.evaluate((scrollY) => window.scrollTo(0, scrollY), stickyScroll);
+                await page.waitForTimeout(100);
+                const heroSticky = await readHeroGeometry(page);
+                if (!heroSticky) {
+                  failures.push('desktop: sticky hero geometry disappeared');
+                } else {
+                  if (Math.abs(heroSticky.copyTop - heroInitial.stickyTop) > 1) {
+                    failures.push(`desktop: hero copy settled at ${heroSticky.copyTop}px instead of sticky top ${heroInitial.stickyTop}px`);
+                  }
+                  if (heroSticky.controlsTop >= heroSticky.copyTop - 16) {
+                    failures.push('desktop: Test profile panel did not continue scrolling past the sticky hero copy');
+                  }
+                }
+                await page.screenshot({ path: 'ui-regression/hero-sticky-desktop.png' });
+
+                const releaseScroll = heroInitial.heroTop + heroInitial.heroHeight - 40;
+                await page.evaluate((scrollY) => window.scrollTo(0, scrollY), releaseScroll);
+                await page.waitForTimeout(100);
+                const heroRelease = await readHeroGeometry(page);
+                if (!heroRelease) {
+                  failures.push('desktop: bounded hero geometry disappeared');
+                } else {
+                  if (heroRelease.copyBottom > heroRelease.heroBottom + 1) {
+                    failures.push('desktop: sticky hero copy escaped its hero section');
+                  }
+                  if (heroRelease.copyTop >= heroInitial.stickyTop - 1) {
+                    failures.push('desktop: hero copy did not release near the end of its section');
+                  }
+                }
+                await page.screenshot({ path: 'ui-regression/hero-release-desktop.png' });
+                await page.evaluate(() => window.scrollTo(0, 0));
+                await page.waitForTimeout(50);
+              } else if (heroInitial.position !== 'static') {
+                failures.push(`mobile: hero copy position is ${heroInitial.position}, expected static`);
+              }
 
               const geometry = await page.evaluate(() => {
                 const wrapper = document.createElement('div');
