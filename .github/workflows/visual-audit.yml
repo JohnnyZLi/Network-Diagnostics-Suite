@@ -10,7 +10,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -31,7 +31,7 @@ jobs:
           done
           cat /tmp/network-preview.log
           exit 1
-      - name: Capture application states
+      - name: Capture and verify application states
         run: |
           mkdir -p visual-audit
           node <<'NODE'
@@ -43,47 +43,69 @@ jobs:
             ['zoom-200', { width: 720, height: 900 }],
             ['mobile', { width: 390, height: 844 }],
           ];
+          const historySeed = [
+            {
+              id: 'visual-r2',
+              startedAt: '2026-07-27T03:00:00.000Z',
+              completedAt: '2026-07-27T03:00:20.000Z',
+              mode: 'quick',
+              download: { steadyMbps: 420, stabilityPercent: 94, delivery: { selectedPath: 'r2-direct-v1' } },
+              upload: { steadyMbps: 48 },
+              downloadLatency: { increaseMs: 12 },
+            },
+            {
+              id: 'visual-worker',
+              startedAt: '2026-07-26T03:00:00.000Z',
+              completedAt: '2026-07-26T03:00:20.000Z',
+              mode: 'full',
+              download: { steadyMbps: 310, stabilityPercent: 89, delivery: { selectedPath: 'worker-stream-v4' } },
+              upload: { steadyMbps: 44 },
+              downloadLatency: { increaseMs: 21 },
+            },
+          ];
+          const near = (actual, expected, tolerance = 0.75) =>
+            typeof actual === 'number' && Math.abs(actual - expected) <= tolerance;
 
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            const report = [];
-            for (const [viewportName, viewport] of viewports) {
-              const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
-              const page = await context.newPage();
-              await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
-              await page.screenshot({ path: `visual-audit/home-${viewportName}.png`, fullPage: true });
+          async function inspect(page, viewportName, prefix) {
+            const problems = [];
+            await page.screenshot({ path: `visual-audit/${prefix}-home-${viewportName}.png`, fullPage: true });
 
-              for (const profile of ['Quick', 'Full', 'Stress']) {
-                await page.getByRole('radio', { name: new RegExp(`^${profile},`) }).click();
-                await page.locator('.test-controls').screenshot({ path: `visual-audit/profile-${profile.toLowerCase()}-${viewportName}.png` });
+            for (const profile of ['Quick', 'Full', 'Stress']) {
+              await page.getByRole('radio', { name: new RegExp(`^${profile},`) }).click();
+              await page.locator('.test-controls').screenshot({ path: `visual-audit/${prefix}-profile-${profile.toLowerCase()}-${viewportName}.png` });
+            }
+
+            const advanced = page.locator('.advanced-path');
+            await advanced.locator('summary').click();
+            await advanced.screenshot({ path: `visual-audit/${prefix}-download-path-${viewportName}.png` });
+
+            for (const [name, selector] of [
+              ['measurement-preview', '.measurement-preview'],
+              ['recent-results', '.recent-results'],
+              ['methodology', '#methodology'],
+              ['deep-probe', '.deep-probe'],
+              ['privacy', '#privacy'],
+            ]) {
+              const locator = page.locator(selector).first();
+              if ((await locator.count()) !== 1) {
+                problems.push(`${name} state was not rendered`);
+                continue;
               }
+              await locator.scrollIntoViewIfNeeded();
+              await locator.screenshot({ path: `visual-audit/${prefix}-${name}-${viewportName}.png` });
+            }
 
-              const advanced = page.locator('.advanced-path');
-              if (await advanced.count()) {
-                await advanced.locator('summary').click();
-                await advanced.screenshot({ path: `visual-audit/download-path-${viewportName}.png` });
-              }
-
-              for (const [name, selector] of [
-                ['measurement-preview', '.measurement-preview'],
-                ['recent-results', '.recent-results'],
-                ['methodology', '#methodology'],
-                ['deep-probe', '.deep-probe'],
-                ['privacy', '#privacy'],
-              ]) {
-                const locator = page.locator(selector).first();
-                if (await locator.count()) {
-                  await locator.scrollIntoViewIfNeeded();
-                  await locator.screenshot({ path: `visual-audit/${name}-${viewportName}.png` });
-                }
-              }
-
-              const metrics = await page.evaluate(() => ({
+            const metrics = await page.evaluate(() => {
+              const bodyColor = getComputedStyle(document.body).color;
+              return {
                 viewportWidth: window.innerWidth,
                 documentWidth: document.documentElement.scrollWidth,
                 overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
                 h1Count: document.querySelectorAll('h1').length,
                 headerHeight: document.querySelector('.jl-global-header')?.getBoundingClientRect().height ?? null,
+                headerInnerHeight: document.querySelector('.jl-global-header__inner')?.getBoundingClientRect().height ?? null,
+                previewHeadingColors: [...document.querySelectorAll('.preview-grid h3')].map((element) => getComputedStyle(element).color),
+                bodyColor,
                 sitesButton: (() => {
                   const element = document.querySelector('.jl-site-switcher__button');
                   if (!(element instanceof HTMLElement)) return null;
@@ -91,14 +113,86 @@ jobs:
                   const style = getComputedStyle(element);
                   return { width: rect.width, height: rect.height, fontSize: style.fontSize, fontWeight: style.fontWeight };
                 })(),
-              }));
-              report.push({ viewportName, ...metrics });
+              };
+            });
+
+            const compact = viewportName === 'mobile';
+            const expectedInnerHeight = compact ? 68 : 82;
+            const expectedOuterHeight = compact ? 69 : 83;
+            const expectedButtonHeight = compact ? 40 : 44;
+            if (metrics.overflow) problems.push('document overflow');
+            if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
+            if (!near(metrics.headerInnerHeight, expectedInnerHeight)) problems.push(`header inner ${metrics.headerInnerHeight}, expected ${expectedInnerHeight}`);
+            if (!near(metrics.headerHeight, expectedOuterHeight)) problems.push(`header outer ${metrics.headerHeight}, expected ${expectedOuterHeight}`);
+            if (!metrics.sitesButton) {
+              problems.push('Sites button missing');
+            } else {
+              if (!near(metrics.sitesButton.width, 88)) problems.push(`Sites width ${metrics.sitesButton.width}`);
+              if (!near(metrics.sitesButton.height, expectedButtonHeight)) problems.push(`Sites height ${metrics.sitesButton.height}, expected ${expectedButtonHeight}`);
+              if (metrics.sitesButton.fontSize !== '13px') problems.push(`Sites font size ${metrics.sitesButton.fontSize}`);
+              if (metrics.sitesButton.fontWeight !== '700') problems.push(`Sites font weight ${metrics.sitesButton.fontWeight}`);
+            }
+            if (metrics.previewHeadingColors.length !== 3 || metrics.previewHeadingColors.some((color) => color !== metrics.bodyColor)) {
+              problems.push('explanatory preview headings are not using the neutral text color');
+            }
+
+            const sitesButton = page.locator('.jl-site-switcher__button');
+            const sitesMenu = page.locator('#owned-sites-menu');
+            await sitesButton.click();
+            await sitesMenu.waitFor({ state: 'visible' });
+            if ((await sitesMenu.locator('a').count()) !== 3) problems.push('Sites menu does not contain three links');
+            if ((await sitesMenu.locator('a[aria-current="page"]').count()) !== 1) problems.push('Sites menu current-page state is incorrect');
+            await page.screenshot({ path: `visual-audit/${prefix}-sites-open-${viewportName}.png` });
+            await page.keyboard.press('Escape');
+            if (await sitesMenu.isVisible()) problems.push('Sites menu did not close with Escape');
+            if (!(await sitesButton.evaluate((element) => document.activeElement === element))) problems.push('Sites button did not regain focus after Escape');
+
+            const nav = page.locator('#primary-navigation');
+            const navButton = page.locator('.nav-toggle');
+            const compactNavigation = viewportName !== 'desktop';
+            if (compactNavigation) {
+              if (!(await navButton.isVisible())) problems.push('compact Menu button is hidden');
+              await navButton.click();
+              await nav.waitFor({ state: 'visible' });
+              if ((await nav.locator('a').count()) !== 3) problems.push('compact navigation has the wrong link count');
+              if ((await navButton.getAttribute('aria-expanded')) !== 'true') problems.push('compact Menu did not expose expanded state');
+              await page.screenshot({ path: `visual-audit/${prefix}-navigation-open-${viewportName}.png` });
+              await page.keyboard.press('Escape');
+              if (await nav.isVisible()) problems.push('compact navigation did not close with Escape');
+              if (!(await navButton.evaluate((element) => document.activeElement === element))) problems.push('compact Menu did not regain focus after Escape');
+            } else {
+              if (await navButton.isVisible()) problems.push('desktop Menu button should be hidden');
+              if (!(await nav.isVisible())) problems.push('desktop navigation should be visible');
+            }
+
+            return { viewportName, ...metrics, problems };
+          }
+
+          async function auditBase(browser, baseUrl, prefix, viewportSet) {
+            const report = [];
+            for (const [viewportName, viewport] of viewportSet) {
+              const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+              await context.addInitScript((seed) => {
+                localStorage.setItem('network-diagnostics.recent-results.v1', JSON.stringify(seed));
+              }, historySeed);
+              const page = await context.newPage();
+              const response = await page.goto(baseUrl, { waitUntil: 'networkidle' });
+              const entry = await inspect(page, viewportName, prefix);
+              if (!response || !response.ok()) entry.problems.push(`HTTP ${response?.status() ?? 'no response'}`);
+              report.push(entry);
               await context.close();
             }
-            fs.writeFileSync('visual-audit/report.json', JSON.stringify(report, null, 2));
-            const failures = report.filter((entry) => entry.overflow || entry.h1Count !== 1);
+            return report;
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const localReport = await auditBase(browser, 'http://127.0.0.1:4173/', 'local', viewports);
+            const productionReport = await auditBase(browser, 'https://network.johnnyli.dev/', 'production', [viewports[0], viewports[2]]);
+            fs.writeFileSync('visual-audit/report.json', JSON.stringify({ local: localReport, production: productionReport }, null, 2));
+            const failures = [...localReport, ...productionReport].filter((entry) => entry.problems.length > 0);
             if (failures.length) {
-              console.error('Visual contract failures:', failures);
+              console.error('Rendered contract failures:', failures);
               process.exitCode = 1;
             }
             await browser.close();
