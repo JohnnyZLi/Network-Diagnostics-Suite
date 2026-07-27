@@ -120,11 +120,11 @@ body::after,
 
 .preview-grid article:nth-child(1) h3,
 .preview-grid article:nth-child(2) h3,
-.preview-grid article:nth-child(3) h3 {
+.preview-grid article:nth-child(3) h3,
+.methodology-grid article:nth-child(n) h3 {
   color: var(--text);
 }
 
-.methodology-grid article h3,
 .deep-probe__intro h2,
 .transfer-direction > header > small {
   color: var(--accent);
@@ -139,37 +139,70 @@ body::after,
 }
 
 @media (max-width: 900px) {
-  .site-header {
-    margin-bottom: 46px;
-  }
-
-  /* Product navigation becomes a compact secondary row instead of disappearing. */
   .site-header .site-nav,
   .site-header .site-nav--open {
-    min-height: 46px;
+    width: auto;
+    min-height: 0;
     position: absolute;
+    z-index: var(--jl-z-menu);
     top: 100%;
-    right: 0;
-    left: 0;
+    right: var(--jl-layout-gutter);
+    left: var(--jl-layout-gutter);
+    grid-template-columns: 1fr;
+    gap: var(--jl-space-1);
+    margin-top: var(--jl-space-2);
+    padding: var(--jl-space-2);
+    border: 1px solid var(--jl-color-rule-strong);
+    border-radius: var(--jl-radius-md);
+    background: var(--jl-color-surface);
+    box-shadow: var(--jl-shadow-high);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    font-size: 13px;
+  }
+
+  .site-header .site-nav {
+    display: none;
+  }
+
+  .site-header .site-nav--open {
+    display: grid;
+  }
+
+  .site-header .site-nav a {
+    min-height: var(--jl-control-height-md);
     display: flex;
-    gap: clamp(var(--jl-space-4), 5vw, var(--jl-space-8));
     align-items: center;
-    justify-content: center;
-    padding-inline: var(--jl-layout-gutter);
-    border-bottom: 1px solid var(--jl-color-rule);
-    background: var(--jl-color-canvas);
-    font-size: 0.82rem;
+    padding-inline: var(--jl-space-3);
+    border-radius: var(--jl-radius-sm);
+  }
+
+  .site-header .site-nav a:hover,
+  .site-header .site-nav a:focus-visible {
+    background: var(--jl-color-surface-muted);
+    text-decoration: none;
   }
 
   .nav-toggle {
-    display: none;
+    min-height: var(--jl-control-height-sm);
+    order: -1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--jl-color-rule-strong);
+    border-radius: var(--jl-radius-md);
+    background: var(--jl-color-surface);
+    color: var(--jl-color-ink);
+    font-family: var(--jl-font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
   }
 }
 
 @media (max-width: 560px) {
   .site-header {
     min-height: 68px;
-    margin-bottom: 44px;
   }
 
   .site-header .wordmark {
@@ -178,9 +211,18 @@ body::after,
 
   .site-header .site-nav,
   .site-header .site-nav--open {
-    min-height: 44px;
-    gap: var(--jl-space-4);
-    padding-inline: var(--jl-space-4);
-    font-size: 0.76rem;
+    right: var(--jl-space-4);
+    left: var(--jl-space-4);
+  }
+
+  .nav-toggle {
+    min-height: 40px;
+  }
+}
+
+@media (forced-colors: active) {
+  .nav-toggle,
+  .site-header .site-nav--open {
+    border-color: CanvasText;
   }
 }
