@@ -70,7 +70,6 @@ export function TestControls({
       <div className="test-controls__summary">
         <p>{config.description}</p>
         <dl>
-          <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
@@ -112,7 +111,7 @@ export function TestControls({
             checked={dataConfirmed}
             onChange={(event) => onDataConfirmed(event.target.checked)}
           />
-          <span>I understand this {config.name.toLowerCase()} test may transfer up to {formatBytes(transferCap)}.</span>
+          <span>I understand this {config.name.toLowerCase()} test uses significant data.</span>
         </label>
       )}
 
