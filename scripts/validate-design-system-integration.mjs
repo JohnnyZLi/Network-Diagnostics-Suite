@@ -63,6 +63,9 @@ for (const hook of [
   "siteSwitcherRef",
   "setSitesOpen",
   "jl-site-switcher__button",
+  "nav-toggle",
+  "mobileNav",
+  "site-nav--open",
 ]) {
   if (!app.includes(hook)) fail(`Missing shared global-header hook: ${hook}.`);
 }
@@ -119,14 +122,23 @@ if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) {
   fail("The legacy visible grid is not disabled.");
 }
 for (const compactNavContract of [
-  "Product navigation becomes a compact secondary row instead of disappearing.",
+  "@media (max-width: 900px)",
   ".site-header .site-nav--open",
   "position: absolute;",
   "top: 100%;",
-  "display: flex;",
-  "border-bottom: 1px solid var(--jl-color-rule);",
+  "display: grid;",
+  ".nav-toggle",
+  "order: -1;",
+  "var(--jl-shadow-high)",
 ]) {
   if (!adapter.includes(compactNavContract)) fail(`Compact Network navigation is incomplete: ${compactNavContract}.`);
+}
+for (const colorContract of [
+  ".methodology-grid article:nth-child(n) h3",
+  ".preview-grid article:nth-child(3) h3",
+  "color: var(--text);",
+]) {
+  if (!adapter.includes(colorContract)) fail(`Network explanatory color hierarchy is incomplete: ${colorContract}.`);
 }
 if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
   fail("Network legacy header geometry is not neutralized.");
