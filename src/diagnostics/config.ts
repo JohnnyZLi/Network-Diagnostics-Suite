@@ -37,7 +37,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
   standard: {
     id: "standard",
     name: "Full",
-    description: "Three download samples, a longer upload run, and a common-service reachability battery.",
+    description: "Three download samples, a longer upload run, and common-service reachability checks for a broader view of everyday network quality.",
     estimatedTime: "about 35 seconds",
     idlePingCount: 20,
     pingIntervalMs: 175,
