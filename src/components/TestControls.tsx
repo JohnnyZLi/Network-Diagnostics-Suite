@@ -99,6 +99,7 @@ export function TestControls({
       setRememberChoice(true);
       restoreRunButtonFocusRef.current = true;
       dialog.showModal();
+      cancelButtonRef.current?.focus();
       window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
     }
   };
