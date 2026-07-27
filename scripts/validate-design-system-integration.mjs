@@ -6,6 +6,7 @@ const app = await readFile(resolve("src/App.tsx"), "utf8");
 const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
 const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
 const metricCardStyles = await readFile(resolve("src/metric-card-layout.css"), "utf8");
+const heroLayout = await readFile(resolve("src/hero-layout.css"), "utf8");
 const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
 const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
 const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
@@ -32,6 +33,7 @@ const requiredImports = [
   "./test-controls.css",
   "./transfer-color.css",
   "./full-bleed-layout.css",
+  "./hero-layout.css",
   "./design-system-adapter.css",
 ];
 let previousPosition = -1;
@@ -102,7 +104,7 @@ for (const contract of [
   "if (!requiresConfirmation)",
   "dialog.showModal()",
   'aria-haspopup={requiresConfirmation ? "dialog" : undefined}',
-  '<dialog',
+  "<dialog",
   'id="data-confirmation-dialog"',
   'aria-labelledby="data-confirmation-dialog-title"',
   'aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"',
@@ -154,6 +156,20 @@ for (const contract of [
   "margin: auto -8px -18px;",
 ]) {
   if (!metricCardStyles.includes(contract)) fail(`Metric card chart-separation contract is incomplete: ${contract}.`);
+}
+for (const contract of [
+  "@media (min-width: 1101px)",
+  ".hero",
+  "align-items: start;",
+  ".hero__copy,",
+  ".test-controls",
+  "align-self: start;",
+  "position: sticky;",
+  "top: calc(var(--jl-layout-header-height) + var(--jl-space-8));",
+  "@media (max-width: 1100px)",
+  "position: static;",
+]) {
+  if (!heroLayout.includes(contract)) fail(`Hero alignment and bounded-sticky contract is incomplete: ${contract}.`);
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
