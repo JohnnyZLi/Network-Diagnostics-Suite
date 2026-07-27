@@ -80,6 +80,7 @@ export function TestControls({
   const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
   const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
@@ -98,6 +99,7 @@ export function TestControls({
       setRememberChoice(true);
       restoreRunButtonFocusRef.current = true;
       dialog.showModal();
+      window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
     }
   };
 
@@ -226,7 +228,7 @@ export function TestControls({
             You’ll be asked again if this profile’s transfer cap increases.
           </p>
           <div className="data-confirmation-dialog__actions">
-            <button autoFocus type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
+            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
               Cancel
             </button>
             <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary" onClick={confirmStart}>
