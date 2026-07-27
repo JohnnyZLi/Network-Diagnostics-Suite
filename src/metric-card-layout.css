@@ -1,0 +1,23 @@
+/* Keep metric copy and sparklines in normal document flow so wrapped details
+   can never overlap the chart. The negative edges preserve the original inset. */
+.metric-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-card__detail {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+}
+
+.metric-card .sparkline {
+  position: static;
+  left: auto;
+  bottom: auto;
+  flex: 0 0 60px;
+  width: calc(100% + 16px);
+  height: 60px;
+  margin: auto -8px -18px;
+  overflow: visible;
+}

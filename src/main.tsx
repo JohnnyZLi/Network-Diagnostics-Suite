@@ -9,6 +9,7 @@ import "./styles.css";
 import "./history.css";
 import "./report-details.css";
 import "./ui-polish.css";
+import "./metric-card-layout.css";
 import "./test-controls.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";

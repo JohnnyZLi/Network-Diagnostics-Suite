@@ -5,6 +5,7 @@ const main = await readFile(resolve("src/main.tsx"), "utf8");
 const app = await readFile(resolve("src/App.tsx"), "utf8");
 const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
 const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
+const metricCardStyles = await readFile(resolve("src/metric-card-layout.css"), "utf8");
 const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
 const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
 const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
@@ -27,6 +28,7 @@ const requiredImports = [
   "./history.css",
   "./report-details.css",
   "./ui-polish.css",
+  "./metric-card-layout.css",
   "./test-controls.css",
   "./transfer-color.css",
   "./full-bleed-layout.css",
@@ -34,7 +36,7 @@ const requiredImports = [
 ];
 let previousPosition = -1;
 for (const stylesheet of requiredImports) {
-  const position = main.indexOf(`import \"${stylesheet}\"`);
+  const position = main.indexOf(`import "${stylesheet}"`);
   if (position < 0) fail(`Missing stylesheet import ${stylesheet}.`);
   if (position <= previousPosition) fail(`Stylesheet order is incorrect at ${stylesheet}.`);
   previousPosition = position;
@@ -93,15 +95,21 @@ for (const contract of [
   'aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}',
   '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
   '<div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>',
+  "DATA_CONFIRMATION_STORAGE_KEY",
+  "loadConfirmationRecord",
+  "saveConfirmationRecord",
+  "rememberedCap < transferCap",
   "if (!requiresConfirmation)",
   "dialog.showModal()",
   'aria-haspopup={requiresConfirmation ? "dialog" : undefined}',
   '<dialog',
   'id="data-confirmation-dialog"',
   'aria-labelledby="data-confirmation-dialog-title"',
-  'aria-describedby="data-confirmation-dialog-description"',
+  'aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"',
   "Run the {config.name} test?",
   "This test may transfer up to {formatBytes(transferCap)}",
+  "Remember this choice for the {config.name} profile on this browser.",
+  "You’ll be asked again if this profile’s transfer cap increases.",
   "onClose",
 ]) {
   if (!testControls.includes(contract)) fail(`Test profile confirmation contract is incomplete: ${contract}.`);
@@ -112,7 +120,6 @@ for (const forbidden of [
   "up to ${formatBytes(optionTransferCap)}",
   'className="data-confirmation-slot"',
   'className="data-confirmation-status"',
-  'type="checkbox"',
   "Quick test can start immediately",
   "disabled={requiresConfirmation",
 ]) {
@@ -126,6 +133,7 @@ for (const contract of [
   "white-space: nowrap;",
   ".data-confirmation-dialog",
   ".data-confirmation-dialog::backdrop",
+  ".data-confirmation-dialog__remember",
   ".data-confirmation-dialog__actions",
   "inset: auto 0 12px;",
   "@media (max-width: 760px)",
@@ -136,6 +144,16 @@ for (const contract of [
 }
 for (const forbidden of [".mode-option__cap", ".data-confirmation-slot", ".data-confirmation-status"]) {
   if (testControlStyles.includes(forbidden)) fail(`Obsolete test-control styling remains: ${forbidden}.`);
+}
+for (const contract of [
+  ".metric-card",
+  "display: flex;",
+  "flex-direction: column;",
+  ".metric-card .sparkline",
+  "position: static;",
+  "margin: auto -8px -18px;",
+]) {
+  if (!metricCardStyles.includes(contract)) fail(`Metric card chart-separation contract is incomplete: ${contract}.`);
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];

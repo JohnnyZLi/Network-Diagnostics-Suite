@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import type { DownloadPathPreference, TestMode } from "../types/diagnostics";
@@ -7,19 +7,55 @@ interface TestControlsProps {
   mode: TestMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
-  dataConfirmed?: boolean;
   onModeChange: (mode: TestMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
-  onDataConfirmed?: (confirmed: boolean) => void;
   onStart: () => void;
   onCancel: () => void;
 }
+
+type ConfirmedTestMode = Exclude<TestMode, "quick">;
+type ConfirmationRecord = Partial<Record<ConfirmedTestMode, number>>;
+
+const DATA_CONFIRMATION_STORAGE_KEY = "network-diagnostics.data-confirmations.v1";
+const CONFIRMED_TEST_MODES: ConfirmedTestMode[] = ["standard", "extended"];
 
 const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
   auto: { name: "Automatic", detail: "R2 + fallback" },
   "r2-direct": { name: "Direct R2", detail: "R2 only" },
   "worker-stream": { name: "Worker", detail: "Worker only" }
 };
+
+function loadConfirmationRecord(): ConfirmationRecord {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const stored = window.localStorage.getItem(DATA_CONFIRMATION_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored) as Record<string, unknown>;
+    const record: ConfirmationRecord = {};
+
+    for (const mode of CONFIRMED_TEST_MODES) {
+      const value = parsed[mode];
+      if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+        record[mode] = value;
+      }
+    }
+
+    return record;
+  } catch {
+    return {};
+  }
+}
+
+function saveConfirmationRecord(record: ConfirmationRecord): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(DATA_CONFIRMATION_STORAGE_KEY, JSON.stringify(record));
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
 
 function compactEstimatedTime(value: string): string {
   return value
@@ -38,8 +74,13 @@ export function TestControls({
 }: TestControlsProps) {
   const config = TEST_MODES[mode];
   const transferCap = config.downloadCapBytes + config.uploadCapBytes;
-  const requiresConfirmation = mode !== "quick";
+  const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
+  const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
+  const [rememberChoice, setRememberChoice] = useState(true);
+  const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
+  const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
@@ -55,12 +96,23 @@ export function TestControls({
 
     const dialog = confirmationDialogRef.current;
     if (dialog && !dialog.open) {
+      setRememberChoice(true);
       restoreRunButtonFocusRef.current = true;
       dialog.showModal();
+      window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
     }
   };
 
   const confirmStart = () => {
+    if (rememberChoice && confirmationMode) {
+      const nextRecord: ConfirmationRecord = {
+        ...acknowledgedCaps,
+        [confirmationMode]: Math.max(acknowledgedCaps[confirmationMode] ?? 0, transferCap)
+      };
+      setAcknowledgedCaps(nextRecord);
+      saveConfirmationRecord(nextRecord);
+    }
+
     restoreRunButtonFocusRef.current = false;
     confirmationDialogRef.current?.close();
     onStart();
@@ -149,7 +201,7 @@ export function TestControls({
         id="data-confirmation-dialog"
         ref={confirmationDialogRef}
         aria-labelledby="data-confirmation-dialog-title"
-        aria-describedby="data-confirmation-dialog-description"
+        aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"
         onClick={(event) => {
           if (event.target === event.currentTarget) closeConfirmationDialog();
         }}
@@ -164,8 +216,19 @@ export function TestControls({
           <p id="data-confirmation-dialog-description">
             This test may transfer up to {formatBytes(transferCap)}. Avoid running it on metered or cellular connections.
           </p>
+          <label className="data-confirmation-dialog__remember">
+            <input
+              type="checkbox"
+              checked={rememberChoice}
+              onChange={(event) => setRememberChoice(event.target.checked)}
+            />
+            <span>Remember this choice for the {config.name} profile on this browser.</span>
+          </label>
+          <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
+            You’ll be asked again if this profile’s transfer cap increases.
+          </p>
           <div className="data-confirmation-dialog__actions">
-            <button type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
+            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
               Cancel
             </button>
             <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary" onClick={confirmStart}>
