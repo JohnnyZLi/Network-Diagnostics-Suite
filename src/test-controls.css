@@ -45,11 +45,30 @@
 
 .data-confirmation-slot {
   min-height: 36px;
+  display: flex;
+  align-items: flex-start;
   margin: -2px 0 18px;
 }
 
 .data-confirmation-slot .data-confirmation {
   margin: 0;
+}
+
+.data-confirmation-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.data-confirmation-status__mark {
+  flex: 0 0 16px;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
 }
 
 @media (max-width: 760px) {
