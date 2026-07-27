@@ -90,24 +90,34 @@ for (const [url, current] of ownedSites) {
 
 for (const contract of [
   "function compactEstimatedTime",
-  "const optionTransferCap = optionConfig.downloadCapBytes + optionConfig.uploadCapBytes",
-  "up to ${formatBytes(optionTransferCap)}",
+  'aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}',
   '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
-  '<small className="mode-option__cap" aria-hidden="true">≤ {formatBytes(optionTransferCap)}</small>',
+  '<div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>',
+  '<span>I understand this {config.name.toLowerCase()} test uses significant data.</span>',
 ]) {
-  if (!testControls.includes(contract)) fail(`Test profile label contract is incomplete: ${contract}.`);
+  if (!testControls.includes(contract)) fail(`Test profile information hierarchy is incomplete: ${contract}.`);
+}
+for (const forbidden of [
+  "optionTransferCap",
+  "mode-option__cap",
+  "up to ${formatBytes(optionTransferCap)}",
+]) {
+  if (testControls.includes(forbidden)) fail(`Transfer cap must not appear inside profile options: ${forbidden}.`);
 }
 for (const contract of [
   "grid-template-columns: repeat(3, minmax(0, 1fr));",
-  "min-height: 84px;",
-  ".mode-option__cap",
+  "min-height: 72px;",
   "overflow: hidden;",
   "text-overflow: ellipsis;",
   "white-space: nowrap;",
   "@media (max-width: 760px)",
   "grid-template-columns: 1fr;",
+  "grid-row: auto;",
 ]) {
   if (!testControlStyles.includes(contract)) fail(`Test profile layout contract is incomplete: ${contract}.`);
+}
+if (testControlStyles.includes(".mode-option__cap")) {
+  fail("Obsolete profile-option cap styling remains.");
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
