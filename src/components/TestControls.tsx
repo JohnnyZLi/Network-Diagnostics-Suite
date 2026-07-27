@@ -47,21 +47,19 @@ export function TestControls({
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
-          const optionTransferCap = optionConfig.downloadCapBytes + optionConfig.uploadCapBytes;
           return (
             <button
               className={mode === option ? "mode-option mode-option--active" : "mode-option"}
               type="button"
               role="radio"
               aria-checked={mode === option}
-              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}, up to ${formatBytes(optionTransferCap)}`}
+              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
               onClick={() => onModeChange(option)}
               key={option}
             >
               <span>{optionConfig.name}</span>
               <small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>
-              <small className="mode-option__cap" aria-hidden="true">≤ {formatBytes(optionTransferCap)}</small>
             </button>
           );
         })}
@@ -70,6 +68,7 @@ export function TestControls({
       <div className="test-controls__summary">
         <p>{config.description}</p>
         <dl>
+          <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
