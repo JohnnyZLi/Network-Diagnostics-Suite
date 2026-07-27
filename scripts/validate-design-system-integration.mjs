@@ -95,7 +95,7 @@ for (const [url, current] of ownedSites) {
 for (const contract of [
   "function compactEstimatedTime",
   'aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}',
-  '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
+  '<div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>',
   '<div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>',
   "DATA_CONFIRMATION_STORAGE_KEY",
   "loadConfirmationRecord",
@@ -117,6 +117,7 @@ for (const contract of [
   if (!testControls.includes(contract)) fail(`Test profile confirmation contract is incomplete: ${contract}.`);
 }
 for (const forbidden of [
+  '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
   "optionTransferCap",
   "mode-option__cap",
   "up to ${formatBytes(optionTransferCap)}",
@@ -129,7 +130,7 @@ for (const forbidden of [
 }
 for (const contract of [
   "grid-template-columns: repeat(3, minmax(0, 1fr));",
-  "min-height: 72px;",
+  "min-height: 56px;",
   "overflow: hidden;",
   "text-overflow: ellipsis;",
   "white-space: nowrap;",
