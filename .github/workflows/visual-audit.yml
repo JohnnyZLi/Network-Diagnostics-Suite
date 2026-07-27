@@ -1,0 +1,112 @@
+name: Visual audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save playwright@1.54.1
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/network-preview.log 2>&1 &
+          echo $! > /tmp/network-preview.pid
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/network-preview.log
+          exit 1
+      - name: Capture application states
+        run: |
+          mkdir -p visual-audit
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { chromium } = require('playwright');
+
+          const viewports = [
+            ['desktop', { width: 1440, height: 1000 }],
+            ['zoom-200', { width: 720, height: 900 }],
+            ['mobile', { width: 390, height: 844 }],
+          ];
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const report = [];
+            for (const [viewportName, viewport] of viewports) {
+              const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+              const page = await context.newPage();
+              await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              await page.screenshot({ path: `visual-audit/home-${viewportName}.png`, fullPage: true });
+
+              for (const profile of ['Quick', 'Full', 'Stress']) {
+                await page.getByRole('radio', { name: new RegExp(`^${profile},`) }).click();
+                await page.locator('.test-controls').screenshot({ path: `visual-audit/profile-${profile.toLowerCase()}-${viewportName}.png` });
+              }
+
+              const advanced = page.locator('.advanced-path');
+              if (await advanced.count()) {
+                await advanced.locator('summary').click();
+                await advanced.screenshot({ path: `visual-audit/download-path-${viewportName}.png` });
+              }
+
+              for (const [name, selector] of [
+                ['measurement-preview', '.measurement-preview'],
+                ['recent-results', '.recent-results'],
+                ['methodology', '#methodology'],
+                ['deep-probe', '.deep-probe'],
+                ['privacy', '#privacy'],
+              ]) {
+                const locator = page.locator(selector).first();
+                if (await locator.count()) {
+                  await locator.scrollIntoViewIfNeeded();
+                  await locator.screenshot({ path: `visual-audit/${name}-${viewportName}.png` });
+                }
+              }
+
+              const metrics = await page.evaluate(() => ({
+                viewportWidth: window.innerWidth,
+                documentWidth: document.documentElement.scrollWidth,
+                overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+                h1Count: document.querySelectorAll('h1').length,
+                headerHeight: document.querySelector('.jl-global-header')?.getBoundingClientRect().height ?? null,
+                sitesButton: (() => {
+                  const element = document.querySelector('.jl-site-switcher__button');
+                  if (!(element instanceof HTMLElement)) return null;
+                  const rect = element.getBoundingClientRect();
+                  const style = getComputedStyle(element);
+                  return { width: rect.width, height: rect.height, fontSize: style.fontSize, fontWeight: style.fontWeight };
+                })(),
+              }));
+              report.push({ viewportName, ...metrics });
+              await context.close();
+            }
+            fs.writeFileSync('visual-audit/report.json', JSON.stringify(report, null, 2));
+            const failures = report.filter((entry) => entry.overflow || entry.h1Count !== 1);
+            if (failures.length) {
+              console.error('Visual contract failures:', failures);
+              process.exitCode = 1;
+            }
+            await browser.close();
+          })();
+          NODE
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: network-visual-audit
+          path: visual-audit
+          retention-days: 7
