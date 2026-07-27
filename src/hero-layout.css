@@ -1,0 +1,27 @@
+/* Pair the editorial hero copy with the Test profile panel on wide layouts.
+   Both columns begin on the same baseline; the copy then remains visible only
+   while its own hero section is still in view. */
+@media (min-width: 1101px) {
+  .hero {
+    align-items: start;
+  }
+
+  .hero__copy,
+  .test-controls {
+    align-self: start;
+  }
+
+  .hero__copy {
+    position: sticky;
+    top: calc(var(--jl-layout-header-height) + var(--jl-space-8));
+  }
+}
+
+/* Stacking the columns removes the useful sticky boundary and can consume too
+   much of a compact viewport, so smaller layouts remain ordinary document flow. */
+@media (max-width: 1100px) {
+  .hero__copy {
+    position: static;
+    top: auto;
+  }
+}
