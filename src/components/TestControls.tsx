@@ -103,16 +103,18 @@ export function TestControls({
         </div>
       )}
 
-      {requiresConfirmation && !running && (
-        <label className="data-confirmation">
-          <input
-            type="checkbox"
-            checked={dataConfirmed}
-            onChange={(event) => onDataConfirmed(event.target.checked)}
-          />
-          <span>I understand this {config.name.toLowerCase()} test uses significant data.</span>
-        </label>
-      )}
+      <div className="data-confirmation-slot">
+        {requiresConfirmation && !running && (
+          <label className="data-confirmation">
+            <input
+              type="checkbox"
+              checked={dataConfirmed}
+              onChange={(event) => onDataConfirmed(event.target.checked)}
+            />
+            <span>I understand this {config.name.toLowerCase()} test uses significant data.</span>
+          </label>
+        )}
+      </div>
 
       {running ? (
         <button type="button" className="run-button run-button--cancel" onClick={onCancel}>

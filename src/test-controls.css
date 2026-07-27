@@ -31,6 +31,27 @@
   line-height: 1.25;
 }
 
+/* Reserve the tallest content shape for every profile so changing Quick,
+   Full, or Stress only swaps text and selection state. */
+.test-controls__summary > p {
+  min-height: 66px;
+  margin-block: 0;
+}
+
+.data-use-note {
+  min-height: 80px;
+  align-items: start;
+}
+
+.data-confirmation-slot {
+  min-height: 36px;
+  margin: -2px 0 18px;
+}
+
+.data-confirmation-slot .data-confirmation {
+  margin: 0;
+}
+
 @media (max-width: 760px) {
   .mode-selector {
     grid-template-columns: 1fr;
@@ -57,5 +78,31 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+
+  .test-controls__summary > p {
+    min-height: 88px;
+  }
+
+  .data-use-note {
+    min-height: 86px;
+  }
+
+  .data-confirmation-slot {
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 520px) {
+  .test-controls__summary > p {
+    min-height: 132px;
+  }
+
+  .data-use-note {
+    min-height: 138px;
+  }
+
+  .data-confirmation-slot {
+    min-height: 54px;
   }
 }

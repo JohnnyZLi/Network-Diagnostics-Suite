@@ -70,9 +70,47 @@ jobs:
             const problems = [];
             await page.screenshot({ path: `visual-audit/${prefix}-home-${viewportName}.png`, fullPage: true });
 
+            const profileGeometry = [];
             for (const profile of ['Quick', 'Full', 'Stress']) {
               await page.getByRole('radio', { name: new RegExp(`^${profile},`) }).click();
+              await page.waitForTimeout(50);
+              const geometry = await page.evaluate(() => {
+                const readRect = (selector) => {
+                  const element = document.querySelector(selector);
+                  if (!(element instanceof HTMLElement)) return null;
+                  const rect = element.getBoundingClientRect();
+                  return { top: rect.top + window.scrollY, height: rect.height };
+                };
+                return {
+                  heroCopy: readRect('.hero__copy'),
+                  controls: readRect('.test-controls'),
+                  dataUse: readRect('.data-use-note'),
+                  confirmationSlot: readRect('.data-confirmation-slot'),
+                  runButton: readRect('.run-button'),
+                };
+              });
+              profileGeometry.push({ profile, ...geometry });
               await page.locator('.test-controls').screenshot({ path: `visual-audit/${prefix}-profile-${profile.toLowerCase()}-${viewportName}.png` });
+            }
+
+            if (prefix === 'local') {
+              const baseline = profileGeometry[0];
+              for (const entry of profileGeometry.slice(1)) {
+                for (const area of ['heroCopy', 'controls', 'dataUse', 'confirmationSlot', 'runButton']) {
+                  const expected = baseline[area];
+                  const actual = entry[area];
+                  if (!expected || !actual) {
+                    problems.push(`${entry.profile} ${area} geometry is missing`);
+                    continue;
+                  }
+                  if (!near(actual.top, expected.top, 1)) {
+                    problems.push(`${entry.profile} moved ${area} from ${expected.top} to ${actual.top}`);
+                  }
+                  if (!near(actual.height, expected.height, 1)) {
+                    problems.push(`${entry.profile} changed ${area} height from ${expected.height} to ${actual.height}`);
+                  }
+                }
+              }
             }
 
             const advanced = page.locator('.advanced-path');
@@ -165,7 +203,7 @@ jobs:
               if (!(await nav.isVisible())) problems.push('desktop navigation should be visible');
             }
 
-            return { viewportName, ...metrics, problems };
+            return { viewportName, ...metrics, profileGeometry, problems };
           }
 
           async function auditBase(browser, baseUrl, prefix, viewportSet) {
