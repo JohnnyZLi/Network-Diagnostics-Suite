@@ -7,8 +7,10 @@ interface TestControlsProps {
   mode: TestMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
+  dataConfirmed?: boolean;
   onModeChange: (mode: TestMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
+  onDataConfirmed?: (confirmed: boolean) => void;
   onStart: () => void;
   onCancel: () => void;
 }
