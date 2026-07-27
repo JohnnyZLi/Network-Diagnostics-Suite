@@ -71,6 +71,7 @@ jobs:
             await page.screenshot({ path: `visual-audit/${prefix}-home-${viewportName}.png`, fullPage: true });
 
             const profileGeometry = [];
+            const expectedCaps = { Full: '1.2 GB', Stress: '3.5 GB' };
             for (const profile of ['Quick', 'Full', 'Stress']) {
               await page.getByRole('radio', { name: new RegExp(`^${profile},`) }).click();
               await page.waitForTimeout(50);
@@ -85,18 +86,61 @@ jobs:
                   heroCopy: readRect('.hero__copy'),
                   controls: readRect('.test-controls'),
                   dataUse: readRect('.data-use-note'),
-                  confirmationSlot: readRect('.data-confirmation-slot'),
                   runButton: readRect('.run-button'),
                 };
               });
               profileGeometry.push({ profile, ...geometry });
               await page.locator('.test-controls').screenshot({ path: `visual-audit/${prefix}-profile-${profile.toLowerCase()}-${viewportName}.png` });
+
+              if (prefix === 'local') {
+                const runButton = page.getByRole('button', { name: `Run ${profile.toLowerCase()} test` });
+                const dialog = page.getByRole('dialog');
+                if (profile === 'Quick') {
+                  if ((await runButton.getAttribute('aria-haspopup')) !== null) problems.push('Quick run button exposes an unnecessary dialog affordance');
+                  if (await dialog.isVisible()) problems.push('Quick profile left the confirmation dialog open');
+                } else {
+                  if ((await runButton.getAttribute('aria-haspopup')) !== 'dialog') problems.push(`${profile} run button does not announce its dialog`);
+                  await runButton.click();
+                  await dialog.waitFor({ state: 'visible' });
+                  if (!(await dialog.getByRole('heading', { name: `Run the ${profile} test?` }).isVisible())) {
+                    problems.push(`${profile} confirmation heading is missing`);
+                  }
+                  if (!(await dialog.getByText(expectedCaps[profile], { exact: false }).isVisible())) {
+                    problems.push(`${profile} confirmation does not show its transfer cap`);
+                  }
+                  const cancelButton = dialog.getByRole('button', { name: 'Cancel' });
+                  if (!(await cancelButton.evaluate((element) => document.activeElement === element))) {
+                    problems.push(`${profile} dialog did not focus Cancel first`);
+                  }
+                  const dialogGeometry = await dialog.evaluate((element) => {
+                    const rect = element.getBoundingClientRect();
+                    return { left: rect.left, right: rect.right, bottom: rect.bottom, width: rect.width };
+                  });
+                  if (viewportName === 'mobile') {
+                    if (!near(dialogGeometry.width, 366, 1)) problems.push(`${profile} mobile sheet width ${dialogGeometry.width}`);
+                    if (!near(dialogGeometry.bottom, 832, 1)) problems.push(`${profile} mobile sheet bottom ${dialogGeometry.bottom}`);
+                  }
+                  await page.screenshot({ path: `visual-audit/${prefix}-profile-${profile.toLowerCase()}-confirmation-${viewportName}.png` });
+                  await page.keyboard.press('Escape');
+                  if (await dialog.isVisible()) problems.push(`${profile} confirmation did not close with Escape`);
+                  if (!(await runButton.evaluate((element) => document.activeElement === element))) {
+                    problems.push(`${profile} run button did not regain focus after Escape`);
+                  }
+                  await runButton.click();
+                  await dialog.waitFor({ state: 'visible' });
+                  await dialog.getByRole('button', { name: 'Cancel' }).click();
+                  if (await dialog.isVisible()) problems.push(`${profile} confirmation did not close with Cancel`);
+                  if (!(await runButton.evaluate((element) => document.activeElement === element))) {
+                    problems.push(`${profile} run button did not regain focus after Cancel`);
+                  }
+                }
+              }
             }
 
             if (prefix === 'local') {
               const baseline = profileGeometry[0];
               for (const entry of profileGeometry.slice(1)) {
-                for (const area of ['heroCopy', 'controls', 'dataUse', 'confirmationSlot', 'runButton']) {
+                for (const area of ['heroCopy', 'controls', 'dataUse', 'runButton']) {
                   const expected = baseline[area];
                   const actual = entry[area];
                   if (!expected || !actual) {

@@ -93,16 +93,30 @@ for (const contract of [
   'aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}',
   '<small aria-hidden="true">{compactEstimatedTime(optionConfig.estimatedTime)}</small>',
   '<div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>',
-  '<span>I understand this {config.name.toLowerCase()} test uses significant data.</span>',
+  "if (!requiresConfirmation)",
+  "dialog.showModal()",
+  'aria-haspopup={requiresConfirmation ? "dialog" : undefined}',
+  '<dialog',
+  'id="data-confirmation-dialog"',
+  'aria-labelledby="data-confirmation-dialog-title"',
+  'aria-describedby="data-confirmation-dialog-description"',
+  "Run the {config.name} test?",
+  "This test may transfer up to {formatBytes(transferCap)}",
+  "onClose",
 ]) {
-  if (!testControls.includes(contract)) fail(`Test profile information hierarchy is incomplete: ${contract}.`);
+  if (!testControls.includes(contract)) fail(`Test profile confirmation contract is incomplete: ${contract}.`);
 }
 for (const forbidden of [
   "optionTransferCap",
   "mode-option__cap",
   "up to ${formatBytes(optionTransferCap)}",
+  'className="data-confirmation-slot"',
+  'className="data-confirmation-status"',
+  'type="checkbox"',
+  "Quick test can start immediately",
+  "disabled={requiresConfirmation",
 ]) {
-  if (testControls.includes(forbidden)) fail(`Transfer cap must not appear inside profile options: ${forbidden}.`);
+  if (testControls.includes(forbidden)) fail(`Obsolete inline confirmation remains: ${forbidden}.`);
 }
 for (const contract of [
   "grid-template-columns: repeat(3, minmax(0, 1fr));",
@@ -110,14 +124,18 @@ for (const contract of [
   "overflow: hidden;",
   "text-overflow: ellipsis;",
   "white-space: nowrap;",
+  ".data-confirmation-dialog",
+  ".data-confirmation-dialog::backdrop",
+  ".data-confirmation-dialog__actions",
+  "inset: auto 0 12px;",
   "@media (max-width: 760px)",
   "grid-template-columns: 1fr;",
   "grid-row: auto;",
 ]) {
   if (!testControlStyles.includes(contract)) fail(`Test profile layout contract is incomplete: ${contract}.`);
 }
-if (testControlStyles.includes(".mode-option__cap")) {
-  fail("Obsolete profile-option cap styling remains.");
+for (const forbidden of [".mode-option__cap", ".data-confirmation-slot", ".data-confirmation-status"]) {
+  if (testControlStyles.includes(forbidden)) fail(`Obsolete test-control styling remains: ${forbidden}.`);
 }
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
