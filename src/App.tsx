@@ -55,7 +55,6 @@ export default function App() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [history, setHistory] = useState<DiagnosticResult[]>(() => loadRecentResults());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [dataConfirmed, setDataConfirmed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
@@ -226,13 +225,8 @@ export default function App() {
               mode={mode}
               downloadPath={downloadPath}
               running={runState === "running"}
-              dataConfirmed={dataConfirmed}
-              onModeChange={(nextMode) => {
-                setMode(nextMode);
-                setDataConfirmed(false);
-              }}
+              onModeChange={setMode}
               onDownloadPathChange={setDownloadPath}
-              onDataConfirmed={setDataConfirmed}
               onStart={startTest}
               onCancel={cancelTest}
             />
