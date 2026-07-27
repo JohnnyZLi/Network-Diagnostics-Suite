@@ -95,11 +95,11 @@
 
 @media (max-width: 520px) {
   .test-controls__summary > p {
-    min-height: 110px;
+    min-height: 132px;
   }
 
   .data-use-note {
-    min-height: 104px;
+    min-height: 138px;
   }
 
   .data-confirmation-slot {
