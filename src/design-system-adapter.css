@@ -40,7 +40,7 @@ body::after,
   box-shadow: 0 0 0 5px var(--_jl-focus-gap-color);
 }
 
-/* Reset the legacy Network header. Shared CSS owns the actual geometry. */
+/* Neutralize legacy header geometry; the shared classes own the rendered contract. */
 .site-header {
   width: 100%;
   min-height: var(--jl-layout-header-height);
@@ -138,91 +138,10 @@ body::after,
   color: var(--accent);
 }
 
-@media (max-width: 900px) {
-  .site-header .site-nav,
-  .site-header .site-nav--open {
-    width: auto;
-    min-height: 0;
-    position: absolute;
-    z-index: var(--jl-z-menu);
-    top: 100%;
-    right: var(--jl-layout-gutter);
-    left: var(--jl-layout-gutter);
-    grid-template-columns: 1fr;
-    gap: var(--jl-space-1);
-    margin-top: var(--jl-space-2);
-    padding: var(--jl-space-2);
-    border: 1px solid var(--jl-color-rule-strong);
-    border-radius: var(--jl-radius-md);
-    background: var(--jl-color-surface);
-    box-shadow: var(--jl-shadow-high);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    font-size: 13px;
-  }
-
-  .site-header .site-nav {
-    display: none;
-  }
-
-  .site-header .site-nav--open {
+/* The legacy stylesheet hides every header nav below 760px. Restore only the
+   shared controller's open state; all popover geometry remains package-owned. */
+@media (max-width: 760px) {
+  .site-header .site-nav.jl-header-menu--open {
     display: grid;
-  }
-
-  .site-header .site-nav a {
-    min-height: var(--jl-control-height-md);
-    display: flex;
-    align-items: center;
-    padding-inline: var(--jl-space-3);
-    border-radius: var(--jl-radius-sm);
-  }
-
-  .site-header .site-nav a:hover,
-  .site-header .site-nav a:focus-visible {
-    background: var(--jl-color-surface-muted);
-    text-decoration: none;
-  }
-
-  .nav-toggle {
-    min-height: var(--jl-control-height-sm);
-    order: -1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-color: var(--jl-color-rule-strong);
-    border-radius: var(--jl-radius-md);
-    background: var(--jl-color-surface);
-    color: var(--jl-color-ink);
-    font-family: var(--jl-font-ui);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1;
-  }
-}
-
-@media (max-width: 560px) {
-  .site-header {
-    min-height: 68px;
-  }
-
-  .site-header .wordmark {
-    font-size: var(--jl-type-body-size);
-  }
-
-  .site-header .site-nav,
-  .site-header .site-nav--open {
-    right: var(--jl-space-4);
-    left: var(--jl-space-4);
-  }
-
-  .nav-toggle {
-    min-height: 40px;
-  }
-}
-
-@media (forced-colors: active) {
-  .nav-toggle,
-  .site-header .site-nav--open {
-    border-color: CanvasText;
   }
 }

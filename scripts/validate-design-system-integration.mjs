@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const main = await readFile(resolve("src/main.tsx"), "utf8");
 const app = await readFile(resolve("src/App.tsx"), "utf8");
+const siteControls = await readFile(resolve("src/design-system/site-controls.js"), "utf8");
 const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
 const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
 const metricCardStyles = await readFile(resolve("src/metric-card-layout.css"), "utf8");
@@ -16,8 +17,8 @@ const fail = (message) => {
   throw new Error(message);
 };
 
-if (version.version !== "1.4.0") fail("Network Diagnostics must consume Web Design System v1.4.0.");
-if (!source.includes("8a223a383fe1f41000c2fbe34ac5f92c73a1e710")) {
+if (version.version !== "1.5.0") fail("Network Diagnostics must consume Web Design System v1.5.0.");
+if (!source.includes("14fc1281f02d3a1fa33e6d80aae24637d93b04f7")) {
   fail("Design-system source commit is not pinned.");
 }
 
@@ -44,13 +45,13 @@ for (const stylesheet of requiredImports) {
   previousPosition = position;
 }
 
-for (const obsolete of ["portfolio-dots.css", "typography-accent.css"]) {
-  if (main.includes(obsolete)) fail(`Obsolete override remains imported: ${obsolete}.`);
+for (const obsolete of ["portfolio-dots.css", "typography-accent.css", "compact-navigation-escape.ts"]) {
+  if (main.includes(obsolete)) fail(`Obsolete integration remains imported: ${obsolete}.`);
   try {
     await access(resolve("src", obsolete));
-    fail(`Obsolete override file still exists: ${obsolete}.`);
+    fail(`Obsolete integration file still exists: ${obsolete}.`);
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Obsolete override")) throw error;
+    if (error instanceof Error && error.message.startsWith("Obsolete integration")) throw error;
   }
 }
 
@@ -61,35 +62,57 @@ for (const hook of [
   'className="jl-site-identity__owner"',
   'className="jl-site-identity__separator"',
   'className="wordmark__product jl-site-identity__product"',
-  "jl-global-header__nav",
+  "jl-global-header__nav jl-header-menu",
   'className="header-actions jl-global-header__actions"',
-  "owned-sites-menu",
-  "siteSwitcherRef",
-  "setSitesOpen",
-  "jl-site-switcher__button",
-  "nav-toggle",
-  "mobileNav",
-  "site-nav--open",
+  "data-site-switcher",
+  "data-site-switcher-button",
+  "data-site-switcher-menu",
+  "data-header-menu",
+  "data-header-menu-button",
+  "jl-header-menu--open",
+  "jl-header-menu-toggle",
+  "OWNED_SITES.map",
+  'site.id === "network"',
+  "installSiteSwitcher",
+  "installHeaderMenu",
+  "siteController.destroy()",
+  "navigationController.destroy()",
+  "mobileNavControllerRef.current?.close()",
+  "siteController.close()",
 ]) {
-  if (!app.includes(hook)) fail(`Missing shared global-header hook: ${hook}.`);
+  if (!app.includes(hook)) fail(`Missing shared global-header or controller hook: ${hook}.`);
 }
 if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");
+for (const forbidden of [
+  'document.addEventListener("pointerdown"',
+  'document.addEventListener("keydown"',
+  "site-nav--open",
+  "siteSwitcherButtonRef",
+  "closeMobileNav",
+]) {
+  if (app.includes(forbidden)) fail(`Duplicated navigation behavior remains in App: ${forbidden}.`);
+}
 
-const menuStart = app.indexOf('id="owned-sites-menu"');
-const menuEnd = app.indexOf("</ul>", menuStart);
-if (menuStart < 0 || menuEnd < 0) fail("Owned-sites menu markup is missing.");
-const menu = app.slice(menuStart, menuEnd);
-const ownedSites = [
-  ["https://johnnyli.dev", false],
-  ["https://network.johnnyli.dev", true],
-  ["https://rolepacket.johnnyli.dev", false],
-];
-for (const [url, current] of ownedSites) {
-  const escaped = url.replaceAll(".", "\\.");
-  const match = menu.match(new RegExp(`<a[^>]*href=\"${escaped}\"[^>]*>`, "g"));
-  if (!match || match.length !== 1) fail(`Expected one site-switcher link for ${url}.`);
-  if (/\btarget=/.test(match[0])) fail(`Owned-site link must stay in the same tab: ${url}.`);
-  if (current !== /aria-current=\"page\"/.test(match[0])) fail(`Incorrect current-site state for ${url}.`);
+for (const contract of [
+  "export const OWNED_SITES",
+  'id: "portfolio"',
+  'id: "network"',
+  'id: "rolepacket"',
+  'href: "https://johnnyli.dev"',
+  'href: "https://network.johnnyli.dev"',
+  'href: "https://rolepacket.johnnyli.dev"',
+  "export function installDisclosureMenu",
+  "export function installSiteSwitcher",
+  "export function installHeaderMenu",
+  'event.key === "ArrowDown"',
+  'event.key === "ArrowUp"',
+  'event.key === "Home"',
+  'event.key === "End"',
+  'event.key === "Escape"',
+  'document.addEventListener("pointerdown"',
+  'closeMediaQuery: "(min-width: 901px)"',
+]) {
+  if (!siteControls.includes(contract)) fail(`Shared site-control contract is incomplete: ${contract}.`);
 }
 
 for (const contract of [
@@ -184,18 +207,6 @@ if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatmen
 if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) {
   fail("The legacy visible grid is not disabled.");
 }
-for (const compactNavContract of [
-  "@media (max-width: 900px)",
-  ".site-header .site-nav--open",
-  "position: absolute;",
-  "top: 100%;",
-  "display: grid;",
-  ".nav-toggle",
-  "order: -1;",
-  "var(--jl-shadow-high)",
-]) {
-  if (!adapter.includes(compactNavContract)) fail(`Compact Network navigation is incomplete: ${compactNavContract}.`);
-}
 for (const colorContract of [
   ".methodology-grid article:nth-child(n) h3",
   ".preview-grid article:nth-child(3) h3",
@@ -206,9 +217,17 @@ for (const colorContract of [
 if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
   fail("Network legacy header geometry is not neutralized.");
 }
-for (const forbidden of ["var(--jl-layout-portfolio-max)", ".jl-site-switcher__button", "text-transform: uppercase"]) {
-  if (adapter.includes(forbidden)) fail(`Network must not re-own shared header styling: ${forbidden}.`);
+for (const forbidden of [
+  "@media (max-width: 900px)",
+  ".site-nav--open",
+  ".nav-toggle",
+  "var(--jl-layout-portfolio-max)",
+  ".jl-site-switcher__button",
+  "text-transform: uppercase",
+]) {
+  if (adapter.includes(forbidden)) fail(`Network adapter re-owns shared header behavior or styling: ${forbidden}.`);
 }
+
 if (/^\s*@layer\b/m.test(identityStyles)) {
   fail("Shared header must remain unlayered so Network button resets cannot override it.");
 }
@@ -224,8 +243,13 @@ for (const contract of [
   '.jl-site-switcher__button > [aria-hidden="true"]',
   "border-right: 2px solid currentColor;",
   "border-bottom: 2px solid currentColor;",
+  ".jl-header-menu-toggle",
+  ".jl-global-header__nav.jl-header-menu--open",
+  "right: var(--jl-layout-gutter);",
+  "left: var(--jl-layout-gutter);",
+  "@media (forced-colors: active)",
 ]) {
-  if (!identityStyles.includes(contract)) fail(`Shared Sites control contract is incomplete: ${contract}.`);
+  if (!identityStyles.includes(contract)) fail(`Shared header and compact-menu contract is incomplete: ${contract}.`);
 }
 
 console.log("Network Diagnostics design-system integration passed.");
