@@ -131,11 +131,11 @@ body::after,
 }
 
 .information-panel:first-child h2 {
-  color: var(--accent);
+  color: var(--text);
 }
 
 .information-panel--probe h2 {
-  color: var(--text);
+  color: var(--accent);
 }
 
 @media (max-width: 900px) {
