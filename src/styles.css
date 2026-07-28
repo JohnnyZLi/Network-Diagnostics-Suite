@@ -120,8 +120,8 @@ body::before {
 .results { padding-top: 72px; }
 .section-heading--actions { max-width: none; display: flex; justify-content: space-between; align-items: end; }
 .result-actions { display: flex; gap: 8px; }
-.result-actions button, .error-panel button { padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--muted-strong); background: var(--panel); font-size: 11px; cursor: pointer; }
-.result-actions button:hover, .error-panel button:hover { color: var(--text); border-color: rgba(23,23,20,.32); }
+.result-actions button { padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--muted-strong); background: var(--panel); font-size: 11px; cursor: pointer; }
+.result-actions button:hover { color: var(--text); border-color: rgba(23,23,20,.32); }
 .metric-grid { display: grid; grid-template-columns: 1.25fr 1.25fr .75fr .75fr; gap: 12px; }
 .metric-card { min-height: 225px; position: relative; overflow: hidden; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: rgba(251,248,242,.82); box-shadow: 0 16px 45px rgba(78,55,39,.06); }
 .metric-card__header { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .11em; }
@@ -150,7 +150,6 @@ body::before {
 .scope-status--warn { color: var(--rust); }
 .scope-panel__note { margin: 18px 0 0; color: var(--muted-strong); font-size: 10px; line-height: 1.55; }
 .scope-panel__note code { padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); font: 500 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.latency-table-wrap { overflow-x: auto; }
 .latency-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 11px; }
 .latency-table th, .latency-table td { padding: 15px 12px; border-top: 1px solid var(--line); text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 400; }
 .latency-table thead th { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: 9px; }
@@ -228,7 +227,7 @@ body::before {
 .probe-status span { color: var(--muted); }
 .probe-status strong { font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-.error-panel { margin: 48px 3.5%; padding: 38px; border: 1px solid rgba(182,83,71,.3); border-radius: var(--radius); background: rgba(182,83,71,.07); }
+.error-panel { margin: 48px 3.5%; }
 .error-panel > span { color: var(--red); font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .11em; }
 .error-panel h2 { margin: 13px 0; font-size: 25px; }
 .error-panel p { color: var(--muted-strong); }
