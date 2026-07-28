@@ -1,0 +1,149 @@
+/* Variable-backed content shells for cross-product reuse.
+   This export is standalone after tokens.css; consumers do not need content.css. */
+
+.jl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jl-actions-gap, var(--jl-space-3));
+  align-items: var(--jl-actions-align, center);
+}
+
+.jl-button {
+  min-height: var(--jl-button-min-height, var(--jl-control-height-md));
+  display: inline-flex;
+  gap: var(--jl-button-gap, var(--jl-space-2));
+  align-items: center;
+  justify-content: center;
+  padding: var(--jl-button-padding-block, 0) var(--jl-button-padding-inline, var(--jl-control-padding-inline));
+  border: var(--jl-button-border-width, 1px) solid var(--jl-button-border-color, var(--jl-color-rule-strong));
+  border-radius: var(--jl-button-radius, var(--jl-radius-md));
+  background: var(--jl-button-background, var(--jl-color-surface));
+  color: var(--jl-button-color, var(--jl-color-ink));
+  box-shadow: var(--jl-button-shadow, none);
+  font-family: var(--jl-button-font-family, var(--jl-font-ui));
+  font-size: var(--jl-button-font-size, inherit);
+  font-weight: var(--jl-button-font-weight, 700);
+  line-height: var(--jl-button-line-height, 1.2);
+  text-align: center;
+  text-decoration: none;
+  white-space: var(--jl-button-white-space, nowrap);
+  cursor: pointer;
+  transition:
+    border-color var(--jl-motion-fast) ease,
+    background-color var(--jl-motion-fast) ease,
+    color var(--jl-motion-fast) ease,
+    box-shadow var(--jl-motion-fast) ease,
+    transform var(--jl-motion-fast) ease;
+}
+
+.jl-button:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--jl-button-hover-border-color, var(--jl-color-accent));
+  background: var(--jl-button-hover-background, var(--jl-button-background, var(--jl-color-surface)));
+  color: var(--jl-button-hover-color, var(--jl-button-color, var(--jl-color-ink)));
+  box-shadow: var(--jl-button-hover-shadow, var(--jl-button-shadow, none));
+  transform: var(--jl-button-hover-transform, none);
+}
+
+.jl-button:disabled,
+.jl-button[aria-disabled="true"] {
+  opacity: var(--jl-button-disabled-opacity, var(--jl-control-disabled-opacity));
+  cursor: not-allowed;
+}
+
+.jl-button--primary {
+  --jl-button-border-color: var(--jl-color-accent);
+  --jl-button-background: var(--jl-color-accent);
+  --jl-button-color: var(--jl-color-on-accent);
+  --jl-button-hover-border-color: var(--jl-color-accent-hover);
+  --jl-button-hover-background: var(--jl-color-accent-hover);
+  --jl-button-hover-color: var(--jl-color-on-accent);
+}
+
+.jl-button--compact {
+  --jl-button-min-height: var(--jl-control-height-sm);
+  --jl-button-padding-inline: var(--jl-space-3);
+  --jl-button-font-size: var(--jl-type-metadata-size);
+}
+
+.jl-button--danger {
+  --jl-button-border-color: var(--jl-semantic-danger-border);
+  --jl-button-background: var(--jl-semantic-danger-surface);
+  --jl-button-color: var(--jl-semantic-danger-text);
+  --jl-button-hover-border-color: var(--jl-color-danger-hover);
+  --jl-button-hover-color: var(--jl-color-danger-active);
+}
+
+.jl-callout {
+  min-width: 0;
+  padding: var(--jl-callout-padding, var(--jl-space-6));
+  border: var(--jl-callout-border-width, 1px) solid var(--jl-callout-border-color, var(--jl-color-rule-strong));
+  border-radius: var(--jl-callout-radius, var(--jl-radius-md));
+  background: var(--jl-callout-background, var(--jl-color-surface-muted));
+  color: var(--jl-callout-color, var(--jl-color-text));
+  box-shadow: var(--jl-callout-shadow, none);
+  font-size: var(--jl-callout-font-size, inherit);
+  line-height: var(--jl-callout-line-height, inherit);
+}
+
+.jl-callout--success {
+  --jl-callout-border-color: var(--jl-semantic-success-border);
+  --jl-callout-background: var(--jl-semantic-success-surface);
+  --jl-callout-color: var(--jl-semantic-success-text);
+}
+
+.jl-callout--warning {
+  --jl-callout-border-color: var(--jl-semantic-warning-border);
+  --jl-callout-background: var(--jl-semantic-warning-surface);
+  --jl-callout-color: var(--jl-semantic-warning-text);
+}
+
+.jl-callout--danger {
+  --jl-callout-border-color: var(--jl-semantic-danger-border);
+  --jl-callout-background: var(--jl-semantic-danger-surface);
+  --jl-callout-color: var(--jl-semantic-danger-text);
+}
+
+.jl-callout--info {
+  --jl-callout-border-color: var(--jl-semantic-info-border);
+  --jl-callout-background: var(--jl-semantic-info-surface);
+  --jl-callout-color: var(--jl-semantic-info-text);
+}
+
+.jl-empty-state {
+  max-width: var(--jl-empty-state-max-width, 680px);
+  margin-inline: var(--jl-empty-state-margin-inline, auto);
+  padding: var(--jl-empty-state-padding, clamp(var(--jl-space-8), 6vw, var(--jl-space-16)));
+  border: var(--jl-empty-state-border-width, 1px) solid var(--jl-empty-state-border-color, var(--jl-color-rule));
+  border-radius: var(--jl-empty-state-radius, var(--jl-radius-xl));
+  background: var(--jl-empty-state-background, var(--jl-color-surface));
+  color: var(--jl-empty-state-color, var(--jl-color-muted));
+  text-align: var(--jl-empty-state-text-align, center);
+}
+
+.jl-table-region {
+  max-width: 100%;
+  overflow-x: auto;
+  border: var(--jl-table-region-border-width, 1px) solid var(--jl-table-region-border-color, var(--jl-color-rule));
+  border-radius: var(--jl-table-region-radius, var(--jl-radius-md));
+  background: var(--jl-table-region-background, var(--jl-color-surface));
+  box-shadow: var(--jl-table-region-shadow, none);
+}
+
+@media (max-width: 560px) {
+  .jl-actions {
+    align-items: var(--jl-actions-compact-align, stretch);
+  }
+
+  .jl-actions .jl-button {
+    width: var(--jl-button-compact-width, 100%);
+  }
+}
+
+@media (forced-colors: active) {
+  .jl-button,
+  .jl-callout,
+  .jl-empty-state,
+  .jl-table-region {
+    border-color: CanvasText;
+  }
+}
