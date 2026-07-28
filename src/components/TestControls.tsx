@@ -198,7 +198,7 @@ export function TestControls({
       )}
 
       <dialog
-        className={`data-confirmation-dialog data-confirmation-dialog--${mode}`}
+        className={`data-confirmation-dialog data-confirmation-dialog--${mode} jl-dialog`}
         id="data-confirmation-dialog"
         ref={confirmationDialogRef}
         aria-labelledby="data-confirmation-dialog-title"
@@ -211,10 +211,10 @@ export function TestControls({
           restoreRunButtonFocusRef.current = true;
         }}
       >
-        <div className="data-confirmation-dialog__content">
+        <div className="data-confirmation-dialog__content jl-dialog__surface">
           <span className="eyebrow">Confirm data use</span>
-          <h2 id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
-          <p id="data-confirmation-dialog-description">
+          <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
+          <p className="jl-dialog__message" id="data-confirmation-dialog-description">
             This test may transfer up to {formatBytes(transferCap)}. Avoid running it on metered or cellular connections.
           </p>
           <label className="data-confirmation-dialog__remember">
@@ -228,11 +228,11 @@ export function TestControls({
           <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
             You’ll be asked again if this profile’s transfer cap increases.
           </p>
-          <div className="data-confirmation-dialog__actions">
-            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button" onClick={closeConfirmationDialog}>
+          <div className="data-confirmation-dialog__actions jl-dialog__actions jl-actions">
+            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
               Cancel
             </button>
-            <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary" onClick={confirmStart}>
+            <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary" onClick={confirmStart}>
               Run {config.name.toLowerCase()} test
             </button>
           </div>

@@ -129,6 +129,60 @@
   box-shadow: var(--jl-table-region-shadow, none);
 }
 
+.jl-dialog {
+  width: var(--jl-dialog-width, min(calc(100% - 32px), 460px));
+  max-width: var(--jl-dialog-max-width, none);
+  max-height: var(--jl-dialog-max-height, min(80vh, 640px));
+  position: fixed;
+  inset: var(--jl-dialog-inset, 0);
+  z-index: var(--jl-z-dialog);
+  margin: var(--jl-dialog-margin, auto);
+  padding: 0;
+  overflow: var(--jl-dialog-overflow, auto);
+  overscroll-behavior: contain;
+  border: var(--jl-dialog-border-width, 0) solid var(--jl-dialog-border-color, transparent);
+  border-radius: var(--jl-dialog-radius, 0);
+  background: var(--jl-dialog-background, transparent);
+  color: var(--jl-dialog-color, var(--jl-color-ink));
+  box-shadow: var(--jl-dialog-shadow, none);
+}
+
+.jl-dialog::backdrop {
+  background: var(--jl-dialog-backdrop-background, var(--jl-color-overlay));
+  -webkit-backdrop-filter: blur(var(--jl-dialog-backdrop-blur, 4px));
+  backdrop-filter: blur(var(--jl-dialog-backdrop-blur, 4px));
+}
+
+.jl-dialog__surface {
+  padding: var(--jl-dialog-surface-padding, var(--jl-space-6));
+  border: var(--jl-dialog-surface-border-width, 1px) solid var(--jl-dialog-surface-border-color, var(--jl-color-rule-strong));
+  border-radius: var(--jl-dialog-surface-radius, var(--jl-radius-xl));
+  background: var(--jl-dialog-surface-background, var(--jl-color-surface));
+  color: var(--jl-dialog-surface-color, inherit);
+  box-shadow: var(--jl-dialog-surface-shadow, var(--jl-shadow-high));
+}
+
+.jl-dialog__title {
+  margin: var(--jl-dialog-title-margin, var(--jl-space-3) 0 var(--jl-space-2));
+  font-size: var(--jl-dialog-title-size, var(--jl-type-card-title-size));
+  line-height: var(--jl-dialog-title-leading, 1.15);
+  letter-spacing: var(--jl-dialog-title-tracking, -0.025em);
+}
+
+.jl-dialog__message {
+  margin: var(--jl-dialog-message-margin, 0);
+  color: var(--jl-dialog-message-color, var(--jl-color-muted));
+  font-size: var(--jl-dialog-message-size, var(--jl-type-metadata-size));
+  line-height: var(--jl-dialog-message-leading, var(--jl-type-body-leading));
+}
+
+.jl-dialog__actions {
+  --jl-actions-gap: var(--jl-dialog-actions-gap, var(--jl-space-2));
+  --jl-actions-align: center;
+  justify-content: var(--jl-dialog-actions-justify, flex-end);
+  margin-top: var(--jl-dialog-actions-margin-top, var(--jl-space-6));
+}
+
 @media (max-width: 560px) {
   .jl-actions {
     align-items: var(--jl-actions-compact-align, stretch);
@@ -137,13 +191,26 @@
   .jl-actions .jl-button {
     width: var(--jl-button-compact-width, 100%);
   }
+
+  .jl-dialog {
+    width: var(--jl-dialog-compact-width, calc(100% - 24px));
+    max-height: var(--jl-dialog-compact-max-height, calc(100dvh - 24px));
+    inset: var(--jl-dialog-compact-inset, auto 0 12px);
+    margin: var(--jl-dialog-compact-margin, 0 auto);
+  }
+
+  .jl-dialog__surface {
+    padding: var(--jl-dialog-compact-surface-padding, var(--jl-space-6) var(--jl-space-4));
+  }
 }
 
 @media (forced-colors: active) {
   .jl-button,
   .jl-callout,
   .jl-empty-state,
-  .jl-table-region {
+  .jl-table-region,
+  .jl-dialog,
+  .jl-dialog__surface {
     border-color: CanvasText;
   }
 }
