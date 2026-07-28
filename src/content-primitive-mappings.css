@@ -1,0 +1,38 @@
+/* Product-level values for shared content shells.
+   Earlier legacy declarations remain as rollback-safe fallbacks during this trial. */
+
+.error-panel {
+  --jl-callout-padding: 38px;
+  --jl-callout-border-color: rgba(182, 83, 71, 0.3);
+  --jl-callout-background: rgba(182, 83, 71, 0.07);
+  --jl-callout-color: var(--text);
+  --jl-callout-radius: var(--radius);
+  --jl-callout-shadow: none;
+  padding: var(--jl-callout-padding);
+  border-color: var(--jl-callout-border-color);
+  border-radius: var(--jl-callout-radius);
+  background: var(--jl-callout-background);
+  color: var(--jl-callout-color);
+  box-shadow: var(--jl-callout-shadow);
+}
+
+.error-panel .jl-button {
+  --jl-button-min-height: auto;
+  --jl-button-padding-block: 10px;
+  --jl-button-padding-inline: 14px;
+  --jl-button-border-color: var(--line-strong);
+  --jl-button-radius: 8px;
+  --jl-button-background: var(--panel);
+  --jl-button-color: var(--muted-strong);
+  --jl-button-font-size: 11px;
+  --jl-button-font-weight: 400;
+  --jl-button-hover-border-color: rgba(23, 23, 20, 0.32);
+  --jl-button-hover-color: var(--text);
+}
+
+.latency-table-wrap {
+  --jl-table-region-border-width: 0;
+  --jl-table-region-radius: 0;
+  --jl-table-region-background: transparent;
+  --jl-table-region-shadow: none;
+}
