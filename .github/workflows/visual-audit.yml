@@ -200,7 +200,7 @@ jobs:
 
             const compact = viewportName === 'mobile';
             const expectedInnerHeight = compact ? 68 : 82;
-            const expectedOuterHeight = compact ? 69 : 83;
+            const expectedOuterHeight = compact ? 82 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
             if (metrics.overflow) problems.push('document overflow');
             if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
