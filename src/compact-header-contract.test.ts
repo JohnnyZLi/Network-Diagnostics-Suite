@@ -1,8 +1,6 @@
-import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-
-const appSource = await readFile(new URL("./App.tsx", import.meta.url), "utf8");
-const polishSource = await readFile(new URL("./ui-polish.css", import.meta.url), "utf8");
+import appSource from "./App.tsx?raw";
+import polishSource from "./ui-polish.css?raw";
 
 describe("compact header contract", () => {
   it("renders Menu before Sites in DOM and focus order", () => {
