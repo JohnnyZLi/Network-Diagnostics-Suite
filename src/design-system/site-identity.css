@@ -176,9 +176,78 @@
   font-weight: 700;
 }
 
+.jl-header-menu-toggle {
+  min-width: 58px;
+  min-height: var(--jl-control-height-sm);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--jl-space-3);
+  border: 1px solid var(--jl-color-rule-strong);
+  border-radius: var(--jl-radius-md);
+  appearance: none;
+  background: var(--jl-color-surface);
+  color: var(--jl-color-ink);
+  font-family: var(--jl-font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.jl-header-menu-toggle:hover {
+  border-color: var(--jl-color-accent);
+}
+
 @media (max-width: 900px) {
   .jl-global-header__nav {
     display: none;
+  }
+
+  .jl-header-menu-toggle {
+    display: inline-flex;
+  }
+
+  .jl-global-header__nav.jl-header-menu,
+  .jl-global-header__nav.jl-header-menu--open {
+    width: auto;
+    min-height: 0;
+    position: absolute;
+    z-index: var(--jl-z-menu);
+    top: 100%;
+    right: var(--jl-layout-gutter);
+    left: var(--jl-layout-gutter);
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    gap: var(--jl-space-1);
+    margin: var(--jl-space-2) 0 0;
+    padding: var(--jl-space-2);
+    border: 1px solid var(--jl-color-rule-strong);
+    border-radius: var(--jl-radius-md);
+    background: var(--jl-color-surface);
+    box-shadow: var(--jl-shadow-high);
+    font-size: 13px;
+  }
+
+  .jl-global-header__nav.jl-header-menu {
+    display: none;
+  }
+
+  .jl-global-header__nav.jl-header-menu--open {
+    display: grid;
+  }
+
+  .jl-global-header__nav.jl-header-menu a {
+    min-height: var(--jl-control-height-md);
+    display: flex;
+    align-items: center;
+    padding-inline: var(--jl-space-3);
+    border-radius: var(--jl-radius-sm);
+  }
+
+  .jl-global-header__nav.jl-header-menu a:hover,
+  .jl-global-header__nav.jl-header-menu a:focus-visible {
+    background: var(--jl-color-surface-muted);
+    text-decoration: none;
   }
 }
 
@@ -207,11 +276,23 @@
     height: 40px;
     min-height: 40px;
   }
+
+  .jl-header-menu-toggle {
+    min-height: 40px;
+  }
+
+  .jl-global-header__nav.jl-header-menu,
+  .jl-global-header__nav.jl-header-menu--open {
+    right: var(--jl-space-4);
+    left: var(--jl-space-4);
+  }
 }
 
 @media (forced-colors: active) {
   .jl-site-switcher__button,
-  .jl-site-menu {
+  .jl-site-menu,
+  .jl-header-menu-toggle,
+  .jl-global-header__nav.jl-header-menu--open {
     border-color: CanvasText;
   }
 }
