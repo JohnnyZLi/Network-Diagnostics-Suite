@@ -14,6 +14,7 @@
     "design-system:sync": "node scripts/check-design-system.mjs --write",
     "design-system:check": "node scripts/check-design-system.mjs",
     "design-system:integration": "node scripts/validate-design-system-integration.mjs",
+    "design-system:conformance": "node scripts/design-system-conformance-runner.mjs --contract scripts/design-system-conformance-contract.json",
     "types:worker": "wrangler types",
     "worker:dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",

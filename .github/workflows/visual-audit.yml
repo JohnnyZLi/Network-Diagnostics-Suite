@@ -40,8 +40,9 @@ jobs:
 
           const viewports = [
             ['desktop', { width: 1440, height: 1000 }],
-            ['zoom-200', { width: 720, height: 900 }],
+            ['narrow-desktop', { width: 720, height: 900 }],
             ['mobile', { width: 390, height: 844 }],
+            ['minimum', { width: 320, height: 700 }],
           ];
           const historySeed = [
             {
@@ -198,7 +199,7 @@ jobs:
               };
             });
 
-            const compact = viewportName === 'mobile';
+            const compact = viewportName === 'mobile' || viewportName === 'minimum';
             const expectedInnerHeight = compact ? 68 : 82;
             const expectedOuterHeight = compact ? 82 : 83;
             const expectedButtonHeight = compact ? 40 : 44;

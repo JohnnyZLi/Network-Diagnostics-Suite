@@ -17,14 +17,19 @@ const adapter = await read("src/design-system-adapter.css");
 const identityStyles = await read("src/design-system/site-identity.css");
 const updater = await read("scripts/update-design-system.mjs");
 const consumerRelease = await read("scripts/design-system-consumer-release.mjs");
+const conformanceRunner = await read("scripts/design-system-conformance-runner.mjs");
+const conformanceContract = JSON.parse(await read("scripts/design-system-conformance-contract.json"));
+const conformanceManifest = JSON.parse(await read("design-system.conformance.json"));
 const synchronizer = await read("scripts/check-design-system.mjs");
 const syncWorkflow = await read(".github/workflows/design-system-sync.yml");
+const conformanceWorkflow = await read(".github/workflows/design-system-conformance.yml");
+const packageMetadata = JSON.parse(await read("package.json"));
 const version = JSON.parse(await read("src/design-system/version.json"));
 const lock = JSON.parse(await read("design-system.lock.json"));
 const source = await read("src/design-system/SOURCE.md");
 
-const expectedVersion = "1.7.0";
-const expectedCommit = "15d831f437785e22419765c025e7b53abd3a2c61";
+const expectedVersion = "1.8.0";
+const expectedCommit = "5f891a80e06a0637b2bb9901a5236b36cc9e3e9a";
 const fail = (message) => { throw new Error(message); };
 const requireFragments = (content, fragments, label) => {
   for (const fragment of fragments) if (!content.includes(fragment)) fail(`${label} is incomplete: ${fragment}.`);
@@ -33,6 +38,14 @@ const requireFragments = (content, fragments, label) => {
 if (version.version !== expectedVersion) fail(`Network Diagnostics must consume Web Design System v${expectedVersion}.`);
 if (lock.version !== expectedVersion || lock.sourceCommit !== expectedCommit) fail("Design-system lock metadata drifted.");
 if (!source.includes(expectedCommit) || !source.includes(`Version: ${expectedVersion}`)) fail("Design-system source metadata is not pinned.");
+if (conformanceContract.designSystemVersion !== expectedVersion || conformanceContract.schemaVersion !== "1.0.0") fail("Conformance contract metadata drifted.");
+if (conformanceManifest.product !== "network" || conformanceManifest.schemaVersion !== "1.0.0") fail("Network conformance manifest metadata drifted.");
+if (packageMetadata.scripts?.["design-system:conformance"] !== "node scripts/design-system-conformance-runner.mjs --contract scripts/design-system-conformance-contract.json") fail("Network conformance command drifted.");
+for (const id of ["DS-DIST-001", "DS-DIALOG-001", "DS-DIALOG-002", "DS-RESP-001", "DS-TEST-001"]) {
+  if (!conformanceManifest.rules?.[id]) fail(`Network conformance manifest is missing ${id}.`);
+}
+requireFragments(conformanceRunner, ["function confined(root, value, label)", "manual-pending", "report.json", "report.md", "process.exitCode = 1"], "Shared conformance runner");
+if (conformanceRunner.includes("child_process") || conformanceRunner.includes("exec(")) fail("Conformance runner can execute consumer commands.");
 
 const requiredImports = [
   "./design-system/tokens.css",
@@ -226,14 +239,21 @@ if (consumerRelease.includes("child_process") || consumerRelease.includes("exec(
 requireFragments(synchronizer, [
   'readFile(resolve("design-system.lock.json")', 'styles/content-primitives.css',
   'scripts/consumer-release.mjs", "scripts/design-system-consumer-release.mjs',
+  'scripts/conformance-runner.mjs", "scripts/design-system-conformance-runner.mjs',
+  'conformance/contract.json", "scripts/design-system-conformance-contract.json',
   "versionMetadata.version !== lockedVersion", "sourceMetadata.includes(sourceCommit)",
 ], "Design-system synchronizer");
 requireFragments(syncWorkflow, [
   "workflow_dispatch:", "schedule:", "contents: write", "pull-requests: write",
   `uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@${expectedCommit}`,
-  'node-version: "24"', "npm run design-system:check", "npm test", "npm run build",
-  "scripts/design-system-consumer-release.mjs", "product-name: Network Diagnostics",
+  'node-version: "24"', "npm run design-system:check", "npm run design-system:conformance", "npm test", "npm run build",
+  "scripts/design-system-consumer-release.mjs", "scripts/design-system-conformance-runner.mjs", "product-name: Network Diagnostics",
 ], "Shared design-system update workflow caller");
 if (syncWorkflow.includes("gh pr create") || syncWorkflow.includes("git push")) fail("Network workflow still duplicates shared publication behavior.");
+requireFragments(conformanceWorkflow, [
+  `uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-conformance.yml@${expectedCommit}`,
+  "npm run design-system:check", "npm run design-system:integration", "npm run design-system:conformance", "npm test", "npm run build",
+  "network-design-system-conformance",
+], "Network conformance workflow caller");
 
 console.log("Network Diagnostics design-system integration passed.");

@@ -17,6 +17,8 @@ const files = [
   ["scripts/site-controls.js", "src/design-system/site-controls.js"],
   ["scripts/site-controls.d.ts", "src/design-system/site-controls.d.ts"],
   ["scripts/consumer-release.mjs", "scripts/design-system-consumer-release.mjs"],
+  ["scripts/conformance-runner.mjs", "scripts/design-system-conformance-runner.mjs"],
+  ["conformance/contract.json", "scripts/design-system-conformance-contract.json"],
   ["version.json", "src/design-system/version.json"],
 ];
 
