@@ -11,14 +11,17 @@ permissions:
 
 jobs:
   update:
-    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@15d831f437785e22419765c025e7b53abd3a2c61
+    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@5f891a80e06a0637b2bb9901a5236b36cc9e3e9a
     with:
       node-version: "24"
       timeout-minutes: 20
       install-command: npm ci --no-audit --no-fund
-      validate-command: npm run design-system:check && npm run design-system:integration && npm run typecheck && npm test && npm run build
+      validate-command: npm run design-system:check && npm run design-system:integration && npm run design-system:conformance && npm run typecheck && npm test && npm run build
       tracked-paths: |
         design-system.lock.json
+        design-system.conformance.json
         scripts/design-system-consumer-release.mjs
+        scripts/design-system-conformance-runner.mjs
+        scripts/design-system-conformance-contract.json
         src/design-system
       product-name: Network Diagnostics
