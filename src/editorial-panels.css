@@ -12,7 +12,7 @@
 }
 
 .methodology {
-  padding-top: 88px;
+  padding-top: calc(var(--jl-layout-header-height) + var(--jl-space-6));
 }
 
 .preview-grid,
@@ -128,10 +128,6 @@
 @media (max-width: 760px) {
   .measurement-preview {
     padding-bottom: 68px;
-  }
-
-  .methodology {
-    padding-top: 68px;
   }
 
   .preview-grid,
