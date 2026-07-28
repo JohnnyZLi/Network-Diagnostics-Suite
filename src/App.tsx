@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatLatency, formatRate } from "./core/format";
 import { clearRecentResults, loadRecentResults, MAX_RECENT_RESULTS, saveRecentResult } from "./core/result-history";
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
+import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
 import { MotionObserver } from "./components/MotionObserver";
@@ -59,26 +60,34 @@ export default function App() {
   const [sitesOpen, setSitesOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
   const controllerRef = useRef<AbortController | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
   const siteSwitcherRef = useRef<HTMLDivElement | null>(null);
-  const siteSwitcherButtonRef = useRef<HTMLButtonElement | null>(null);
+  const siteSwitcherControllerRef = useRef<ReturnType<typeof installSiteSwitcher> | null>(null);
+  const mobileNavControllerRef = useRef<ReturnType<typeof installHeaderMenu> | null>(null);
 
   useEffect(() => () => controllerRef.current?.abort("page-unmounted"), []);
 
   useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!siteSwitcherRef.current?.contains(event.target as Node)) setSitesOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setSitesOpen(false);
-      siteSwitcherButtonRef.current?.focus();
-    };
+    const header = headerRef.current;
+    const siteSwitcher = siteSwitcherRef.current;
+    if (!header || !siteSwitcher) return;
 
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
+    const siteController = installSiteSwitcher(siteSwitcher, {
+      onBeforeOpen: () => mobileNavControllerRef.current?.close(),
+      onOpenChange: setSitesOpen,
+    });
+    const navigationController = installHeaderMenu(header, {
+      onBeforeOpen: () => siteController.close(),
+      onOpenChange: setMobileNavOpen,
+    });
+    siteSwitcherControllerRef.current = siteController;
+    mobileNavControllerRef.current = navigationController;
+
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
+      siteController.destroy();
+      navigationController.destroy();
+      siteSwitcherControllerRef.current = null;
+      mobileNavControllerRef.current = null;
     };
   }, []);
 
@@ -148,13 +157,11 @@ export default function App() {
     setHistory([]);
   };
 
-  const closeMobileNav = () => setMobileNavOpen(false);
-
   return (
     <>
       <MotionObserver />
       <div className="app-shell">
-        <header className="site-header jl-global-header">
+        <header ref={headerRef} className="site-header jl-global-header">
           <div className="jl-global-header__inner">
             <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
               <a className="jl-site-identity__owner" href="https://johnnyli.dev">Johnny Li</a>
@@ -162,45 +169,46 @@ export default function App() {
               <a className="wordmark__product jl-site-identity__product" href="/" aria-current="page">Network Diagnostics</a>
             </div>
             <nav
-              className={mobileNavOpen ? "site-nav site-nav--open jl-global-header__nav" : "site-nav jl-global-header__nav"}
+              className={`site-nav jl-global-header__nav jl-header-menu${mobileNavOpen ? " jl-header-menu--open" : ""}`}
               id="primary-navigation"
               aria-label="Primary navigation"
+              data-header-menu
             >
-              <a href="#methodology" onClick={closeMobileNav}>Methodology</a>
-              <a href="#privacy" onClick={closeMobileNav}>Privacy</a>
-              <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer" onClick={closeMobileNav}>Source <span aria-hidden="true">↗</span></a>
+              <a href="#methodology">Methodology</a>
+              <a href="#privacy">Privacy</a>
+              <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
             </nav>
             <div className="header-actions jl-global-header__actions">
-              <div className="jl-site-switcher" ref={siteSwitcherRef}>
+              <div className="jl-site-switcher" ref={siteSwitcherRef} data-site-switcher>
                 <button
                   className="jl-site-switcher__button"
-                  ref={siteSwitcherButtonRef}
                   type="button"
                   aria-expanded={sitesOpen}
                   aria-controls="owned-sites-menu"
-                  onClick={() => {
-                    setMobileNavOpen(false);
-                    setSitesOpen((open) => !open);
-                  }}
+                  data-site-switcher-button
                 >
                   <span>Sites</span>
                   <span aria-hidden="true">⌄</span>
                 </button>
-                <ul className="jl-site-menu" id="owned-sites-menu" hidden={!sitesOpen}>
-                  <li><a href="https://johnnyli.dev" onClick={() => setSitesOpen(false)}>Portfolio</a></li>
-                  <li><a href="https://network.johnnyli.dev" aria-current="page" onClick={() => setSitesOpen(false)}>Network Diagnostics</a></li>
-                  <li><a href="https://rolepacket.johnnyli.dev" onClick={() => setSitesOpen(false)}>RolePacket</a></li>
+                <ul
+                  className="jl-site-menu"
+                  id="owned-sites-menu"
+                  hidden={!sitesOpen}
+                  data-site-switcher-menu
+                >
+                  {OWNED_SITES.map((site) => (
+                    <li key={site.id}>
+                      <a href={site.href} aria-current={site.id === "network" ? "page" : undefined}>{site.label}</a>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <button
-                className="nav-toggle"
+                className="nav-toggle jl-header-menu-toggle"
                 type="button"
                 aria-expanded={mobileNavOpen}
                 aria-controls="primary-navigation"
-                onClick={() => {
-                  setSitesOpen(false);
-                  setMobileNavOpen((open) => !open);
-                }}
+                data-header-menu-button
               >
                 {mobileNavOpen ? "Close" : "Menu"}
               </button>
