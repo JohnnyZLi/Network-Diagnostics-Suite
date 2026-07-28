@@ -5,6 +5,7 @@ const read = (path) => readFile(resolve(path), "utf8");
 const main = await read("src/main.tsx");
 const app = await read("src/App.tsx");
 const styles = await read("src/styles.css");
+const polish = await read("src/ui-polish.css");
 const latencyTable = await read("src/components/LatencyTable.tsx");
 const siteControls = await read("src/design-system/site-controls.js");
 const primitives = await read("src/design-system/content-primitives.css");
@@ -28,8 +29,8 @@ const version = JSON.parse(await read("src/design-system/version.json"));
 const lock = JSON.parse(await read("design-system.lock.json"));
 const source = await read("src/design-system/SOURCE.md");
 
-const expectedVersion = "1.8.0";
-const expectedCommit = "5f891a80e06a0637b2bb9901a5236b36cc9e3e9a";
+const expectedVersion = "1.8.1";
+const expectedCommit = "5c8daca97dd21628b6e2340421c8eed2a7d3d563";
 const fail = (message) => { throw new Error(message); };
 const requireFragments = (content, fragments, label) => {
   for (const fragment of fragments) if (!content.includes(fragment)) fail(`${label} is incomplete: ${fragment}.`);
@@ -99,10 +100,19 @@ requireFragments(app, [
   "mobileNavControllerRef.current?.close()", "siteController.close()",
 ], "Network shared header");
 if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");
+const headerActionsPosition = app.indexOf('className="header-actions jl-global-header__actions"');
+const menuButtonPosition = app.indexOf("data-header-menu-button", headerActionsPosition);
+const sitesPosition = app.indexOf("data-site-switcher", headerActionsPosition);
+if (headerActionsPosition < 0 || menuButtonPosition < 0 || sitesPosition < 0 || menuButtonPosition > sitesPosition) {
+  fail("Network compact controls must render Menu before Sites in DOM and focus order.");
+}
 for (const forbidden of [
   'document.addEventListener("pointerdown"', 'document.addEventListener("keydown"',
   "site-nav--open", "siteSwitcherButtonRef", "closeMobileNav",
 ]) if (app.includes(forbidden)) fail(`Duplicated navigation behavior remains in App: ${forbidden}.`);
+for (const forbidden of [
+  ".site-header .site-nav {", "border-top: 0;", "border-radius: 0 0 14px 14px;", ".nav-toggle {",
+]) if (polish.includes(forbidden)) fail(`Legacy clipped compact navigation remains in ui-polish.css: ${forbidden}.`);
 
 requireFragments(siteControls, [
   "export const OWNED_SITES", 'id: "portfolio"', 'id: "network"', 'id: "rolepacket"',
@@ -223,7 +233,11 @@ requireFragments(identityStyles, [
   "font-weight: 700;", "line-height: 1;", '.jl-site-switcher__button > [aria-hidden="true"]',
   "border-right: 2px solid currentColor;", "border-bottom: 2px solid currentColor;",
   ".jl-header-menu-toggle", ".jl-global-header__nav.jl-header-menu--open",
-  "right: var(--jl-layout-gutter);", "left: var(--jl-layout-gutter);", "@media (forced-colors: active)",
+  "right: var(--jl-layout-gutter);", "left: var(--jl-layout-gutter);",
+  "@media (max-width: 360px)", "width: calc(100% - 16px);",
+  ".jl-global-header__actions", "min-width: 44px;",
+  "right: var(--jl-space-2);", "left: var(--jl-space-2);",
+  "@media (forced-colors: active)",
 ], "Shared header and compact-menu contract");
 
 requireFragments(updater, [

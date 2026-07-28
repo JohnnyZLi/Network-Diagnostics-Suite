@@ -145,3 +145,11 @@ body::after,
     display: grid;
   }
 }
+
+/* The Network product name is substantially longer than the other owned-site
+   labels. Keep it complete while fitting the shared controls at 320px. */
+@media (max-width: 360px) {
+  .site-header .wordmark__product {
+    font-size: 0.8125rem;
+  }
+}

@@ -179,6 +179,15 @@ export default function App() {
               <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
             </nav>
             <div className="header-actions jl-global-header__actions">
+              <button
+                className="nav-toggle jl-header-menu-toggle"
+                type="button"
+                aria-expanded={mobileNavOpen}
+                aria-controls="primary-navigation"
+                data-header-menu-button
+              >
+                {mobileNavOpen ? "Close" : "Menu"}
+              </button>
               <div className="jl-site-switcher" ref={siteSwitcherRef} data-site-switcher>
                 <button
                   className="jl-site-switcher__button"
@@ -203,15 +212,6 @@ export default function App() {
                   ))}
                 </ul>
               </div>
-              <button
-                className="nav-toggle jl-header-menu-toggle"
-                type="button"
-                aria-expanded={mobileNavOpen}
-                aria-controls="primary-navigation"
-                data-header-menu-button
-              >
-                {mobileNavOpen ? "Close" : "Menu"}
-              </button>
             </div>
           </div>
         </header>
