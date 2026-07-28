@@ -9,9 +9,9 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
 
 ## Design system
 
-The browser application consumes Johnny Li Web Design System v1.3.4 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens and shared foundations against that source and checks the global header, exact dot canvas, focus treatment, compact navigation, and test-profile layout contract.
+The browser application consumes Johnny Li Web Design System v1.4.0 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens and shared foundations against that source and checks the global header, exact dot canvas, focus treatment, compact navigation, and test-profile layout contract.
 
-Network-specific charts, measurements, test controls, progress states, and semantic data encodings remain owned by this repository.
+The current production UI is the approved Network Diagnostics baseline. Network-specific hero composition, charts, measurements, test controls, progress states, report layouts, and semantic data encodings remain owned by this repository. Shared page-content utilities are available for future components, but stable application markup does not need to be rewritten solely to adopt shared class names.
 
 ## What it measures
 
