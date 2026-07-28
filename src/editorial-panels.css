@@ -2,6 +2,11 @@
    The three test conditions read as one connected process; methodology terms
    remain independent cards so the two sections do not share identical geometry. */
 
+.methodology,
+#privacy {
+  scroll-margin-top: calc(var(--jl-layout-header-height) + var(--jl-space-6));
+}
+
 .preview-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
