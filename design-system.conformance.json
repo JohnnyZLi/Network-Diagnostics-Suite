@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "product": "network",
+  "outputDirectory": "design-system-conformance",
+  "rules": {
+    "DS-DIST-001": {"evidence":[
+      {"type":"json-equals","file":"design-system.lock.json","path":"package","value":"@johnnyzli/web-design-system"},
+      {"type":"json-matches","file":"design-system.lock.json","path":"version","pattern":"^\\d+\\.\\d+\\.\\d+$"},
+      {"type":"json-matches","file":"design-system.lock.json","path":"sourceCommit","pattern":"^[0-9a-f]{40}$"}
+    ]},
+    "DS-DIST-002": {"evidence":[
+      {"type":"contains","file":"scripts/check-design-system.mjs","values":["scripts/conformance-runner.mjs","conformance/contract.json","drifted from Web Design System commit"]},
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Design-system source metadata is not pinned","Design-system synchronizer"]}
+    ]},
+    "DS-HEADER-001": {"evidence":[
+      {"type":"contains","file":"src/App.tsx","values":["jl-global-header","jl-global-header__inner","jl-site-identity"]},
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["headerInnerHeight","expectedInnerHeight","expectedOuterHeight"]}
+    ]},
+    "DS-SITES-001": {"evidence":[
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["Sites menu does not contain three links","Sites menu current-page state is incorrect"]}
+    ]},
+    "DS-SITES-002": {"evidence":[
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["Sites menu did not close with Escape","Sites button did not regain focus after Escape","compact Menu did not regain focus after Escape"]}
+    ]},
+    "DS-PRIMITIVE-001": {"evidence":[
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Network mapping repeats shared structure","Tested primitive fallback remains in styles.css"]}
+    ]},
+    "DS-DIALOG-001": {"evidence":[
+      {"type":"contains","file":"src/components/TestControls.tsx","values":["jl-dialog","jl-dialog__surface","jl-dialog__title","jl-dialog__message","jl-dialog__actions"]},
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Superseded test-control structure remains","Test profile confirmation contract"]}
+    ]},
+    "DS-DIALOG-002": {"evidence":[
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["dialog did not focus Cancel first","confirmation did not close with Escape","run button did not regain focus after Escape"]}
+    ]},
+    "DS-RESP-001": {"evidence":[
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["width: 320","document overflow"]}
+    ]},
+    "DS-RESP-002": {"status":"manual-pending","reason":"Actual 200 percent browser zoom remains a manual release check; the automated narrow-desktop viewport is not labeled as zoom."},
+    "DS-A11Y-001": {"evidence":[
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["page.keyboard.press('Escape')","regain focus after Escape","aria-expanded"]}
+    ]},
+    "DS-A11Y-002": {"status":"manual-pending","reason":"Real forced-colors and assistive-technology review remains a recorded manual release check."},
+    "DS-STATE-001": {"evidence":[
+      {"type":"contains","file":"src/App.tsx","values":["error-panel jl-callout jl-callout--danger","jl-button jl-button--compact"]},
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","value":"Network error primitive markup"}
+    ]},
+    "DS-STATE-002": {"evidence":[
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Browser request loss","Network explanatory color hierarchy"]}
+    ]},
+    "DS-OWN-001": {"evidence":[
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Test profile confirmation contract","Metric card chart-separation contract","Hero alignment and bounded-sticky contract"]}
+    ]},
+    "DS-WORKFLOW-001": {"evidence":[
+      {"type":"matches","file":".github/workflows/design-system-sync.yml","pattern":"uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync\\.yml@[0-9a-f]{40}"},
+      {"type":"not-contains","file":".github/workflows/design-system-sync.yml","values":["gh pr create","git push"]}
+    ]},
+    "DS-TEST-001": {"evidence":[
+      {"type":"file-exists","file":".github/workflows/visual-audit.yml"},
+      {"type":"contains","file":".github/workflows/design-system-conformance.yml","values":["consumer-conformance.yml@","design-system:check","design-system:integration","design-system:conformance","npm test","npm run build"]}
+    ]},
+    "DS-PERF-001": {"status":"manual-pending","reason":"Reviewed bundle and user-experience performance baselines have not yet been recorded."}
+  }
+}
