@@ -137,3 +137,11 @@ body::after,
 .information-panel--probe h2 {
   color: var(--accent);
 }
+
+/* The legacy stylesheet hides every header nav below 760px. Restore only the
+   shared controller's open state; all popover geometry remains package-owned. */
+@media (max-width: 760px) {
+  .site-header .site-nav.jl-header-menu--open {
+    display: grid;
+  }
+}
