@@ -16,6 +16,7 @@ const files = [
   ["styles/content-primitives.css", "src/design-system/content-primitives.css"],
   ["scripts/site-controls.js", "src/design-system/site-controls.js"],
   ["scripts/site-controls.d.ts", "src/design-system/site-controls.d.ts"],
+  ["scripts/consumer-release.mjs", "scripts/design-system-consumer-release.mjs"],
   ["version.json", "src/design-system/version.json"],
 ];
 
