@@ -1,31 +1,42 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const main = await readFile(resolve("src/main.tsx"), "utf8");
-const app = await readFile(resolve("src/App.tsx"), "utf8");
-const siteControls = await readFile(resolve("src/design-system/site-controls.js"), "utf8");
-const testControls = await readFile(resolve("src/components/TestControls.tsx"), "utf8");
-const testControlStyles = await readFile(resolve("src/test-controls.css"), "utf8");
-const metricCardStyles = await readFile(resolve("src/metric-card-layout.css"), "utf8");
-const heroLayout = await readFile(resolve("src/hero-layout.css"), "utf8");
-const adapter = await readFile(resolve("src/design-system-adapter.css"), "utf8");
-const identityStyles = await readFile(resolve("src/design-system/site-identity.css"), "utf8");
-const version = JSON.parse(await readFile(resolve("src/design-system/version.json"), "utf8"));
-const source = await readFile(resolve("src/design-system/SOURCE.md"), "utf8");
+const read = (path) => readFile(resolve(path), "utf8");
+const main = await read("src/main.tsx");
+const app = await read("src/App.tsx");
+const latencyTable = await read("src/components/LatencyTable.tsx");
+const siteControls = await read("src/design-system/site-controls.js");
+const primitives = await read("src/design-system/content-primitives.css");
+const primitiveMappings = await read("src/content-primitive-mappings.css");
+const testControls = await read("src/components/TestControls.tsx");
+const testControlStyles = await read("src/test-controls.css");
+const metricCardStyles = await read("src/metric-card-layout.css");
+const heroLayout = await read("src/hero-layout.css");
+const adapter = await read("src/design-system-adapter.css");
+const identityStyles = await read("src/design-system/site-identity.css");
+const updater = await read("scripts/update-design-system.mjs");
+const synchronizer = await read("scripts/check-design-system.mjs");
+const syncWorkflow = await read(".github/workflows/design-system-sync.yml");
+const version = JSON.parse(await read("src/design-system/version.json"));
+const lock = JSON.parse(await read("design-system.lock.json"));
+const source = await read("src/design-system/SOURCE.md");
 
-const fail = (message) => {
-  throw new Error(message);
+const expectedVersion = "1.6.1";
+const expectedCommit = "6d09e748f6fb90f822b64e266dd13ba9e60a617b";
+const fail = (message) => { throw new Error(message); };
+const requireFragments = (content, fragments, label) => {
+  for (const fragment of fragments) if (!content.includes(fragment)) fail(`${label} is incomplete: ${fragment}.`);
 };
 
-if (version.version !== "1.5.0") fail("Network Diagnostics must consume Web Design System v1.5.0.");
-if (!source.includes("14fc1281f02d3a1fa33e6d80aae24637d93b04f7")) {
-  fail("Design-system source commit is not pinned.");
-}
+if (version.version !== expectedVersion) fail(`Network Diagnostics must consume Web Design System v${expectedVersion}.`);
+if (lock.version !== expectedVersion || lock.sourceCommit !== expectedCommit) fail("Design-system lock metadata drifted.");
+if (!source.includes(expectedCommit) || !source.includes(`Version: ${expectedVersion}`)) fail("Design-system source metadata is not pinned.");
 
 const requiredImports = [
   "./design-system/tokens.css",
   "./design-system/foundations.css",
   "./design-system/site-identity.css",
+  "./design-system/content-primitives.css",
   "./styles.css",
   "./history.css",
   "./report-details.css",
@@ -35,7 +46,9 @@ const requiredImports = [
   "./transfer-color.css",
   "./full-bleed-layout.css",
   "./hero-layout.css",
+  "./editorial-panels.css",
   "./design-system-adapter.css",
+  "./content-primitive-mappings.css",
 ];
 let previousPosition = -1;
 for (const stylesheet of requiredImports) {
@@ -114,6 +127,26 @@ for (const contract of [
 ]) {
   if (!siteControls.includes(contract)) fail(`Shared site-control contract is incomplete: ${contract}.`);
 }
+
+requireFragments(primitives, [
+  ".jl-actions {", "display: flex;", "flex-wrap: wrap;",
+  ".jl-button {", "display: inline-flex;", "align-items: center;", "justify-content: center;",
+  ".jl-button--compact", ".jl-callout--danger", ".jl-empty-state", ".jl-table-region",
+  "@media (forced-colors: active)",
+], "Standalone content-primitives asset");
+requireFragments(app, [
+  'className="error-panel jl-callout jl-callout--danger"',
+  'className="jl-button jl-button--compact"',
+], "Network error primitive markup");
+requireFragments(latencyTable, [
+  'className="latency-table-wrap jl-table-region"',
+], "Network table-region markup");
+requireFragments(primitiveMappings, [
+  ".error-panel {", "--jl-callout-padding: 38px;", "--jl-callout-radius: var(--radius);",
+  ".error-panel .jl-button {", "--jl-button-font-weight: 400;",
+  ".latency-table-wrap {", "--jl-table-region-border-width: 0;",
+  "--jl-table-region-background: transparent;",
+], "Network content-primitive mappings");
 
 for (const contract of [
   "function compactEstimatedTime",
@@ -198,15 +231,11 @@ for (const contract of [
 
 const requiredAliases = ["--bg", "--panel", "--line", "--text", "--muted", "--accent", "--radius", "--ease-out"];
 for (const alias of requiredAliases) {
-  if (!new RegExp(`${alias}:\\s*var\\(--jl-`).test(adapter)) {
-    fail(`Network role ${alias} is not mapped to a shared token.`);
-  }
+  if (!new RegExp(`${alias}:\\s*var\\(--jl-`).test(adapter)) fail(`Network role ${alias} is not mapped to a shared token.`);
 }
 if (!adapter.includes("var(--jl-color-canvas-dot)")) fail("Shared exact dot canvas is not active.");
 if (!adapter.includes("var(--jl-color-focus-ring)")) fail("Shared focus treatment is not active.");
-if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) {
-  fail("The legacy visible grid is not disabled.");
-}
+if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) fail("The legacy visible grid is not disabled.");
 for (const colorContract of [
   ".methodology-grid article:nth-child(n) h3",
   ".preview-grid article:nth-child(3) h3",
@@ -214,9 +243,7 @@ for (const colorContract of [
 ]) {
   if (!adapter.includes(colorContract)) fail(`Network explanatory color hierarchy is incomplete: ${colorContract}.`);
 }
-if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) {
-  fail("Network legacy header geometry is not neutralized.");
-}
+if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) fail("Network legacy header geometry is not neutralized.");
 for (const forbidden of [
   "@media (max-width: 900px)",
   ".site-nav--open",
@@ -228,9 +255,7 @@ for (const forbidden of [
   if (adapter.includes(forbidden)) fail(`Network adapter re-owns shared header behavior or styling: ${forbidden}.`);
 }
 
-if (/^\s*@layer\b/m.test(identityStyles)) {
-  fail("Shared header must remain unlayered so Network button resets cannot override it.");
-}
+if (/^\s*@layer\b/m.test(identityStyles)) fail("Shared header must remain unlayered so Network button resets cannot override it.");
 for (const contract of [
   ".jl-global-header__inner",
   "grid-template-columns: auto minmax(0, 1fr) auto",
@@ -251,5 +276,18 @@ for (const contract of [
 ]) {
   if (!identityStyles.includes(contract)) fail(`Shared header and compact-menu contract is incomplete: ${contract}.`);
 }
+
+requireFragments(updater, [
+  "api.github.com/repos/${repository}/commits/main", "design-system.lock.json", "sourceCommit", "version",
+], "Design-system updater");
+requireFragments(synchronizer, [
+  'readFile(resolve("design-system.lock.json")', 'styles/content-primitives.css',
+  "versionMetadata.version !== lockedVersion", "sourceMetadata.includes(sourceCommit)",
+], "Design-system synchronizer");
+requireFragments(syncWorkflow, [
+  "workflow_dispatch:", "schedule:", "contents: write", "pull-requests: write",
+  "npm run design-system:update", "npm run design-system:sync", "automation/design-system-update",
+  "gh pr create --draft",
+], "Design-system update workflow");
 
 console.log("Network Diagnostics design-system integration passed.");

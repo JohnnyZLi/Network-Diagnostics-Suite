@@ -243,11 +243,11 @@ export default function App() {
           {runState === "running" && <ProgressStage progress={progress} />}
 
           {runState === "error" && (
-            <section className="error-panel" role="alert">
+            <section className="error-panel jl-callout jl-callout--danger" role="alert">
               <span>Test interrupted</span>
               <h2>The measurement endpoint did not finish the request.</h2>
               <p>{errorMessage} Check the connection and try again.</p>
-              <button type="button" onClick={startTest}>Try again</button>
+              <button className="jl-button jl-button--compact" type="button" onClick={startTest}>Try again</button>
             </section>
           )}
 

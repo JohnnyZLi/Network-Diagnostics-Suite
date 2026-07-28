@@ -1,0 +1,61 @@
+name: Design system sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 16 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: network-design-system-sync
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Resolve latest reviewed design system
+        run: npm run design-system:update
+      - name: Synchronize generated assets
+        run: npm run design-system:sync
+      - name: Validate update
+        run: |
+          npm run design-system:check
+          npm run design-system:integration
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Open or refresh update pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- design-system.lock.json src/design-system; then
+            echo "Network Diagnostics already uses the latest design system."
+            exit 0
+          fi
+          version=$(node -p "require('./design-system.lock.json').version")
+          branch=automation/design-system-update
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add design-system.lock.json src/design-system
+          git commit -m "Update Web Design System to v${version}"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin "HEAD:${branch}"
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            gh pr edit "$branch" --title "Update Web Design System to v${version}" --body "Automated synchronization of the reviewed Web Design System release and generated Network Diagnostics assets."
+          else
+            gh pr create --draft --base main --head "$branch" --title "Update Web Design System to v${version}" --body "Automated synchronization of the reviewed Web Design System release and generated Network Diagnostics assets."
+          fi
