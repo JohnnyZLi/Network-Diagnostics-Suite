@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { installCompactNavigationEscape } from "./compact-navigation-escape";
 import "./design-system/tokens.css";
 import "./design-system/foundations.css";
 import "./design-system/site-identity.css";
@@ -16,8 +15,6 @@ import "./full-bleed-layout.css";
 import "./hero-layout.css";
 import "./editorial-panels.css";
 import "./design-system-adapter.css";
-
-installCompactNavigationEscape();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
