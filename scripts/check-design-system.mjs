@@ -1,13 +1,15 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const sourceCommit = "8a223a383fe1f41000c2fbe34ac5f92c73a1e710";
+const sourceCommit = "14fc1281f02d3a1fa33e6d80aae24637d93b04f7";
 const sourceRoot = `https://raw.githubusercontent.com/JohnnyZLi/Web-Design-System/${sourceCommit}`;
 const write = process.argv.includes("--write");
 const files = [
   ["tokens/tokens.css", "src/design-system/tokens.css"],
   ["styles/foundations.css", "src/design-system/foundations.css"],
   ["styles/site-identity.css", "src/design-system/site-identity.css"],
+  ["scripts/site-controls.js", "src/design-system/site-controls.js"],
+  ["scripts/site-controls.d.ts", "src/design-system/site-controls.d.ts"],
   ["version.json", "src/design-system/version.json"],
 ];
 
@@ -39,4 +41,4 @@ if (!sourceMetadata.includes(sourceCommit)) {
   throw new Error("Design-system source metadata is not pinned to the validated commit.");
 }
 
-console.log(`${write ? "Synced" : "Validated"} Web Design System v1.4.0 at ${sourceCommit}.`);
+console.log(`${write ? "Synced" : "Validated"} Web Design System v1.5.0 at ${sourceCommit}.`);
