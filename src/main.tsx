@@ -4,6 +4,7 @@ import App from "./App";
 import "./design-system/tokens.css";
 import "./design-system/foundations.css";
 import "./design-system/site-identity.css";
+import "./design-system/content-primitives.css";
 import "./styles.css";
 import "./history.css";
 import "./report-details.css";
