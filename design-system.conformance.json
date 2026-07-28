@@ -45,7 +45,8 @@
       {"type":"contains","file":"scripts/validate-design-system-integration.mjs","value":"Network error primitive markup"}
     ]},
     "DS-STATE-002": {"evidence":[
-      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Browser request loss","Network explanatory color hierarchy"]}
+      {"type":"contains","file":"scripts/validate-design-system-integration.mjs","value":"Network explanatory color hierarchy"},
+      {"type":"contains","file":".github/workflows/visual-audit.yml","values":["previewHeadingColors","neutral text color"]}
     ]},
     "DS-OWN-001": {"evidence":[
       {"type":"contains","file":"scripts/validate-design-system-integration.mjs","values":["Test profile confirmation contract","Metric card chart-separation contract","Hero alignment and bounded-sticky contract"]}
