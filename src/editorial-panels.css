@@ -18,10 +18,7 @@
 .preview-grid,
 .methodology-grid {
   gap: 0;
-  border-top: 1px solid var(--line-strong);
-  border-right: 0;
-  border-bottom: 1px solid var(--line-strong);
-  border-left: 0;
+  border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -120,6 +117,8 @@
     border-left: 1px solid var(--line);
   }
 
+  /* Once the four columns wrap into two rows, a horizontal separator is needed
+     to preserve the reading order without recreating an outer box. */
   .methodology-grid article:nth-child(n + 3) {
     border-top: 1px solid var(--line);
   }
@@ -155,8 +154,6 @@
 }
 
 @media (forced-colors: active) {
-  .preview-grid,
-  .methodology-grid,
   .preview-grid article + article,
   .methodology-grid article + article {
     border-color: CanvasText;
