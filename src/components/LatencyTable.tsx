@@ -15,7 +15,7 @@ export function LatencyTable({ idle, download, upload }: LatencyTableProps) {
   ];
 
   return (
-    <div className="latency-table-wrap">
+    <div className="latency-table-wrap jl-table-region">
       <table className="latency-table">
         <thead>
           <tr>
