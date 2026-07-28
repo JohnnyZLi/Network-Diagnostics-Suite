@@ -14,6 +14,7 @@ import "./test-controls.css";
 import "./transfer-color.css";
 import "./full-bleed-layout.css";
 import "./hero-layout.css";
+import "./editorial-panels.css";
 import "./design-system-adapter.css";
 
 installCompactNavigationEscape();
