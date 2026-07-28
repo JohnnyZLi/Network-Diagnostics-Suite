@@ -1,5 +1,4 @@
-/* Product-level values for shared content shells.
-   Earlier legacy declarations remain as rollback-safe fallbacks during this trial. */
+/* Product-level values for shared content shells. */
 
 .error-panel {
   --jl-callout-padding: 38px;
@@ -8,12 +7,6 @@
   --jl-callout-color: var(--text);
   --jl-callout-radius: var(--radius);
   --jl-callout-shadow: none;
-  padding: var(--jl-callout-padding);
-  border-color: var(--jl-callout-border-color);
-  border-radius: var(--jl-callout-radius);
-  background: var(--jl-callout-background);
-  color: var(--jl-callout-color);
-  box-shadow: var(--jl-callout-shadow);
 }
 
 .error-panel .jl-button {
@@ -35,4 +28,89 @@
   --jl-table-region-radius: 0;
   --jl-table-region-background: transparent;
   --jl-table-region-shadow: none;
+}
+
+.data-confirmation-dialog.jl-dialog {
+  --jl-dialog-width: min(calc(100% - 32px), 440px);
+  --jl-dialog-max-height: min(80vh, 620px);
+  --jl-dialog-backdrop-background: rgba(23, 23, 20, 0.38);
+  --jl-dialog-backdrop-blur: 4px;
+  --jl-dialog-compact-width: min(calc(100% - 32px), 440px);
+  --jl-dialog-compact-max-height: min(80vh, 620px);
+  --jl-dialog-compact-inset: 0;
+  --jl-dialog-compact-margin: auto;
+}
+
+.data-confirmation-dialog__content.jl-dialog__surface {
+  --jl-dialog-surface-padding: 28px;
+  --jl-dialog-surface-border-color: var(--line-strong);
+  --jl-dialog-surface-radius: 18px;
+  --jl-dialog-surface-background: var(--panel);
+  --jl-dialog-surface-color: var(--text);
+  --jl-dialog-surface-shadow: 0 30px 90px rgba(23, 23, 20, 0.24);
+  --jl-dialog-compact-surface-padding: 28px;
+}
+
+.data-confirmation-dialog .jl-dialog__title {
+  --jl-dialog-title-margin: 12px 0 10px;
+  --jl-dialog-title-size: 24px;
+  --jl-dialog-title-leading: 1.15;
+  --jl-dialog-title-tracking: -0.025em;
+  font-weight: 620;
+}
+
+.data-confirmation-dialog .jl-dialog__message {
+  --jl-dialog-message-color: var(--muted-strong);
+  --jl-dialog-message-size: 14px;
+  --jl-dialog-message-leading: 1.6;
+}
+
+.data-confirmation-dialog__actions.jl-dialog__actions {
+  --jl-dialog-actions-gap: 8px;
+  --jl-dialog-actions-margin-top: 24px;
+}
+
+.data-confirmation-dialog__actions .jl-button {
+  --jl-button-min-height: 44px;
+  --jl-button-padding-inline: 16px;
+  --jl-button-border-color: var(--line-strong);
+  --jl-button-radius: 10px;
+  --jl-button-background: var(--panel-soft);
+  --jl-button-color: var(--muted-strong);
+  --jl-button-font-size: 13px;
+  --jl-button-font-weight: 700;
+  --jl-button-hover-border-color: var(--accent);
+  --jl-button-hover-color: var(--text);
+  --jl-button-compact-width: auto;
+}
+
+.data-confirmation-dialog__actions .jl-button--primary {
+  --jl-button-border-color: var(--accent);
+  --jl-button-background: var(--accent);
+  --jl-button-color: #fffaf4;
+  --jl-button-hover-border-color: var(--accent);
+  --jl-button-hover-background: var(--accent);
+  --jl-button-hover-color: #fffaf4;
+}
+
+@media (max-width: 520px) {
+  .data-confirmation-dialog.jl-dialog {
+    --jl-dialog-compact-width: calc(100% - 24px);
+    --jl-dialog-compact-max-height: calc(100dvh - 24px);
+    --jl-dialog-compact-inset: auto 0 12px;
+    --jl-dialog-compact-margin: 0 auto;
+  }
+
+  .data-confirmation-dialog__content.jl-dialog__surface {
+    --jl-dialog-compact-surface-padding: 24px 20px 20px;
+  }
+
+  .data-confirmation-dialog__actions.jl-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .data-confirmation-dialog__actions .jl-button {
+    --jl-button-compact-width: 100%;
+  }
 }
