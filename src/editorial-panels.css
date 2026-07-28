@@ -1,35 +1,64 @@
-/* Editorial measurement panels.
-   The three test conditions read as one connected process; methodology terms
-   remain independent cards so the two sections do not share identical geometry. */
+/* Flat editorial measurement rows.
+   Both explanatory sections share one edge-to-edge typographic structure.
+   Numbering identifies the process sequence; technical labels identify the taxonomy. */
 
 .methodology,
 #privacy {
   scroll-margin-top: calc(var(--jl-layout-header-height) + var(--jl-space-6));
 }
 
-.preview-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: 20px;
-  background: rgba(251, 248, 242, .7);
-  box-shadow: 0 18px 52px rgba(78, 55, 39, .055);
+.measurement-preview {
+  padding-bottom: 88px;
 }
 
-.preview-grid article {
-  min-height: 218px;
+.methodology {
+  padding-top: 88px;
+}
+
+.preview-grid,
+.methodology-grid {
+  gap: 0;
+  border-top: 1px solid var(--line-strong);
+  border-right: 0;
+  border-bottom: 1px solid var(--line-strong);
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.preview-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.methodology-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.preview-grid article,
+.methodology-grid article {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 30px 32px 32px;
   border: 0;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, .55), transparent 62%),
-    var(--panel-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.preview-grid article + article {
+.preview-grid article {
+  min-height: 204px;
+  padding: 30px 32px 32px;
+}
+
+.methodology-grid article {
+  min-height: 220px;
+  padding: 30px 28px 32px;
+}
+
+.preview-grid article + article,
+.methodology-grid article + article {
   border-left: 1px solid var(--line);
 }
 
@@ -39,121 +68,101 @@
 }
 
 .preview-grid h3 {
-  margin: 46px 0 12px;
+  margin: 38px 0 12px;
   font-size: 19px;
   line-height: 1.2;
+}
+
+.methodology-grid h3 {
+  margin: 38px 0 12px;
+  font-size: 18px;
+  line-height: 1.25;
 }
 
 .preview-grid p {
   max-width: 36ch;
 }
 
-.methodology-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  border: 0;
-  background: transparent;
-}
-
-.methodology-grid article {
-  min-height: 238px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 30px 30px 32px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, .5), transparent 64%),
-    rgba(251, 248, 242, .78);
-  box-shadow: 0 14px 38px rgba(78, 55, 39, .045);
-}
-
-.methodology-grid h3 {
-  margin: 48px 0 12px;
-  font-size: 18px;
-  line-height: 1.25;
-}
-
 .methodology-grid p {
   max-width: 34ch;
 }
 
+/* These are explanatory surfaces, not interactive cards. */
 @media (hover: hover) {
-  .preview-grid article {
-    transition: background-color 240ms var(--ease-out);
-  }
-
-  .preview-grid article:hover {
+  .preview-grid article,
+  .methodology-grid article,
+  .preview-grid article:hover,
+  .methodology-grid article:hover {
     z-index: auto;
     transform: none;
-    background-color: var(--panel);
+    border-color: var(--line);
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
-  }
-
-  .methodology-grid article {
-    transition:
-      border-color 260ms var(--ease-out),
-      transform 260ms var(--ease-out),
-      box-shadow 260ms var(--ease-out);
-  }
-
-  .methodology-grid article:hover {
-    z-index: 1;
-    transform: translateY(-2px);
-    border-color: var(--line-strong);
-    background-color: rgba(251, 248, 242, .9);
-    box-shadow: 0 18px 44px rgba(78, 55, 39, .075);
+    transition: none;
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1100px) and (min-width: 761px) {
   .methodology-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+  }
+
+  .methodology-grid article {
+    min-height: 205px;
+  }
+
+  .methodology-grid article:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .methodology-grid article:nth-child(even) {
+    border-left: 1px solid var(--line);
+  }
+
+  .methodology-grid article:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
   }
 }
 
 @media (max-width: 760px) {
-  .preview-grid {
+  .measurement-preview {
+    padding-bottom: 68px;
+  }
+
+  .methodology {
+    padding-top: 68px;
+  }
+
+  .preview-grid,
+  .methodology-grid {
     grid-template-columns: minmax(0, 1fr);
-    border-radius: 18px;
   }
 
-  .preview-grid article {
+  .preview-grid article,
+  .methodology-grid article {
     min-height: 0;
-    padding: 26px 24px 28px;
+    padding: 26px 4px 28px;
+    border-left: 0;
   }
 
-  .preview-grid article + article {
+  .preview-grid article + article,
+  .methodology-grid article + article {
     border-top: 1px solid var(--line);
     border-left: 0;
   }
 
-  .preview-grid h3 {
-    margin-top: 30px;
-  }
-
-  .methodology-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .methodology-grid article {
-    min-height: 0;
-    padding: 26px 24px 28px;
-    border-radius: 16px;
-  }
-
+  .preview-grid h3,
   .methodology-grid h3 {
-    margin-top: 30px;
+    margin-top: 28px;
   }
 }
 
 @media (forced-colors: active) {
   .preview-grid,
-  .methodology-grid article {
+  .methodology-grid,
+  .preview-grid article + article,
+  .methodology-grid article + article {
     border-color: CanvasText;
-    box-shadow: none;
   }
 }
