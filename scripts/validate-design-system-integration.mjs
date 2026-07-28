@@ -29,15 +29,21 @@ const version = JSON.parse(await read("src/design-system/version.json"));
 const lock = JSON.parse(await read("design-system.lock.json"));
 const source = await read("src/design-system/SOURCE.md");
 
-const expectedVersion = "1.8.1";
-const expectedCommit = "5c8daca97dd21628b6e2340421c8eed2a7d3d563";
+const expectedVersion = String(lock.version ?? "");
+const expectedCommit = String(lock.sourceCommit ?? "");
 const fail = (message) => { throw new Error(message); };
 const requireFragments = (content, fragments, label) => {
   for (const fragment of fragments) if (!content.includes(fragment)) fail(`${label} is incomplete: ${fragment}.`);
 };
+const requireImmutableWorkflow = (content, workflow, label) => {
+  const pattern = new RegExp(`uses: JohnnyZLi/Web-Design-System/\\.github/workflows/${workflow}@[0-9a-f]{40}`);
+  if (!pattern.test(content)) fail(`${label} is not pinned to an immutable design-system commit.`);
+};
 
+if (lock.package !== "@johnnyzli/web-design-system") fail("Design-system lock package is invalid.");
+if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) fail("Design-system lock version is invalid.");
+if (!/^[0-9a-f]{40}$/.test(expectedCommit)) fail("Design-system lock source commit is invalid.");
 if (version.version !== expectedVersion) fail(`Network Diagnostics must consume Web Design System v${expectedVersion}.`);
-if (lock.version !== expectedVersion || lock.sourceCommit !== expectedCommit) fail("Design-system lock metadata drifted.");
 if (!source.includes(expectedCommit) || !source.includes(`Version: ${expectedVersion}`)) fail("Design-system source metadata is not pinned.");
 if (conformanceContract.designSystemVersion !== expectedVersion || conformanceContract.schemaVersion !== "1.0.0") fail("Conformance contract metadata drifted.");
 if (conformanceManifest.product !== "network" || conformanceManifest.schemaVersion !== "1.0.0") fail("Network conformance manifest metadata drifted.");
@@ -259,15 +265,15 @@ requireFragments(synchronizer, [
 ], "Design-system synchronizer");
 requireFragments(syncWorkflow, [
   "workflow_dispatch:", "schedule:", "contents: write", "pull-requests: write",
-  `uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@${expectedCommit}`,
   'node-version: "24"', "npm run design-system:check", "npm run design-system:conformance", "npm test", "npm run build",
   "scripts/design-system-consumer-release.mjs", "scripts/design-system-conformance-runner.mjs", "product-name: Network Diagnostics",
 ], "Shared design-system update workflow caller");
+requireImmutableWorkflow(syncWorkflow, "consumer-design-system-sync\\.yml", "Shared design-system update workflow caller");
 if (syncWorkflow.includes("gh pr create") || syncWorkflow.includes("git push")) fail("Network workflow still duplicates shared publication behavior.");
 requireFragments(conformanceWorkflow, [
-  `uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-conformance.yml@${expectedCommit}`,
   "npm run design-system:check", "npm run design-system:integration", "npm run design-system:conformance", "npm test", "npm run build",
   "network-design-system-conformance",
 ], "Network conformance workflow caller");
+requireImmutableWorkflow(conformanceWorkflow, "consumer-conformance\\.yml", "Network conformance workflow caller");
 
 console.log("Network Diagnostics design-system integration passed.");
