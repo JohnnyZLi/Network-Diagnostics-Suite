@@ -10,15 +10,8 @@
 }
 
 .hero-signal {
-  position: absolute;
-  z-index: 0;
-  top: 55%;
-  right: 28%;
-  bottom: 2%;
-  left: 1.5%;
-  overflow: visible;
+  display: none;
   color: var(--accent);
-  opacity: .34;
   pointer-events: none;
 }
 
@@ -61,7 +54,7 @@
 
 .hero-signal__live-tip {
   transform-box: view-box;
-  transform-origin: 930px 90px;
+  transform-origin: 930px 65px;
   animation: hero-signal-tip 3.4s ease-in-out infinite alternate;
 }
 
@@ -77,19 +70,28 @@
   to { transform: rotate(13deg); }
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 1101px) {
+  .hero > .hero__copy,
   .hero-signal {
-    top: 43%;
-    right: 3%;
-    bottom: 39%;
-    left: 0;
-    opacity: .22;
+    grid-column: 1;
+    grid-row: 1;
   }
-}
 
-@media (max-width: 760px) {
+  .hero > .test-controls {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .hero-signal {
-    display: none;
+    width: calc(100% + clamp(44px, 5vw, 92px));
+    height: clamp(260px, 23vw, 340px);
+    display: block;
+    position: sticky;
+    z-index: 0;
+    top: calc(var(--jl-layout-header-height) + var(--jl-space-8));
+    align-self: start;
+    opacity: .32;
+    transform: translate3d(-1.5%, clamp(92px, 7vw, 126px), 0);
   }
 }
 
