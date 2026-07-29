@@ -9,9 +9,11 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
 
 ## Design system
 
-The browser application consumes Johnny Li Web Design System v1.5.0 from the immutable source recorded in `src/design-system/SOURCE.md`. CI verifies the committed tokens, shared foundations, canonical owned-site registry, Sites-menu controller, compact header-menu shell, and integration contract against that source.
+The browser application consumes Johnny Li Web Design System v1.8.2 from the immutable source recorded in `design-system.lock.json` and `src/design-system/SOURCE.md`. Continuous integration verifies the committed tokens, shared foundations, canonical owned-site registry, Sites-menu controller, compact header-menu shell, generated helpers, conformance contract, and integration evidence against that exact source.
 
-The current production UI is the approved Network Diagnostics baseline. Network-specific hero composition, charts, measurements, test controls, progress states, report layouts, and semantic data encodings remain owned by this repository. The shared controller now owns outside-click, Escape, ArrowUp, ArrowDown, Home, End, focus restoration, and compact-navigation disclosure behavior. Shared page-content utilities remain available for future components, but stable application markup does not need to be rewritten solely to adopt shared class names.
+The current production UI is the approved Network Diagnostics baseline. Network-specific hero composition, charts, measurements, test controls, progress states, report layouts, and semantic data encodings remain owned by this repository. The shared controller owns outside-click, Escape, ArrowUp, ArrowDown, Home, End, focus restoration, and compact-navigation disclosure behavior. Shared page-content utilities remain available for future components, but stable application markup does not need to be rewritten solely to adopt shared class names.
+
+Generated conformance reports and visual-audit screenshots are ignored locally.
 
 ## What it measures
 
@@ -81,6 +83,7 @@ Run the automated checks:
 ```bash
 npm run design-system:check
 npm run design-system:integration
+npm run design-system:conformance
 npm run typecheck
 npm test
 npm run build
@@ -89,7 +92,7 @@ npm run probe:test
 
 ## Native deep probe
 
-CI builds and smoke-tests five self-contained packages on their matching operating systems:
+Continuous integration builds and smoke-tests five self-contained packages on their matching operating systems:
 
 | Package | Intended system |
 | --- | --- |
@@ -122,7 +125,7 @@ chmod +x NetworkDeepProbe
 ./NetworkDeepProbe
 ```
 
-The initial macOS CI builds are not Apple-signed or notarized. If macOS blocks the first launch, review the source and checksum, build it locally, or explicitly approve it in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
+The initial macOS continuous-integration builds are not Apple-signed or notarized. If macOS blocks the first launch, review the source and checksum, build it locally, or explicitly approve it in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
 
 The probe writes a timestamped JSON report to the current directory. Import that report through the web dashboard to render the deep results.
 
