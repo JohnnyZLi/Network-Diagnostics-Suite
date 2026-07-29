@@ -1,26 +1,23 @@
 import "./HeroSignalTrace.css";
 
-const TRACE_POINTS = [
-  "8,176",
-  "76,164",
-  "118,199",
-  "164,140",
-  "214,165",
-  "258,100",
-  "302,136",
-  "348,82",
-  "394,128",
-  "444,62",
-  "496,148",
-  "548,112",
-  "602,174",
-  "654,98",
-  "706,138",
-  "756,55",
-  "806,95",
-  "854,38",
-  "902,77",
-  "930,65"
+const TRACE_PATH = [
+  "M 8 204",
+  "L 76 188",
+  "L 126 216",
+  "L 184 154",
+  "L 244 178",
+  "L 304 112",
+  "L 362 146",
+  "L 424 92",
+  "L 486 132",
+  "L 548 72",
+  "L 612 150",
+  "L 676 108",
+  "L 740 136",
+  "L 804 66",
+  "L 868 102",
+  "L 930 52",
+  "L 988 76"
 ].join(" ");
 
 export function HeroSignalTrace() {
@@ -33,54 +30,67 @@ export function HeroSignalTrace() {
         focusable="false"
       >
         <defs>
-          <linearGradient id="hero-signal-gradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="currentColor" stopOpacity="0" />
-            <stop offset="0.16" stopColor="currentColor" stopOpacity="0.22" />
-            <stop offset="0.58" stopColor="currentColor" stopOpacity="0.46" />
-            <stop offset="1" stopColor="currentColor" stopOpacity="0.72" />
-          </linearGradient>
           <filter id="hero-signal-glow" x="-20%" y="-40%" width="140%" height="180%">
-            <feGaussianBlur stdDeviation="2.4" result="blur" />
+            <feGaussianBlur stdDeviation="2.1" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <marker
-            id="hero-signal-live-arrow"
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M 0 0 L 12 6 L 0 12 Z" fill="currentColor" />
-          </marker>
         </defs>
 
-        <g className="hero-signal__field" filter="url(#hero-signal-glow)">
-          <polyline points={TRACE_POINTS} className="hero-signal__path hero-signal__path--base" />
-          <polyline points={TRACE_POINTS} className="hero-signal__path hero-signal__path--trace" />
+        <g className="hero-signal__animated" filter="url(#hero-signal-glow)">
+          <path
+            className="hero-signal__trace"
+            d={TRACE_PATH}
+            pathLength="1"
+          >
+            <animate
+              attributeName="stroke-dashoffset"
+              dur="8s"
+              repeatCount="indefinite"
+              values="1;1;0;0;0;1"
+              keyTimes="0;0.08;0.64;0.82;0.999;1"
+              calcMode="linear"
+            />
+            <animate
+              attributeName="opacity"
+              dur="8s"
+              repeatCount="indefinite"
+              values="0;0;0.34;0.34;0;0"
+              keyTimes="0;0.08;0.1;0.82;0.92;1"
+              calcMode="linear"
+            />
+          </path>
 
-          <g className="hero-signal__samples">
-            <circle cx="258" cy="100" r="3" />
-            <circle cx="444" cy="62" r="3" />
-            <circle cx="654" cy="98" r="3" />
-            <circle cx="854" cy="38" r="3" />
-          </g>
-
-          <circle className="hero-signal__hinge" cx="930" cy="65" r="4" />
-          <g className="hero-signal__live-tip">
-            <line
-              x1="930"
-              y1="65"
-              x2="982"
-              y2="29"
-              markerEnd="url(#hero-signal-live-arrow)"
+          <g className="hero-signal__head">
+            <circle r="3.2" />
+            <path d="M -10 -5 L 3 0 L -10 5 Z" />
+            <animate
+              attributeName="opacity"
+              dur="8s"
+              repeatCount="indefinite"
+              values="0;0;0.78;0.78;0;0"
+              keyTimes="0;0.08;0.1;0.82;0.92;1"
+              calcMode="linear"
+            />
+            <animateMotion
+              dur="8s"
+              repeatCount="indefinite"
+              rotate="auto"
+              keyPoints="0;0;1;1;1;0"
+              keyTimes="0;0.08;0.64;0.82;0.999;1"
+              calcMode="linear"
+              path={TRACE_PATH}
             />
           </g>
         </g>
+
+        <path
+          className="hero-signal__static"
+          d={TRACE_PATH}
+          pathLength="1"
+        />
       </svg>
     </div>
   );
