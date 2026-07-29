@@ -38,7 +38,23 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - name: Record baseline
-        run: npm run performance:baseline
+        env:
+          BASELINE_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          npm run performance:baseline
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'performance-baseline/report.json';
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          report.sourceCommit = process.env.BASELINE_SOURCE_COMMIT;
+          fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
+          const markdownPath = 'performance-baseline/report.md';
+          const markdown = fs.readFileSync(markdownPath, 'utf8').replace(
+            /^Commit:.*$/m,
+            `Source commit: ${report.sourceCommit}\nWorkflow commit: ${report.commit ?? 'unknown'}`,
+          );
+          fs.writeFileSync(markdownPath, markdown);
+          NODE
       - name: Upload performance evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
