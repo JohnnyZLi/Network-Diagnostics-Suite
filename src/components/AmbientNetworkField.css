@@ -16,18 +16,18 @@
   pointer-events: none;
   -webkit-mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, .96) 0,
-    rgba(0, 0, 0, .92) 21%,
-    rgba(0, 0, 0, .48) 56%,
-    rgba(0, 0, 0, .2) 84%,
+    rgba(0, 0, 0, .9) 0,
+    rgba(0, 0, 0, .78) 24%,
+    rgba(0, 0, 0, .3) 58%,
+    rgba(0, 0, 0, .1) 82%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, .96) 0,
-    rgba(0, 0, 0, .92) 21%,
-    rgba(0, 0, 0, .48) 56%,
-    rgba(0, 0, 0, .2) 84%,
+    rgba(0, 0, 0, .9) 0,
+    rgba(0, 0, 0, .78) 24%,
+    rgba(0, 0, 0, .3) 58%,
+    rgba(0, 0, 0, .1) 82%,
     transparent 100%
   );
 }
@@ -42,18 +42,22 @@
 .ambient-network-field__page-network {
   fill: none;
   stroke: var(--jl-color-rule-strong);
-  stroke-width: 1;
+  stroke-width: .8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.ambient-network-field__hero-network > path,
+.ambient-network-field__page-network > path {
   vector-effect: non-scaling-stroke;
 }
 
 .ambient-network-field__hero-network {
-  opacity: .27;
+  opacity: .12;
 }
 
 .ambient-network-field__page-network {
-  opacity: .11;
+  opacity: .05;
 }
 
 .ambient-network-field__nodes {
@@ -62,11 +66,11 @@
 }
 
 .ambient-network-field__hero-network .ambient-network-field__nodes {
-  opacity: .42;
+  opacity: .3;
 }
 
 .ambient-network-field__page-network .ambient-network-field__nodes {
-  opacity: .25;
+  opacity: .14;
 }
 
 .ambient-network-field__packet {
@@ -76,18 +80,18 @@
 
 @media (max-width: 1100px) {
   .ambient-network-field__hero-network {
-    opacity: .2;
+    opacity: .09;
   }
 
   .ambient-network-field__page-network {
-    opacity: .08;
+    opacity: .035;
   }
 }
 
 @media (max-width: 760px) {
   .ambient-network-field {
-    -webkit-mask-image: linear-gradient(to bottom, black 0, rgba(0, 0, 0, .7) 32%, transparent 68%);
-    mask-image: linear-gradient(to bottom, black 0, rgba(0, 0, 0, .7) 32%, transparent 68%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .7) 0, rgba(0, 0, 0, .35) 32%, transparent 62%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .7) 0, rgba(0, 0, 0, .35) 32%, transparent 62%);
   }
 
   .ambient-network-field__page-network,
@@ -96,7 +100,7 @@
   }
 
   .ambient-network-field__hero-network {
-    opacity: .13;
+    opacity: .065;
   }
 }
 
