@@ -1,26 +1,26 @@
 import "./HeroSignalTrace.css";
 
 const TRACE_POINTS = [
-  "8,226",
-  "76,219",
-  "118,239",
-  "164,194",
-  "214,209",
-  "258,151",
-  "302,178",
-  "348,126",
-  "394,164",
-  "444,111",
-  "496,186",
-  "548,151",
-  "602,204",
-  "654,143",
-  "706,172",
-  "756,102",
-  "806,129",
-  "854,73",
-  "902,99",
-  "930,90"
+  "8,176",
+  "76,164",
+  "118,199",
+  "164,140",
+  "214,165",
+  "258,100",
+  "302,136",
+  "348,82",
+  "394,128",
+  "444,62",
+  "496,148",
+  "548,112",
+  "602,174",
+  "654,98",
+  "706,138",
+  "756,55",
+  "806,95",
+  "854,38",
+  "902,77",
+  "930,65"
 ].join(" ");
 
 export function HeroSignalTrace() {
@@ -64,19 +64,19 @@ export function HeroSignalTrace() {
           <polyline points={TRACE_POINTS} className="hero-signal__path hero-signal__path--trace" />
 
           <g className="hero-signal__samples">
-            <circle cx="258" cy="151" r="3" />
-            <circle cx="444" cy="111" r="3" />
-            <circle cx="654" cy="143" r="3" />
-            <circle cx="854" cy="73" r="3" />
+            <circle cx="258" cy="100" r="3" />
+            <circle cx="444" cy="62" r="3" />
+            <circle cx="654" cy="98" r="3" />
+            <circle cx="854" cy="38" r="3" />
           </g>
 
-          <circle className="hero-signal__hinge" cx="930" cy="90" r="4" />
+          <circle className="hero-signal__hinge" cx="930" cy="65" r="4" />
           <g className="hero-signal__live-tip">
             <line
               x1="930"
-              y1="90"
+              y1="65"
               x2="982"
-              y2="54"
+              y2="29"
               markerEnd="url(#hero-signal-live-arrow)"
             />
           </g>
