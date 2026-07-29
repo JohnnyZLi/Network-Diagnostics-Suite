@@ -1,7 +1,7 @@
 {
   "$schema": "./contract.schema.json",
   "schemaVersion": "1.0.0",
-  "designSystemVersion": "1.8.1",
+  "designSystemVersion": "1.8.2",
   "rules": [
     {
       "id": "DS-DIST-001",

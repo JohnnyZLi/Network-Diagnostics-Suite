@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const PRODUCTS = new Set(["portfolio", "network", "rolepacket"]);
 const MANUAL_STATUSES = new Set(["manual-passed", "manual-pending", "manual-failed"]);
+const EVIDENCE_TYPES = new Set(["file-exists", "contains", "not-contains", "matches", "json-equals", "json-matches"]);
 const scriptRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 function parseArguments(argv) {
@@ -61,12 +62,37 @@ function list(value) {
   return [String(value)];
 }
 
-async function evaluateEvidence(root, evidence) {
-  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
-    throw new Error("Evidence must be an object.");
-  }
+function assertObject(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object.`);
+}
+
+function assertKeys(value, allowed, label) {
+  for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`${label} has an unsupported property: ${key}`);
+}
+
+function validateEvidenceShape(evidence, label) {
+  assertObject(evidence, label);
+  assertKeys(evidence, new Set(["type", "file", "path", "value", "values", "pattern", "flags"]), label);
   const type = String(evidence.type ?? "");
-  const file = evidence.file ? confined(root, evidence.file, "Evidence file") : null;
+  if (!EVIDENCE_TYPES.has(type)) throw new Error(`${label} has an unsupported type: ${type}`);
+  if (typeof evidence.file !== "string" || evidence.file.length === 0) throw new Error(`${label} requires a file.`);
+  if (["json-equals", "json-matches"].includes(type) && (typeof evidence.path !== "string" || evidence.path.length === 0)) {
+    throw new Error(`${label} requires a JSON path.`);
+  }
+  if (["matches", "json-matches"].includes(type) && typeof evidence.pattern !== "string") throw new Error(`${label} requires a pattern.`);
+  if (type === "json-equals" && !("value" in evidence)) throw new Error(`${label} requires a value.`);
+  if (["contains", "not-contains"].includes(type) && list(evidence.values ?? evidence.value).length === 0) {
+    throw new Error(`${label} requires value or values.`);
+  }
+  if (evidence.flags !== undefined && (typeof evidence.flags !== "string" || !/^[dgimsuvy]*$/.test(evidence.flags))) {
+    throw new Error(`${label} has invalid regular-expression flags.`);
+  }
+}
+
+async function evaluateEvidence(root, evidence) {
+  validateEvidenceShape(evidence, "Evidence");
+  const type = String(evidence.type);
+  const file = confined(root, evidence.file, "Evidence file");
   if (type === "file-exists") {
     try {
       await readFile(file);
@@ -75,7 +101,6 @@ async function evaluateEvidence(root, evidence) {
       return { passed: false, detail: `${evidence.file} is missing` };
     }
   }
-  if (!file) throw new Error(`${type} evidence requires a file.`);
 
   if (type === "json-equals" || type === "json-matches") {
     const actual = valueAtPath(await readJson(file), evidence.path);
@@ -91,7 +116,6 @@ async function evaluateEvidence(root, evidence) {
   const content = await readFile(file, "utf8");
   if (type === "contains" || type === "not-contains") {
     const values = list(evidence.values ?? evidence.value);
-    if (values.length === 0) throw new Error(`${type} evidence requires value or values.`);
     const found = values.filter((fragment) => content.includes(fragment));
     const passed = type === "contains" ? found.length === values.length : found.length === 0;
     const detail = type === "contains"
@@ -99,24 +123,23 @@ async function evaluateEvidence(root, evidence) {
       : `${evidence.file} contains ${found.length}/${values.length} forbidden fragments`;
     return { passed, detail };
   }
-  if (type === "matches") {
-    const expression = new RegExp(String(evidence.pattern), String(evidence.flags ?? ""));
-    const passed = expression.test(content);
-    return { passed, detail: `${evidence.file} ${passed ? "matches" : "does not match"} /${expression.source}/` };
-  }
-  throw new Error(`Unsupported evidence type: ${type}`);
+  const expression = new RegExp(String(evidence.pattern), String(evidence.flags ?? ""));
+  const passed = expression.test(content);
+  return { passed, detail: `${evidence.file} ${passed ? "matches" : "does not match"} /${expression.source}/` };
 }
 
 function validateContract(contract) {
+  assertObject(contract, "Contract");
   if (!/^\d+\.\d+\.\d+$/.test(String(contract.schemaVersion ?? ""))) throw new Error("Contract schemaVersion is invalid.");
   if (!/^\d+\.\d+\.\d+$/.test(String(contract.designSystemVersion ?? ""))) throw new Error("Contract designSystemVersion is invalid.");
   if (!Array.isArray(contract.rules) || contract.rules.length === 0) throw new Error("Contract has no rules.");
   const ids = new Set();
   for (const rule of contract.rules) {
+    assertObject(rule, "Contract rule");
     if (!/^DS-[A-Z0-9]+-\d{3}$/.test(String(rule.id ?? ""))) throw new Error(`Invalid rule ID: ${rule.id}`);
     if (ids.has(rule.id)) throw new Error(`Duplicate rule ID: ${rule.id}`);
     ids.add(rule.id);
-    if (!Array.isArray(rule.appliesTo) || rule.appliesTo.some((product) => !PRODUCTS.has(product))) {
+    if (!Array.isArray(rule.appliesTo) || rule.appliesTo.length === 0 || rule.appliesTo.some((product) => !PRODUCTS.has(product))) {
       throw new Error(`Rule ${rule.id} has invalid products.`);
     }
     if (!["required", "advisory", "manual"].includes(rule.severity)) throw new Error(`Rule ${rule.id} has invalid severity.`);
@@ -124,9 +147,39 @@ function validateContract(contract) {
 }
 
 function validateManifest(manifest) {
+  assertObject(manifest, "Consumer manifest");
+  assertKeys(manifest, new Set(["schemaVersion", "product", "outputDirectory", "rules"]), "Consumer manifest");
   if (manifest.schemaVersion !== "1.0.0") throw new Error("Consumer manifest schemaVersion must be 1.0.0.");
   if (!PRODUCTS.has(manifest.product)) throw new Error(`Unknown product: ${manifest.product}`);
-  if (!manifest.rules || typeof manifest.rules !== "object" || Array.isArray(manifest.rules)) throw new Error("Consumer manifest rules must be an object.");
+  if (manifest.outputDirectory !== undefined && (typeof manifest.outputDirectory !== "string" || manifest.outputDirectory.length === 0)) {
+    throw new Error("Consumer manifest outputDirectory must be a non-empty string.");
+  }
+  assertObject(manifest.rules, "Consumer manifest rules");
+  for (const [id, declaration] of Object.entries(manifest.rules)) {
+    if (!/^DS-[A-Z0-9]+-\d{3}$/.test(id)) throw new Error(`Manifest has an invalid rule ID: ${id}`);
+    assertObject(declaration, `Manifest declaration ${id}`);
+    assertKeys(declaration, new Set(["status", "reason", "evidence"]), `Manifest declaration ${id}`);
+    if (MANUAL_STATUSES.has(declaration.status)) {
+      if (typeof declaration.reason !== "string" || declaration.reason.length === 0) throw new Error(`Manual declaration ${id} requires a reason.`);
+      if (declaration.evidence !== undefined) throw new Error(`Manual declaration ${id} cannot also declare automated evidence.`);
+      continue;
+    }
+    if (declaration.status !== undefined) throw new Error(`Manifest declaration ${id} has an invalid status: ${declaration.status}`);
+    if (!Array.isArray(declaration.evidence) || declaration.evidence.length === 0) throw new Error(`Manifest declaration ${id} requires evidence.`);
+    declaration.evidence.forEach((evidence, index) => validateEvidenceShape(evidence, `Manifest declaration ${id} evidence ${index + 1}`));
+  }
+}
+
+async function readProvenance(root, contract) {
+  const lock = await readJson(confined(root, "design-system.lock.json", "Design-system lock"));
+  assertObject(lock, "Design-system lock");
+  if (lock.package !== "@johnnyzli/web-design-system") throw new Error("Design-system lock package is invalid.");
+  if (!/^\d+\.\d+\.\d+$/.test(String(lock.version ?? ""))) throw new Error("Design-system lock version is invalid.");
+  if (!/^[0-9a-f]{40}$/.test(String(lock.sourceCommit ?? ""))) throw new Error("Design-system lock sourceCommit is invalid.");
+  if (lock.version !== contract.designSystemVersion) {
+    throw new Error(`Conformance contract v${contract.designSystemVersion} does not match consumer lock v${lock.version}.`);
+  }
+  return lock;
 }
 
 function markdown(report) {
@@ -136,6 +189,8 @@ function markdown(report) {
     "",
     `- Contract: ${report.contractVersion}`,
     `- Design system: ${report.designSystemVersion}`,
+    `- Source commit: ${report.sourceCommit}`,
+    report.consumerCommit ? `- Consumer commit: ${report.consumerCommit}` : null,
     `- Generated: ${report.generatedAt}`,
     `- Blocking failures: ${report.summary.blockingFailures}`,
     `- Manual pending: ${report.summary.manualPending}`,
@@ -144,7 +199,7 @@ function markdown(report) {
     "| --- | --- | --- | --- |",
     ...rows,
     "",
-  ].join("\n");
+  ].filter((line) => line !== null).join("\n");
 }
 
 async function main() {
@@ -155,6 +210,7 @@ async function main() {
   const [contract, manifest] = await Promise.all([readJson(contractPath), readJson(manifestPath)]);
   validateContract(contract);
   validateManifest(manifest);
+  const provenance = await readProvenance(root, contract);
 
   const declaredIds = new Set(Object.keys(manifest.rules));
   const knownIds = new Set(contract.rules.map((rule) => rule.id));
@@ -176,21 +232,12 @@ async function main() {
         id: rule.id,
         severity: rule.severity,
         status: declaration.status,
-        detail: String(declaration.reason ?? "Manual review status declared."),
+        detail: String(declaration.reason),
       });
       continue;
     }
-    if (declaration.status === "not-applicable") {
-      results.push({ id: rule.id, severity: rule.severity, status: "failed", detail: "Applicable rules cannot be marked not-applicable." });
-      continue;
-    }
-    const evidence = Array.isArray(declaration.evidence) ? declaration.evidence : [];
-    if (evidence.length === 0) {
-      results.push({ id: rule.id, severity: rule.severity, status: "failed", detail: "No automated evidence was provided." });
-      continue;
-    }
     const checks = [];
-    for (const item of evidence) {
+    for (const item of declaration.evidence) {
       try {
         checks.push(await evaluateEvidence(root, item));
       } catch (error) {
@@ -214,8 +261,11 @@ async function main() {
   const report = {
     schemaVersion: "1.0.0",
     product: manifest.product,
+    package: provenance.package,
     contractVersion: contract.schemaVersion,
     designSystemVersion: contract.designSystemVersion,
+    sourceCommit: provenance.sourceCommit,
+    consumerCommit: process.env.GITHUB_SHA ?? null,
     generatedAt: new Date().toISOString(),
     summary: { blockingFailures, advisoryFailures, manualPending, manualFailed },
     results,

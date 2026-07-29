@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "1.0.0",
+  "product": "network",
+  "package": "@johnnyzli/web-design-system",
+  "contractVersion": "1.0.0",
+  "designSystemVersion": "1.8.2",
+  "sourceCommit": "abb6c44f588afe09e8f593a8c467b564ac9fef86",
+  "consumerCommit": null,
+  "generatedAt": "2026-07-29T01:04:06.387Z",
+  "summary": {
+    "blockingFailures": 0,
+    "advisoryFailures": 0,
+    "manualPending": 3,
+    "manualFailed": 0
+  },
+  "results": [
+    {
+      "id": "DS-DIST-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: design-system.lock.json#package matches; PASS: design-system.lock.json#version matches /^\\d+\\.\\d+\\.\\d+$/; PASS: design-system.lock.json#sourceCommit matches /^[0-9a-f]{40}$/"
+    },
+    {
+      "id": "DS-DIST-002",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: scripts/check-design-system.mjs contains 3/3 required fragments; PASS: scripts/validate-design-system-integration.mjs contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-HEADER-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: src/App.tsx contains 3/3 required fragments; PASS: .github/workflows/visual-audit.yml contains 3/3 required fragments"
+    },
+    {
+      "id": "DS-SITES-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-SITES-002",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml contains 3/3 required fragments"
+    },
+    {
+      "id": "DS-PRIMITIVE-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: scripts/validate-design-system-integration.mjs contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-DIALOG-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: src/components/TestControls.tsx contains 5/5 required fragments; PASS: scripts/validate-design-system-integration.mjs contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-DIALOG-002",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml contains 3/3 required fragments"
+    },
+    {
+      "id": "DS-RESP-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-RESP-002",
+      "severity": "manual",
+      "status": "manual-pending",
+      "detail": "Actual 200 percent browser zoom remains a manual release check; the automated narrow-desktop viewport is not labeled as zoom."
+    },
+    {
+      "id": "DS-A11Y-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml contains 3/3 required fragments"
+    },
+    {
+      "id": "DS-A11Y-002",
+      "severity": "manual",
+      "status": "manual-pending",
+      "detail": "Real forced-colors and assistive-technology review remains a recorded manual release check."
+    },
+    {
+      "id": "DS-STATE-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: src/App.tsx contains 2/2 required fragments; PASS: scripts/validate-design-system-integration.mjs contains 1/1 required fragments"
+    },
+    {
+      "id": "DS-STATE-002",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: scripts/validate-design-system-integration.mjs contains 1/1 required fragments; PASS: .github/workflows/visual-audit.yml contains 2/2 required fragments"
+    },
+    {
+      "id": "DS-OWN-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: scripts/validate-design-system-integration.mjs contains 3/3 required fragments"
+    },
+    {
+      "id": "DS-WORKFLOW-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/design-system-sync.yml matches /uses: JohnnyZLi\\/Web-Design-System\\/.github\\/workflows\\/consumer-design-system-sync\\.yml@[0-9a-f]{40}/; PASS: .github/workflows/design-system-sync.yml contains 0/2 forbidden fragments"
+    },
+    {
+      "id": "DS-TEST-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: .github/workflows/visual-audit.yml exists; PASS: .github/workflows/design-system-conformance.yml contains 6/6 required fragments"
+    },
+    {
+      "id": "DS-PERF-001",
+      "severity": "manual",
+      "status": "manual-pending",
+      "detail": "Reviewed bundle and user-experience performance baselines have not yet been recorded."
+    }
+  ]
+}
