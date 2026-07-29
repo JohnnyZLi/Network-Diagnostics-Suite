@@ -34,6 +34,13 @@ function round(value) {
   return Math.round(value * 100) / 100;
 }
 
+function totalsFor(assets) {
+  return assets.reduce(
+    (value, asset) => ({ bytes: value.bytes + asset.bytes, gzipBytes: value.gzipBytes + asset.gzipBytes }),
+    { bytes: 0, gzipBytes: 0 },
+  );
+}
+
 async function waitForPreview(preview) {
   for (let attempt = 1; attempt <= 60; attempt += 1) {
     if (preview.exitCode !== null) throw new Error(`Vite preview exited before becoming ready with status ${preview.exitCode}.`);
@@ -101,9 +108,18 @@ const files = await walk(assetRoot);
 const assets = [];
 for (const path of files) {
   const body = await readFile(path);
-  assets.push({ path: relative(assetRoot, path), bytes: body.byteLength, gzipBytes: gzipSync(body, { level: 9 }).byteLength, sha256: createHash("sha256").update(body).digest("hex") });
+  const assetPath = relative(assetRoot, path);
+  assets.push({
+    path: assetPath,
+    category: assetPath.startsWith("speed/") && assetPath.endsWith(".bin") ? "transfer-fixture" : "application",
+    bytes: body.byteLength,
+    gzipBytes: gzipSync(body, { level: 9 }).byteLength,
+    sha256: createHash("sha256").update(body).digest("hex"),
+  });
 }
 assets.sort((a, b) => b.gzipBytes - a.gzipBytes);
+const applicationAssets = assets.filter((asset) => asset.category === "application");
+const transferFixtures = assets.filter((asset) => asset.category === "transfer-fixture");
 await mkdir(outputDirectory, { recursive: true });
 const managedPreview = !process.env.PERFORMANCE_BASE_URL;
 const preview = managedPreview ? spawn(npx, ["--no-install", "vite", "preview", "--host", "127.0.0.1", "--port", "4173"], { cwd: root, env: process.env, stdio: "inherit" }) : null;
@@ -122,7 +138,8 @@ try {
   await stopPreview(preview);
 }
 const metrics = Object.fromEntries(Object.entries(samples).map(([name, results]) => [name, Object.fromEntries(Object.keys(results[0]).map((key) => [key, round(median(results.map((result) => result[key])))]))]));
-const totals = assets.reduce((value, asset) => ({ bytes: value.bytes + asset.bytes, gzipBytes: value.gzipBytes + asset.gzipBytes }), { bytes: 0, gzipBytes: 0 });
+const applicationTotals = totalsFor(applicationAssets);
+const transferFixtureTotals = totalsFor(transferFixtures);
 const report = {
   schemaVersion: "1.0.0",
   product: "network",
@@ -130,7 +147,10 @@ const report = {
   recordedAt: new Date().toISOString(),
   environment: { platform: process.platform, architecture: process.arch, node: process.version, runs },
   methodology: "Median local production-preview measurements at desktop and mobile widths with reduced motion and the idle application state.",
-  assets: { totals, largestByGzip: assets.slice(0, 25) },
+  assets: {
+    application: { totals: applicationTotals, largestByGzip: applicationAssets.slice(0, 25) },
+    transferFixtures: { totals: transferFixtureTotals, files: transferFixtures },
+  },
   metrics,
 };
 await writeFile(resolve(outputDirectory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
@@ -142,7 +162,8 @@ const markdown = [
   `Commit: ${report.commit ?? "local working tree"}`,
   `Environment: ${process.platform} ${process.arch}, ${process.version}, ${runs} runs`,
   "",
-  `Production assets: ${totals.bytes} bytes raw; ${totals.gzipBytes} bytes gzip.`,
+  `Application assets: ${applicationTotals.bytes} bytes raw; ${applicationTotals.gzipBytes} bytes gzip.`,
+  `Generated transfer fixtures: ${transferFixtureTotals.bytes} bytes across ${transferFixtures.length} incompressible speed-test files; excluded from application bundle totals.`,
   "",
   "| Viewport | Metric | Median |",
   "| --- | --- | ---: |",
