@@ -4,7 +4,8 @@ Network Diagnostics records a reproducible engineering baseline for the built br
 
 ## What is recorded
 
-- Total raw and gzip-compressed production asset size
+- Application asset size, reported raw and gzip-compressed
+- The generated incompressible speed-test fixtures, reported separately from application assets
 - SHA-256 provenance and the largest built assets
 - Median desktop and mobile navigation timing
 - First Contentful Paint and Largest Contentful Paint
@@ -13,6 +14,8 @@ Network Diagnostics records a reproducible engineering baseline for the built br
 - Resource count and rendered DOM-node count
 
 The recorder uses the idle production application state, reduced motion, a local Vite preview, two fixed viewports, and three runs by default. Results are written to `performance-baseline/report.json` and `performance-baseline/report.md`.
+
+The files under `dist/speed/` are deterministic transfer fixtures used by the measurement engine. They are intentionally large and incompressible, so they are excluded from application bundle totals and shown in their own report section.
 
 ## Local use
 
