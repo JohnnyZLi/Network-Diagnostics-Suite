@@ -35,11 +35,11 @@
     "DS-RESP-001": {"evidence":[
       {"type":"contains","file":".github/workflows/visual-audit.yml","values":["width: 320","document overflow"]}
     ]},
-    "DS-RESP-002": {"status":"manual-pending","reason":"Actual 200 percent browser zoom remains a manual release check; the automated narrow-desktop viewport is not labeled as zoom."},
+    "DS-RESP-002": {"status":"manual-passed","reason":"Repository owner completed actual 200 percent browser zoom review of selectors, tables, charts, and imported-report layouts on 2026-07-29; no blocking overflow or loss of access was found."},
     "DS-A11Y-001": {"evidence":[
       {"type":"contains","file":".github/workflows/visual-audit.yml","values":["page.keyboard.press('Escape')","regain focus after Escape","aria-expanded"]}
     ]},
-    "DS-A11Y-002": {"status":"manual-pending","reason":"Real forced-colors and assistive-technology review remains a recorded manual release check."},
+    "DS-A11Y-002": {"status":"manual-passed","reason":"Repository owner completed forced-colors, grayscale chart-meaning, keyboard, and assistive-technology review on 2026-07-29; no blocking issue was found."},
     "DS-STATE-001": {"evidence":[
       {"type":"contains","file":"src/App.tsx","values":["error-panel jl-callout jl-callout--danger","jl-button jl-button--compact"]},
       {"type":"contains","file":"scripts/validate-design-system-integration.mjs","value":"Network error primitive markup"}
@@ -59,6 +59,6 @@
       {"type":"file-exists","file":".github/workflows/visual-audit.yml"},
       {"type":"contains","file":".github/workflows/design-system-conformance.yml","values":["consumer-conformance.yml@","design-system:check","design-system:integration","design-system:conformance","npm test","npm run build"]}
     ]},
-    "DS-PERF-001": {"status":"manual-pending","reason":"Reviewed bundle and user-experience performance baselines have not yet been recorded."}
+    "DS-PERF-001": {"status":"manual-passed","reason":"The initial immutable-commit Network Diagnostics performance baseline was generated, reviewed for fixture and measurement errors, and accepted as the engineering reference on 2026-07-29."}
   }
 }
