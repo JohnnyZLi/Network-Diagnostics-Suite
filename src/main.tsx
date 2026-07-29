@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { AmbientNetworkField } from "./components/AmbientNetworkField";
 import "./design-system/tokens.css";
 import "./design-system/foundations.css";
 import "./design-system/site-identity.css";
@@ -20,6 +21,7 @@ import "./content-primitive-mappings.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <AmbientNetworkField />
     <App />
   </StrictMode>,
 );
