@@ -1,5 +1,4 @@
 .hero {
-  --hero-signal-progress: 0;
   position: relative;
   isolation: isolate;
   overflow: clip;
@@ -13,23 +12,14 @@
 .hero-signal {
   position: absolute;
   z-index: 0;
-  top: 56%;
+  top: 55%;
   right: 28%;
   bottom: 2%;
   left: 1.5%;
   overflow: visible;
   color: var(--accent);
-  opacity: calc(.3 - (var(--hero-signal-progress) * .11));
+  opacity: .34;
   pointer-events: none;
-  transform:
-    translate3d(
-      calc(var(--hero-signal-progress) * 44px),
-      calc(var(--hero-signal-progress) * -78px),
-      0
-    )
-    scale(calc(1 + (var(--hero-signal-progress) * .035)));
-  transform-origin: 72% 48%;
-  will-change: transform, opacity;
 }
 
 .hero-signal__svg {
@@ -39,38 +29,52 @@
   overflow: visible;
 }
 
-.hero-signal__field {
-  transform-origin: center;
-}
-
 .hero-signal__path {
   fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
   vector-effect: non-scaling-stroke;
 }
 
 .hero-signal__path--base {
   stroke: currentColor;
-  stroke-width: 1.15;
+  stroke-width: 1.05;
   opacity: .13;
 }
 
 .hero-signal__path--trace {
   stroke: url(#hero-signal-gradient);
-  stroke-width: 1.9;
-  stroke-dasharray: 10 15;
-  animation: hero-signal-flow 16s linear infinite;
+  stroke-width: 1.75;
 }
 
-.hero-signal__packet {
+.hero-signal__samples {
   fill: currentColor;
-  opacity: .42;
+  opacity: .28;
 }
 
-@keyframes hero-signal-flow {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -200; }
+.hero-signal__hinge {
+  fill: var(--bg);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.hero-signal__live-tip {
+  transform-box: view-box;
+  transform-origin: 930px 90px;
+  animation: hero-signal-tip 3.4s ease-in-out infinite alternate;
+}
+
+.hero-signal__live-tip line {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+
+@keyframes hero-signal-tip {
+  from { transform: rotate(-9deg); }
+  to { transform: rotate(13deg); }
 }
 
 @media (max-width: 1100px) {
@@ -79,7 +83,7 @@
     right: 3%;
     bottom: 39%;
     left: 0;
-    opacity: calc(.2 - (var(--hero-signal-progress) * .08));
+    opacity: .22;
   }
 }
 
@@ -91,17 +95,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hero-signal {
-    opacity: .18;
-    transform: none;
-    will-change: auto;
+    opacity: .2;
   }
 
-  .hero-signal__path--trace {
+  .hero-signal__live-tip {
     animation: none;
-  }
-
-  .hero-signal__packet {
-    display: none;
+    transform: rotate(2deg);
   }
 }
 
