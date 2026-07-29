@@ -16,3 +16,4 @@ public/speed/**/*.bin
 .DS_Store
 design-system-conformance/
 visual-audit/
+performance-baseline/
