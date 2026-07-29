@@ -7,7 +7,6 @@
 
 .hero > .hero__copy,
 .hero > .test-controls {
-  position: relative;
   z-index: 1;
 }
 
