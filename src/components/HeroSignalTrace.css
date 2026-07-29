@@ -22,52 +22,39 @@
   overflow: visible;
 }
 
-.hero-signal__path {
+.hero-signal__trace,
+.hero-signal__static {
   fill: none;
+  stroke: currentColor;
   stroke-linecap: square;
   stroke-linejoin: miter;
   vector-effect: non-scaling-stroke;
 }
 
-.hero-signal__path--base {
-  stroke: currentColor;
-  stroke-width: 1.05;
-  opacity: .13;
+.hero-signal__trace {
+  stroke-width: 1.9;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
 }
 
-.hero-signal__path--trace {
-  stroke: url(#hero-signal-gradient);
-  stroke-width: 1.75;
-}
-
-.hero-signal__samples {
+.hero-signal__head {
   fill: currentColor;
-  opacity: .28;
+  opacity: 0;
 }
 
-.hero-signal__hinge {
-  fill: var(--bg);
-  stroke: currentColor;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
+.hero-signal__head circle {
+  opacity: .45;
 }
 
-.hero-signal__live-tip {
-  transform-box: view-box;
-  transform-origin: 930px 65px;
-  animation: hero-signal-tip 3.4s ease-in-out infinite alternate;
+.hero-signal__head path {
+  opacity: .92;
 }
 
-.hero-signal__live-tip line {
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: square;
-  vector-effect: non-scaling-stroke;
-}
-
-@keyframes hero-signal-tip {
-  from { transform: rotate(-9deg); }
-  to { transform: rotate(13deg); }
+.hero-signal__static {
+  display: none;
+  stroke-width: 1.6;
+  opacity: .2;
 }
 
 @media (min-width: 1101px) {
@@ -90,19 +77,18 @@
     z-index: 0;
     top: calc(var(--jl-layout-header-height) + var(--jl-space-8));
     align-self: start;
-    opacity: .32;
+    opacity: .9;
     transform: translate3d(-1.5%, clamp(92px, 7vw, 126px), 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-signal {
-    opacity: .2;
+  .hero-signal__animated {
+    display: none;
   }
 
-  .hero-signal__live-tip {
-    animation: none;
-    transform: rotate(2deg);
+  .hero-signal__static {
+    display: block;
   }
 }
 
