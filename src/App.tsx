@@ -5,7 +5,6 @@ import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
 import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
-import { HeroSignalTrace } from "./components/HeroSignalTrace";
 import { MotionObserver } from "./components/MotionObserver";
 import { ProgressStage } from "./components/ProgressStage";
 import { RecentResultsPanel } from "./components/RecentResultsPanel";
@@ -219,7 +218,6 @@ export default function App() {
 
         <main>
           <section className="hero">
-            <HeroSignalTrace />
             <div className="hero__copy">
               <span className="eyebrow">Browser test + local deep probe</span>
               <h1>Measure the connection,<br /><em>not just the headline speed.</em></h1>
