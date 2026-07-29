@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   update:
-    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@abb6c44f588afe09e8f593a8c467b564ac9fef86
+    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@44615631b9f8500ebb86c1ead803cecc91a497d3
     with:
       node-version: "24"
       timeout-minutes: 20
