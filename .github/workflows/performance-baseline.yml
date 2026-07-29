@@ -1,0 +1,65 @@
+name: Performance baseline
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/performance-baseline.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/performance-baseline.mjs"
+      - "src/**"
+      - "index.html"
+      - "vite.config.*"
+  workflow_dispatch:
+  schedule:
+    - cron: "29 10 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: network-performance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save playwright@1.54.1
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Record baseline
+        env:
+          BASELINE_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          npm run performance:baseline
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'performance-baseline/report.json';
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          report.sourceCommit = process.env.BASELINE_SOURCE_COMMIT;
+          fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
+          const markdownPath = 'performance-baseline/report.md';
+          const markdown = fs.readFileSync(markdownPath, 'utf8').replace(
+            /^Commit:.*$/m,
+            `Source commit: ${report.sourceCommit}\nWorkflow commit: ${report.commit ?? 'unknown'}`,
+          );
+          fs.writeFileSync(markdownPath, markdown);
+          NODE
+      - name: Upload performance evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: network-performance-baseline
+          path: performance-baseline
+          if-no-files-found: error
+          retention-days: 30
