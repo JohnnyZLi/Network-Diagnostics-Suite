@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
@@ -96,14 +96,14 @@ export function TestControls({
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
+  useLayoutEffect(() => {
+    if (window.innerWidth >= 1101 && window.scrollY > 0 && window.scrollY <= 64) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [mode]);
+
   const closeConfirmationDialog = () => {
     confirmationDialogRef.current?.close();
-  };
-
-  const changeModeWithoutScrollJump = (option: TestMode) => {
-    const scrollPosition = window.scrollY;
-    onModeChange(option);
-    window.requestAnimationFrame(() => window.scrollTo({ top: scrollPosition, behavior: "auto" }));
   };
 
   const requestStart = () => {
@@ -151,7 +151,7 @@ export function TestControls({
               aria-checked={mode === option}
               aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
-              onClick={() => changeModeWithoutScrollJump(option)}
+              onClick={() => onModeChange(option)}
               key={option}
             >
               <span>{optionConfig.name}</span>
