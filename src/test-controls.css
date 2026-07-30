@@ -41,11 +41,31 @@
   letter-spacing: .08em;
 }
 
-/* Reserve the tallest description and warning shapes so profile changes only
-   replace text and selection state. Confirmation is handled in a modal. */
+/* Profile switching should replace content without moving the hero or action.
+   The fixed description and variable-row slots reserve the longest shapes. */
 .test-controls__summary > p {
-  min-height: 96px;
+  height: 140px;
+  min-height: 140px;
   margin-block: 0;
+}
+
+.test-controls__summary dl div {
+  gap: 12px;
+}
+
+.test-controls__summary dt {
+  flex: 0 0 auto;
+}
+
+.test-controls__summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.test-controls__summary dl .test-controls__variable-row {
+  min-height: 48px;
+  align-items: flex-start;
 }
 
 .data-use-note {
@@ -113,6 +133,7 @@
   }
 
   .test-controls__summary > p {
+    height: 126px;
     min-height: 126px;
   }
 
@@ -123,7 +144,8 @@
 
 @media (max-width: 520px) {
   .test-controls__summary > p {
-    min-height: 160px;
+    height: 184px;
+    min-height: 184px;
   }
 
   .data-use-note {
