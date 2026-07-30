@@ -37,7 +37,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     concurrency: 6,
     uploadConcurrency: 6,
     comparisonSingleDownloadDurationMs: 4_000,
-    comparisonSingleDownloadCapBytes: 250 * 1_000_000,
+    comparisonSingleDownloadCapBytes: 150 * 1_000_000,
     comparisonSingleUploadDurationMs: 0,
     comparisonSingleUploadCapBytes: 0,
     includeServices: false
@@ -57,9 +57,9 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     concurrency: 8,
     uploadConcurrency: 8,
     comparisonSingleDownloadDurationMs: 6_000,
-    comparisonSingleDownloadCapBytes: 400 * 1_000_000,
+    comparisonSingleDownloadCapBytes: 250 * 1_000_000,
     comparisonSingleUploadDurationMs: 6_000,
-    comparisonSingleUploadCapBytes: 96 * 1_000_000,
+    comparisonSingleUploadCapBytes: 64 * 1_000_000,
     includeServices: true
   },
   extended: {
