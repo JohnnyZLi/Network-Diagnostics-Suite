@@ -21,21 +21,32 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
   });
 
-  it("adds a compact single-flow download to Quick Compare", () => {
+  it("adds a compact single-flow download to Quick Compare without raising its cap", () => {
     const plan = buildDiagnosticTestPlan(TEST_MODES.quick, "compare");
 
     expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 6]);
+    expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([150, 450].map((megabytes) => megabytes * 1_000_000));
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([6]);
-    expect(plan.transferCapBytes).toBe(978 * 1_000_000);
+    expect(plan.transferCapBytes).toBe(728 * 1_000_000);
     expect(plan.estimatedTime).toBe("25 seconds");
   });
 
-  it("builds the Stress connection-scaling curve without increasing its download cap", () => {
+  it("splits the Full payload budget across single and aggregate stages", () => {
+    const plan = buildDiagnosticTestPlan(TEST_MODES.standard, "compare");
+
+    expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([250, 650].map((megabytes) => megabytes * 1_000_000));
+    expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([64, 192].map((megabytes) => megabytes * 1_000_000));
+    expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
+  });
+
+  it("builds the Stress connection-scaling curve without increasing its profile cap", () => {
     const plan = buildDiagnosticTestPlan(TEST_MODES.extended, "compare");
 
     expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 2, 4, 8, 10]);
     expect(plan.downloads.reduce((sum, stage) => sum + stage.capBytes, 0)).toBe(3_000 * 1_000_000);
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([1, 8]);
+    expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([128, 384].map((megabytes) => megabytes * 1_000_000));
+    expect(plan.transferCapBytes).toBe(3_512 * 1_000_000);
     expect(plan.estimatedTime).toBe("65 seconds");
   });
 });
