@@ -83,8 +83,9 @@ export function TestControls({
   onStart,
   onCancel
 }: TestControlsProps) {
-  const config = TEST_MODES[mode];
-  const plan = buildDiagnosticTestPlan(config, transferMode);
+  const profileConfig = TEST_MODES[mode];
+  const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
+  const config = { ...profileConfig, estimatedTime: plan.estimatedTime };
   const transferCap = plan.transferCapBytes;
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
@@ -176,10 +177,10 @@ export function TestControls({
         <p>{plan.methodDescription}</p>
         <dl>
           <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
-          <div><dt>With method</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-          <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div className="test-controls__variable-row"><dt>Connections</dt><dd>{plan.connectionLabel}</dd></div>
+          <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          <div className="test-controls__variable-row"><dt>Download</dt><dd>{plan.downloadConnectionLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Upload</dt><dd>{plan.uploadConnectionLabel}</dd></div>
           <div className="test-controls__variable-row"><dt>Samples</dt><dd>{plan.sampleLabel}</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
           <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
