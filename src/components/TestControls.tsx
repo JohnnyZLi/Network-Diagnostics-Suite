@@ -100,6 +100,12 @@ export function TestControls({
     confirmationDialogRef.current?.close();
   };
 
+  const changeModeWithoutScrollJump = (option: TestMode) => {
+    const scrollPosition = window.scrollY;
+    onModeChange(option);
+    window.requestAnimationFrame(() => window.scrollTo({ top: scrollPosition, behavior: "auto" }));
+  };
+
   const requestStart = () => {
     if (!requiresConfirmation) {
       onStart();
@@ -145,7 +151,7 @@ export function TestControls({
               aria-checked={mode === option}
               aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
-              onClick={() => onModeChange(option)}
+              onClick={() => changeModeWithoutScrollJump(option)}
               key={option}
             >
               <span>{optionConfig.name}</span>
