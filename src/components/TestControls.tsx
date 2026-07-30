@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
@@ -72,6 +72,14 @@ function compactEstimatedTime(value: string): string {
     .replace(/\s+seconds?$/i, " sec");
 }
 
+function normalizeTinyDesktopFocusScroll(): void {
+  window.requestAnimationFrame(() => {
+    if (window.innerWidth >= 1101 && window.scrollY > 0 && window.scrollY <= 64) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  });
+}
+
 export function TestControls({
   mode,
   transferMode,
@@ -95,12 +103,6 @@ export function TestControls({
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
-
-  useLayoutEffect(() => {
-    if (window.innerWidth >= 1101 && window.scrollY > 0 && window.scrollY <= 64) {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }
-  }, [mode]);
 
   const closeConfirmationDialog = () => {
     confirmationDialogRef.current?.close();
@@ -151,6 +153,7 @@ export function TestControls({
               aria-checked={mode === option}
               aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
+              onFocus={normalizeTinyDesktopFocusScroll}
               onClick={() => onModeChange(option)}
               key={option}
             >
