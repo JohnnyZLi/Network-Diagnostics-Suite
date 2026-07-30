@@ -137,14 +137,13 @@ export function TestControls({
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
-          const optionPlan = buildDiagnosticTestPlan(optionConfig, transferMode);
           return (
             <button
               className={mode === option ? "mode-option mode-option--active" : "mode-option"}
               type="button"
               role="radio"
               aria-checked={mode === option}
-              aria-label={`${optionConfig.name}, ${optionPlan.estimatedTime}`}
+              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
               onClick={() => onModeChange(option)}
               key={option}
