@@ -1,9 +1,5 @@
 /* Test-control layout ownership. Keeps segmented options readable inside the narrow hero panel. */
 
-.test-controls {
-  overflow-anchor: none;
-}
-
 .mode-selector {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
