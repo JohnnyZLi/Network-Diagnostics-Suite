@@ -10,8 +10,9 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.uploads).toHaveLength(1);
     expect(plan.downloads[0]?.concurrency).toBe(1);
     expect(plan.uploads[0]?.concurrency).toBe(1);
-    expect(plan.downloadConnectionLabel).toBe("1 download");
-    expect(plan.uploadConnectionLabel).toBe("1 upload");
+    expect(plan.downloadConnectionLabel).toBe("1");
+    expect(plan.uploadConnectionLabel).toBe("1");
+    expect(plan.sampleLabel).toBe("3 single");
     expect(plan.transferCapBytes).toBe(728 * 1_000_000);
   });
 
@@ -20,8 +21,9 @@ describe("buildDiagnosticTestPlan", () => {
 
     expect(plan.downloads[0]).toMatchObject({ concurrency: 8, samples: 3, durationMs: 12_000 });
     expect(plan.uploads[0]).toMatchObject({ concurrency: 8, durationMs: 12_000 });
-    expect(plan.downloadConnectionLabel).toBe("8 concurrent downloads");
-    expect(plan.uploadConnectionLabel).toBe("8 concurrent uploads");
+    expect(plan.downloadConnectionLabel).toBe("8");
+    expect(plan.uploadConnectionLabel).toBe("8");
+    expect(plan.sampleLabel).toBe("3 parallel");
     expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
   });
 
@@ -31,8 +33,9 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 6]);
     expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([150, 450].map((megabytes) => megabytes * 1_000_000));
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([6]);
-    expect(plan.downloadConnectionLabel).toBe("1 and 6 concurrent downloads");
-    expect(plan.uploadConnectionLabel).toBe("6 concurrent uploads");
+    expect(plan.downloadConnectionLabel).toBe("1 / 6");
+    expect(plan.uploadConnectionLabel).toBe("6");
+    expect(plan.sampleLabel).toBe("1 single + 3 parallel");
     expect(plan.transferCapBytes).toBe(728 * 1_000_000);
     expect(plan.estimatedTime).toBe("25 seconds");
   });
@@ -42,8 +45,9 @@ describe("buildDiagnosticTestPlan", () => {
 
     expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([250, 650].map((megabytes) => megabytes * 1_000_000));
     expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([64, 192].map((megabytes) => megabytes * 1_000_000));
-    expect(plan.downloadConnectionLabel).toBe("1 and 8 concurrent downloads");
-    expect(plan.uploadConnectionLabel).toBe("1 and 8 concurrent uploads");
+    expect(plan.downloadConnectionLabel).toBe("1 / 8");
+    expect(plan.uploadConnectionLabel).toBe("1 / 8");
+    expect(plan.sampleLabel).toBe("1 single + 3 parallel");
     expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
   });
 
@@ -54,9 +58,9 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.downloads.reduce((sum, stage) => sum + stage.capBytes, 0)).toBe(3_000 * 1_000_000);
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([1, 8]);
     expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([128, 384].map((megabytes) => megabytes * 1_000_000));
-    expect(plan.downloadConnectionLabel).toBe("1, 2, 4, 8, and 10 concurrent downloads");
-    expect(plan.uploadConnectionLabel).toBe("1 and 8 concurrent uploads");
-    expect(plan.sampleLabel).toBe("Five-stage download scaling test");
+    expect(plan.downloadConnectionLabel).toBe("1 / 2 / 4 / 8 / 10");
+    expect(plan.uploadConnectionLabel).toBe("1 / 8");
+    expect(plan.sampleLabel).toBe("5 scaling stages");
     expect(plan.transferCapBytes).toBe(3_512 * 1_000_000);
     expect(plan.estimatedTime).toBe("65 seconds");
   });

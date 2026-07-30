@@ -23,9 +23,9 @@ const DATA_CONFIRMATION_STORAGE_KEY = "network-diagnostics.data-confirmations.v1
 const CONFIRMED_TEST_MODES: ConfirmedTestMode[] = ["standard", "extended"];
 
 const TRANSFER_MODES: Record<TransferMode, { name: string; detail: string }> = {
-  compare: { name: "Compare", detail: "Single + aggregate" },
-  single: { name: "Single", detail: "One connection" },
-  aggregate: { name: "Aggregate", detail: "Parallel capacity" }
+  compare: { name: "Compare", detail: "Both" },
+  single: { name: "Single", detail: "1 connection" },
+  aggregate: { name: "Aggregate", detail: "Parallel" }
 };
 
 const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
@@ -179,9 +179,9 @@ export function TestControls({
           <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div className="test-controls__variable-row"><dt>Download</dt><dd>{plan.downloadConnectionLabel}</dd></div>
-          <div className="test-controls__variable-row"><dt>Upload</dt><dd>{plan.uploadConnectionLabel}</dd></div>
-          <div className="test-controls__variable-row"><dt>Samples</dt><dd>{plan.sampleLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Download connections</dt><dd>{plan.downloadConnectionLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Upload connections</dt><dd>{plan.uploadConnectionLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Download runs</dt><dd>{plan.sampleLabel}</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
           <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
         </dl>
