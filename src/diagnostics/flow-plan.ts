@@ -32,28 +32,18 @@ function stage(
   return { id, strategy, concurrency, durationMs, capBytes, samples };
 }
 
-function formatCountSeries(counts: number[]): string {
-  if (counts.length === 1) return String(counts[0]);
-  if (counts.length === 2) return `${counts[0]} and ${counts[1]}`;
-  return `${counts.slice(0, -1).join(", ")}, and ${counts.at(-1)}`;
-}
-
-function transferConnectionLabel(counts: number[], direction: "download" | "upload"): string {
-  if (counts.length === 1 && counts[0] === 1) return `1 ${direction}`;
-  const noun = `${direction}s`;
-  return counts.length === 1
-    ? `${counts[0]} concurrent ${noun}`
-    : `${formatCountSeries(counts)} concurrent ${noun}`;
+function connectionSequence(counts: number[]): string {
+  return counts.join(" / ");
 }
 
 function singlePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "downloads" | "uploads" | "downloadConnectionLabel" | "uploadConnectionLabel" | "sampleLabel" | "methodDescription"> {
   return {
     downloads: [stage("single", "single", 1, config.downloadDurationMs, config.downloadCapBytes, config.downloadSamples)],
     uploads: [stage("single", "single", 1, config.uploadDurationMs, config.uploadCapBytes)],
-    downloadConnectionLabel: transferConnectionLabel([1], "download"),
-    uploadConnectionLabel: transferConnectionLabel([1], "upload"),
-    sampleLabel: `Median of ${config.downloadSamples} single-connection downloads`,
-    methodDescription: "One isolated connection in each direction exposes single-flow behavior that parallel transfers can hide."
+    downloadConnectionLabel: "1",
+    uploadConnectionLabel: "1",
+    sampleLabel: `${config.downloadSamples} single`,
+    methodDescription: "Measures one connection in each direction."
   };
 }
 
@@ -61,10 +51,10 @@ function aggregatePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "downlo
   return {
     downloads: [stage("aggregate", "aggregate", config.concurrency, config.downloadDurationMs, config.downloadCapBytes, config.downloadSamples)],
     uploads: [stage("aggregate", "aggregate", config.uploadConcurrency, config.uploadDurationMs, config.uploadCapBytes)],
-    downloadConnectionLabel: transferConnectionLabel([config.concurrency], "download"),
-    uploadConnectionLabel: transferConnectionLabel([config.uploadConcurrency], "upload"),
-    sampleLabel: `Median of ${config.downloadSamples} aggregate downloads`,
-    methodDescription: "Parallel connections estimate the total application capacity available to several simultaneous transfers."
+    downloadConnectionLabel: String(config.concurrency),
+    uploadConnectionLabel: String(config.uploadConcurrency),
+    sampleLabel: `${config.downloadSamples} parallel`,
+    methodDescription: "Measures total speed across parallel connections."
   };
 }
 
@@ -89,10 +79,10 @@ function comparePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "download
           config.uploadCapBytes - config.comparisonSingleUploadCapBytes
         )
       ],
-      downloadConnectionLabel: transferConnectionLabel([1, 2, 4, 8, config.concurrency], "download"),
-      uploadConnectionLabel: transferConnectionLabel([1, config.uploadConcurrency], "upload"),
-      sampleLabel: "Five-stage download scaling test",
-      methodDescription: "Measures download capacity at 1, 2, 4, 8, and 10 concurrent connections, then compares single-connection and aggregate upload capacity."
+      downloadConnectionLabel: connectionSequence([1, 2, 4, 8, config.concurrency]),
+      uploadConnectionLabel: connectionSequence([1, config.uploadConcurrency]),
+      sampleLabel: "5 scaling stages",
+      methodDescription: "Tests how download speed scales with more connections, then compares single and parallel upload."
     };
   }
 
@@ -116,14 +106,14 @@ function comparePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "download
       stage("aggregate", "aggregate", config.concurrency, config.downloadDurationMs, aggregateDownloadCapBytes, config.downloadSamples)
     ],
     uploads,
-    downloadConnectionLabel: transferConnectionLabel([1, config.concurrency], "download"),
+    downloadConnectionLabel: connectionSequence([1, config.concurrency]),
     uploadConnectionLabel: config.comparisonSingleUploadDurationMs > 0
-      ? transferConnectionLabel([1, config.uploadConcurrency], "upload")
-      : transferConnectionLabel([config.uploadConcurrency], "upload"),
-    sampleLabel: `Single flow + median of ${config.downloadSamples} aggregate downloads`,
+      ? connectionSequence([1, config.uploadConcurrency])
+      : String(config.uploadConcurrency),
+    sampleLabel: `1 single + ${config.downloadSamples} parallel`,
     methodDescription: config.id === "quick"
-      ? "Compares one download connection with parallel capacity, then uses aggregate upload to keep the test compact."
-      : "Compares one connection with parallel capacity in both directions, then checks common-service reachability."
+      ? "Compares single and parallel download speed, then tests parallel upload."
+      : "Compares single and parallel speed in both directions."
   };
 }
 
