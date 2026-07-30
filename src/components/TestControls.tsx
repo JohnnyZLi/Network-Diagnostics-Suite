@@ -72,14 +72,6 @@ function compactEstimatedTime(value: string): string {
     .replace(/\s+seconds?$/i, " sec");
 }
 
-function normalizeTinyDesktopFocusScroll(): void {
-  window.requestAnimationFrame(() => {
-    if (window.innerWidth >= 1101 && window.scrollY > 0 && window.scrollY <= 64) {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }
-  });
-}
-
 export function TestControls({
   mode,
   transferMode,
@@ -153,7 +145,6 @@ export function TestControls({
               aria-checked={mode === option}
               aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
               disabled={running}
-              onFocus={normalizeTinyDesktopFocusScroll}
               onClick={() => onModeChange(option)}
               key={option}
             >
