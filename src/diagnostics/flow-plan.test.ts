@@ -33,7 +33,7 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 6]);
     expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([150, 450].map((megabytes) => megabytes * 1_000_000));
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([6]);
-    expect(plan.downloadConnectionLabel).toBe("1 / 6");
+    expect(plan.downloadConnectionLabel).toBe("1 + 6");
     expect(plan.uploadConnectionLabel).toBe("6");
     expect(plan.sampleLabel).toBe("1 single + 3 parallel");
     expect(plan.transferCapBytes).toBe(728 * 1_000_000);
@@ -45,8 +45,8 @@ describe("buildDiagnosticTestPlan", () => {
 
     expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([250, 650].map((megabytes) => megabytes * 1_000_000));
     expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([64, 192].map((megabytes) => megabytes * 1_000_000));
-    expect(plan.downloadConnectionLabel).toBe("1 / 8");
-    expect(plan.uploadConnectionLabel).toBe("1 / 8");
+    expect(plan.downloadConnectionLabel).toBe("1 + 8");
+    expect(plan.uploadConnectionLabel).toBe("1 + 8");
     expect(plan.sampleLabel).toBe("1 single + 3 parallel");
     expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
   });
@@ -58,8 +58,8 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.downloads.reduce((sum, stage) => sum + stage.capBytes, 0)).toBe(3_000 * 1_000_000);
     expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([1, 8]);
     expect(plan.uploads.map((stage) => stage.capBytes)).toEqual([128, 384].map((megabytes) => megabytes * 1_000_000));
-    expect(plan.downloadConnectionLabel).toBe("1 / 2 / 4 / 8 / 10");
-    expect(plan.uploadConnectionLabel).toBe("1 / 8");
+    expect(plan.downloadConnectionLabel).toBe("1 + 2 + 4 + 8 + 10");
+    expect(plan.uploadConnectionLabel).toBe("1 + 8");
     expect(plan.sampleLabel).toBe("5 scaling stages");
     expect(plan.transferCapBytes).toBe(3_512 * 1_000_000);
     expect(plan.estimatedTime).toBe("65 seconds");
