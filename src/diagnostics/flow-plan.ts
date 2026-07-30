@@ -37,7 +37,7 @@ function singlePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "downloads
     uploads: [stage("single", "single", 1, config.uploadDurationMs, config.uploadCapBytes)],
     connectionLabel: "1 download · 1 upload",
     sampleLabel: `Median of ${config.downloadSamples} single-connection downloads`,
-    methodDescription: "One isolated connection in each direction. This exposes single-flow behavior that parallel transfers can hide."
+    methodDescription: "One isolated connection in each direction exposes single-flow behavior that parallel transfers can hide."
   };
 }
 
@@ -64,32 +64,45 @@ function comparePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "download
       downloads: scaling,
       uploads: [
         stage("single", "single", 1, config.comparisonSingleUploadDurationMs, config.comparisonSingleUploadCapBytes),
-        stage("aggregate", "aggregate", config.uploadConcurrency, config.uploadDurationMs, config.uploadCapBytes)
+        stage(
+          "aggregate",
+          "aggregate",
+          config.uploadConcurrency,
+          config.uploadDurationMs,
+          config.uploadCapBytes - config.comparisonSingleUploadCapBytes
+        )
       ],
       connectionLabel: "1 → 2 → 4 → 8 → 10 download",
       sampleLabel: "Five-step download scaling curve",
-      methodDescription: "Measures how throughput scales as connections are added, then compares single and aggregate upload behavior."
+      methodDescription: "Builds a 1 → 2 → 4 → 8 → 10 download scaling curve, then compares single and aggregate upload."
     };
   }
 
+  const aggregateDownloadCapBytes = config.downloadCapBytes - config.comparisonSingleDownloadCapBytes;
   const uploads = config.comparisonSingleUploadDurationMs > 0
     ? [
         stage("single", "single", 1, config.comparisonSingleUploadDurationMs, config.comparisonSingleUploadCapBytes),
-        stage("aggregate", "aggregate", config.uploadConcurrency, config.uploadDurationMs, config.uploadCapBytes)
+        stage(
+          "aggregate",
+          "aggregate",
+          config.uploadConcurrency,
+          config.uploadDurationMs,
+          config.uploadCapBytes - config.comparisonSingleUploadCapBytes
+        )
       ]
     : [stage("aggregate", "aggregate", config.uploadConcurrency, config.uploadDurationMs, config.uploadCapBytes)];
 
   return {
     downloads: [
       stage("single", "single", 1, config.comparisonSingleDownloadDurationMs, config.comparisonSingleDownloadCapBytes),
-      stage("aggregate", "aggregate", config.concurrency, config.downloadDurationMs, config.downloadCapBytes, config.downloadSamples)
+      stage("aggregate", "aggregate", config.concurrency, config.downloadDurationMs, aggregateDownloadCapBytes, config.downloadSamples)
     ],
     uploads,
     connectionLabel: `1 + ${config.concurrency} download connections`,
     sampleLabel: `Single flow + median of ${config.downloadSamples} aggregate downloads`,
     methodDescription: config.id === "quick"
-      ? "Compares one download connection with aggregate capacity, then uses aggregate upload to keep the run compact."
-      : "Compares isolated and parallel transfers in both directions under the same endpoint and test profile."
+      ? "Compares one download connection with parallel capacity, then uses aggregate upload to keep the test compact."
+      : "Compares one connection with parallel capacity in both directions, then checks common-service reachability."
   };
 }
 
