@@ -175,7 +175,8 @@ export function TestControls({
       <div className="test-controls__summary">
         <p>{config.description} {plan.methodDescription}</p>
         <dl>
-          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
+          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
+          <div><dt>With method</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div><dt>Connections</dt><dd>{plan.connectionLabel}</dd></div>
