@@ -137,13 +137,14 @@ export function TestControls({
       <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
+          const optionPlan = buildDiagnosticTestPlan(optionConfig, transferMode);
           return (
             <button
               className={mode === option ? "mode-option mode-option--active" : "mode-option"}
               type="button"
               role="radio"
               aria-checked={mode === option}
-              aria-label={`${optionConfig.name}, ${optionConfig.estimatedTime}`}
+              aria-label={`${optionConfig.name}, ${optionPlan.estimatedTime}`}
               disabled={running}
               onClick={() => onModeChange(option)}
               key={option}
@@ -173,14 +174,14 @@ export function TestControls({
       </div>
 
       <div className="test-controls__summary">
-        <p>{config.description} {plan.methodDescription}</p>
+        <p>{plan.methodDescription}</p>
         <dl>
           <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
           <div><dt>With method</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div><dt>Connections</dt><dd>{plan.connectionLabel}</dd></div>
-          <div><dt>Samples</dt><dd>{plan.sampleLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Connections</dt><dd>{plan.connectionLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Samples</dt><dd>{plan.sampleLabel}</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
           <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
         </dl>
