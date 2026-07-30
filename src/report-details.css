@@ -165,29 +165,203 @@
   overflow-wrap: anywhere;
 }
 
+.flow-comparison {
+  margin-top: clamp(54px, 8vw, 96px);
+}
+
+.flow-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.flow-comparison-card,
+.flow-scaling-panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(246, 242, 235, .72);
+}
+
+.flow-comparison-card__heading,
+.flow-scaling-panel__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.flow-comparison-card__heading span,
+.flow-scaling-panel__heading .eyebrow {
+  color: var(--muted-strong);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.flow-comparison-card__heading small,
+.flow-scaling-panel__heading > small {
+  color: var(--muted);
+  font: 500 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: right;
+}
+
+.flow-comparison-card dl {
+  margin: 8px 0 0;
+}
+
+.flow-comparison-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.flow-comparison-card dl div:last-child {
+  border-bottom: 0;
+}
+
+.flow-comparison-card dt {
+  color: var(--muted);
+}
+
+.flow-comparison-card dd {
+  margin: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: right;
+}
+
+.flow-comparison-card--interpretation > strong {
+  display: block;
+  margin-top: 18px;
+  font: 500 clamp(30px, 4vw, 48px)/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.flow-comparison-card--interpretation p {
+  margin: 10px 0 0;
+  color: var(--muted-strong);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.flow-scaling-panel {
+  margin-top: 12px;
+}
+
+.flow-scaling-panel__heading h3 {
+  margin: 6px 0 0;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.flow-scaling-list {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-scaling-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 1fr) 110px 72px;
+  align-items: center;
+  gap: 12px;
+}
+
+.flow-scaling-list li > span,
+.flow-scaling-list li > strong,
+.flow-scaling-list li > small {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.flow-scaling-list li > span {
+  color: var(--muted-strong);
+  font-size: 11px;
+}
+
+.flow-scaling-list li > strong {
+  font-size: 12px;
+  font-weight: 550;
+  text-align: right;
+}
+
+.flow-scaling-list li > small {
+  color: var(--muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+.flow-scaling-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.flow-scaling-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
 @media (max-width: 1100px) {
   .transfer-direction-grid {
     grid-template-columns: 1fr;
   }
+
+  .flow-comparison-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .flow-comparison-card--interpretation {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 760px) {
-  .transfer-summary-grid {
+  .transfer-summary-grid,
+  .flow-comparison-grid {
     grid-template-columns: 1fr;
   }
 
-  .transfer-direction {
+  .flow-comparison-card--interpretation {
+    grid-column: auto;
+  }
+
+  .transfer-direction,
+  .flow-comparison-card,
+  .flow-scaling-panel {
     padding: 16px;
   }
 
-  .transfer-direction > header {
+  .transfer-direction > header,
+  .flow-scaling-panel__heading {
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
   }
 
-  .transfer-direction > header > small {
+  .transfer-direction > header > small,
+  .flow-scaling-panel__heading > small {
     text-align: left;
+  }
+
+  .flow-scaling-list li {
+    grid-template-columns: 30px minmax(80px, 1fr) 92px;
+  }
+
+  .flow-scaling-list li > small {
+    display: none;
   }
 }
 
@@ -195,5 +369,10 @@
   .transfer-card-grid--samples,
   .transfer-card-grid--lifecycle {
     grid-template-columns: 1fr;
+  }
+
+  .flow-scaling-list li {
+    grid-template-columns: 28px minmax(64px, 1fr) 82px;
+    gap: 8px;
   }
 }

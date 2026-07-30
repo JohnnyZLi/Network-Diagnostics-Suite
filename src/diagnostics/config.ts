@@ -14,6 +14,10 @@ export interface TestModeConfig {
   uploadCapBytes: number;
   concurrency: number;
   uploadConcurrency: number;
+  comparisonSingleDownloadDurationMs: number;
+  comparisonSingleDownloadCapBytes: number;
+  comparisonSingleUploadDurationMs: number;
+  comparisonSingleUploadCapBytes: number;
   includeServices: boolean;
 }
 
@@ -21,7 +25,7 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
   quick: {
     id: "quick",
     name: "Quick",
-    description: "Core speed, latency, jitter, request loss, and loaded latency with a median of three download samples.",
+    description: "Core speed, latency, jitter, request loss, and loaded latency with an optional single-versus-aggregate comparison.",
     estimatedTime: "20 seconds",
     idlePingCount: 12,
     pingIntervalMs: 150,
@@ -32,12 +36,16 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadCapBytes: 128 * 1_000_000,
     concurrency: 6,
     uploadConcurrency: 6,
+    comparisonSingleDownloadDurationMs: 4_000,
+    comparisonSingleDownloadCapBytes: 150 * 1_000_000,
+    comparisonSingleUploadDurationMs: 0,
+    comparisonSingleUploadCapBytes: 0,
     includeServices: false
   },
   standard: {
     id: "standard",
     name: "Full",
-    description: "Three download samples, a longer upload run, and common-service reachability checks for a broader view of everyday network quality.",
+    description: "Longer transfer phases, single-versus-aggregate behavior, and common-service reachability for a broader view of everyday network quality.",
     estimatedTime: "35 seconds",
     idlePingCount: 20,
     pingIntervalMs: 175,
@@ -48,12 +56,16 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadCapBytes: 256 * 1_000_000,
     concurrency: 8,
     uploadConcurrency: 8,
+    comparisonSingleDownloadDurationMs: 6_000,
+    comparisonSingleDownloadCapBytes: 250 * 1_000_000,
+    comparisonSingleUploadDurationMs: 6_000,
+    comparisonSingleUploadCapBytes: 64 * 1_000_000,
     includeServices: true
   },
   extended: {
     id: "extended",
     name: "Stress",
-    description: "Three sustained download samples with higher data caps for fast connections and queueing behavior.",
+    description: "Sustained high-capacity testing with a 1 → 2 → 4 → 8 → 10 connection scaling curve in Compare mode.",
     estimatedTime: "60 seconds",
     idlePingCount: 30,
     pingIntervalMs: 175,
@@ -64,6 +76,10 @@ export const TEST_MODES: Record<TestMode, TestModeConfig> = {
     uploadCapBytes: 512 * 1_000_000,
     concurrency: 10,
     uploadConcurrency: 8,
+    comparisonSingleDownloadDurationMs: 4_000,
+    comparisonSingleDownloadCapBytes: 400 * 1_000_000,
+    comparisonSingleUploadDurationMs: 8_000,
+    comparisonSingleUploadCapBytes: 128 * 1_000_000,
     includeServices: true
   }
 };

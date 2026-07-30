@@ -5,12 +5,13 @@ import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
 import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
+import { FlowComparisonPanel } from "./components/FlowComparisonPanel";
 import { MotionObserver } from "./components/MotionObserver";
 import { ProgressStage } from "./components/ProgressStage";
 import { RecentResultsPanel } from "./components/RecentResultsPanel";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
-import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress } from "./types/diagnostics";
+import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress, TransferMode } from "./types/diagnostics";
 
 type RunState = "idle" | "running" | "complete" | "error";
 
@@ -25,8 +26,11 @@ function createResultSummary(result: DiagnosticResult): string {
   const sampleDetail = result.download.samples && result.download.samples.length > 1
     ? ` (${result.download.samples.length}-sample median)`
     : "";
-  return [
+  const single = result.flowMeasurements?.find((measurement) => measurement.strategy === "single");
+  const aggregate = result.flowMeasurements?.find((measurement) => measurement.strategy === "aggregate");
+  const lines = [
     "Network Diagnostics Suite",
+    `Transfer method: ${result.transferMode ?? "aggregate"}`,
     `Download: ${formatRate(result.download.steadyMbps)} Mbps steady${sampleDetail} (${formatRate(result.download.mbps)} Mbps whole phase)`,
     `Download path: ${downloadPath}`,
     `Upload: ${formatRate(result.upload.steadyMbps)} Mbps steady (${formatRate(result.upload.mbps)} Mbps whole phase)`,
@@ -35,7 +39,14 @@ function createResultSummary(result: DiagnosticResult): string {
     `Request loss: ${result.idleLatency.lossPercent.toFixed(1)}%`,
     `Loaded latency: +${formatLatency(result.downloadLatency.increaseMs)} ms down / +${formatLatency(result.uploadLatency.increaseMs)} ms up`,
     `Network: ${result.edge?.network ?? "Unavailable"}`
-  ].join("\n");
+  ];
+  if (single?.download && aggregate?.download) {
+    lines.splice(3, 0,
+      `Single connection: ${formatRate(single.download.steadyMbps)} Mbps`,
+      `Aggregate capacity: ${formatRate(aggregate.download.steadyMbps)} Mbps`
+    );
+  }
+  return lines.join("\n");
 }
 
 function downloadResultFile(result: DiagnosticResult): void {
@@ -50,6 +61,7 @@ function downloadResultFile(result: DiagnosticResult): void {
 
 export default function App() {
   const [mode, setMode] = useState<TestMode>("quick");
+  const [transferMode, setTransferMode] = useState<TransferMode>("compare");
   const [downloadPath, setDownloadPath] = useState<DownloadPathPreference>("auto");
   const [runState, setRunState] = useState<RunState>("idle");
   const [progress, setProgress] = useState<TestProgress>(INITIAL_PROGRESS);
@@ -103,6 +115,7 @@ export default function App() {
     try {
       const nextResult = await runDiagnosticTest({
         mode,
+        transferMode,
         downloadPath,
         signal: controller.signal,
         onProgress: (next) => setProgress((previous) => {
@@ -221,9 +234,9 @@ export default function App() {
             <div className="hero__copy">
               <span className="eyebrow">Browser test + local deep probe</span>
               <h1>Measure the connection,<br /><em>not just the headline speed.</em></h1>
-              <p>Throughput is only one part of a usable network. Test latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account. Recent reports stay only in this browser.</p>
+              <p>Throughput is only one part of a usable network. Compare single-flow and aggregate capacity, then inspect latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account.</p>
               <div className="hero__facts">
-                <div><strong>3</strong><span>download samples</span></div>
+                <div><strong>1→10</strong><span>connection range</span></div>
                 <div><strong>6</strong><span>service targets</span></div>
                 <div><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
               </div>
@@ -231,9 +244,11 @@ export default function App() {
 
             <TestControls
               mode={mode}
+              transferMode={transferMode}
               downloadPath={downloadPath}
               running={runState === "running"}
               onModeChange={setMode}
+              onTransferModeChange={setTransferMode}
               onDownloadPathChange={setDownloadPath}
               onStart={startTest}
               onCancel={cancelTest}
@@ -252,25 +267,28 @@ export default function App() {
           )}
 
           {result && (
-            <ResultDashboard
-              result={result}
-              onExport={exportResult}
-              onCopy={copyResult}
-              copyLabel={copyLabel}
-            />
+            <>
+              <ResultDashboard
+                result={result}
+                onExport={exportResult}
+                onCopy={copyResult}
+                copyLabel={copyLabel}
+              />
+              <FlowComparisonPanel result={result} />
+            </>
           )}
 
           {!result && runState !== "running" && runState !== "error" && (
             <section className="measurement-preview" aria-label="Available measurements">
               <div className="section-heading">
                 <span className="eyebrow">Beyond a single number</span>
-                <h2>One run, <em className="text-blue">three network conditions.</em></h2>
-                <p>The same latency series is sampled at rest, under download load, and under upload load so queueing delay is visible.</p>
+                <h2>One run, <em className="text-blue">two throughput views.</em></h2>
+                <p>Compare mode measures an isolated connection and aggregate capacity separately, while latency is sampled at rest and under transfer load.</p>
               </div>
               <div className="preview-grid">
-                <article><span>01 / Idle</span><h3>Baseline quality</h3><p>Median, mean, minimum, maximum, 95th percentile, jitter, and request timeouts.</p></article>
-                <article><span>02 / Downstream</span><h3>Loaded responsiveness</h3><p>Three parallel-stream samples report a median download rate alongside loaded latency and stability.</p></article>
-                <article><span>03 / Upstream</span><h3>Queue pressure</h3><p>Upload saturation reveals call and gaming delays that an unloaded ping cannot show.</p></article>
+                <article><span>01 / Single</span><h3>Individual transfer behavior</h3><p>One connection shows what a single download, tunnel, or remote service can use on the selected path.</p></article>
+                <article><span>02 / Aggregate</span><h3>Total application capacity</h3><p>Parallel connections show how much throughput several simultaneous transfers can use together.</p></article>
+                <article><span>03 / Loaded</span><h3>Queue pressure</h3><p>Latency during download and upload reveals responsiveness problems that an unloaded ping cannot show.</p></article>
               </div>
             </section>
           )}
@@ -291,8 +309,8 @@ export default function App() {
             <div className="methodology-grid">
               <article><span>HTTP</span><h3>Browser request loss</h3><p>A failed or timed-out request. Transmission Control Protocol can retransmit underlying packets, so this is deliberately not labeled raw packet loss.</p></article>
               <article><span>RTT</span><h3>Round-trip latency</h3><p>High-resolution elapsed time for an uncached request to the nearest configured test edge, summarized as a distribution.</p></article>
-              <article><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer direction.</p></article>
-              <article><span>RATE</span><h3>Application throughput</h3><p>The displayed download is the median of three successful payload-rate samples; upload remains one sustained phase.</p></article>
+              <article><span>LOAD</span><h3>Bufferbloat signal</h3><p>The change between idle median latency and the median observed during each saturated transfer stage.</p></article>
+              <article><span>RATE</span><h3>Application throughput</h3><p>Single and aggregate phases are isolated from each other. Compare mode reports both; Stress adds a connection-scaling curve.</p></article>
             </div>
           </section>
 

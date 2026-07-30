@@ -3,14 +3,18 @@ import type {
   DiagnosticResult,
   DownloadDeliverySummary,
   DownloadPathPreference,
+  FlowMeasurement,
   LatencySummary,
   TestMode,
   TestProgress,
   ThroughputQualification,
   ThroughputSampleSummary,
-  ThroughputSummary
+  ThroughputSummary,
+  TransferMode,
+  TransferStrategy
 } from "../types/diagnostics";
 import { TEST_MODES } from "./config";
+import { buildDiagnosticTestPlan, type ThroughputStagePlan } from "./flow-plan";
 import { fetchMetadata, TestCancelledError, throwIfAborted } from "./http";
 import { collectLatencySamples, collectLatencyUntilStopped } from "./latency";
 import { runServiceBattery } from "./services";
@@ -18,9 +22,16 @@ import { runDownload, runUpload } from "./throughput";
 
 interface RunTestOptions {
   mode: TestMode;
+  transferMode: TransferMode;
   downloadPath: DownloadPathPreference;
   signal: AbortSignal;
   onProgress: (progress: TestProgress) => void;
+}
+
+interface StageResult {
+  stage: ThroughputStagePlan;
+  throughput: ThroughputSummary;
+  latency: ReturnType<typeof summarizeLoadedLatency>;
 }
 
 const EDGE_SERVED_STATUSES = new Set(["HIT", "REVALIDATED", "STALE", "UPDATING"]);
@@ -164,14 +175,15 @@ function aggregateDownloadSamples(samples: ThroughputSummary[]): ThroughputSumma
   };
 }
 
-async function runLoadedPhase(
+async function runLoadedStage(
   kind: "download" | "upload",
+  stage: ThroughputStagePlan,
   idleLatency: LatencySummary,
   options: RunTestOptions,
   baseFraction: number,
-  fractionSpan: number
-): Promise<{ throughput: ThroughputSummary; latency: ReturnType<typeof summarizeLoadedLatency> }> {
-  const config = TEST_MODES[options.mode];
+  fractionSpan: number,
+  bytesOffset: number
+): Promise<StageResult> {
   const phaseController = new AbortController();
   const forwardAbort = () => phaseController.abort(options.signal.reason);
   options.signal.addEventListener("abort", forwardAbort, { once: true });
@@ -180,27 +192,27 @@ async function runLoadedPhase(
       phase: kind,
       fraction: baseFraction,
       liveLatencyMs: sample ?? undefined,
-      bytesTransferred: 0
+      bytesTransferred: bytesOffset
     });
   });
 
   let throughput: ThroughputSummary;
   try {
     if (kind === "download") {
-      const sampleCount = Math.max(1, config.downloadSamples);
+      const sampleCount = Math.max(1, stage.samples);
       const samples: ThroughputSummary[] = [];
       let completedBytes = 0;
       for (let index = 0; index < sampleCount; index += 1) {
         const durationMs = index === sampleCount - 1
-          ? config.downloadDurationMs - Math.floor(config.downloadDurationMs / sampleCount) * (sampleCount - 1)
-          : Math.floor(config.downloadDurationMs / sampleCount);
+          ? stage.durationMs - Math.floor(stage.durationMs / sampleCount) * (sampleCount - 1)
+          : Math.floor(stage.durationMs / sampleCount);
         const capBytes = index === sampleCount - 1
-          ? config.downloadCapBytes - Math.floor(config.downloadCapBytes / sampleCount) * (sampleCount - 1)
-          : Math.floor(config.downloadCapBytes / sampleCount);
+          ? stage.capBytes - Math.floor(stage.capBytes / sampleCount) * (sampleCount - 1)
+          : Math.floor(stage.capBytes / sampleCount);
         const sample = await runDownload({
           durationMs,
           capBytes,
-          concurrency: config.concurrency,
+          concurrency: stage.concurrency,
           signal: options.signal,
           downloadPath: options.downloadPath,
           onProgress: (liveMbps, bytesTransferred) => {
@@ -209,7 +221,7 @@ async function runLoadedPhase(
               phase: kind,
               fraction: baseFraction + ((index + sampleFraction) / sampleCount) * fractionSpan,
               liveMbps,
-              bytesTransferred: completedBytes + bytesTransferred
+              bytesTransferred: bytesOffset + completedBytes + bytesTransferred
             });
           }
         });
@@ -219,40 +231,102 @@ async function runLoadedPhase(
           phase: kind,
           fraction: baseFraction + ((index + 1) / sampleCount) * fractionSpan,
           liveMbps: sample.steadyMbps,
-          bytesTransferred: completedBytes
+          bytesTransferred: bytesOffset + completedBytes
         });
       }
       throughput = aggregateDownloadSamples(samples);
     } else {
       throughput = await runUpload({
-        durationMs: config.uploadDurationMs,
-        capBytes: config.uploadCapBytes,
-        concurrency: config.uploadConcurrency,
+        durationMs: stage.durationMs,
+        capBytes: stage.capBytes,
+        concurrency: stage.concurrency,
         signal: options.signal,
         onProgress: (liveMbps, bytesTransferred) => {
-          const elapsedFraction = Math.min(1, bytesTransferred / Math.max(config.uploadCapBytes, 1));
+          const elapsedFraction = Math.min(1, bytesTransferred / Math.max(stage.capBytes, 1));
           options.onProgress({
             phase: kind,
             fraction: baseFraction + elapsedFraction * fractionSpan,
             liveMbps,
-            bytesTransferred
+            bytesTransferred: bytesOffset + bytesTransferred
           });
         }
       });
     }
+    options.onProgress({
+      phase: kind,
+      fraction: baseFraction + fractionSpan,
+      liveMbps: throughput.steadyMbps,
+      bytesTransferred: bytesOffset + throughput.bytes
+    });
   } finally {
     phaseController.abort("transfer-complete");
     options.signal.removeEventListener("abort", forwardAbort);
   }
   const latencySamples = await latencyPromise;
   return {
+    stage,
     throughput,
     latency: summarizeLoadedLatency(latencySamples, idleLatency.medianMs)
   };
 }
 
+function totalDuration(stages: ThroughputStagePlan[]): number {
+  return stages.reduce((sum, stage) => sum + stage.durationMs, 0);
+}
+
+async function runStageSequence(
+  kind: "download" | "upload",
+  stages: ThroughputStagePlan[],
+  idleLatency: LatencySummary,
+  options: RunTestOptions,
+  baseFraction: number,
+  fractionSpan: number
+): Promise<StageResult[]> {
+  const results: StageResult[] = [];
+  const durationTotal = Math.max(1, totalDuration(stages));
+  let elapsedDuration = 0;
+  let bytesOffset = 0;
+
+  for (const stage of stages) {
+    const stageBase = baseFraction + (elapsedDuration / durationTotal) * fractionSpan;
+    const stageSpan = (stage.durationMs / durationTotal) * fractionSpan;
+    const result = await runLoadedStage(kind, stage, idleLatency, options, stageBase, stageSpan, bytesOffset);
+    results.push(result);
+    elapsedDuration += stage.durationMs;
+    bytesOffset += result.throughput.bytes;
+  }
+
+  return results;
+}
+
+function highestConcurrency(results: StageResult[]): StageResult | undefined {
+  return [...results].sort((left, right) => right.stage.concurrency - left.stage.concurrency)[0];
+}
+
+function singleConnection(results: StageResult[]): StageResult | undefined {
+  return results.find((result) => result.stage.concurrency === 1);
+}
+
+function measurement(
+  strategy: TransferStrategy,
+  concurrency: number,
+  download: StageResult | undefined,
+  upload: StageResult | undefined
+): FlowMeasurement | null {
+  if (!download && !upload) return null;
+  return {
+    strategy,
+    concurrency,
+    download: download?.throughput,
+    upload: upload?.throughput,
+    downloadLatency: download?.latency,
+    uploadLatency: upload?.latency
+  };
+}
+
 export async function runDiagnosticTest(options: RunTestOptions): Promise<DiagnosticResult> {
   const config = TEST_MODES[options.mode];
+  const plan = buildDiagnosticTestPlan(config, options.transferMode);
   const startedAt = new Date();
   throwIfAborted(options.signal);
 
@@ -276,8 +350,8 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
   );
   const idleLatency = summarizeLatency(idleSamples);
 
-  const download = await runLoadedPhase("download", idleLatency, options, 0.15, 0.35);
-  const upload = await runLoadedPhase("upload", idleLatency, options, 0.5, 0.35);
+  const downloadResults = await runStageSequence("download", plan.downloads, idleLatency, options, 0.15, 0.35);
+  const uploadResults = await runStageSequence("upload", plan.uploads, idleLatency, options, 0.5, 0.35);
 
   let services: DiagnosticResult["services"] = [];
   if (config.includeServices) {
@@ -288,8 +362,44 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
   throwIfAborted(options.signal);
   const edge = await metadataPromise;
   const completedAt = new Date();
-  const downloadWarmupBytes = download.throughput.delivery?.warmupBytes ?? 0;
-  const dataUsedBytes = download.throughput.bytes + upload.throughput.bytes + downloadWarmupBytes;
+  const singleDownload = singleConnection(downloadResults);
+  const aggregateDownload = highestConcurrency(downloadResults.filter((result) => result.stage.concurrency > 1));
+  const singleUpload = singleConnection(uploadResults);
+  const aggregateUpload = highestConcurrency(uploadResults.filter((result) => result.stage.concurrency > 1));
+  const primaryDownload = options.transferMode === "single"
+    ? singleDownload
+    : aggregateDownload ?? singleDownload;
+  const primaryUpload = options.transferMode === "single"
+    ? singleUpload
+    : aggregateUpload ?? singleUpload;
+
+  if (!primaryDownload || !primaryUpload) {
+    throw new Error("The selected transfer plan did not produce both download and upload measurements.");
+  }
+
+  const flowMeasurements = [
+    measurement("single", 1, singleDownload, singleUpload),
+    measurement(
+      "aggregate",
+      Math.max(aggregateDownload?.stage.concurrency ?? 0, aggregateUpload?.stage.concurrency ?? 0),
+      aggregateDownload,
+      aggregateUpload
+    )
+  ].filter((item): item is FlowMeasurement => item !== null);
+  const downloadScaling = downloadResults.length > 2
+    ? downloadResults.map((result) => ({
+        concurrency: result.stage.concurrency,
+        download: result.throughput,
+        downloadLatency: result.latency
+      }))
+    : undefined;
+  const downloadWarmupBytes = downloadResults.reduce(
+    (sum, result) => sum + (result.throughput.delivery?.warmupBytes ?? 0),
+    0
+  );
+  const dataUsedBytes = downloadResults.reduce((sum, result) => sum + result.throughput.bytes, 0)
+    + uploadResults.reduce((sum, result) => sum + result.throughput.bytes, 0)
+    + downloadWarmupBytes;
   options.onProgress({
     phase: "complete",
     fraction: 1,
@@ -301,12 +411,15 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
     startedAt: startedAt.toISOString(),
     completedAt: completedAt.toISOString(),
     mode: options.mode,
+    transferMode: options.transferMode,
     edge,
     idleLatency,
-    download: download.throughput,
-    upload: upload.throughput,
-    downloadLatency: download.latency,
-    uploadLatency: upload.latency,
+    download: primaryDownload.throughput,
+    upload: primaryUpload.throughput,
+    downloadLatency: primaryDownload.latency,
+    uploadLatency: primaryUpload.latency,
+    flowMeasurements,
+    downloadScaling,
     services,
     dataUsedBytes
   };

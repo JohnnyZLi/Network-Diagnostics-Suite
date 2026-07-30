@@ -1,13 +1,16 @@
 import { useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
-import type { DownloadPathPreference, TestMode } from "../types/diagnostics";
+import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
+import type { DownloadPathPreference, TestMode, TransferMode } from "../types/diagnostics";
 
 interface TestControlsProps {
   mode: TestMode;
+  transferMode: TransferMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
   onModeChange: (mode: TestMode) => void;
+  onTransferModeChange: (mode: TransferMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
   onStart: () => void;
   onCancel: () => void;
@@ -18,6 +21,12 @@ type ConfirmationRecord = Partial<Record<ConfirmedTestMode, number>>;
 
 const DATA_CONFIRMATION_STORAGE_KEY = "network-diagnostics.data-confirmations.v1";
 const CONFIRMED_TEST_MODES: ConfirmedTestMode[] = ["standard", "extended"];
+
+const TRANSFER_MODES: Record<TransferMode, { name: string; detail: string }> = {
+  compare: { name: "Compare", detail: "Single + aggregate" },
+  single: { name: "Single", detail: "One connection" },
+  aggregate: { name: "Aggregate", detail: "Parallel capacity" }
+};
 
 const DOWNLOAD_PATHS: Record<DownloadPathPreference, { name: string; detail: string }> = {
   auto: { name: "Automatic", detail: "R2 + fallback" },
@@ -65,15 +74,18 @@ function compactEstimatedTime(value: string): string {
 
 export function TestControls({
   mode,
+  transferMode,
   downloadPath,
   running,
   onModeChange,
+  onTransferModeChange,
   onDownloadPathChange,
   onStart,
   onCancel
 }: TestControlsProps) {
   const config = TEST_MODES[mode];
-  const transferCap = config.downloadCapBytes + config.uploadCapBytes;
+  const plan = buildDiagnosticTestPlan(config, transferMode);
+  const transferCap = plan.transferCapBytes;
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
@@ -142,13 +154,33 @@ export function TestControls({
         })}
       </div>
 
+      <div className="test-controls__subheading">Transfer method</div>
+      <div className="mode-selector transfer-method-selector" role="radiogroup" aria-label="Transfer method">
+        {(Object.keys(TRANSFER_MODES) as TransferMode[]).map((option) => (
+          <button
+            className={transferMode === option ? "mode-option mode-option--active" : "mode-option"}
+            type="button"
+            role="radio"
+            aria-checked={transferMode === option}
+            disabled={running}
+            onClick={() => onTransferModeChange(option)}
+            key={option}
+          >
+            <span>{TRANSFER_MODES[option].name}</span>
+            <small>{TRANSFER_MODES[option].detail}</small>
+          </button>
+        ))}
+      </div>
+
       <div className="test-controls__summary">
-        <p>{config.description}</p>
+        <p>{plan.methodDescription}</p>
         <dl>
           <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
+          <div><dt>With method</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div><dt>Samples</dt><dd>Median of {config.downloadSamples} downloads</dd></div>
+          <div className="test-controls__variable-row"><dt>Connections</dt><dd>{plan.connectionLabel}</dd></div>
+          <div className="test-controls__variable-row"><dt>Samples</dt><dd>{plan.sampleLabel}</dd></div>
           <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
           <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
         </dl>
@@ -215,7 +247,7 @@ export function TestControls({
           <span className="eyebrow">Confirm data use</span>
           <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
           <p className="jl-dialog__message" id="data-confirmation-dialog-description">
-            This test may transfer up to {formatBytes(transferCap)}. Avoid running it on metered or cellular connections.
+            This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
           </p>
           <label className="data-confirmation-dialog__remember">
             <input

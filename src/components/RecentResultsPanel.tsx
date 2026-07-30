@@ -106,7 +106,7 @@ export function RecentResultsPanel({
           >
             <div>
               <strong>{new Date(saved.startedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</strong>
-              <span>{pathLabel(saved)} · {saved.mode}</span>
+              <span>{pathLabel(saved)} · {saved.mode} · {saved.transferMode ?? "aggregate"}</span>
             </div>
             <dl>
               <div><dt>Down</dt><dd>{formatRate(saved.download.steadyMbps)} Mbps</dd></div>

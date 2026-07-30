@@ -14,6 +14,7 @@
   overflow: hidden;
 }
 
+.transfer-method-selector .mode-option,
 .path-selector .mode-option {
   min-height: 68px;
 }
@@ -31,11 +32,40 @@
   line-height: 1.25;
 }
 
-/* Reserve the tallest description and warning shapes so profile changes only
-   replace text and selection state. Confirmation is handled in a modal. */
+.test-controls__subheading {
+  margin: 20px 0 9px;
+  color: var(--muted-strong);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+/* Profile switching should replace content without moving the hero or action.
+   The fixed description and variable-row slots reserve the longest shapes. */
 .test-controls__summary > p {
-  min-height: 66px;
+  height: 90px;
+  min-height: 90px;
   margin-block: 0;
+}
+
+.test-controls__summary dl div {
+  gap: 12px;
+}
+
+.test-controls__summary dt {
+  flex: 0 0 auto;
+}
+
+.test-controls__summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.test-controls__summary dl .test-controls__variable-row {
+  min-height: 48px;
+  align-items: flex-start;
 }
 
 .data-use-note {
@@ -93,6 +123,7 @@
     text-align: right;
   }
 
+  .transfer-method-selector .mode-option,
   .path-selector .mode-option {
     min-height: 52px;
     display: flex;
@@ -102,7 +133,8 @@
   }
 
   .test-controls__summary > p {
-    min-height: 88px;
+    height: 126px;
+    min-height: 126px;
   }
 
   .data-use-note {
@@ -112,7 +144,8 @@
 
 @media (max-width: 520px) {
   .test-controls__summary > p {
-    min-height: 132px;
+    height: 184px;
+    min-height: 184px;
   }
 
   .data-use-note {
