@@ -83,8 +83,9 @@ export function TestControls({
   onStart,
   onCancel
 }: TestControlsProps) {
-  const config = TEST_MODES[mode];
-  const plan = buildDiagnosticTestPlan(config, transferMode);
+  const profileConfig = TEST_MODES[mode];
+  const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
+  const config = { ...profileConfig, estimatedTime: plan.estimatedTime };
   const transferCap = plan.transferCapBytes;
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
@@ -175,7 +176,7 @@ export function TestControls({
       <div className="test-controls__summary">
         <p>{plan.methodDescription}</p>
         <dl>
-          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(plan.estimatedTime)}</dd></div>
+          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
           <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
           <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           <div className="test-controls__variable-row"><dt>Download</dt><dd>{plan.downloadConnectionLabel}</dd></div>
