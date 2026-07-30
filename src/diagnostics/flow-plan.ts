@@ -33,7 +33,7 @@ function stage(
 }
 
 function connectionSequence(counts: number[]): string {
-  return counts.join(" / ");
+  return counts.join(" + ");
 }
 
 function singlePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "downloads" | "uploads" | "downloadConnectionLabel" | "uploadConnectionLabel" | "sampleLabel" | "methodDescription"> {
