@@ -1,6 +1,8 @@
 import type { EdgeMetadata } from "./api";
 
 export type TestMode = "quick" | "standard" | "extended";
+export type TransferMode = "compare" | "single" | "aggregate";
+export type TransferStrategy = "single" | "aggregate";
 export type TestPhase = "idle" | "download" | "upload" | "services" | "complete";
 export type DownloadPathPreference = "auto" | "r2-direct" | "worker-stream";
 export type DownloadImplementation = "r2-direct-v1" | "worker-stream-v4";
@@ -141,6 +143,21 @@ export interface LoadedLatencySummary extends LatencySummary {
   grade: "A+" | "A" | "B" | "C" | "D" | "F" | "—";
 }
 
+export interface FlowMeasurement {
+  strategy: TransferStrategy;
+  concurrency: number;
+  download?: ThroughputSummary;
+  upload?: ThroughputSummary;
+  downloadLatency?: LoadedLatencySummary;
+  uploadLatency?: LoadedLatencySummary;
+}
+
+export interface FlowScalingPoint {
+  concurrency: number;
+  download: ThroughputSummary;
+  downloadLatency: LoadedLatencySummary;
+}
+
 export interface ServiceCheckResult {
   id: string;
   name: string;
@@ -154,12 +171,15 @@ export interface DiagnosticResult {
   startedAt: string;
   completedAt: string;
   mode: TestMode;
+  transferMode?: TransferMode;
   edge: EdgeMetadata | null;
   idleLatency: LatencySummary;
   download: ThroughputSummary;
   upload: ThroughputSummary;
   downloadLatency: LoadedLatencySummary;
   uploadLatency: LoadedLatencySummary;
+  flowMeasurements?: FlowMeasurement[];
+  downloadScaling?: FlowScalingPoint[];
   services: ServiceCheckResult[];
   dataUsedBytes: number;
 }
