@@ -13,7 +13,7 @@
 
   .hero__copy {
     position: sticky;
-    top: calc(var(--jl-layout-header-height) + var(--jl-space-8));
+    top: var(--jl-layout-header-height);
   }
 }
 
