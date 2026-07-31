@@ -110,7 +110,7 @@ function comparePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "download
     uploadConnectionLabel: config.comparisonSingleUploadDurationMs > 0
       ? connectionSequence([1, config.uploadConcurrency])
       : String(config.uploadConcurrency),
-    sampleLabel: `1 single + ${config.downloadSamples} parallel`,
+    sampleLabel: `1 single · ${config.downloadSamples} parallel`,
     methodDescription: config.id === "quick"
       ? "Compares single and parallel download speed, then tests parallel upload."
       : "Compares single and parallel speed in both directions."
