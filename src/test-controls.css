@@ -41,14 +41,6 @@
   letter-spacing: .08em;
 }
 
-/* Profile switching should replace content without moving the hero or action.
-   The fixed description slot reserves the longest method description. */
-.test-controls__summary > p {
-  height: 90px;
-  min-height: 90px;
-  margin-block: 0;
-}
-
 .test-controls__summary-group {
   margin-top: 15px;
 }
@@ -158,22 +150,12 @@
     gap: 16px;
   }
 
-  .test-controls__summary > p {
-    height: 126px;
-    min-height: 126px;
-  }
-
   .data-use-note {
     min-height: 86px;
   }
 }
 
 @media (max-width: 520px) {
-  .test-controls__summary > p {
-    height: 184px;
-    min-height: 184px;
-  }
-
   .test-controls__summary dd {
     max-width: 55%;
     line-height: 1.35;
