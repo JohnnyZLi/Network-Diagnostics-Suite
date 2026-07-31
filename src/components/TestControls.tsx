@@ -174,8 +174,6 @@ export function TestControls({
       </div>
 
       <div className="test-controls__summary">
-        <p>{plan.methodDescription}</p>
-
         <div className="test-controls__summary-group">
           <div className="test-controls__summary-label">Test limits</div>
           <dl>
