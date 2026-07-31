@@ -84,6 +84,13 @@ main > .deep-report {
   margin-inline: auto;
 }
 
+/* Connection comparison is supporting report content, so it uses a narrower
+   rail than the primary dashboard rather than stretching across the canvas. */
+main > .flow-comparison {
+  width: min(calc(100% - (var(--content-gutter) * 2)), 1180px);
+  margin-inline: auto;
+}
+
 main > .progress-stage,
 main > .error-panel {
   width: min(calc(100% - (var(--content-gutter) * 2)), var(--content-max));
