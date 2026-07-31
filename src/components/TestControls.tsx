@@ -175,16 +175,32 @@ export function TestControls({
 
       <div className="test-controls__summary">
         <p>{plan.methodDescription}</p>
-        <dl>
-          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
-          <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-          <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-          <div className="test-controls__variable-row"><dt>Download connections</dt><dd>{plan.downloadConnectionLabel}</dd></div>
-          <div className="test-controls__variable-row"><dt>Upload connections</dt><dd>{plan.uploadConnectionLabel}</dd></div>
-          <div className="test-controls__variable-row"><dt>Download runs</dt><dd>{plan.sampleLabel}</dd></div>
-          <div><dt>Services</dt><dd>{config.includeServices ? "6 destinations" : "Not contacted"}</dd></div>
-          <div><dt>Storage</dt><dd>12 reports · this browser</dd></div>
-        </dl>
+
+        <div className="test-controls__summary-group">
+          <div className="test-controls__summary-label">Test limits</div>
+          <dl>
+            <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
+            <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
+            <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          </dl>
+        </div>
+
+        <div className="test-controls__summary-group">
+          <div className="test-controls__summary-label">Transfer plan</div>
+          <dl>
+            <div className="test-controls__variable-row"><dt>Download connections</dt><dd>{plan.downloadConnectionLabel}</dd></div>
+            <div className="test-controls__variable-row"><dt>Upload connections</dt><dd>{plan.uploadConnectionLabel}</dd></div>
+            <div className="test-controls__variable-row"><dt>Download runs</dt><dd>{plan.sampleLabel}</dd></div>
+          </dl>
+        </div>
+
+        <div className="test-controls__summary-group">
+          <div className="test-controls__summary-label">Local</div>
+          <dl>
+            <div><dt>Service checks</dt><dd>{config.includeServices ? "6 destinations" : "Off"}</dd></div>
+            <div><dt>Saved reports</dt><dd>12 reports · this browser</dd></div>
+          </dl>
+        </div>
       </div>
 
       <details className="advanced-path">
