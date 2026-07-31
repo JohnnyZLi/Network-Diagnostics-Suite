@@ -174,11 +174,14 @@ export function TestControls({
       </div>
 
       <div className="test-controls__summary">
-        <dl className="test-controls__limits">
-          <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
-          <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-          <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
-        </dl>
+        <div className="test-controls__summary-group">
+          <div className="test-controls__summary-label">Test limits</div>
+          <dl>
+            <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
+            <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
+            <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+          </dl>
+        </div>
 
         <div className="test-controls__summary-group">
           <div className="test-controls__summary-label">Transfer plan</div>
@@ -190,7 +193,7 @@ export function TestControls({
         </div>
 
         <div className="test-controls__summary-group">
-          <div className="test-controls__summary-label">Browser</div>
+          <div className="test-controls__summary-label">Local</div>
           <dl>
             <div><dt>Service checks</dt><dd>{config.includeServices ? "6 destinations" : "Off"}</dd></div>
             <div><dt>Saved reports</dt><dd>12 reports · this browser</dd></div>
