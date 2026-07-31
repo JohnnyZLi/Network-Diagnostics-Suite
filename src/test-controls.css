@@ -7,16 +7,17 @@
 
 .mode-option {
   min-width: 0;
-  min-height: 56px;
+  min-height: 48px;
   display: grid;
   align-content: center;
-  gap: 4px;
+  gap: 3px;
+  padding: 8px 7px;
   overflow: hidden;
 }
 
 .transfer-method-selector .mode-option,
 .path-selector .mode-option {
-  min-height: 68px;
+  min-height: 58px;
 }
 
 .mode-option span,
@@ -33,7 +34,7 @@
 }
 
 .test-controls__subheading {
-  margin: 20px 0 9px;
+  margin: 17px 0 8px;
   color: var(--muted-strong);
   font-size: 10px;
   font-weight: 600;
@@ -41,8 +42,12 @@
   letter-spacing: .08em;
 }
 
+.transfer-method-selector {
+  margin-bottom: 11px;
+}
+
 .test-controls__summary-group {
-  margin-top: 15px;
+  margin-top: 12px;
 }
 
 .test-controls__summary-label {
@@ -52,17 +57,23 @@
   letter-spacing: .11em;
 }
 
+.test-controls__limits,
 .test-controls__summary-group dl {
   gap: 0;
   margin: 6px 0 0;
   border-top: 1px solid var(--line);
 }
 
+.test-controls__limits {
+  margin-top: 0;
+}
+
+.test-controls__limits div,
 .test-controls__summary-group dl div {
-  min-height: 34px;
+  min-height: 32px;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 7px 0;
 }
 
 .test-controls__summary dt {
@@ -78,12 +89,12 @@
 }
 
 .test-controls__summary dl .test-controls__variable-row {
-  min-height: 34px;
+  min-height: 32px;
   align-items: center;
 }
 
 .test-controls__summary-group:last-child {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .data-use-note {
@@ -127,7 +138,7 @@
   }
 
   .mode-option {
-    min-height: 52px;
+    min-height: 46px;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     align-items: center;
@@ -143,7 +154,7 @@
 
   .transfer-method-selector .mode-option,
   .path-selector .mode-option {
-    min-height: 52px;
+    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -162,6 +173,7 @@
     white-space: normal;
   }
 
+  .test-controls__limits div,
   .test-controls__summary-group dl div,
   .test-controls__summary dl .test-controls__variable-row {
     align-items: flex-start;
