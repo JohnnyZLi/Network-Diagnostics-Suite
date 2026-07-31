@@ -7,12 +7,16 @@
 
 .mode-option {
   min-width: 0;
-  min-height: 48px;
+  min-height: 56px;
   display: grid;
   align-content: center;
   gap: 3px;
   padding: 8px 7px;
   overflow: hidden;
+}
+
+.test-controls .mode-option {
+  min-height: 48px;
 }
 
 .transfer-method-selector .mode-option,
@@ -137,7 +141,7 @@
     grid-template-columns: 1fr;
   }
 
-  .mode-option {
+  .test-controls .mode-option {
     min-height: 46px;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
