@@ -15,6 +15,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../NetworkDiagnostics.Core/NetworkDiagnostics.Core.csproj" />
     <ProjectReference Include="../DeepProbe/NetworkDeepProbe.csproj" />
   </ItemGroup>
 </Project>
