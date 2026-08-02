@@ -48,7 +48,7 @@ public sealed class PlatformNetworkDetailsTests
         Assert.Equal("available", report.Status);
         Assert.Null(report.Ssid);
         Assert.Equal(-48, report.RssiDbm);
-        Assert.Equal(104, report.SignalPercent);
+        Assert.Equal(100, report.SignalPercent);
         Assert.Equal("6 GHz", report.Band);
         Assert.Equal(2402, report.ReceiveRateMbps);
     }
