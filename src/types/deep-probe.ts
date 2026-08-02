@@ -77,8 +77,38 @@ export interface DeepLanThroughput {
   uploadBytes: number;
 }
 
+export interface DeepWifiDetails {
+  status: "available" | "not-connected" | "unavailable" | string;
+  interfaceName?: string;
+  ssid?: string;
+  signalPercent?: number;
+  rssiDbm?: number;
+  channel?: number;
+  band?: string;
+  protocol?: string;
+  receiveRateMbps?: number;
+  transmitRateMbps?: number;
+  security?: string;
+  error?: string;
+}
+
+export interface DeepRouteEntry {
+  destination: string;
+  gateway?: string;
+  interfaceName?: string;
+  metric?: number;
+  addressFamily: string;
+  isDefault: boolean;
+}
+
+export interface DeepRoutingDetails {
+  status: "available" | "unavailable" | string;
+  entries: DeepRouteEntry[];
+  error?: string;
+}
+
 export interface DeepProbeReport {
-  schemaVersion: "1.0" | "1.1";
+  schemaVersion: "1.0" | "1.1" | "1.2";
   generatedAt: string;
   target: string;
   operatingSystem: string;
@@ -103,6 +133,8 @@ export interface DeepProbeReport {
   };
   serviceEndpoints: DeepTlsEndpoint[];
   localLink?: DeepLanThroughput;
+  wifi?: DeepWifiDetails;
+  routing?: DeepRoutingDetails;
 }
 
 export interface NativeThroughputSummary {

@@ -76,7 +76,7 @@ internal static class ProbeProgram
             Console.WriteLine($"Report written to {outputPath}");
             Console.WriteLine(options.IncludeInternetTransfer
                 ? "This schema 2.0 report contains Internet transfer and operating-system diagnostics."
-                : "Import that JSON file into the browser dashboard to view the deep results.");
+                : "Import that schema 1.2 JSON file into the browser dashboard to view the deep results.");
             return 0;
         }
         catch (OperationCanceledException)
@@ -100,7 +100,7 @@ internal static class ProbeProgram
         Console.WriteLine("  --output <file>       JSON report path");
         Console.WriteLine("  --pings <5-100>       Internet ping count (default: 20)");
         Console.WriteLine("  --max-hops <5-64>     Traceroute hop limit (default: 30)");
-        Console.WriteLine("  --include-addresses   Include local IP, gateway, and DNS addresses");
+        Console.WriteLine("  --include-addresses   Include local addresses, route gateways, and SSID");
         Console.WriteLine();
         Console.WriteLine("First-party Internet transfer:");
         Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
@@ -117,7 +117,7 @@ internal static class ProbeProgram
         Console.WriteLine();
         Console.WriteLine("  --help                Show this help");
         Console.WriteLine();
-        Console.WriteLine("The default deep-only report remains schema 1.1. --internet-transfer emits schema 2.0.");
+        Console.WriteLine("The default deep-only report is schema 1.2. --internet-transfer emits schema 2.0.");
         Console.WriteLine("The default report omits hostname, public IP, MAC address, SSID, and local addresses.");
     }
 }

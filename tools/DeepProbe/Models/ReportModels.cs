@@ -99,4 +99,6 @@ public sealed record DeepProbeReport(
     IReadOnlyList<DnsResolverReport> DnsResolvers,
     PathMtuReport PathMtu,
     IReadOnlyList<TlsEndpointReport> ServiceEndpoints,
-    LanThroughputReport? LocalLink);
+    LanThroughputReport? LocalLink,
+    WifiDetailsReport? Wifi,
+    RoutingDetailsReport? Routing);

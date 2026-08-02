@@ -1,75 +1,91 @@
 # Privacy model
 
-The project is designed around data minimization and honest boundaries. It has no application database and no code path that sends a completed result back to the project owner.
+The project is designed around data minimization and explicit boundaries. It has no application database and no code path that sends a completed result back to the project owner.
 
-## Browser app
+## Browser application
 
-### What the application processes transiently
+### Transient processing
 
-- Timing samples and generated upload/download payloads needed to run the selected test.
-- Cloudflare edge, network organization, ASN, protocol, TLS, and IP-version context.
-- Reachability timing for named common services in the opt-in Full and Stress profiles.
+The browser processes timing samples and generated transfer payloads, Cloudflare edge/network/protocol context, and—on Full and Stress—reachability timing for named services. The Worker examines the connecting address only to identify IPv4 or IPv6 and does not return the address itself.
 
-The Worker examines the connecting address only to classify the session as IPv4 or IPv6. It does not return that address to the browser.
+The browser application has no accounts, authentication, cookies, tracking local storage, analytics, advertising, telemetry, results database, third-party scripts, remote fonts, or result-submission endpoint. Imported native JSON is read with the File API and remains in the current tab.
 
-### What the application does not have
-
-- User accounts or authentication.
-- Cookies, local-storage tracking, analytics, advertising, or telemetry.
-- A results database or server-side result submission endpoint.
-- Third-party scripts, fonts, or tracking pixels.
-- Access to imported deep-probe report contents; the browser reads those files locally.
-
-Worker observability is disabled in `wrangler.jsonc`. This prevents project-level Worker request logs from being enabled, but it does not mean traffic is invisible to infrastructure providers.
+Recent browser reports and remembered high-data confirmations are stored only in that browser's local storage. Clearing site data removes them.
 
 ### Infrastructure boundary
 
-Cloudflare necessarily receives the network traffic, source address, and ordinary request metadata required to route and protect the application. Cloudflare may process that data under its own terms, security controls, and retention practices.
+Cloudflare necessarily receives source addresses, traffic, and ordinary request metadata required to route and protect the application. It may process that data under its own terms and retention practices.
 
-The main download test uses deterministic binary files deployed as same-origin Cloudflare Workers Static Assets. It does not contact M-Lab or another speed-test provider, and the matching asset requests bypass the project Worker script. The upload, ping, and metadata endpoints remain same-origin Worker requests. This reduces application processing and avoids adding another data recipient, but Cloudflare remains part of the measured path and infrastructure boundary.
+The main download path uses project-operated deterministic assets through Cloudflare Static Assets or the project R2 custom domain. Upload, ping, metadata, and fallback download requests use project Workers. The suite does not submit results to M-Lab or another public measurement dataset.
 
-When the user selects Full or Stress, the browser sends one reachability request to each named provider. Each provider necessarily sees the originating connection and may process it under its own privacy policy. Quick mode does not run this third-party battery.
+Full and Stress service checks contact Cloudflare, Google, Microsoft, GitHub, Apple, and Amazon. Each provider necessarily sees the originating connection. Quick does not run the service battery.
 
-## Native deep probe
+Worker observability is disabled in `wrangler.jsonc`. This prevents project-level Worker request logs from being enabled but does not make infrastructure traffic invisible.
 
-The probe runs locally and writes JSON to a user-selected or timestamped local path. It has no telemetry or project-operated upload code. The optional LAN mode intentionally exchanges generated test bytes with a user-selected machine on the local network.
+## Native desktop application
 
-The default report includes:
+The desktop application runs locally, calls project-operated first-party transfer endpoints, performs operating-system diagnostics, and writes completed schema 2.0 JSON reports to the user's local application-data directory. It has no telemetry or automatic result upload.
 
-- Test time, operating-system description, and CPU architecture.
-- Interface name, description, type, link speed, MTU, and protocol support.
-- ICMP statistics, public traceroute-hop addresses and reverse-DNS names, DNS timings, MTU estimate, and endpoint timing.
+The latest 12 report files are listed from the local reports directory. The application does not copy or synchronize those files elsewhere. **Export latest** creates a user-requested copy in the user's Documents directory.
 
-The default report omits or redacts:
+Remembered Full/Stress confirmations are stored in a small local settings file containing only the approved profile name and transfer ceiling. No measurement data is stored in that settings file.
 
-- Public IP address as a dedicated field.
-- MAC address, computer hostname, and Wi-Fi SSID.
-- Interface IP addresses, gateway addresses, and local DNS addresses.
-- Private, carrier-grade NAT, loopback, and link-local traceroute-hop addresses.
+### First-party transfer boundary
 
-`--include-addresses` explicitly adds interface IP, gateway, DNS, and private-hop addresses. The report should then be treated as sensitive diagnostic material.
+Every desktop run intentionally exchanges generated payloads with the project-operated ping, download, and upload endpoints. The UI displays the selected transfer ceiling and requires confirmation for Full and Stress. Cloudflare receives the native connection and traffic just as it receives browser traffic.
 
-### Optional LAN server/client
+## Command-line deep probe
 
-`--lan-server` opens a TCP listener on all local interfaces on port 8765 by default and remains active until it is stopped. It accepts only the probe's small command protocol and generated throughput payloads; it does not read files or enumerate the connecting client. The server does not write results or contact the project infrastructure.
+The default CLI run performs deep diagnostics locally and writes schema 1.2 JSON to the selected or timestamped path. It does not transfer speed-test payloads to project infrastructure unless `--internet-transfer` is explicitly supplied. That option emits the combined schema 2.0 report and contacts the same first-party transfer endpoints as the desktop application.
 
-`--lan-target` connects to the host explicitly supplied by the user and records its target name, resolved address, port, transfer byte counts, rates, and response timings in the local JSON report. Those fields can reveal a private LAN address, so review the report before sharing it.
+## Native report contents
 
-Run the LAN server only on a trusted network, permit the port only in the appropriate local firewall profile, and stop it when the test is complete.
+Default native reports can include:
 
-## Exported results
+- test time, operating-system description, and CPU architecture;
+- interface name, description, type, link speed, MTU, and protocol support;
+- ICMP statistics and the selected public target;
+- public traceroute-hop addresses and reverse-DNS names;
+- DNS timing, path-MTU status, and service endpoint timing;
+- Wi-Fi signal, RSSI, channel, band, protocol, and reported link rates when exposed;
+- route destinations, interface names, metrics, and default-route status;
+- first-party transfer measurements when that scope runs.
 
-Browser result exports contain timestamps, measured rates and timings, the network organization/ASN, serving edge, protocol information, and common-service results. Deep-probe reports can contain public network-path addresses and hardware descriptions even with default redaction.
+Default native reports omit or redact:
 
-Review a JSON file before posting it publicly. Export and sharing are user-controlled actions outside the application's no-retention boundary.
+- public IP address as a dedicated field;
+- MAC address and computer hostname;
+- Wi-Fi SSID;
+- interface addresses, gateway addresses, and local resolver addresses;
+- private, carrier-grade NAT, loopback, and link-local traceroute-hop addresses;
+- route gateways and other sensitive route addresses.
+
+Enabling local identifiers in the desktop application or using `--include-addresses` adds available SSID, interface, gateway, resolver, private-hop, and route-address fields. Such reports should be treated as sensitive diagnostic material.
+
+Platform Wi-Fi and route providers invoke only fixed read-only commands with fixed argument lists. User input is not passed to a shell. Missing tools, permission failures, localized output, and unsupported fields are recorded as unavailable.
+
+## Optional LAN server/client
+
+`--lan-server` opens a TCP listener on all local interfaces on port 8765 by default and remains active until stopped. It accepts only the probe's small command protocol and generated throughput payloads. It does not read files, enumerate clients, write reports, or contact project infrastructure.
+
+A desktop or CLI LAN client connects only to the target explicitly entered by the user. The report records the target, resolved address, port, transfer byte counts, rates, and response timing. These fields can reveal private network addressing.
+
+Run the LAN server only on a trusted network, permit the port only in the appropriate local firewall profile, and stop it when testing is complete.
+
+## Exported and shared results
+
+Browser exports can contain timestamps, measured rates, loaded latency, network organization/ASN, serving edge, protocol information, and service results. Native reports can additionally contain public path addresses, hardware/interface descriptions, Wi-Fi characteristics, and routing context even under default redaction.
+
+Review JSON before posting it publicly. Exporting and sharing are user-controlled actions outside the application's no-retention boundary.
 
 ## Threat and abuse controls
 
-- Test endpoints accept only their required HTTP methods.
+- Test endpoints accept only required HTTP methods.
 - Bandwidth endpoints reject ordinary cross-site browser requests.
-- Per-request download and upload sizes are capped.
-- Static throughput files are same-origin, have restrictive response headers, and are individually limited to 24 MiB.
-- Static responses use a restrictive Content Security Policy and security headers.
-- Production deployment should add a Cloudflare rate-limiting rule for the dynamic bandwidth endpoints to discourage automated abuse.
+- Per-request and per-profile transfer sizes are capped.
+- Static payload responses use restrictive headers.
+- Native platform commands use fixed executable names and arguments without shell interpolation.
+- The LAN protocol accepts only bounded ping, download, and upload commands.
+- Production should use Cloudflare rate limits for public bandwidth endpoints.
 
-No client-side control can fully prevent a custom script from making direct requests to a public endpoint. Production limits are therefore part of the deployment model.
+No client-side control can prevent a custom script from making direct requests to a public endpoint. Infrastructure limits remain part of the deployment model.

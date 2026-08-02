@@ -13,6 +13,11 @@ internal static class ProbeRunner
         progress?.Report("Inspecting active network interfaces");
         var interfaces = InterfaceProbe.Collect(options.IncludeAddresses);
 
+        progress?.Report("Inspecting Wi-Fi and routing details");
+        var platformDetails = await PlatformNetworkDetailsProbe.RunAsync(
+            options.IncludeAddresses,
+            cancellationToken);
+
         progress?.Report($"Resolving {options.Target}");
         var destination = await PingProbe.ResolveTargetAsync(options.Target, cancellationToken);
 
@@ -66,7 +71,7 @@ internal static class ProbeRunner
         }
 
         return new DeepProbeReport(
-            "1.1",
+            "1.2",
             DateTimeOffset.UtcNow,
             options.Target,
             RuntimeInformation.OSDescription,
@@ -79,6 +84,8 @@ internal static class ProbeRunner
             dnsResolvers,
             pathMtu,
             serviceEndpoints,
-            localLink);
+            localLink,
+            platformDetails.Wifi,
+            platformDetails.Routing);
     }
 }

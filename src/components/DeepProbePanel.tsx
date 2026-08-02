@@ -7,7 +7,7 @@ type DisplayProbeReport = DeepProbeReport & { combined?: NativeCombinedReport };
 function isDeepProbeReport(value: unknown): value is DeepProbeReport {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<DeepProbeReport>;
-  return (candidate.schemaVersion === "1.0" || candidate.schemaVersion === "1.1")
+  return (candidate.schemaVersion === "1.0" || candidate.schemaVersion === "1.1" || candidate.schemaVersion === "1.2")
     && typeof candidate.target === "string"
     && Array.isArray(candidate.interfaces)
     && Array.isArray(candidate.dnsResolvers)
@@ -33,6 +33,21 @@ function fastestResolver(report: DeepProbeReport) {
 
 function sampleText(samples: Array<number | null>): string {
   return samples.map((sample) => sample === null ? "*" : formatLatency(sample)).join(" / ");
+}
+
+function wifiSummary(report: DeepProbeReport): string {
+  const wifi = report.wifi;
+  if (!wifi || wifi.status === "unavailable") return wifi?.error ?? "Wi-Fi details unavailable";
+  if (wifi.status === "not-connected") return "Wireless interface not connected";
+  return [
+    wifi.ssid,
+    wifi.interfaceName,
+    wifi.signalPercent === undefined ? undefined : `${wifi.signalPercent}% signal`,
+    wifi.rssiDbm === undefined ? undefined : `${wifi.rssiDbm} dBm`,
+    wifi.band,
+    wifi.channel === undefined ? undefined : `channel ${wifi.channel}`,
+    wifi.protocol
+  ].filter(Boolean).join(" · ");
 }
 
 export function DeepProbePanel() {
@@ -92,6 +107,7 @@ export function DeepProbePanel() {
   const fastestDns = fastestResolver(report);
   const combined = report.combined;
   const transfer = combined?.internetTransfer;
+  const defaultRoute = report.routing?.entries.find((entry) => entry.isDefault);
   return (
     <section className="deep-report" id="deep-probe">
       <div className="section-heading section-heading--actions">
@@ -161,6 +177,27 @@ export function DeepProbePanel() {
               </table>
             </div>
           )}
+        </section>
+      )}
+
+      {(report.wifi || report.routing) && (
+        <section className="report-panel platform-network-panel">
+          <div className="report-panel__heading">
+            <div><span className="eyebrow">Operating-system network details</span><h3>Wi-Fi and routing</h3></div>
+            <p>Unsupported commands and restricted fields remain explicitly unavailable rather than being inferred.</p>
+          </div>
+          <div className="scope-grid">
+            <article>
+              <span>Wi-Fi</span>
+              <strong>{report.wifi?.status === "available" ? `${report.wifi.signalPercent ?? "—"}%` : report.wifi?.status ?? "Unavailable"}</strong>
+              <p>{wifiSummary(report)}</p>
+            </article>
+            <article>
+              <span>Route table</span>
+              <strong>{report.routing?.status === "available" ? report.routing.entries.length : "—"}<small>routes</small></strong>
+              <p>{defaultRoute ? `Default through ${defaultRoute.interfaceName ?? "unknown interface"}${defaultRoute.gateway ? ` via ${defaultRoute.gateway}` : ""}.` : report.routing?.error ?? "No default route identified."}</p>
+            </article>
+          </div>
         </section>
       )}
 

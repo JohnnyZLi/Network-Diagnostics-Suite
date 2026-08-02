@@ -1,44 +1,38 @@
-# Deployment guide
+# Deployment and native distribution
 
-The complete application requires dynamic ping, fallback download, upload, and metadata endpoints. GitHub Pages can host a portfolio card or documentation, but it cannot run those endpoints. Deploy this repository as a Cloudflare Worker and link it from `johnnyli.dev`.
+The browser application requires dynamic ping, fallback download, upload, and metadata endpoints. GitHub Pages can host a portfolio card or documentation, but not the complete service. Deploy the browser application as a Cloudflare Worker and distribute native clients through reproducible GitHub Actions artifacts or a later signed release process.
 
 Recommended application URL: `https://network.johnnyli.dev`
 
 Recommended direct-download URL: `https://speed.johnnyli.dev/network-diagnostics-speed-v1.bin`
 
-## First Worker deployment
+## Browser deployment
 
-Install dependencies and validate the project:
+Install dependencies and validate:
 
 ```bash
 npm ci
+npm run design-system:check
+npm run design-system:integration
 npm run typecheck
 npm test
 npm run build
 ```
 
-Authenticate Wrangler and deploy:
+Authenticate and deploy:
 
 ```bash
 npx wrangler login
 npm run deploy
 ```
 
-The Worker configuration serves `dist/` as static assets, routes `/api/*` and the Worker comparison path through `worker/index.ts`, falls back to the React entry page for client routes, and disables Worker observability.
+The Worker serves `dist/`, routes `/api/*` and the Worker stream through `worker/index.ts`, falls back to the React entry page for client routes, and disables Worker observability.
 
-## Attach the application subdomain
+### Attach the application domain
 
-In the Cloudflare dashboard:
+In Cloudflare **Workers & Pages → network-diagnostics-suite → Settings → Domains & Routes**, add `network.johnnyli.dev` as a Custom Domain. Let Cloudflare manage the DNS record and certificate. Do not point this subdomain to GitHub Pages.
 
-1. Open **Workers & Pages** and select `network-diagnostics-suite`.
-2. Open **Settings**, then **Domains & Routes**.
-3. Choose **Add**, then **Custom Domain**.
-4. Enter `network.johnnyli.dev` and confirm.
-5. Let Cloudflare create and manage the DNS record for the Worker.
-
-Do not point this subdomain to GitHub Pages. The apex `johnnyli.dev` and its existing GitHub Pages records remain unchanged.
-
-After the certificate is active, test:
+Verify:
 
 ```bash
 curl -I https://network.johnnyli.dev/
@@ -46,54 +40,29 @@ curl https://network.johnnyli.dev/api/health
 curl https://network.johnnyli.dev/api/meta
 ```
 
-The health endpoint should return `{"status":"ok"}`. The metadata response should not contain a public IP address.
+The health endpoint should return `{"status":"ok"}`. Metadata must not contain a public IP address.
 
-## Provision the direct R2 path
+## Direct R2 path
 
-The normal browser path bypasses the Worker response body. It requires one public R2 bucket, one 256 MiB deterministic object, a bucket CORS policy, a custom domain, a Cache Rule, and a Response Header Transform Rule.
+The browser's normal direct-download path requires one public R2 bucket, a deterministic 256 MiB object, CORS, a custom domain, an edge-cache rule, and a Timing-Allow-Origin response rule.
 
-### 1. Create the bucket
-
-Run this once:
+### Create and populate the bucket
 
 ```bash
 npm run r2:bucket:create
-```
-
-The expected bucket name is `network-diagnostics-speed`.
-
-### 2. Generate and upload the object
-
-```bash
 npm run r2:upload
-```
-
-The generator writes an ignored deterministic file to `.r2-speed/network-diagnostics-speed-v1.bin`. The upload sets `Content-Type: application/octet-stream` and `Cache-Control: no-store, no-transform`. Browser caches therefore must not retain the response.
-
-### 3. Apply the browser CORS policy
-
-```bash
 npm run r2:cors
 ```
 
-`infra/r2-cors.json` allows `GET` and `HEAD` from `https://network.johnnyli.dev` and the local Vite origin. It exposes `CF-Cache-Status`, `Age`, `Content-Length`, `Content-Range`, `ETag`, and `Timing-Allow-Origin` so the browser can validate and report the direct path.
+The expected bucket is `network-diagnostics-speed`. The object is generated under the ignored `.r2-speed/` directory with `Content-Type: application/octet-stream` and `Cache-Control: no-store, no-transform`.
 
-### 4. Connect the custom domain
+### Connect the custom domain
 
-In the Cloudflare dashboard:
+In **R2 Object Storage → network-diagnostics-speed → Settings → Public access**, connect `speed.johnnyli.dev`. Keep the `r2.dev` URL disabled unless intentionally used for troubleshooting. Do not attach the speed hostname to the Worker.
 
-1. Open **R2 Object Storage**.
-2. Select `network-diagnostics-speed`.
-3. Open **Settings**.
-4. Under **Public access → Custom Domains**, connect `speed.johnnyli.dev`.
-5. Wait for the domain status and certificate to become active.
-6. Keep the `r2.dev` development URL disabled unless it is deliberately needed for troubleshooting.
+### Cache rule
 
-Do not attach `speed.johnnyli.dev` to the Worker. It must resolve directly to the R2 bucket custom domain for the comparison to be meaningful.
-
-### 5. Add the cache rule
-
-Create a Cache Rule for:
+Match:
 
 ```text
 (http.host eq "speed.johnnyli.dev" and
@@ -102,89 +71,115 @@ Create a Cache Rule for:
 
 Set:
 
-- **Cache eligibility:** Eligible for cache.
-- **Edge TTL:** Ignore origin cache-control and use a one-day TTL.
-- **Browser TTL:** Bypass cache.
+- Cache eligibility: eligible.
+- Edge TTL: ignore origin cache control and use one day.
+- Browser TTL: bypass.
 
-The Edge TTL override lets Cloudflare cache the object even though the response sent to the browser remains `Cache-Control: no-store`. This separation is necessary: the edge should reuse the object, while each browser run must transfer it again.
+The edge can reuse the deterministic object while every browser test still transfers the response.
 
-The browser sends distinct single-range requests for each parallel worker. The R2 custom domain serves those ranges from the cached full object when available, avoiding identical-request coalescing without requiring query-string cache-key customization.
+### Resource Timing rule
 
-### 6. Add resource timing access
-
-Create a **Response Header Transform Rule** using the same filter expression:
-
-```text
-(http.host eq "speed.johnnyli.dev" and
- http.request.uri.path eq "/network-diagnostics-speed-v1.bin")
-```
-
-Set this static response header:
+Using the same filter, set:
 
 ```text
 Timing-Allow-Origin: https://network.johnnyli.dev
 ```
 
-This header permits the browser Resource Timing API to expose `nextHopProtocol` for the cross-origin R2 requests. Without it, the download can still run, but the report normally cannot distinguish HTTP/2 from HTTP/3.
+This allows browser Resource Timing to expose `nextHopProtocol` for R2 requests. Purge the speed hostname after changing CORS or response headers.
 
-After changing CORS or response headers, purge the `speed.johnnyli.dev` hostname so cached variants receive the new headers.
-
-### 7. Verify the endpoint
-
-After the custom domain, CORS policy, cache rule, and response header rule are active:
+Verify:
 
 ```bash
 npm run r2:verify
 ```
 
-The verifier checks the full object size, production CORS origin, `Timing-Allow-Origin`, and a 1 KiB byte-range response. A cold first request may report `MISS`; repeated requests should normally report `HIT`.
+The verifier checks object size, CORS, Timing-Allow-Origin, and a byte-range response.
 
-## Browser measurement procedure
+## Native build and distribution
 
-Automatic delivery is the default. It prefers R2 and falls back to the Worker path if the R2 probe or CORS contract fails. The explicit Worker path is retained under **Advanced download path** for comparison.
+The native core has two hosts:
 
-Each profile divides its configured download duration and byte cap into three shorter samples. The displayed download rate and stability are medians of those samples; loaded latency is collected across the complete download condition.
+- `NetworkDeepProbe`: command-line deep diagnostics and LAN server/client, with optional first-party Internet transfer.
+- `NetworkDiagnosticsDesktop`: graphical Windows, macOS, and Linux application using the same core and schema 2.0 runner.
 
-For an explicit path comparison:
+Build all self-contained targets locally with .NET 10:
 
-1. Run **R2 direct** and **Worker** under the same profile, device, network, and time window.
-2. Repeat as needed; completed reports are kept locally in the browser, up to 12 reports.
-3. Use the local comparison view to compare median download, median stability, and median loaded delay.
-4. Export JSON for any report that must be retained outside that browser.
+```bash
+npm run probe:build
+npm run desktop:build
+```
 
-A direct R2 improvement isolates Worker response composition as a meaningful limiter. Similar R2 and Worker results point instead toward the browser transport connection, Cloudflare route, local link, or congestion behavior.
+CI builds both hosts for:
 
-## Production safeguards
+| Runtime | Platform |
+| --- | --- |
+| `win-x64` | Windows 11 x64 |
+| `osx-arm64` | Apple Silicon macOS |
+| `osx-x64` | Intel macOS |
+| `linux-x64` | glibc Linux x64 |
+| `linux-arm64` | glibc Linux ARM64 |
 
-A public bandwidth test can be automated by third parties. Before advertising the URL broadly:
+Each job:
 
-- Add Cloudflare rate limiting for `/api/download`, `/api/upload`, and the R2 speed hostname.
-- Set billing and usage notifications appropriate to the Cloudflare account plan.
-- Keep Worker observability disabled unless logs are intentionally needed for troubleshooting.
-- If logs are enabled temporarily, document the change and disable them afterward.
-- Re-run Quick, Full, and Stress from both IPv4 and IPv6 networks.
-- Confirm the Content Security Policy permits only the documented direct R2 and common-service targets.
-- Keep the R2 bucket limited to deterministic test payloads; do not place private data in the public bucket.
+1. runs the shared native test suite where applicable;
+2. publishes a self-contained single-file binary;
+3. launches a non-network smoke test on the matching operating system;
+4. stages license and run/privacy notes;
+5. creates ZIP or TAR distribution archives;
+6. creates SHA-256 checksum files;
+7. uploads 30-day workflow artifacts.
 
-The application caps dynamic download and upload requests, rejects standard cross-site requests to Worker endpoints, and requires explicit confirmation for the largest browser profile. R2 remains a public read-only object endpoint, so Cloudflare edge controls are part of the deployment model.
+The desktop smoke test uses `--smoke-test`, loads the shared Quick/Compare plan, and exits without creating a window or contacting the network.
+
+### Signing and installers
+
+Current CI artifacts are not code-signed, notarized, or wrapped in platform installers. Do not label them as trusted signed releases.
+
+A production release process should add:
+
+- Windows Authenticode signing and an installer format such as MSIX or MSI;
+- macOS application bundling, Developer ID signing, hardened runtime, and notarization;
+- Linux package metadata or clearly documented portable archives;
+- immutable release tags and retained checksums;
+- manual launch and accessibility review on physical Windows, macOS, and Linux systems.
+
+Signing credentials must be held in protected repository environments or an external signing service, never committed to the repository.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` validates every push and pull request by:
+Pull requests and `main` runs retain all existing gates:
 
-- Type-checking, testing, and building the web application.
-- Producing a dry-run Worker bundle.
-- Running the .NET test suite.
-- Testing and publishing native self-contained probes for Windows x64, macOS Apple Silicon and Intel, and Linux x64 and ARM64, each with a SHA-256 checksum.
+- design-system drift, integration, and conformance;
+- browser and Worker typechecking, tests, build, and Wrangler dry run;
+- browser UI regression and visual audit;
+- performance baseline;
+- CodeQL and secret scanning;
+- native unit and contract tests;
+- five command-line build/smoke/package jobs;
+- five desktop build/smoke/package jobs.
 
-Deployment and R2 provisioning are intentionally not automatic. This keeps Cloudflare credentials out of the repository setup and makes public storage/domain changes deliberate.
+Deployment, R2 provisioning, signing, notarization, and installer publication remain deliberate manual processes.
+
+## Production safeguards
+
+A public bandwidth test can be automated by third parties. Before broad promotion:
+
+- rate-limit dynamic bandwidth endpoints and the R2 speed hostname;
+- configure Cloudflare usage and billing notifications;
+- keep Worker observability disabled unless logs are intentionally needed;
+- re-run profiles from IPv4 and IPv6 networks;
+- verify Content Security Policy targets;
+- keep the public bucket limited to deterministic test data;
+- monitor native release signing and checksum provenance separately from browser deployment.
+
+Client-side controls cannot prevent custom scripts from calling public endpoints. Infrastructure limits are part of the deployment model.
 
 ## Portfolio integration
 
-Add a project card on `johnnyli.dev` with:
+Recommended project card:
 
 - **Title:** Network Diagnostics Suite
-- **Summary:** Privacy-first browser testing plus a cross-platform native probe for throughput, latency distributions, bufferbloat, packet loss, route, DNS, MTU, and TLS diagnostics.
-- **Live link:** `https://network.johnnyli.dev`
-- **Source link:** `https://github.com/JohnnyZLi/Network-Diagnostics-Suite`
-- **Evidence:** browser engine, Cloudflare Worker fallback, direct R2 delivery, local comparison history, cross-platform .NET probe, operating-system build matrix, automated tests, and documented measurement boundaries.
+- **Summary:** Privacy-first browser and native network testing for single-flow and aggregate throughput, loaded latency, packet loss, routes, DNS, MTU, TLS, Wi-Fi, and LAN isolation.
+- **Live:** `https://network.johnnyli.dev`
+- **Source:** `https://github.com/JohnnyZLi/Network-Diagnostics-Suite`
+- **Evidence:** React/TypeScript engine, Cloudflare Worker and R2 delivery, shared .NET core, cross-platform desktop application, deep-probe CLI, ten native package jobs, automated tests, and explicit measurement/privacy boundaries.
