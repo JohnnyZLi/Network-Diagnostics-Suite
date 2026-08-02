@@ -72,6 +72,10 @@ function compactEstimatedTime(value: string): string {
     .replace(/\s+seconds?$/i, " sec");
 }
 
+function compactTransferCap(bytes: number): string {
+  return formatBytes(bytes).replace(/\.0 (?=[A-Z]+$)/, " ");
+}
+
 export function TestControls({
   mode,
   transferMode,
@@ -87,6 +91,7 @@ export function TestControls({
   const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
   const config = { ...profileConfig, estimatedTime: plan.estimatedTime };
   const transferCap = plan.transferCapBytes;
+  const transferCapLabel = compactTransferCap(transferCap);
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
@@ -178,7 +183,7 @@ export function TestControls({
           <div className="test-controls__summary-label">Test limits</div>
           <dl>
             <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
-            <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
+            <div><dt>Transfer cap</dt><dd>{transferCapLabel}</dd></div>
             <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           </dl>
         </div>
@@ -223,7 +228,7 @@ export function TestControls({
 
       <div className={`data-use-note data-use-note--${mode}`}>
         <strong>Data use</strong>
-        <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
+        <span>Transfers up to {transferCapLabel}. Avoid metered or cellular connections.</span>
       </div>
 
       {running ? (
@@ -262,7 +267,7 @@ export function TestControls({
           <span className="eyebrow">Confirm data use</span>
           <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
           <p className="jl-dialog__message" id="data-confirmation-dialog-description">
-            This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
+            This test may transfer up to {transferCapLabel}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
           </p>
           <label className="data-confirmation-dialog__remember">
             <input
