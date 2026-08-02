@@ -237,7 +237,7 @@ export default function App() {
               <p>Throughput is only one part of a usable network. Compare single-flow and aggregate capacity, then inspect latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and common-service reachability without creating an account.</p>
               <div className="hero__facts">
                 <div><strong>1–10</strong><span>connections</span></div>
-                <div><strong>6</strong><span>service targets</span></div>
+                <div><strong>6</strong><span>supported services</span></div>
                 <div><strong>{MAX_RECENT_RESULTS}</strong><span>local reports</span></div>
               </div>
             </div>

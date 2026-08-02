@@ -87,6 +87,7 @@ export function TestControls({
   const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
   const config = { ...profileConfig, estimatedTime: plan.estimatedTime };
   const transferCap = plan.transferCapBytes;
+  const transferCapLabel = formatBytes(transferCap);
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
@@ -223,7 +224,7 @@ export function TestControls({
 
       <div className={`data-use-note data-use-note--${mode}`}>
         <strong>Data use</strong>
-        <span>May transfer up to {formatBytes(transferCap)}. Avoid running on metered or cellular connections.</span>
+        <span>Transfers up to {transferCapLabel}. Avoid metered or cellular connections.</span>
       </div>
 
       {running ? (
