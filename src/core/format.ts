@@ -15,7 +15,9 @@ export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1000)), units.length - 1);
-  return `${(bytes / 1000 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  const value = bytes / 1000 ** index;
+  const decimals = index === 0 || Number.isInteger(value) ? 0 : 1;
+  return `${value.toFixed(decimals)} ${units[index]}`;
 }
 
 export function formatDuration(ms: number): string {
