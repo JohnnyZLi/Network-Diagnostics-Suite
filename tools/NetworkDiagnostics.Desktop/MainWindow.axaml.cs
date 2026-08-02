@@ -2,7 +2,6 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using NetworkDeepProbe.Diagnostics;
@@ -19,7 +18,7 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
-        AvaloniaXamlLoader.Load(this);
+        InitializeComponent();
         ProfileSelector.SelectedIndex = 0;
         MethodSelector.SelectedIndex = 0;
         initialized = true;
