@@ -27,48 +27,6 @@ public sealed partial class MainWindow : Window
         LoadHistory();
     }
 
-    private ComboBox ProfileSelector => Get<ComboBox>("ProfileSelector");
-    private ComboBox MethodSelector => Get<ComboBox>("MethodSelector");
-    private TextBox TargetInput => Get<TextBox>("TargetInput");
-    private TextBox LanTargetInput => Get<TextBox>("LanTargetInput");
-    private CheckBox IncludeAddressesCheck => Get<CheckBox>("IncludeAddressesCheck");
-    private TextBlock EstimatedTimeText => Get<TextBlock>("EstimatedTimeText");
-    private TextBlock TransferCapText => Get<TextBlock>("TransferCapText");
-    private TextBlock DownloadConnectionsText => Get<TextBlock>("DownloadConnectionsText");
-    private TextBlock UploadConnectionsText => Get<TextBlock>("UploadConnectionsText");
-    private TextBlock DownloadRunsText => Get<TextBlock>("DownloadRunsText");
-    private TextBlock DataUseText => Get<TextBlock>("DataUseText");
-    private Button RunButton => Get<Button>("RunButton");
-    private Button StopButton => Get<Button>("StopButton");
-    private TextBlock StatusText => Get<TextBlock>("StatusText");
-    private ProgressBar RunProgress => Get<ProgressBar>("RunProgress");
-    private TextBlock LiveText => Get<TextBlock>("LiveText");
-    private ListBox HistoryList => Get<ListBox>("HistoryList");
-    private TextBlock ReportPathText => Get<TextBlock>("ReportPathText");
-    private TextBlock DownloadMetric => Get<TextBlock>("DownloadMetric");
-    private TextBlock DownloadDetail => Get<TextBlock>("DownloadDetail");
-    private TextBlock UploadMetric => Get<TextBlock>("UploadMetric");
-    private TextBlock UploadDetail => Get<TextBlock>("UploadDetail");
-    private TextBlock LossMetric => Get<TextBlock>("LossMetric");
-    private TextBlock LossDetail => Get<TextBlock>("LossDetail");
-    private TextBlock LatencyMetric => Get<TextBlock>("LatencyMetric");
-    private TextBlock LatencyDetail => Get<TextBlock>("LatencyDetail");
-    private StackPanel FlowResultsPanel => Get<StackPanel>("FlowResultsPanel");
-    private StackPanel ScalingResultsPanel => Get<StackPanel>("ScalingResultsPanel");
-    private TextBlock WifiTitleText => Get<TextBlock>("WifiTitleText");
-    private TextBlock WifiDetailText => Get<TextBlock>("WifiDetailText");
-    private TextBlock RoutingTitleText => Get<TextBlock>("RoutingTitleText");
-    private TextBlock RoutingDetailText => Get<TextBlock>("RoutingDetailText");
-    private StackPanel InterfacesPanel => Get<StackPanel>("InterfacesPanel");
-    private TextBlock RouteSummaryText => Get<TextBlock>("RouteSummaryText");
-    private StackPanel DnsPanel => Get<StackPanel>("DnsPanel");
-    private TextBlock TraceSummaryText => Get<TextBlock>("TraceSummaryText");
-    private StackPanel TracePanel => Get<StackPanel>("TracePanel");
-    private StackPanel ServicesPanel => Get<StackPanel>("ServicesPanel");
-
-    private T Get<T>(string name) where T : Control =>
-        this.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control {name}.");
-
     private void PlanSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
     {
         if (initialized) RefreshPlan();
