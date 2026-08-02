@@ -3,6 +3,7 @@
    while its own hero section is still in view. */
 @media (min-width: 1101px) {
   .hero {
+    grid-template-columns: minmax(0, 1.45fr) minmax(400px, .74fr);
     align-items: start;
   }
 
