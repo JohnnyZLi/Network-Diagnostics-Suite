@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="../DeepProbe/Diagnostics/**/*.cs" LinkBase="Diagnostics" />
     <Compile Include="../DeepProbe/Models/**/*.cs" LinkBase="Models" />
+    <Compile Include="../DeepProbe/Planning/**/*.cs" LinkBase="Planning" />
     <EmbeddedResource Include="../../contracts/test-profiles.v1.json" LogicalName="NetworkDiagnostics.Contracts.test-profiles.v1.json" />
     <InternalsVisibleTo Include="NetworkDeepProbe" />
     <InternalsVisibleTo Include="NetworkDeepProbe.Tests" />
