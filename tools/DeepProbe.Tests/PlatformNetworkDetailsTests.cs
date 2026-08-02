@@ -37,7 +37,7 @@ public sealed class PlatformNetworkDetailsTests
         const string output = """
             Connected to 00:11:22:33:44:55 (on wlan0)
                 SSID: Example
-                freq: 6115
+                freq: 7115
                 signal: -48 dBm
                 rx bitrate: 2401.9 MBit/s
                 tx bitrate: 1921.5 MBit/s
