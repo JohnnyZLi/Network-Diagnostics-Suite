@@ -17,6 +17,7 @@
   <ItemGroup>
     <Compile Remove="Diagnostics/**/*.cs" />
     <Compile Remove="Models/**/*.cs" />
+    <Compile Remove="Planning/**/*.cs" />
     <ProjectReference Include="../NetworkDiagnostics.Core/NetworkDiagnostics.Core.csproj" />
     <InternalsVisibleTo Include="NetworkDeepProbe.Tests" />
   </ItemGroup>

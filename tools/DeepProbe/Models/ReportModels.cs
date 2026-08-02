@@ -1,6 +1,6 @@
 namespace NetworkDeepProbe.Models;
 
-internal sealed record LatencyStatistics(
+public sealed record LatencyStatistics(
     int Sent,
     int Received,
     int Lost,
@@ -13,12 +13,12 @@ internal sealed record LatencyStatistics(
     double? JitterMs,
     IReadOnlyList<double?> Samples);
 
-internal sealed record PingTargetReport(
+public sealed record PingTargetReport(
     string Label,
     string? Address,
     LatencyStatistics Statistics);
 
-internal sealed record TraceHop(
+public sealed record TraceHop(
     int Hop,
     string? Address,
     string? Hostname,
@@ -26,14 +26,14 @@ internal sealed record TraceHop(
     bool ReachedDestination,
     bool AddressRedacted);
 
-internal sealed record TraceRouteReport(
+public sealed record TraceRouteReport(
     string Target,
     string? ResolvedAddress,
     int MaximumHops,
     bool ReachedDestination,
     IReadOnlyList<TraceHop> Hops);
 
-internal sealed record DnsResolverReport(
+public sealed record DnsResolverReport(
     string Name,
     string Address,
     int Attempts,
@@ -44,7 +44,7 @@ internal sealed record DnsResolverReport(
     double? MaximumMs,
     string? Error);
 
-internal sealed record TlsEndpointReport(
+public sealed record TlsEndpointReport(
     string Name,
     string Host,
     bool Reachable,
@@ -55,7 +55,7 @@ internal sealed record TlsEndpointReport(
     string? ApplicationProtocol,
     string? Error);
 
-internal sealed record NetworkInterfaceReport(
+public sealed record NetworkInterfaceReport(
     string Name,
     string Description,
     string Type,
@@ -67,13 +67,13 @@ internal sealed record NetworkInterfaceReport(
     IReadOnlyList<string>? Gateways,
     IReadOnlyList<string>? DnsServers);
 
-internal sealed record PathMtuReport(
+public sealed record PathMtuReport(
     string Target,
     int? PayloadBytes,
     int? EstimatedIpv4Mtu,
     string Status);
 
-internal sealed record LanThroughputReport(
+public sealed record LanThroughputReport(
     string Target,
     string? ResolvedAddress,
     int Port,
@@ -85,7 +85,7 @@ internal sealed record LanThroughputReport(
     double UploadMbps,
     long UploadBytes);
 
-internal sealed record DeepProbeReport(
+public sealed record DeepProbeReport(
     string SchemaVersion,
     DateTimeOffset GeneratedAt,
     string Target,

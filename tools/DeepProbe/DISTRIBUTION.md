@@ -19,8 +19,19 @@ chmod +x NetworkDeepProbe
 ./NetworkDeepProbe
 ```
 
-Run `NetworkDeepProbe --help` (or `NetworkDeepProbe.exe --help`) for target, output, ping-count, hop-limit, address-inclusion, and LAN-isolation options.
+The default command retains the original deep-only schema 1.1 report. Run `NetworkDeepProbe --help` (or `NetworkDeepProbe.exe --help`) for all controls.
 
+## First-party Internet transfer
+
+Add the same Quick, Full, Stress and Compare, Single, Aggregate concepts used by the browser application:
+
+```bash
+./NetworkDeepProbe --internet-transfer --profile quick --transfer-method compare
+```
+
+This mode contacts the project-operated `network.johnnyli.dev` ping, download, and upload endpoints and emits a combined schema 2.0 report. The report includes separate single and aggregate measurements where selected, loaded latency, transfer caps, estimated transfer time, and the Stress 1, 2, 4, 8, and 10 connection sequence.
+
+Full and Stress can transfer substantial data. Review the transfer plan printed before the run and avoid metered or cellular connections unless the data use is acceptable.
 
 ## Local-link throughput isolation
 
@@ -44,7 +55,9 @@ The current macOS binaries are open-source CI builds but are not Apple-signed or
 
 ## Privacy
 
-The probe contains no telemetry or project-operated upload code. LAN client mode intentionally sends generated test bytes to the user-selected LAN server, and LAN server mode receives or transmits generated test bytes only while it is running. It omits the public IP, MAC address, hostname, SSID, local interface addresses, gateway addresses, local resolver addresses, and private traceroute hops by default. `--include-addresses` deliberately includes the local-address fields, so review that report before sharing it.
+The deep-only probe contains no telemetry or project-operated upload code. `--internet-transfer` intentionally exchanges generated payloads with the project-operated first-party test endpoints. LAN client mode intentionally sends generated test bytes to the user-selected LAN server, and LAN server mode receives or transmits generated test bytes only while it is running.
+
+Reports omit the public IP, MAC address, hostname, SSID, local interface addresses, gateway addresses, local resolver addresses, and private traceroute hops by default. `--include-addresses` deliberately includes the local-address fields, so review that report before sharing it.
 
 Public traceroute hops and the operating-system/interface descriptions are diagnostic output and can still reveal network or hardware context.
 

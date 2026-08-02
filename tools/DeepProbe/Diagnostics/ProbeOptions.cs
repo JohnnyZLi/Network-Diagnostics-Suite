@@ -1,3 +1,5 @@
+using NetworkDeepProbe.Planning;
+
 namespace NetworkDeepProbe.Diagnostics;
 
 internal sealed record ProbeOptions(
@@ -11,6 +13,10 @@ internal sealed record ProbeOptions(
     int LanDurationSeconds,
     int LanConcurrency,
     bool LanServer,
+    bool IncludeInternetTransfer,
+    TestProfileId Profile,
+    TransferMethod TransferMethod,
+    Uri TestOrigin,
     bool ShowHelp)
 {
     public static ProbeOptions Parse(string[] args, DateTimeOffset? now = null)
@@ -25,6 +31,10 @@ internal sealed record ProbeOptions(
         var lanDurationSeconds = 8;
         var lanConcurrency = 4;
         var lanServer = false;
+        var includeInternetTransfer = false;
+        var profile = TestProfileId.Quick;
+        var transferMethod = TransferMethod.Compare;
+        var testOrigin = InternetTransferProbe.DefaultOrigin;
         var showHelp = false;
 
         for (var index = 0; index < args.Length; index++)
@@ -45,6 +55,18 @@ internal sealed record ProbeOptions(
                     break;
                 case "--include-addresses":
                     includeAddresses = true;
+                    break;
+                case "--internet-transfer":
+                    includeInternetTransfer = true;
+                    break;
+                case "--profile":
+                    profile = NativeTransferPlanBuilder.ParseProfile(RequireValue(args, ref index, "--profile"));
+                    break;
+                case "--transfer-method":
+                    transferMethod = NativeTransferPlanBuilder.ParseMethod(RequireValue(args, ref index, "--transfer-method"));
+                    break;
+                case "--test-origin":
+                    testOrigin = ParseOrigin(RequireValue(args, ref index, "--test-origin"));
                     break;
                 case "--lan-target":
                     lanTarget = RequireValue(args, ref index, "--lan-target");
@@ -74,6 +96,10 @@ internal sealed record ProbeOptions(
         {
             throw new ArgumentException("--lan-server and --lan-target cannot be used together.");
         }
+        if (lanServer && includeInternetTransfer)
+        {
+            throw new ArgumentException("--lan-server cannot be combined with --internet-transfer.");
+        }
 
         return new ProbeOptions(
             target,
@@ -86,6 +112,10 @@ internal sealed record ProbeOptions(
             lanDurationSeconds,
             lanConcurrency,
             lanServer,
+            includeInternetTransfer,
+            profile,
+            transferMethod,
+            testOrigin,
             showHelp);
     }
 
@@ -106,5 +136,16 @@ internal sealed record ProbeOptions(
             throw new ArgumentException($"{option} must be between {minimum} and {maximum}.");
         }
         return parsed;
+    }
+
+    private static Uri ParseOrigin(string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var parsed)
+            || parsed.Scheme is not ("http" or "https"))
+        {
+            throw new ArgumentException("--test-origin must be an absolute HTTP or HTTPS URL.");
+        }
+        var builder = new UriBuilder(parsed) { Path = parsed.AbsolutePath.EndsWith('/') ? parsed.AbsolutePath : $"{parsed.AbsolutePath}/" };
+        return builder.Uri;
     }
 }
