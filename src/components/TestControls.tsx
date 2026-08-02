@@ -263,7 +263,7 @@ export function TestControls({
           <span className="eyebrow">Confirm data use</span>
           <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
           <p className="jl-dialog__message" id="data-confirmation-dialog-description">
-            This test may transfer up to {transferCapLabel}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
+            This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
           </p>
           <label className="data-confirmation-dialog__remember">
             <input
