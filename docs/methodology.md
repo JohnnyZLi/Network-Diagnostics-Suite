@@ -1,69 +1,87 @@
 # Measurement methodology
 
-This document defines what each result means, how it is calculated, and where it can be misleading. The guiding rule is simple: do not give a browser-level approximation an operating-system-level label.
+This document defines what each result means, how it is calculated, and where it can be misleading. The guiding rule is simple: do not give a browser-level approximation an operating-system-level label, and do not fill unavailable native fields with guesses.
+
+## Shared profiles and transfer plans
+
+The browser, desktop application, and opt-in CLI Internet-transfer mode consume the same canonical contract in `contracts/test-profiles.v1.json`.
+
+Profiles define idle-sample counts, transfer durations, byte ceilings, download sample counts, aggregate connection counts, service checks, comparison allocations, and Stress scaling stages. Transfer methods produce ordered stages:
+
+- **Compare:** independent single and aggregate stages. Quick compares download and then runs aggregate upload. Full compares both directions. Stress runs 1, 2, 4, 8, and 10 connection download stages, followed by single and aggregate upload.
+- **Single:** one connection in each direction using the profile's full configured duration and cap.
+- **Aggregate:** the profile's parallel connection count in each direction using the full configured duration and cap.
+
+Every method preserves the selected profile's maximum combined transfer ceiling. The displayed estimated time is the larger of the profile base estimate and the sum of idle, transfer, service-check, and fixed-overhead allowances rounded to five seconds.
 
 ## Browser measurements
 
-### Idle latency
+### Idle latency and request loss
 
-The app repeatedly performs an uncached request to the same-origin `/api/ping` endpoint and records elapsed high-resolution browser time. Each request has a 1.5-second timeout.
+The browser repeatedly performs an uncached request to the same-origin `/api/ping` endpoint with a 1.5-second timeout. Successful high-resolution elapsed times produce minimum, maximum, mean, median, p95, and consecutive-sample jitter.
 
-The successful round-trip times produce:
+Timed-out or failed requests divided by attempts are reported as **request loss**. This is not raw packet loss: TCP can retransmit beneath the browser, and failures can come from DNS, TLS, HTTP, extensions, the browser, or the server.
 
-- **Minimum and maximum:** lowest and highest successful sample.
-- **Mean:** arithmetic average of successful samples.
-- **Median:** linearly interpolated 50th percentile.
-- **P95:** linearly interpolated 95th percentile.
-- **Jitter:** mean absolute difference between consecutive successful samples.
-- **Request loss:** timed-out or failed requests divided by attempted requests.
+### Browser download delivery
 
-Request loss is not raw packet loss. TCP can retransmit packets beneath the browser and a failed request can be caused by DNS, TLS, HTTP, the browser, an extension, or the server.
+Automatic mode probes the deterministic incompressible R2 object on `speed.johnnyli.dev`, prefers direct range requests, and falls back to the Worker stream if validation fails. The explicit R2 and Worker paths remain available for comparison.
 
-### Throughput
+The browser records direct and fallback requests, cache evidence, response validation failures, request generations, warm-up bytes, started/completed/interrupted requests, replacements, and Resource Timing protocols where cross-origin timing permission is available.
 
-The normal download path uses a deterministic, incompressible 256 MiB object in Cloudflare R2 through the bucket custom domain `speed.johnnyli.dev`. A browser probe checks the object size and required CORS contract before the timed condition begins. Automatic mode prefers this direct path and falls back to the Worker stream if the probe fails. The explicit Worker path remains available under advanced controls for comparison.
+The Worker comparison path composes deterministic Static Assets into a fixed-length logical stream. Invalid or truncated responses are recorded before a smaller generated fallback is used.
 
-Parallel browser workers request distinct 192 MiB byte ranges from the same R2 object. The ranges are large enough to remain open for most connections, while distinct offsets prevent all parallel requests from being identical. Cloudflare edge caching is forced by a Cache Rule with a one-day Edge TTL, while Browser TTL bypass and the object's `Cache-Control: no-store, no-transform` prevent the browser cache from satisfying a measured transfer.
+### Browser upload delivery
 
-Quick, Full, and Stress start six, eight, and ten parallel download requests respectively. Each profile divides its configured download duration and byte ceiling across three consecutive samples. The displayed whole-sample rate, steady-state rate, and stability are the medians of those three samples. Total transferred bytes and total download duration remain sums across all samples. Peak rate is the maximum observed interval across the set.
+Generated binary request bodies are posted to `/api/upload`; the Worker reads and discards them. Quick and Full use 16 MiB requests, while Stress uses 32 MiB requests. Workers start 40 milliseconds apart and use small deterministic restart delays to reduce synchronized turnover. Reports retain request size and generation/lifecycle counts.
 
-A median of three short samples is less sensitive to one unusually fast or slow interval than a single run of the same total duration. It does not eliminate route, radio, browser, or congestion variability, and the exported report retains every sample's rate, stability, qualification, duration, and byte count.
+## Native Internet transfer
 
-If an R2 range fails validation or ends early, that worker uses the Worker stream for the remainder of that request and the report preserves the fallback reason. The Worker comparison path uses four deterministic, incompressible 24 MiB Static Assets. The Worker retrieves missing segments through the static-assets binding, stores full cacheable copies in its local `caches.default`, and pipes them sequentially into a Cloudflare `FixedLengthStream` to create a 96 MiB logical response. A truncated or invalid Worker response is recorded before using the smaller dynamically generated fallback.
+The native core sends first-party HTTP traffic to the same project origin. Its transport implementation is independent from browser fetch APIs but uses the same stage plan, payload endpoints, byte ceilings, timing formulas, and result vocabulary.
 
-The report records cache status, cache age, direct R2 requests, Worker stream requests, dynamic fallbacks, response rejections, started/completed/interrupted requests, replacement requests, and bytes by request generation. `Timing-Allow-Origin` on the R2 response permits Resource Timing to expose `nextHopProtocol`; without it, the transfer still works but the cross-origin protocol normally remains unavailable.
+- `/api/ping` provides HTTP idle and loaded latency.
+- `/speed/v4/stream` provides deterministic download bytes.
+- `/api/upload` accepts generated upload bodies.
+- `SocketsHttpHandler` limits and reuses connections per origin while each stage controls active worker count.
 
-The download byte ceilings are 600 MB for Quick, 900 MB for Full, and 3 GB for Stress. They are safety ceilings rather than targets and are divided across the three samples. Reaching a sample's portion of the ceiling aborts that sample and marks it cap-limited when it ends substantially before its configured duration.
+Native Internet transfer is always part of a desktop run and explicit opt-in for the CLI through `--internet-transfer`. A deep-only CLI run does not transfer speed-test payloads.
 
-The upload phase sends generated binary request bodies and the Worker reads and discards them. Upload workers use 16 MiB requests for Quick and Full and 32 MiB requests for Stress, begin 40 milliseconds apart, and apply a small deterministic delay before replacement requests. This reduces synchronized request turnover without hiding request boundaries. The report records upload request generations and completed, interrupted, and replacement requests. Quick and Full use 128 MB and 256 MB upload safety ceilings respectively; Stress uses 512 MB.
+## Throughput calculation
 
-Each individual throughput sample uses successfully transferred payload bytes and elapsed wall time:
+Each sample uses successfully transferred payload bytes and elapsed wall time:
 
 ```text
 Mbps = transferred bytes × 8 ÷ elapsed seconds ÷ 1,000,000
 ```
 
-The graph samples recent transfer rate every 250 milliseconds. Each sample's steady-state value excludes up to its first second, while the report also retains the complete sample average. A terminal interval shorter than 100 milliseconds is omitted from the graph and interval statistics because dividing a few final progress bytes by only a few milliseconds can create a false rate spike; those bytes remain included in the whole-phase average. The median headline is computed only after all three download samples finish.
+Progress is sampled every 250 milliseconds. Intervals shorter than 100 milliseconds are omitted from graph and interval-derived statistics to prevent a few terminal bytes from creating an impossible rate spike. Those bytes remain in the whole-phase average.
 
-A sample is marked **cap-limited** when its byte ceiling ends it substantially before the configured duration, **still ramping** when the latter half is more than 20% faster than the earlier measured half, **declining** when the latter half is below 80% of the earlier measured half, and **unstable** when the steady-state coefficient of variation is high. The aggregate download report carries the most cautionary qualification among its three samples.
+The steady-state value excludes up to the first second of each sample. Download stages with multiple samples report medians for whole-phase rate, steady rate, stability, and ramp ratio; bytes and durations remain sums. Peak rate is the maximum retained interval.
 
-The displayed stability score is a bounded project metric:
+A sample is classified as:
+
+- **cap-limited** when its byte ceiling ends it substantially before its duration;
+- **still-ramping** when the latter half is more than 20% faster;
+- **declining** when the latter half is below 80% of the earlier half;
+- **unstable** when steady-state coefficient of variation exceeds the project threshold;
+- **qualified** otherwise.
+
+The stability score is:
 
 ```text
 stability = clamp(100 - coefficient of variation × 100, 0, 100)
 ```
 
-It is useful for comparing runs but is not an industry certification.
+This is a project comparison metric, not an industry certification.
 
-### Loaded latency and bufferbloat signal
+## Loaded latency
 
-Latency requests continue throughout all three download samples and again while upload traffic saturates the connection. Added delay is:
+Separate latency requests continue during every transfer stage. Added delay is:
 
 ```text
-added delay = max(0, loaded median - idle median)
+added delay = loaded median - idle median
 ```
 
-The grade uses project-specific thresholds:
+The UI presents the measured difference; browser result summaries clamp negative values where appropriate. The project grade is:
 
 | Added median delay | Grade |
 | ---: | :---: |
@@ -74,16 +92,86 @@ The grade uses project-specific thresholds:
 | >60–100 ms | D |
 | >100 ms | F |
 
-The grade is a compact interpretation of queueing delay, not a standards-body rating.
+The grade is a compact queueing-delay interpretation, not a standards-body rating.
 
-### Common-service battery
+## Single versus aggregate interpretation
 
-Full and Stress profiles make one cache-bypassed, credential-free, no-referrer browser request to each of these targets: Cloudflare, Google, Microsoft, GitHub, Apple, and Amazon. The Cloudflare entry uses the deployed first-party `/api/ping` Worker; the other five are external opaque requests.
+Single and aggregate stages run independently so they do not compete with one another. The comparison reports:
 
-Because the external requests use `no-cors`, the browser intentionally hides response status and content. The app can only report whether the fetch completed before the timeout and how long the browser waited. A failure does not prove that the service is down.
+```text
+single share = single steady Mbps ÷ aggregate steady Mbps × 100
+parallel gain = (aggregate steady Mbps ÷ single steady Mbps - 1) × 100
+```
 
-### Edge context
+A lower single share means parallel transfers used materially more of the measured path. It does not identify the cause. TCP congestion control, endpoint limits, routing, packet loss, radio conditions, security software, CPU load, and server behavior can all affect a single flow.
 
-The Worker returns the servicing edge code, network organization and ASN, HTTP protocol, TLS version, and whether the connection reached Cloudflare over IPv4 or IPv6. It uses the connecting address only to infer the IP version and never returns the address itself. The R2 download may terminate at the same or a different Cloudflare edge; Resource Timing reports its protocol when the browser and response headers permit it.
+## Native operating-system diagnostics
 
-## Native deep probe
+### ICMP latency and packet loss
+
+The deep probe sends ICMP Echo Requests with a 1.5-second timeout and 120 milliseconds between attempts. The result is real ICMP loss for the selected target and sample, but devices can deprioritize or block ICMP while forwarding ordinary traffic.
+
+The default gateway is measured separately when the operating system exposes an IPv4 gateway.
+
+### Traceroute
+
+Three ICMP probes are sent per time-to-live value until the destination is reached or the configured hop limit is exhausted. A missing reply does not prove that forwarding failed; many routers suppress or rate-limit TTL-expired responses. The visible route is not necessarily the return path.
+
+Private and link-local hop addresses are redacted unless local identifiers are explicitly enabled.
+
+### DNS timing
+
+The native probe sends direct UDP port 53 queries to available system resolvers plus Cloudflare, Google, and Quad9. Attempts, success counts, minimum, median, p95, maximum, and errors are recorded. Resolver behavior can differ for cached versus uncached names and UDP versus encrypted DNS.
+
+### Path MTU
+
+IPv4 ICMP probes with Don't Fragment set are used to estimate the largest successful payload and corresponding IPv4 MTU. Firewalls, tunnels, VPNs, or ICMP filtering can make the estimate unavailable or conservative.
+
+### DNS, TCP, and TLS phases
+
+Cloudflare, Google, Microsoft, GitHub, Apple, and Amazon are resolved and connected on TCP port 443. DNS lookup, TCP connect, and TLS authentication are timed separately. The negotiated TLS protocol and HTTP application protocol are recorded. No HTTP page content is fetched after the handshake.
+
+### Interfaces
+
+For active non-loopback, non-tunnel interfaces, the report records name, description, media type, reported link speed, IPv4 MTU, and IPv4/IPv6 support. Reported link speed is a negotiated or driver-reported interface rate, not measured Internet throughput.
+
+## Platform Wi-Fi and routing details
+
+The native core runs fixed read-only operating-system commands with an eight-second timeout:
+
+- Windows: `netsh wlan show interfaces` and `route print -4`.
+- macOS: Apple's `airport -I` tool and `netstat -rn -f inet`.
+- Linux: `iw dev`, `iw dev <interface> link`, and `ip route show`.
+
+Only documented text fields required for the report are parsed. Missing tools, changed formats, denied permissions, disconnected radios, and unsupported operating systems produce explicit `unavailable` or `not-connected` statuses.
+
+Wi-Fi fields can include interface name, signal percentage, RSSI, channel, band, protocol, receive/transmit link rates, security, and SSID. Route entries can include destination, gateway, interface, metric, address family, and default-route status. Sensitive names and addresses remain redacted unless the user enables local identifiers.
+
+Signal percentage derived from RSSI on macOS and Linux is a bounded presentation estimate, not a calibrated radio measurement:
+
+```text
+signal percent = clamp((RSSI dBm + 100) × 2, 0, 100)
+```
+
+## Isolated LAN throughput
+
+The optional LAN mode uses a second user-controlled machine instead of a public endpoint. The server listens on TCP port 8765 by default. The client measures eight request/response samples, then generated download and upload traffic using the configured duration and parallel stream count.
+
+This removes the ISP, public transit, and public test platform. It does not remove either endpoint's operating system, CPU, adapter, firewall, switch, access point, cabling, or TCP implementation. A preferably wired server with a link rate above the expected client speed is recommended.
+
+## Report schemas
+
+- **1.0 and 1.1:** historical native deep-probe formats.
+- **1.2:** additive deep-probe format with optional Wi-Fi and routing details.
+- **2.0:** combined envelope containing run metadata, transfer plan, native Internet transfer, deep diagnostics, and optional LAN result.
+
+The browser importer accepts all four versions. Missing optional sections mean that scope was not run or was unavailable.
+
+## Important limitations
+
+- Every result describes particular devices, software, routes, endpoints, and a moment in time.
+- VPNs, security software, CPU load, power saving, Wi-Fi contention, browser scheduling, and background traffic can affect results.
+- A short sample can miss intermittent faults. Repeat at different times and compare wired, wireless, browser, desktop, and LAN-isolated runs.
+- Public transfer results can be limited by the selected edge and route as well as the access connection.
+- A service connection success does not prove the whole service is healthy; failure does not prove a global outage.
+- Platform command output varies by operating-system release and localization. Unavailable fields are not inferred.
