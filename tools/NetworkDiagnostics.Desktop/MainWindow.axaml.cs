@@ -3,7 +3,6 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using NetworkDeepProbe.Diagnostics;
@@ -15,13 +14,12 @@ namespace NetworkDiagnostics.Desktop;
 public sealed partial class MainWindow : Window
 {
     private CancellationTokenSource? runCancellation;
-    private NetworkDiagnosticsReportV2? latestReport;
     private string? latestReportPath;
     private bool initialized;
 
     public MainWindow()
     {
-        InitializeComponent();
+        AvaloniaXamlLoader.Load(this);
         ProfileSelector.SelectedIndex = 0;
         MethodSelector.SelectedIndex = 0;
         initialized = true;
@@ -29,55 +27,47 @@ public sealed partial class MainWindow : Window
         LoadHistory();
     }
 
-    private ComboBox ProfileSelector => Required<ComboBox>("ProfileSelector");
-    private ComboBox MethodSelector => Required<ComboBox>("MethodSelector");
-    private TextBox TargetInput => Required<TextBox>("TargetInput");
-    private TextBox LanTargetInput => Required<TextBox>("LanTargetInput");
-    private CheckBox IncludeAddressesCheck => Required<CheckBox>("IncludeAddressesCheck");
-    private TextBlock EstimatedTimeText => Required<TextBlock>("EstimatedTimeText");
-    private TextBlock TransferCapText => Required<TextBlock>("TransferCapText");
-    private TextBlock DownloadConnectionsText => Required<TextBlock>("DownloadConnectionsText");
-    private TextBlock UploadConnectionsText => Required<TextBlock>("UploadConnectionsText");
-    private TextBlock DownloadRunsText => Required<TextBlock>("DownloadRunsText");
-    private TextBlock DataUseText => Required<TextBlock>("DataUseText");
-    private Button RunButton => Required<Button>("RunButton");
-    private Button StopButton => Required<Button>("StopButton");
-    private TextBlock StatusText => Required<TextBlock>("StatusText");
-    private ProgressBar RunProgress => Required<ProgressBar>("RunProgress");
-    private TextBlock LiveText => Required<TextBlock>("LiveText");
-    private ListBox HistoryList => Required<ListBox>("HistoryList");
-    private TextBlock ReportPathText => Required<TextBlock>("ReportPathText");
-    private TextBlock DownloadMetric => Required<TextBlock>("DownloadMetric");
-    private TextBlock DownloadDetail => Required<TextBlock>("DownloadDetail");
-    private TextBlock UploadMetric => Required<TextBlock>("UploadMetric");
-    private TextBlock UploadDetail => Required<TextBlock>("UploadDetail");
-    private TextBlock LossMetric => Required<TextBlock>("LossMetric");
-    private TextBlock LossDetail => Required<TextBlock>("LossDetail");
-    private TextBlock LatencyMetric => Required<TextBlock>("LatencyMetric");
-    private TextBlock LatencyDetail => Required<TextBlock>("LatencyDetail");
-    private StackPanel FlowResultsPanel => Required<StackPanel>("FlowResultsPanel");
-    private StackPanel ScalingResultsPanel => Required<StackPanel>("ScalingResultsPanel");
-    private TextBlock WifiTitleText => Required<TextBlock>("WifiTitleText");
-    private TextBlock WifiDetailText => Required<TextBlock>("WifiDetailText");
-    private TextBlock RoutingTitleText => Required<TextBlock>("RoutingTitleText");
-    private TextBlock RoutingDetailText => Required<TextBlock>("RoutingDetailText");
-    private StackPanel InterfacesPanel => Required<StackPanel>("InterfacesPanel");
-    private TextBlock RouteSummaryText => Required<TextBlock>("RouteSummaryText");
-    private StackPanel DnsPanel => Required<StackPanel>("DnsPanel");
-    private TextBlock TraceSummaryText => Required<TextBlock>("TraceSummaryText");
-    private StackPanel TracePanel => Required<StackPanel>("TracePanel");
-    private StackPanel ServicesPanel => Required<StackPanel>("ServicesPanel");
+    private ComboBox ProfileSelector => Get<ComboBox>("ProfileSelector");
+    private ComboBox MethodSelector => Get<ComboBox>("MethodSelector");
+    private TextBox TargetInput => Get<TextBox>("TargetInput");
+    private TextBox LanTargetInput => Get<TextBox>("LanTargetInput");
+    private CheckBox IncludeAddressesCheck => Get<CheckBox>("IncludeAddressesCheck");
+    private TextBlock EstimatedTimeText => Get<TextBlock>("EstimatedTimeText");
+    private TextBlock TransferCapText => Get<TextBlock>("TransferCapText");
+    private TextBlock DownloadConnectionsText => Get<TextBlock>("DownloadConnectionsText");
+    private TextBlock UploadConnectionsText => Get<TextBlock>("UploadConnectionsText");
+    private TextBlock DownloadRunsText => Get<TextBlock>("DownloadRunsText");
+    private TextBlock DataUseText => Get<TextBlock>("DataUseText");
+    private Button RunButton => Get<Button>("RunButton");
+    private Button StopButton => Get<Button>("StopButton");
+    private TextBlock StatusText => Get<TextBlock>("StatusText");
+    private ProgressBar RunProgress => Get<ProgressBar>("RunProgress");
+    private TextBlock LiveText => Get<TextBlock>("LiveText");
+    private ListBox HistoryList => Get<ListBox>("HistoryList");
+    private TextBlock ReportPathText => Get<TextBlock>("ReportPathText");
+    private TextBlock DownloadMetric => Get<TextBlock>("DownloadMetric");
+    private TextBlock DownloadDetail => Get<TextBlock>("DownloadDetail");
+    private TextBlock UploadMetric => Get<TextBlock>("UploadMetric");
+    private TextBlock UploadDetail => Get<TextBlock>("UploadDetail");
+    private TextBlock LossMetric => Get<TextBlock>("LossMetric");
+    private TextBlock LossDetail => Get<TextBlock>("LossDetail");
+    private TextBlock LatencyMetric => Get<TextBlock>("LatencyMetric");
+    private TextBlock LatencyDetail => Get<TextBlock>("LatencyDetail");
+    private StackPanel FlowResultsPanel => Get<StackPanel>("FlowResultsPanel");
+    private StackPanel ScalingResultsPanel => Get<StackPanel>("ScalingResultsPanel");
+    private TextBlock WifiTitleText => Get<TextBlock>("WifiTitleText");
+    private TextBlock WifiDetailText => Get<TextBlock>("WifiDetailText");
+    private TextBlock RoutingTitleText => Get<TextBlock>("RoutingTitleText");
+    private TextBlock RoutingDetailText => Get<TextBlock>("RoutingDetailText");
+    private StackPanel InterfacesPanel => Get<StackPanel>("InterfacesPanel");
+    private TextBlock RouteSummaryText => Get<TextBlock>("RouteSummaryText");
+    private StackPanel DnsPanel => Get<StackPanel>("DnsPanel");
+    private TextBlock TraceSummaryText => Get<TextBlock>("TraceSummaryText");
+    private StackPanel TracePanel => Get<StackPanel>("TracePanel");
+    private StackPanel ServicesPanel => Get<StackPanel>("ServicesPanel");
 
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
-
-    private T Required<T>(string name) where T : Control
-    {
-        return this.FindControl<T>(name)
-            ?? throw new InvalidOperationException($"Desktop control {name} was not found.");
-    }
+    private T Get<T>(string name) where T : Control =>
+        this.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control {name}.");
 
     private void PlanSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
     {
@@ -89,10 +79,10 @@ public sealed partial class MainWindow : Window
         var plan = CurrentPlan();
         EstimatedTimeText.Text = $"{plan.EstimatedSeconds} sec";
         TransferCapText.Text = FormatBytes(plan.TransferCapBytes);
-        DownloadConnectionsText.Text = ConnectionSequence(plan.DownloadStages);
-        UploadConnectionsText.Text = ConnectionSequence(plan.UploadStages);
-        DownloadRunsText.Text = DownloadRunLabel(plan);
-        DataUseText.Text = $"Transfers up to {FormatBytes(plan.TransferCapBytes)} against the first-party test origin. Avoid metered or cellular connections.";
+        DownloadConnectionsText.Text = JoinConnections(plan.DownloadStages);
+        UploadConnectionsText.Text = JoinConnections(plan.UploadStages);
+        DownloadRunsText.Text = DescribeDownloadRuns(plan);
+        DataUseText.Text = $"Transfers up to {FormatBytes(plan.TransferCapBytes)}. Avoid metered or cellular connections.";
         RunButton.Content = $"Run {plan.ProfileName.ToLowerInvariant()} diagnostic";
     }
 
@@ -109,31 +99,28 @@ public sealed partial class MainWindow : Window
 
         runCancellation = new CancellationTokenSource();
         SetRunning(true);
-        ResetResultPanels();
-        StatusText.Text = "Starting native diagnostic…";
+        ResetResults();
         var profile = SelectedProfile();
-        var pingCount = profile switch
-        {
-            TestProfileId.Quick => 12,
-            TestProfileId.Standard => 20,
-            TestProfileId.Extended => 30,
-            _ => 20
-        };
-        var target = string.IsNullOrWhiteSpace(TargetInput.Text) ? "1.1.1.1" : TargetInput.Text.Trim();
-        var lanTarget = string.IsNullOrWhiteSpace(LanTargetInput.Text) ? null : LanTargetInput.Text.Trim();
         var options = new NativeDiagnosticRunOptions(
             Profile: profile,
             TransferMethod: SelectedMethod(),
-            Target: target,
-            PingCount: pingCount,
+            Target: string.IsNullOrWhiteSpace(TargetInput.Text) ? "1.1.1.1" : TargetInput.Text.Trim(),
+            PingCount: profile switch
+            {
+                TestProfileId.Quick => 12,
+                TestProfileId.Standard => 20,
+                TestProfileId.Extended => 30,
+                _ => 20
+            },
             IncludeAddresses: IncludeAddressesCheck.IsChecked == true,
-            LanTarget: lanTarget);
-        var progress = new Progress<NativeRunProgress>(UpdateProgress);
+            LanTarget: string.IsNullOrWhiteSpace(LanTargetInput.Text) ? null : LanTargetInput.Text.Trim());
 
         try
         {
-            var report = await NetworkDiagnosticsRunner.RunAsync(options, progress, runCancellation.Token);
-            latestReport = report;
+            var report = await NetworkDiagnosticsRunner.RunAsync(
+                options,
+                new Progress<NativeRunProgress>(UpdateProgress),
+                runCancellation.Token);
             latestReportPath = await SaveReportAsync(report, runCancellation.Token);
             RenderReport(report);
             LoadHistory();
@@ -161,24 +148,13 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void StopClicked(object? sender, RoutedEventArgs eventArgs)
-    {
-        runCancellation?.Cancel();
-    }
+    private void StopClicked(object? sender, RoutedEventArgs eventArgs) => runCancellation?.Cancel();
 
     private void UpdateProgress(NativeRunProgress progress)
     {
         StatusText.Text = progress.Message;
-        if (progress.Phase == "diagnostics")
-        {
-            RunProgress.IsIndeterminate = true;
-        }
-        else
-        {
-            RunProgress.IsIndeterminate = false;
-            RunProgress.Value = Math.Clamp(progress.Fraction * 100, 0, 100);
-        }
-
+        RunProgress.IsIndeterminate = progress.Phase == "diagnostics";
+        if (!RunProgress.IsIndeterminate) RunProgress.Value = Math.Clamp(progress.Fraction * 100, 0, 100);
         var live = new List<string>();
         if (progress.LiveMbps is not null) live.Add($"{progress.LiveMbps:0.#} Mbps");
         if (progress.LiveLatencyMs is not null) live.Add($"{progress.LiveLatencyMs:0.#} ms");
@@ -197,19 +173,20 @@ public sealed partial class MainWindow : Window
         IncludeAddressesCheck.IsEnabled = !running;
         if (running)
         {
-            RunProgress.Value = 0;
+            StatusText.Text = "Starting native diagnostic…";
             RunProgress.IsIndeterminate = false;
+            RunProgress.Value = 0;
         }
     }
 
-    private void ResetResultPanels()
+    private void ResetResults()
     {
         DownloadMetric.Text = "—";
         UploadMetric.Text = "—";
         LossMetric.Text = "—";
         LatencyMetric.Text = "—";
         FlowResultsPanel.Children.Clear();
-        FlowResultsPanel.Children.Add(MutedText("Measurement in progress."));
+        FlowResultsPanel.Children.Add(Muted("Measurement in progress."));
         ScalingResultsPanel.Children.Clear();
     }
 
@@ -232,7 +209,7 @@ public sealed partial class MainWindow : Window
             LatencyDetail.Text = $"ms median · {deep.InternetPing.Statistics.JitterMs:0.#} ms jitter";
         }
         RenderFlows(transfer);
-        RenderDeepDiagnostics(deep);
+        RenderDeep(deep);
     }
 
     private void RenderFlows(NativeInternetTransferReport? transfer)
@@ -241,23 +218,18 @@ public sealed partial class MainWindow : Window
         ScalingResultsPanel.Children.Clear();
         if (transfer is null)
         {
-            FlowResultsPanel.Children.Add(MutedText("Internet transfer measurements were not available."));
+            FlowResultsPanel.Children.Add(Muted("Internet transfer measurements were unavailable."));
             return;
         }
 
-        foreach (var measurement in transfer.FlowMeasurements)
+        foreach (var item in transfer.FlowMeasurements)
         {
-            var download = measurement.Download is null ? "Not sampled" : $"{measurement.Download.SteadyMbps:0.#} Mbps download";
-            var upload = measurement.Upload is null ? "Not sampled" : $"{measurement.Upload.SteadyMbps:0.#} Mbps upload";
-            var delay = measurement.DownloadLatency?.IncreaseMs is null
-                ? "Loaded delay unavailable"
-                : $"+{measurement.DownloadLatency.IncreaseMs:0.#} ms loaded download delay";
-            FlowResultsPanel.Children.Add(InformationCard(
-                measurement.Strategy == TransferStrategy.Single ? "Single connection" : "Aggregate capacity",
-                $"{measurement.Connections} connection{(measurement.Connections == 1 ? string.Empty : "s")}",
-                download,
-                upload,
-                delay));
+            FlowResultsPanel.Children.Add(Card(
+                item.Strategy == TransferStrategy.Single ? "Single connection" : "Aggregate capacity",
+                $"{item.Connections} connection{(item.Connections == 1 ? string.Empty : "s")}",
+                item.Download is null ? "Download not sampled" : $"{item.Download.SteadyMbps:0.#} Mbps download",
+                item.Upload is null ? "Upload not sampled" : $"{item.Upload.SteadyMbps:0.#} Mbps upload",
+                item.DownloadLatency?.IncreaseMs is null ? "Loaded delay unavailable" : $"+{item.DownloadLatency.IncreaseMs:0.#} ms loaded download delay"));
         }
 
         var single = transfer.FlowMeasurements.FirstOrDefault(item => item.Strategy == TransferStrategy.Single)?.Download;
@@ -265,20 +237,20 @@ public sealed partial class MainWindow : Window
         if (single is not null && aggregate is not null && aggregate.SteadyMbps > 0)
         {
             var share = single.SteadyMbps / aggregate.SteadyMbps * 100;
-            var gain = single.SteadyMbps > 0 ? (aggregate.SteadyMbps / single.SteadyMbps - 1) * 100 : 0;
-            FlowResultsPanel.Children.Add(InformationCard(
+            var gain = single.SteadyMbps <= 0 ? 0 : (aggregate.SteadyMbps / single.SteadyMbps - 1) * 100;
+            FlowResultsPanel.Children.Add(Card(
                 "Difference",
                 $"One connection reached {share:0}% of aggregate capacity",
                 $"Parallel gain: {(gain >= 0 ? "+" : string.Empty)}{gain:0}%",
-                InterpretFlowShare(share)));
+                share < 70 ? "Parallel transfers used materially more of the path." : share < 90 ? "Parallel transfers improved throughput, but one connection still captured most capacity." : "One connection captured nearly all aggregate capacity."));
         }
 
         if (transfer.DownloadScaling.Count > 2)
         {
-            ScalingResultsPanel.Children.Add(SectionLabel("STRESS DOWNLOAD SCALING"));
+            ScalingResultsPanel.Children.Add(Label("STRESS DOWNLOAD SCALING"));
             foreach (var point in transfer.DownloadScaling)
             {
-                ScalingResultsPanel.Children.Add(InformationCard(
+                ScalingResultsPanel.Children.Add(Card(
                     $"{point.Connections} connection{(point.Connections == 1 ? string.Empty : "s")}",
                     $"{point.Download.SteadyMbps:0.#} Mbps steady",
                     $"{point.Download.Mbps:0.#} Mbps whole phase",
@@ -287,7 +259,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void RenderDeepDiagnostics(DeepProbeReport? deep)
+    private void RenderDeep(DeepProbeReport? deep)
     {
         InterfacesPanel.Children.Clear();
         DnsPanel.Children.Clear();
@@ -295,20 +267,19 @@ public sealed partial class MainWindow : Window
         ServicesPanel.Children.Clear();
         if (deep is null)
         {
-            InterfacesPanel.Children.Add(MutedText("Deep diagnostics were not available."));
+            InterfacesPanel.Children.Add(Muted("Deep diagnostics were unavailable."));
             return;
         }
 
         RenderWifi(deep.Wifi);
         RenderRouting(deep.Routing);
-
         foreach (var network in deep.Interfaces)
         {
-            InterfacesPanel.Children.Add(InformationCard(
+            InterfacesPanel.Children.Add(Card(
                 network.Name,
                 network.Description,
                 $"{network.Type} · {(network.LinkSpeedMbps is null ? "link rate unavailable" : $"{network.LinkSpeedMbps} Mbps link")}",
-                $"MTU {network.Ipv4Mtu?.ToString() ?? "—"} · {[network.SupportsIpv4 ? "IPv4" : null, network.SupportsIpv6 ? "IPv6" : null].Where(value => value is not null).Aggregate(string.Empty, (current, value) => current.Length == 0 ? value! : $"{current} + {value}")}"));
+                $"MTU {network.Ipv4Mtu?.ToString() ?? "—"} · {IpSupport(network)}"));
         }
 
         var defaultRoute = deep.Routing?.Entries.FirstOrDefault(entry => entry.IsDefault);
@@ -318,26 +289,22 @@ public sealed partial class MainWindow : Window
 
         foreach (var resolver in deep.DnsResolvers.OrderBy(item => item.MedianMs ?? double.MaxValue))
         {
-            DnsPanel.Children.Add(CompactLine(
-                resolver.Name,
-                $"{resolver.Successful}/{resolver.Attempts} · median {FormatMilliseconds(resolver.MedianMs)} · p95 {FormatMilliseconds(resolver.P95Ms)}"));
+            DnsPanel.Children.Add(Line(resolver.Name, $"{resolver.Successful}/{resolver.Attempts} · median {Ms(resolver.MedianMs)} · p95 {Ms(resolver.P95Ms)}"));
         }
 
         TraceSummaryText.Text = $"{deep.TraceRoute.Hops.Count} hops to {deep.TraceRoute.Target} · {(deep.TraceRoute.ReachedDestination ? "destination reached" : "partial path")}.";
         foreach (var hop in deep.TraceRoute.Hops.Take(40))
         {
             var address = hop.AddressRedacted ? "Private hop" : hop.Address ?? "No reply";
-            var samples = string.Join(" / ", hop.RoundTripsMs.Select(FormatMilliseconds));
-            TracePanel.Children.Add(CompactLine($"{hop.Hop:00}  {address}", $"{hop.Hostname ?? "—"} · {samples}"));
+            TracePanel.Children.Add(Line($"{hop.Hop:00}  {address}", $"{hop.Hostname ?? "—"} · {string.Join(" / ", hop.RoundTripsMs.Select(Ms))}"));
         }
 
         foreach (var endpoint in deep.ServiceEndpoints)
         {
-            ServicesPanel.Children.Add(CompactLine(
-                endpoint.Name,
-                endpoint.Reachable
-                    ? $"DNS {FormatMilliseconds(endpoint.DnsMs)} · TCP {FormatMilliseconds(endpoint.TcpMs)} · TLS {FormatMilliseconds(endpoint.TlsMs)} · {endpoint.ApplicationProtocol ?? endpoint.TlsProtocol ?? "connected"}"
-                    : endpoint.Error ?? "Connection failed"));
+            var detail = endpoint.Reachable
+                ? $"DNS {Ms(endpoint.DnsMs)} · TCP {Ms(endpoint.TcpMs)} · TLS {Ms(endpoint.TlsMs)} · {endpoint.ApplicationProtocol ?? endpoint.TlsProtocol ?? "connected"}"
+                : endpoint.Error ?? "Connection failed";
+            ServicesPanel.Children.Add(Line(endpoint.Name, detail));
         }
     }
 
@@ -355,17 +322,16 @@ public sealed partial class MainWindow : Window
             WifiDetailText.Text = wifi.Error ?? "A wireless interface was found without an active association.";
             return;
         }
-
         WifiTitleText.Text = wifi.Ssid ?? wifi.InterfaceName ?? "Connected Wi-Fi";
-        var details = new List<string>();
-        if (wifi.SignalPercent is not null) details.Add($"{wifi.SignalPercent}% signal");
-        if (wifi.RssiDbm is not null) details.Add($"{wifi.RssiDbm} dBm");
-        if (wifi.Band is not null) details.Add(wifi.Band);
-        if (wifi.Channel is not null) details.Add($"channel {wifi.Channel}");
-        if (wifi.Protocol is not null) details.Add(wifi.Protocol);
-        if (wifi.ReceiveRateMbps is not null) details.Add($"{wifi.ReceiveRateMbps} Mbps receive link");
-        if (wifi.TransmitRateMbps is not null) details.Add($"{wifi.TransmitRateMbps} Mbps transmit link");
-        WifiDetailText.Text = details.Count == 0 ? "Connected; detailed radio fields were unavailable." : string.Join(" · ", details);
+        var parts = new List<string>();
+        if (wifi.SignalPercent is not null) parts.Add($"{wifi.SignalPercent}% signal");
+        if (wifi.RssiDbm is not null) parts.Add($"{wifi.RssiDbm} dBm");
+        if (wifi.Band is not null) parts.Add(wifi.Band);
+        if (wifi.Channel is not null) parts.Add($"channel {wifi.Channel}");
+        if (wifi.Protocol is not null) parts.Add(wifi.Protocol);
+        if (wifi.ReceiveRateMbps is not null) parts.Add($"{wifi.ReceiveRateMbps} Mbps receive link");
+        if (wifi.TransmitRateMbps is not null) parts.Add($"{wifi.TransmitRateMbps} Mbps transmit link");
+        WifiDetailText.Text = parts.Count == 0 ? "Connected; detailed radio fields were unavailable." : string.Join(" · ", parts);
     }
 
     private void RenderRouting(RoutingDetailsReport? routing)
@@ -383,8 +349,7 @@ public sealed partial class MainWindow : Window
             : $"Default via {defaultRoute.InterfaceName ?? "unknown interface"}{(defaultRoute.Gateway is null ? string.Empty : $" · gateway {defaultRoute.Gateway}")}.";
     }
 
-    private NativeTransferPlan CurrentPlan() =>
-        NetworkDiagnosticsRunner.DescribePlan(SelectedProfile(), SelectedMethod());
+    private NativeTransferPlan CurrentPlan() => NetworkDiagnosticsRunner.DescribePlan(SelectedProfile(), SelectedMethod());
 
     private TestProfileId SelectedProfile() => ProfileSelector.SelectedIndex switch
     {
@@ -404,9 +369,7 @@ public sealed partial class MainWindow : Window
     {
         var directory = ReportDirectory();
         Directory.CreateDirectory(directory);
-        var path = Path.Combine(
-            directory,
-            $"network-report-{report.Run.StartedAt:yyyyMMdd-HHmmss}-{report.Run.Profile.ToString().ToLowerInvariant()}-{report.Run.TransferMethod.ToString().ToLowerInvariant()}.json");
+        var path = Path.Combine(directory, $"network-report-{report.Run.StartedAt:yyyyMMdd-HHmmss}-{report.Run.Profile.ToString().ToLowerInvariant()}-{report.Run.TransferMethod.ToString().ToLowerInvariant()}.json");
         await NetworkDiagnosticsJson.WriteAsync(path, report, cancellationToken);
         return path;
     }
@@ -415,10 +378,9 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            var directory = ReportDirectory();
-            Directory.CreateDirectory(directory);
-            var items = Directory.EnumerateFiles(directory, "network-report-*.json")
-                .Select(path => new ReportHistoryItem(path, File.GetLastWriteTime(path)))
+            Directory.CreateDirectory(ReportDirectory());
+            var items = Directory.EnumerateFiles(ReportDirectory(), "network-report-*.json")
+                .Select(path => new ReportItem(path, File.GetLastWriteTime(path)))
                 .OrderByDescending(item => item.Modified)
                 .Take(12)
                 .ToArray();
@@ -435,8 +397,7 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            var source = latestReportPath;
-            if (source is null || !File.Exists(source))
+            if (latestReportPath is null || !File.Exists(latestReportPath))
             {
                 ReportPathText.Text = "No completed report is available to export.";
                 return;
@@ -445,8 +406,8 @@ public sealed partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(documents)) documents = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var directory = Path.Combine(documents, "Network Diagnostics Exports");
             Directory.CreateDirectory(directory);
-            var destination = Path.Combine(directory, Path.GetFileName(source));
-            await using var input = File.OpenRead(source);
+            var destination = Path.Combine(directory, Path.GetFileName(latestReportPath));
+            await using var input = File.OpenRead(latestReportPath);
             await using var output = File.Create(destination);
             await input.CopyToAsync(output);
             ReportPathText.Text = $"Exported copy: {destination}";
@@ -461,9 +422,8 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            var directory = ReportDirectory();
-            Directory.CreateDirectory(directory);
-            Process.Start(new ProcessStartInfo { FileName = directory, UseShellExecute = true });
+            Directory.CreateDirectory(ReportDirectory());
+            Process.Start(new ProcessStartInfo { FileName = ReportDirectory(), UseShellExecute = true });
         }
         catch (Exception error)
         {
@@ -478,10 +438,9 @@ public sealed partial class MainWindow : Window
         return Path.Combine(root, "Network Diagnostics Suite", "Reports");
     }
 
-    private static string ConnectionSequence(IReadOnlyList<TransferStagePlan> stages) =>
-        string.Join(" + ", stages.Select(stage => stage.Connections));
+    private static string JoinConnections(IEnumerable<TransferStagePlan> stages) => string.Join(" + ", stages.Select(stage => stage.Connections));
 
-    private static string DownloadRunLabel(NativeTransferPlan plan)
+    private static string DescribeDownloadRuns(NativeTransferPlan plan)
     {
         if (plan.Profile == TestProfileId.Extended && plan.Method == TransferMethod.Compare) return "5 scaling stages";
         var single = plan.DownloadStages.Where(stage => stage.Strategy == TransferStrategy.Single).Sum(stage => stage.Samples);
@@ -492,46 +451,33 @@ public sealed partial class MainWindow : Window
         return string.Join(" + ", parts);
     }
 
-    private static string FormatBytes(long bytes)
+    private static string IpSupport(NetworkInterfaceReport network)
     {
-        if (bytes >= 1_000_000_000) return $"{bytes / 1_000_000_000d:0.###} GB";
-        if (bytes >= 1_000_000) return $"{bytes / 1_000_000d:0.#} MB";
-        if (bytes >= 1_000) return $"{bytes / 1_000d:0.#} kB";
-        return $"{bytes} B";
+        var values = new List<string>();
+        if (network.SupportsIpv4) values.Add("IPv4");
+        if (network.SupportsIpv6) values.Add("IPv6");
+        return values.Count == 0 ? "IP support unavailable" : string.Join(" + ", values);
     }
 
-    private static string FormatMilliseconds(double? value) => value is null ? "—" : $"{value:0.#} ms";
-
-    private static string InterpretFlowShare(double share) => share switch
+    private static string FormatBytes(long bytes) => bytes switch
     {
-        < 70 => "Parallel transfers used materially more of the measured path.",
-        < 90 => "Parallel transfers improved throughput, but one connection still captured most capacity.",
-        _ => "One connection captured nearly all measured aggregate capacity."
+        >= 1_000_000_000 => $"{bytes / 1_000_000_000d:0.###} GB",
+        >= 1_000_000 => $"{bytes / 1_000_000d:0.#} MB",
+        >= 1_000 => $"{bytes / 1_000d:0.#} kB",
+        _ => $"{bytes} B"
     };
 
-    private static TextBlock MutedText(string text) => new()
-    {
-        Text = text,
-        TextWrapping = TextWrapping.Wrap,
-        Foreground = Brush.Parse("#68645E")
-    };
+    private static string Ms(double? value) => value is null ? "—" : $"{value:0.#} ms";
 
-    private static TextBlock SectionLabel(string text) => new()
-    {
-        Text = text,
-        FontSize = 11,
-        FontWeight = FontWeight.Bold,
-        Foreground = Brush.Parse("#A4553B")
-    };
+    private static TextBlock Muted(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = Brush.Parse("#68645E") };
 
-    private static Border InformationCard(string title, params string[] lines)
+    private static TextBlock Label(string text) => new() { Text = text, FontSize = 11, FontWeight = FontWeight.Bold, Foreground = Brush.Parse("#A4553B") };
+
+    private static Border Card(string title, params string[] lines)
     {
-        var content = new StackPanel { Spacing = 5 };
-        content.Children.Add(new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold });
-        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line)))
-        {
-            content.Children.Add(MutedText(line));
-        }
+        var panel = new StackPanel { Spacing = 5 };
+        panel.Children.Add(new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold });
+        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line))) panel.Children.Add(Muted(line));
         return new Border
         {
             Background = Brush.Parse("#FCFBF8"),
@@ -539,30 +485,28 @@ public sealed partial class MainWindow : Window
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(14),
-            Child = content
+            Child = panel
         };
     }
 
-    private static Border CompactLine(string title, string detail)
+    private static Border Line(string title, string detail)
     {
+        var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
+        var detailText = new TextBlock { Text = detail, Foreground = Brush.Parse("#68645E"), TextWrapping = TextWrapping.Wrap };
+        Grid.SetColumn(detailText, 1);
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("180,*") };
+        grid.Children.Add(titleText);
+        grid.Children.Add(detailText);
         return new Border
         {
             BorderBrush = Brush.Parse("#E2DCD2"),
             BorderThickness = new Thickness(0, 0, 0, 1),
             Padding = new Thickness(0, 6, 0, 8),
-            Child = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("180,*"),
-                Children =
-                {
-                    new TextBlock { Text = title, FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = detail, Grid.ColumnProperty = 1, Foreground = Brush.Parse("#68645E"), TextWrapping = TextWrapping.Wrap }
-                }
-            }
+            Child = grid
         };
     }
 
-    private sealed record ReportHistoryItem(string Path, DateTime Modified)
+    private sealed record ReportItem(string Path, DateTime Modified)
     {
         public override string ToString() => $"{Modified:g}  ·  {System.IO.Path.GetFileName(Path)}";
     }
@@ -581,13 +525,12 @@ public sealed partial class MainWindow : Window
             values[profile.ToString()] = Math.Max(values.GetValueOrDefault(profile.ToString()), cap);
             try
             {
-                var path = SettingsPath();
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, JsonSerializer.Serialize(values));
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath())!);
+                File.WriteAllText(SettingsPath(), JsonSerializer.Serialize(values));
             }
             catch
             {
-                // Confirmation persistence is optional; the dialog will appear again.
+                // Persistence is optional. The confirmation will appear again if writing fails.
             }
         }
 
@@ -595,9 +538,8 @@ public sealed partial class MainWindow : Window
         {
             try
             {
-                var path = SettingsPath();
-                if (!File.Exists(path)) return new Dictionary<string, long>(StringComparer.Ordinal);
-                return JsonSerializer.Deserialize<Dictionary<string, long>>(File.ReadAllText(path))
+                if (!File.Exists(SettingsPath())) return new Dictionary<string, long>(StringComparer.Ordinal);
+                return JsonSerializer.Deserialize<Dictionary<string, long>>(File.ReadAllText(SettingsPath()))
                     ?? new Dictionary<string, long>(StringComparer.Ordinal);
             }
             catch
