@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { formatBytes, formatLatency, formatRate } from "../core/format";
-import type { DeepProbeReport } from "../types/deep-probe";
+import type { DeepProbeReport, NativeCombinedReport } from "../types/deep-probe";
+
+type DisplayProbeReport = DeepProbeReport & { combined?: NativeCombinedReport };
 
 function isDeepProbeReport(value: unknown): value is DeepProbeReport {
   if (typeof value !== "object" || value === null) return false;
@@ -14,6 +16,15 @@ function isDeepProbeReport(value: unknown): value is DeepProbeReport {
     && typeof candidate.internetPing?.statistics === "object";
 }
 
+function isCombinedReport(value: unknown): value is NativeCombinedReport {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<NativeCombinedReport>;
+  return candidate.schemaVersion === "2.0"
+    && typeof candidate.run === "object"
+    && typeof candidate.transferPlan === "object"
+    && isDeepProbeReport(candidate.deepDiagnostics);
+}
+
 function fastestResolver(report: DeepProbeReport) {
   return report.dnsResolvers
     .filter((resolver) => resolver.medianMs !== undefined)
@@ -25,7 +36,7 @@ function sampleText(samples: Array<number | null>): string {
 }
 
 export function DeepProbePanel() {
-  const [report, setReport] = useState<DeepProbeReport | null>(null);
+  const [report, setReport] = useState<DisplayProbeReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,8 +49,13 @@ export function DeepProbePanel() {
     }
     try {
       const parsed: unknown = JSON.parse(await file.text());
-      if (!isDeepProbeReport(parsed)) throw new Error("This is not a supported Network Deep Probe report.");
-      setReport(parsed);
+      if (isDeepProbeReport(parsed)) {
+        setReport(parsed);
+      } else if (isCombinedReport(parsed)) {
+        setReport({ ...parsed.deepDiagnostics, combined: parsed });
+      } else {
+        throw new Error("This is not a supported Network Deep Probe report.");
+      }
     } catch (caught) {
       setReport(null);
       setError(caught instanceof Error ? caught.message : "The report could not be read.");
@@ -66,7 +82,7 @@ export function DeepProbePanel() {
           />
           <label htmlFor="probe-report">Import probe report <span aria-hidden="true">⇧</span></label>
           <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite#native-deep-probe" target="_blank" rel="noreferrer">Get a native build <span aria-hidden="true">↗</span></a>
-          <small>Schema 1.0–1.1 · maximum 5 MB · processed locally</small>
+          <small>Schema 1.0–2.0 · maximum 5 MB · processed locally</small>
           {error && <p role="alert">{error}</p>}
         </div>
       </section>
@@ -74,6 +90,8 @@ export function DeepProbePanel() {
   }
 
   const fastestDns = fastestResolver(report);
+  const combined = report.combined;
+  const transfer = combined?.internetTransfer;
   return (
     <section className="deep-report" id="deep-probe">
       <div className="section-heading section-heading--actions">
@@ -86,6 +104,8 @@ export function DeepProbePanel() {
       </div>
 
       <div className="deep-summary">
+        {transfer && <article><span>Internet download</span><strong>{formatRate(transfer.download.steadyMbps)}<small>Mbps</small></strong><p>{transfer.download.qualification}</p></article>}
+        {transfer && <article><span>Internet upload</span><strong>{formatRate(transfer.upload.steadyMbps)}<small>Mbps</small></strong><p>{transfer.upload.qualification}</p></article>}
         <article><span>ICMP packet loss</span><strong>{report.internetPing.statistics.lossPercent.toFixed(1)}<small>%</small></strong><p>{report.internetPing.statistics.received} of {report.internetPing.statistics.sent} replies</p></article>
         <article><span>Internet latency</span><strong>{formatLatency(report.internetPing.statistics.medianMs)}<small>ms</small></strong><p>{formatLatency(report.internetPing.statistics.jitterMs)} ms jitter</p></article>
         {report.localLink && <article><span>LAN download</span><strong>{formatRate(report.localLink.downloadMbps)}<small>Mbps</small></strong><p>{report.localLink.concurrency} parallel streams</p></article>}
@@ -94,6 +114,55 @@ export function DeepProbePanel() {
         <article><span>Path MTU</span><strong>{report.pathMtu.estimatedIpv4Mtu ?? "—"}<small>bytes</small></strong><p>{report.pathMtu.status}</p></article>
         <article><span>Fastest DNS</span><strong>{formatLatency(fastestDns?.medianMs)}<small>ms</small></strong><p>{fastestDns?.name ?? "No resolver answered"}</p></article>
       </div>
+
+      {combined && transfer && (
+        <section className="report-panel native-transfer-panel">
+          <div className="report-panel__heading">
+            <div><span className="eyebrow">Native Internet transfer</span><h3>{combined.transferPlan.profileName} · {combined.run.transferMethod}</h3></div>
+            <p>First-party transfer stages ran against {transfer.origin} before the operating-system diagnostics.</p>
+          </div>
+          <div className="scope-grid">
+            <article><span>Transfer cap</span><strong>{formatBytes(combined.transferPlan.transferCapBytes)}</strong><p>{combined.transferPlan.estimatedSeconds} second transfer estimate.</p></article>
+            <article><span>Loaded download delay</span><strong>+{formatLatency(transfer.downloadLatency.increaseMs)} ms</strong><p>Grade {transfer.downloadLatency.grade} during the primary download stage.</p></article>
+            <article><span>Loaded upload delay</span><strong>+{formatLatency(transfer.uploadLatency.increaseMs)} ms</strong><p>Grade {transfer.uploadLatency.grade} during the primary upload stage.</p></article>
+            <article><span>Measured data</span><strong>{formatBytes(transfer.dataUsedBytes)}</strong><p>Payload bytes counted by the native transfer engine.</p></article>
+          </div>
+
+          {transfer.flowMeasurements.length > 0 && (
+            <div className="deep-table-wrap">
+              <table className="deep-table">
+                <thead><tr><th>Method</th><th>Connections</th><th>Download</th><th>Upload</th><th>Loaded delay</th></tr></thead>
+                <tbody>{transfer.flowMeasurements.map((measurement) => (
+                  <tr key={measurement.strategy}>
+                    <td>{measurement.strategy}</td>
+                    <td>{measurement.connections}</td>
+                    <td>{measurement.download ? `${formatRate(measurement.download.steadyMbps)} Mbps` : "—"}</td>
+                    <td>{measurement.upload ? `${formatRate(measurement.upload.steadyMbps)} Mbps` : "—"}</td>
+                    <td>{measurement.downloadLatency ? `+${formatLatency(measurement.downloadLatency.increaseMs)} ms down` : "—"}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+
+          {transfer.downloadScaling.length > 2 && (
+            <div className="deep-table-wrap">
+              <table className="deep-table">
+                <thead><tr><th>Download connections</th><th>Steady rate</th><th>Whole phase</th><th>Loaded delay</th><th>Quality</th></tr></thead>
+                <tbody>{transfer.downloadScaling.map((point) => (
+                  <tr key={point.connections}>
+                    <td>{point.connections}</td>
+                    <td>{formatRate(point.download.steadyMbps)} Mbps</td>
+                    <td>{formatRate(point.download.mbps)} Mbps</td>
+                    <td>+{formatLatency(point.downloadLatency.increaseMs)} ms</td>
+                    <td>{point.download.qualification}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {report.localLink && (
         <section className="report-panel local-link-panel">
