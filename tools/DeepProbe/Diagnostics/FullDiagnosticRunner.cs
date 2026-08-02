@@ -11,11 +11,21 @@ internal static class FullDiagnosticRunner
         IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
+        return await RunAsync(options, progress, null, cancellationToken);
+    }
+
+    public static async Task<NetworkDiagnosticsReportV2> RunAsync(
+        ProbeOptions options,
+        IProgress<string>? progress,
+        IProgress<NativeTransferProgress>? detailedTransferProgress,
+        CancellationToken cancellationToken)
+    {
         var startedAt = DateTimeOffset.UtcNow;
         var plan = NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
         var lastStage = string.Empty;
         var transferProgress = new Progress<NativeTransferProgress>(current =>
         {
+            detailedTransferProgress?.Report(current);
             if (current.Stage == lastStage) return;
             lastStage = current.Stage;
             progress?.Report(current.Phase switch
