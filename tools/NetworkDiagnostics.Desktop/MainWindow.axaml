@@ -1,0 +1,224 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NetworkDiagnostics.Desktop.MainWindow"
+        Title="Network Diagnostics Suite"
+        Width="1240"
+        Height="860"
+        MinWidth="940"
+        MinHeight="680"
+        Background="#F5F2EC"
+        Foreground="#171714">
+  <Window.Styles>
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="Foreground" Value="#A4553B" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="1.2" />
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.metricValue">
+      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#68645E" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#FCFBF8" />
+      <Setter Property="BorderBrush" Value="#D8D1C6" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="20" />
+    </Style>
+    <Style Selector="Border.metric">
+      <Setter Property="Background" Value="#FCFBF8" />
+      <Setter Property="BorderBrush" Value="#DED8CE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#A4553B" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="18,11" />
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="#FCFBF8" />
+      <Setter Property="BorderBrush" Value="#BFB7AA" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="14,9" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="MinHeight" Value="42" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="42" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Background="#FCFBF8" BorderBrush="#D8D1C6" BorderThickness="0,0,0,1" Padding="26,18">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3">
+          <TextBlock Classes="eyebrow" Text="JOHNNY LI / NETWORK DIAGNOSTICS" />
+          <TextBlock FontSize="18" FontWeight="SemiBold" Text="Native desktop and deep probe" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Classes="secondary" Content="Export latest" Click="ExportLatestClicked" />
+          <Button Classes="secondary" Content="Reports folder" Click="OpenReportsFolderClicked" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid Margin="26" ColumnDefinitions="440,*">
+        <StackPanel Grid.Column="0" Spacing="18" Margin="0,0,18,0">
+          <StackPanel Spacing="8" Margin="2,4,2,2">
+            <TextBlock Classes="eyebrow" Text="COMPLETE CONNECTION TEST" />
+            <TextBlock FontSize="36" FontWeight="SemiBold" LineHeight="42" Text="Measure the path beyond headline speed." TextWrapping="Wrap" />
+            <TextBlock Classes="muted" FontSize="14" LineHeight="21" Text="Compare single-flow and aggregate Internet capacity, then inspect packet loss, route, DNS, TLS, interfaces, Wi-Fi, routing, and optional LAN isolation." TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Border Classes="card">
+            <StackPanel Spacing="16">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="eyebrow" Text="TEST PROFILE" />
+                <ComboBox x:Name="ProfileSelector" SelectionChanged="PlanSelectionChanged">
+                  <ComboBoxItem Content="Quick" />
+                  <ComboBoxItem Content="Full" />
+                  <ComboBoxItem Content="Stress" />
+                </ComboBox>
+              </StackPanel>
+
+              <StackPanel Spacing="5">
+                <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
+                <ComboBox x:Name="MethodSelector" SelectionChanged="PlanSelectionChanged">
+                  <ComboBoxItem Content="Compare — single and aggregate" />
+                  <ComboBoxItem Content="Single — one connection" />
+                  <ComboBoxItem Content="Aggregate — parallel connections" />
+                </ComboBox>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,*">
+                <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,7,0">
+                  <TextBlock Classes="eyebrow" Text="DIAGNOSTIC TARGET" />
+                  <TextBox x:Name="TargetInput" Text="1.1.1.1" Watermark="Host or IP address" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5" Margin="7,0,0,0">
+                  <TextBlock Classes="eyebrow" Text="OPTIONAL LAN SERVER" />
+                  <TextBox x:Name="LanTargetInput" Watermark="192.168.1.10" />
+                </StackPanel>
+              </Grid>
+
+              <CheckBox x:Name="IncludeAddressesCheck" Content="Include local addresses and Wi-Fi network name in the saved report" />
+
+              <Border Background="#F1ECE4" CornerRadius="8" Padding="15">
+                <StackPanel Spacing="9">
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Estimated time" /><TextBlock x:Name="EstimatedTimeText" Grid.Column="1" FontWeight="SemiBold" /></Grid>
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Transfer cap" /><TextBlock x:Name="TransferCapText" Grid.Column="1" FontWeight="SemiBold" /></Grid>
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Download connections" /><TextBlock x:Name="DownloadConnectionsText" Grid.Column="1" FontWeight="SemiBold" /></Grid>
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Upload connections" /><TextBlock x:Name="UploadConnectionsText" Grid.Column="1" FontWeight="SemiBold" /></Grid>
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Download runs" /><TextBlock x:Name="DownloadRunsText" Grid.Column="1" FontWeight="SemiBold" /></Grid>
+                </StackPanel>
+              </Border>
+
+              <TextBlock x:Name="DataUseText" Classes="muted" TextWrapping="Wrap" />
+
+              <Grid ColumnDefinitions="*,Auto">
+                <Button x:Name="RunButton" Grid.Column="0" Classes="primary" Content="Run diagnostic" Click="RunClicked" />
+                <Button x:Name="StopButton" Grid.Column="1" Classes="secondary" Content="Stop" IsVisible="False" Margin="10,0,0,0" Click="StopClicked" />
+              </Grid>
+
+              <StackPanel Spacing="7">
+                <TextBlock x:Name="StatusText" Text="Ready." FontWeight="SemiBold" />
+                <ProgressBar x:Name="RunProgress" Minimum="0" Maximum="100" Value="0" Height="7" />
+                <TextBlock x:Name="LiveText" Classes="muted" Text="No active measurement." />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="eyebrow" Text="RECENT LOCAL REPORTS" />
+              <ListBox x:Name="HistoryList" MinHeight="110" MaxHeight="190" />
+              <TextBlock x:Name="ReportPathText" Classes="muted" TextWrapping="Wrap" Text="Reports are stored locally after each completed run." />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="18">
+          <Grid ColumnDefinitions="*,*,*,*">
+            <Border Grid.Column="0" Classes="metric" Margin="0,0,6,0">
+              <StackPanel Spacing="5"><TextBlock Classes="eyebrow" Text="DOWNLOAD" /><TextBlock x:Name="DownloadMetric" Classes="metricValue" Text="—" /><TextBlock x:Name="DownloadDetail" Classes="muted" Text="Steady rate" /></StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="metric" Margin="6,0">
+              <StackPanel Spacing="5"><TextBlock Classes="eyebrow" Text="UPLOAD" /><TextBlock x:Name="UploadMetric" Classes="metricValue" Text="—" /><TextBlock x:Name="UploadDetail" Classes="muted" Text="Steady rate" /></StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="metric" Margin="6,0">
+              <StackPanel Spacing="5"><TextBlock Classes="eyebrow" Text="ICMP LOSS" /><TextBlock x:Name="LossMetric" Classes="metricValue" Text="—" /><TextBlock x:Name="LossDetail" Classes="muted" Text="Raw packet loss" /></StackPanel>
+            </Border>
+            <Border Grid.Column="3" Classes="metric" Margin="6,0,0,0">
+              <StackPanel Spacing="5"><TextBlock Classes="eyebrow" Text="LATENCY" /><TextBlock x:Name="LatencyMetric" Classes="metricValue" Text="—" /><TextBlock x:Name="LatencyDetail" Classes="muted" Text="ICMP median" /></StackPanel>
+            </Border>
+          </Grid>
+
+          <TabControl>
+            <TabItem Header="Transfer comparison">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18" Spacing="18">
+                  <StackPanel Spacing="5">
+                    <TextBlock Classes="eyebrow" Text="SINGLE VERSUS AGGREGATE" />
+                    <TextBlock Classes="sectionTitle" Text="Connection scaling" />
+                    <TextBlock Classes="muted" Text="Each stage runs independently against the same first-party origin." TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel x:Name="FlowResultsPanel" Spacing="10">
+                    <TextBlock Classes="muted" Text="Run a diagnostic to compare transfer methods." />
+                  </StackPanel>
+                  <StackPanel x:Name="ScalingResultsPanel" Spacing="8" />
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Deep diagnostics">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18" Spacing="16">
+                  <Grid ColumnDefinitions="*,*">
+                    <Border Grid.Column="0" Classes="card" Margin="0,0,7,0">
+                      <StackPanel Spacing="8"><TextBlock Classes="eyebrow" Text="WI-FI" /><TextBlock x:Name="WifiTitleText" FontSize="18" FontWeight="SemiBold" Text="Not measured" /><TextBlock x:Name="WifiDetailText" Classes="muted" TextWrapping="Wrap" /></StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="card" Margin="7,0,0,0">
+                      <StackPanel Spacing="8"><TextBlock Classes="eyebrow" Text="ROUTING" /><TextBlock x:Name="RoutingTitleText" FontSize="18" FontWeight="SemiBold" Text="Not measured" /><TextBlock x:Name="RoutingDetailText" Classes="muted" TextWrapping="Wrap" /></StackPanel>
+                    </Border>
+                  </Grid>
+                  <Border Classes="card">
+                    <StackPanel Spacing="10"><TextBlock Classes="eyebrow" Text="ACTIVE INTERFACES" /><StackPanel x:Name="InterfacesPanel" Spacing="8"><TextBlock Classes="muted" Text="No interface report loaded." /></StackPanel></StackPanel>
+                  </Border>
+                  <Border Classes="card">
+                    <StackPanel Spacing="10"><TextBlock Classes="eyebrow" Text="ROUTE AND RESOLVERS" /><TextBlock x:Name="RouteSummaryText" Classes="muted" Text="No route report loaded." TextWrapping="Wrap" /><StackPanel x:Name="DnsPanel" Spacing="7" /></StackPanel>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Path and services">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18" Spacing="16">
+                  <Border Classes="card">
+                    <StackPanel Spacing="10"><TextBlock Classes="eyebrow" Text="TRACEROUTE" /><TextBlock x:Name="TraceSummaryText" Classes="muted" Text="No path report loaded." TextWrapping="Wrap" /><StackPanel x:Name="TracePanel" Spacing="6" /></StackPanel>
+                  </Border>
+                  <Border Classes="card">
+                    <StackPanel Spacing="10"><TextBlock Classes="eyebrow" Text="DNS / TCP / TLS" /><StackPanel x:Name="ServicesPanel" Spacing="7"><TextBlock Classes="muted" Text="No service timing report loaded." /></StackPanel></StackPanel>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+          </TabControl>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </Grid>
+</Window>
