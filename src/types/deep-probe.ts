@@ -104,3 +104,72 @@ export interface DeepProbeReport {
   serviceEndpoints: DeepTlsEndpoint[];
   localLink?: DeepLanThroughput;
 }
+
+export interface NativeThroughputSummary {
+  mbps: number;
+  steadyMbps: number;
+  bytes: number;
+  durationMs: number;
+  peakMbps: number;
+  stabilityPercent: number;
+  rampRatio?: number;
+  capReached: boolean;
+  qualification: string;
+}
+
+export interface NativeLoadedLatencyReport {
+  statistics: DeepLatencyStatistics;
+  increaseMs?: number;
+  grade: string;
+}
+
+export interface NativeFlowMeasurement {
+  strategy: "single" | "aggregate";
+  connections: number;
+  download?: NativeThroughputSummary;
+  upload?: NativeThroughputSummary;
+  downloadLatency?: NativeLoadedLatencyReport;
+  uploadLatency?: NativeLoadedLatencyReport;
+}
+
+export interface NativeInternetTransferReport {
+  origin: string;
+  idleLatency: DeepLatencyStatistics;
+  download: NativeThroughputSummary;
+  upload: NativeThroughputSummary;
+  downloadLatency: NativeLoadedLatencyReport;
+  uploadLatency: NativeLoadedLatencyReport;
+  flowMeasurements: NativeFlowMeasurement[];
+  downloadScaling: Array<{
+    connections: number;
+    download: NativeThroughputSummary;
+    downloadLatency: NativeLoadedLatencyReport;
+  }>;
+  dataUsedBytes: number;
+}
+
+export interface NativeCombinedReport {
+  schemaVersion: "2.0";
+  generatedAt: string;
+  run: {
+    id: string;
+    platform: string;
+    architecture: string;
+    profile: "quick" | "standard" | "extended";
+    transferMethod: "compare" | "single" | "aggregate";
+    startedAt: string;
+    completedAt: string;
+    includesLocalAddresses: boolean;
+  };
+  transferPlan: {
+    profile: "quick" | "standard" | "extended";
+    method: "compare" | "single" | "aggregate";
+    profileName: string;
+    estimatedSeconds: number;
+    transferCapBytes: number;
+    includeServices: boolean;
+  };
+  internetTransfer?: NativeInternetTransferReport;
+  deepDiagnostics: DeepProbeReport;
+  localLink?: DeepLanThroughput;
+}
