@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
@@ -376,12 +376,17 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OpenReportsFolderClicked(object? sender, RoutedEventArgs eventArgs)
+    private async void OpenReportsFolderClicked(object? sender, RoutedEventArgs eventArgs)
     {
         try
         {
-            Directory.CreateDirectory(ReportDirectory());
-            Process.Start(new ProcessStartInfo { FileName = ReportDirectory(), UseShellExecute = true });
+            var directory = new DirectoryInfo(ReportDirectory());
+            directory.Create();
+            var launcher = TopLevel.GetTopLevel(this)?.Launcher;
+            if (launcher is null || !await launcher.LaunchDirectoryInfoAsync(directory))
+            {
+                ReportPathText.Text = "Could not open reports folder: the operating system did not accept the request.";
+            }
         }
         catch (Exception error)
         {
