@@ -3,82 +3,93 @@
 [![CI](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
-A privacy-first connection-quality test that reports more than a headline download speed. The browser app measures throughput, latency distributions, jitter, request failures, loaded responsiveness, and common-service reachability. An optional native probe for Windows 11, macOS, and Linux adds operating-system-level packet loss, traceroute, DNS, path MTU, gateway, interface, TCP/TLS diagnostics, and an optional two-machine LAN throughput test that removes the public test server and ISP path.
+A privacy-first connection-quality suite with three clients built around the same measurement model:
 
-The project does not use accounts, cookies, analytics, advertising, telemetry, or a results database. Measurements remain in the current tab unless the user exports them. The primary browser test stays on the project's own Cloudflare deployment rather than sending results to a public speed-test dataset.
+- The **browser application** measures first-party Internet throughput, latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and service reachability.
+- The **native desktop application** adds the same Quick, Full, Stress and Compare, Single, Aggregate test concepts to a cross-platform graphical interface, then combines them with operating-system diagnostics.
+- The **command-line deep probe** preserves scriptable ICMP, traceroute, DNS, path MTU, interface, Wi-Fi, routing, TCP/TLS, and optional two-machine LAN diagnostics.
+
+The project does not use accounts, cookies, analytics, advertising, telemetry, or a project-operated results database. Browser measurements remain in that browser. Native reports are written to the user's computer. The primary transfer path uses the project's own Cloudflare deployment rather than publishing results to a public speed-test dataset.
 
 ## Design system
 
-The browser application consumes Johnny Li Web Design System v1.8.2 from the immutable source recorded in `design-system.lock.json` and `src/design-system/SOURCE.md`. Continuous integration verifies the committed tokens, shared foundations, canonical owned-site registry, Sites-menu controller, compact header-menu shell, generated helpers, conformance contract, and integration evidence against that exact source.
+The browser application consumes Johnny Li Web Design System v1.8.2 from the immutable source recorded in `design-system.lock.json` and `src/design-system/SOURCE.md`. Continuous integration verifies the committed tokens, shared foundations, navigation controllers, conformance contract, and integration evidence against that exact source.
 
-The current production UI is the approved Network Diagnostics baseline. Network-specific hero composition, charts, measurements, test controls, progress states, report layouts, and semantic data encodings remain owned by this repository. The shared controller owns outside-click, Escape, ArrowUp, ArrowDown, Home, End, focus restoration, and compact-navigation disclosure behavior. Shared page-content utilities remain available for future components, but stable application markup does not need to be rewritten solely to adopt shared class names.
-
-Generated conformance reports and visual-audit screenshots are ignored locally.
+The desktop application translates the same approved product hierarchy and restrained terracotta/neutral visual language into native controls. Platform menus, window behavior, focus, keyboard navigation, accessibility, and high-contrast behavior remain owned by the native UI framework rather than reproducing browser markup.
 
 ## What it measures
 
-| Measurement | Browser test | Native deep probe |
-| --- | :---: | :---: |
-| Internet download and upload throughput | Yes | — |
-| Isolated LAN download and upload throughput | — | Yes, with two machines |
-| Mean, median, min, max, and p95 latency | Yes | Yes |
-| Consecutive-sample jitter | Yes | Yes |
-| Idle, download-loaded, and upload-loaded latency | Yes | — |
-| Bufferbloat signal and project-specific grade | Yes | — |
-| Browser request timeout rate | Yes | — |
-| Raw ICMP packet loss | — | Yes |
-| Traceroute with three samples per hop | — | Yes |
-| Default-gateway latency | — | Yes |
-| System, Cloudflare, Google, and Quad9 DNS timing | — | Yes |
-| IPv4 path MTU estimate | — | Yes |
-| DNS, TCP, and TLS connection phases | — | Yes |
-| Interface link speed, MTU, and IP support | — | Yes |
+| Measurement | Browser | Native desktop | Deep-probe CLI |
+| --- | :---: | :---: | :---: |
+| First-party Internet download and upload | Yes | Yes | Opt-in |
+| Quick, Full, and Stress profiles | Yes | Yes | Opt-in |
+| Compare, Single, and Aggregate methods | Yes | Yes | Opt-in |
+| Single-flow and aggregate results | Yes | Yes | Opt-in |
+| Stress 1, 2, 4, 8, and 10 connection scaling | Yes | Yes | Opt-in |
+| Idle and loaded latency | Yes | Yes | With Internet transfer |
+| Mean, median, min, max, p95, and jitter | Yes | Yes | Yes |
+| Browser request loss | Yes | — | — |
+| Raw ICMP packet loss | — | Yes | Yes |
+| Default-gateway latency | — | Yes | Yes |
+| Traceroute with three samples per hop | — | Yes | Yes |
+| DNS resolver timing | — | Yes | Yes |
+| IPv4 path MTU estimate | — | Yes | Yes |
+| DNS, TCP, and TLS connection phases | — | Yes | Yes |
+| Interface link speed, MTU, and IP support | — | Yes | Yes |
+| Wi-Fi signal, channel, band, and link rates | — | When exposed by the OS | When exposed by the OS |
+| Route-table and default-route details | — | When exposed by the OS | When exposed by the OS |
+| Isolated two-machine LAN throughput | — | Optional | Optional |
 
-The distinction is intentional: a browser cannot send arbitrary ICMP packets or run a truthful traceroute. Browser timeouts are therefore labeled **request loss**, never packet loss.
+A browser cannot send arbitrary ICMP packets or run a truthful traceroute. Browser timeouts are therefore labeled **request loss**, never packet loss. Unsupported native fields are reported as unavailable rather than guessed.
 
 ## Test profiles
 
-| Profile | Approx. time | Download cap | Upload cap | Maximum combined transfer | Common-service checks |
+| Profile | Browser base estimate | Download cap | Upload cap | Maximum combined transfer | Service checks |
 | --- | ---: | ---: | ---: | ---: | :---: |
 | Quick | 20 seconds | 600 MB | 128 MB | 728 MB | No |
 | Full | 35 seconds | 900 MB | 256 MB | 1.156 GB | Yes |
-| Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes, with confirmation |
+| Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes |
 
-Caps are ceilings. A slower connection stops at the profile duration and transfers less data. The interface shows each profile's maximum combined transfer in the selector and repeats the selected maximum before a run begins; Full and Stress require an explicit acknowledgment. Avoid these tests on metered or cellular connections unless that data use is acceptable.
+Caps are ceilings. Slower connections stop at the stage duration and transfer less data. Compare can require longer than the browser base estimate because it runs independent single and aggregate stages. Each client calculates and displays the selected plan's actual estimate and transfer ceiling before starting. Full and Stress require an explicit data-use confirmation.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    Browser["React browser app"] --> Assets["Same-origin Cloudflare static speed assets"]
-    Browser --> Worker["Cloudflare Worker ping, upload, and metadata API"]
-    Browser --> Services["Optional reachability targets"]
-    LanServer["Optional LAN test server"] --> Probe["Native deep probe client"]
-    Probe --> Report["Local JSON report"]
+    Contract["Shared profile and report contracts"] --> Browser["React browser app"]
+    Contract --> Core[".NET native core"]
+    Browser --> Assets["Cloudflare static speed assets"]
+    Browser --> Worker["Cloudflare Worker APIs"]
+    Desktop["Avalonia desktop app"] --> Core
+    CLI["Deep-probe CLI"] --> Core
+    Core --> Assets
+    Core --> Worker
+    Core --> OS["ICMP, routes, DNS, MTU, TLS, interfaces, Wi-Fi"]
+    LanServer["Optional LAN server"] --> Core
+    Core --> Report["Local schema 2.0 JSON report"]
+    Report --> Desktop
     Report --> Browser
-    Assets --> Result["In-memory result"]
-    Worker --> Result
-    Services --> Result
 ```
 
-- **React and TypeScript** render the dashboard and run browser measurements.
-- **Cloudflare Workers Static Assets** deliver two deterministic 24 MiB incompressible files directly from the edge for download testing, without invoking the Worker script for matching requests.
+- **React and TypeScript** render the browser dashboard and run browser measurements.
+- **Cloudflare Workers Static Assets** and optional R2 delivery provide deterministic first-party download payloads.
 - **Cloudflare Workers** provide same-origin latency, upload, metadata, and fallback download endpoints.
-- **.NET 10** powers self-contained command-line probes for Windows, macOS, and Linux, including a local TCP throughput server/client mode.
-- Imported deep-probe JSON is read with the browser File API and is not uploaded.
+- **NetworkDiagnostics.Core on .NET 10** owns native planning, Internet transfers, deep diagnostics, platform capability reporting, and report serialization.
+- **Avalonia** provides the Windows, macOS, and Linux desktop host.
+- Imported native JSON is read locally by the browser File API and is not uploaded.
 
 ## Run locally
 
-Requirements: Node.js 24+, npm, and optionally the .NET 10 SDK.
+Requirements: Node.js 24+, npm, and the .NET 10 SDK for native work.
 
 ```bash
 npm install
 npm run worker:dev
 ```
 
-The build creates two ignored deterministic speed payloads under `public/speed/` and copies them into `dist/`. `worker:dev` then starts the Worker-backed local environment. `npm run dev` is useful for UI work and also generates the static payloads, but the dynamic measurement endpoints do not exist in that mode.
+The web build creates ignored deterministic speed payloads under `public/speed/` and copies them into `dist/`. `worker:dev` starts the Worker-backed local environment. `npm run dev` is useful for UI work but does not provide the dynamic measurement endpoints.
 
-Run the automated checks:
+Run the main checks:
 
 ```bash
 npm run design-system:check
@@ -90,110 +101,129 @@ npm run build
 npm run probe:test
 ```
 
-## Native deep probe
-
-Continuous integration builds and smoke-tests five self-contained packages on their matching operating systems:
-
-| Package | Intended system |
-| --- | --- |
-| `win-x64` | Windows 11 on x64 |
-| `osx-arm64` | Apple Silicon Mac |
-| `osx-x64` | Intel Mac |
-| `linux-x64` | 64-bit Intel/AMD Linux using glibc |
-| `linux-arm64` | 64-bit ARM Linux using glibc |
-
-Open the latest successful [CI run](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/ci.yml) to download a 30-day build artifact. Each artifact contains the native binary, license, run/privacy notes, and a SHA-256 checksum.
-
-Build every target locally with the .NET 10 SDK:
+Build all native targets:
 
 ```bash
 npm run probe:build
+npm run desktop:build
 ```
 
-Individual scripts such as `npm run probe:build:mac-arm64` and `npm run probe:build:linux-x64` build just one target.
+Individual scripts such as `npm run probe:build:mac-arm64` and `npm run desktop:build:linux-x64` build one target.
 
-Run it from PowerShell or Windows Terminal on Windows:
+## Native desktop application
+
+Continuous integration publishes these 30-day desktop artifacts:
+
+| Artifact | Intended system |
+| --- | --- |
+| `NetworkDiagnosticsDesktop-win-x64` | Windows 11 x64 |
+| `NetworkDiagnosticsDesktop-osx-arm64` | Apple Silicon macOS |
+| `NetworkDiagnosticsDesktop-osx-x64` | Intel macOS |
+| `NetworkDiagnosticsDesktop-linux-x64` | glibc Linux x64 |
+| `NetworkDiagnosticsDesktop-linux-arm64` | glibc Linux ARM64 |
+
+Each package contains the self-contained binary, license, run/privacy notes, and a SHA-256 checksum. The application provides:
+
+- profile and transfer-method selection;
+- computed time, cap, connection, and run summaries;
+- progress and cancellation;
+- headline transfer, latency, and packet-loss metrics;
+- single-versus-aggregate and Stress scaling results;
+- interface, Wi-Fi, routing, DNS, TLS, MTU, and traceroute views;
+- optional LAN-target testing;
+- the latest 12 local reports and export copies.
+
+Windows:
 
 ```powershell
-.\NetworkDeepProbe.exe
+.\NetworkDiagnosticsDesktop.exe
 ```
 
-Run it from Terminal on macOS or Linux:
+macOS or Linux:
 
 ```bash
-chmod +x NetworkDeepProbe
-./NetworkDeepProbe
+chmod +x NetworkDiagnosticsDesktop
+./NetworkDiagnosticsDesktop
 ```
 
-The initial macOS continuous-integration builds are not Apple-signed or notarized. If macOS blocks the first launch, review the source and checksum, build it locally, or explicitly approve it in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
+The initial macOS CI builds are not Apple-signed or notarized. Review the source and checksum, build locally, or explicitly approve the binary in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
 
-The probe writes a timestamped JSON report to the current directory. Import that report through the web dashboard to render the deep results.
+## Command-line deep probe
+
+CI also builds the scriptable `NetworkDeepProbe` executable for the same five runtime targets. Running it without transfer options preserves the lower-data deep-diagnostics workflow and writes schema 1.2 JSON.
 
 ```text
 NetworkDeepProbe [options]
 
+Deep diagnostics:
   --target <host>       Ping and traceroute target (default: 1.1.1.1)
   --output <file>       JSON report path
   --pings <5-100>       Internet ping count (default: 20)
   --max-hops <5-64>     Traceroute hop limit (default: 30)
-  --include-addresses   Include local IP, gateway, DNS, and private-hop addresses
-  --lan-server          Run a local throughput server until Ctrl+C
-  --lan-target <host>   Test against a second machine running --lan-server
-  --lan-port <port>     LAN test TCP port (default: 8765)
-  --lan-duration <3-30> Seconds per transfer direction (default: 8)
-  --lan-streams <1-16>  Parallel TCP streams (default: 4)
-  --help                Show usage
+  --include-addresses   Include local addresses, routes, and SSID
+
+First-party Internet transfer:
+  --internet-transfer   Add native Internet download/upload measurements
+  --profile <name>      quick, full, or stress
+  --transfer-method <m> compare, single, or aggregate
+  --test-origin <url>   Override the project endpoint origin
+
+Local-link isolation:
+  --lan-server          Run the LAN throughput server until Ctrl+C
+  --lan-target <host>   Test a machine running --lan-server
+  --lan-port <port>     TCP port (default: 8765)
+  --lan-duration <3-30> Seconds per direction (default: 8)
+  --lan-streams <1-16>  Parallel streams (default: 4)
 ```
 
-### Isolate the local network from the Internet path
+`--internet-transfer` emits the combined schema 2.0 report. The default deep-only run emits schema 1.2. The browser importer continues to accept native schemas 1.0, 1.1, 1.2, and 2.0.
 
-A public speed test cannot remove its own server or the route to it. The native probe can separately measure only the local network by using a second machine as a user-controlled endpoint.
+### Isolate the local network
 
-On a preferably wired machine on the same LAN:
+On a preferably wired machine on the same trusted LAN:
 
 ```bash
 ./NetworkDeepProbe --lan-server
 ```
 
-The server prints the local addresses that can be used by the client. On the device being tested:
+On the device being tested:
 
 ```bash
 ./NetworkDeepProbe --lan-target 192.168.1.10
 ```
 
-The resulting JSON contains local download, upload, and TCP response timing in addition to the regular Internet diagnostics. Compare the imported LAN result with the browser Internet result:
+Fast LAN plus slower Internet points away from Wi-Fi or Ethernet as the primary bottleneck. Slow LAN means the local link, device, switch, access point, server, or adapters can be limiting the Internet result. The LAN mode removes the ISP, public transit, and public test server; it does not remove either endpoint machine.
 
-- Fast LAN plus slower Internet points away from Wi-Fi/Ethernet as the primary bottleneck.
-- Slow LAN means the local link, device, switch, access point, or server can be limiting the Internet test.
-- The LAN result still includes both test devices and their network adapters; it removes the public server, ISP, and transit path, not all endpoint effects.
-
-Allow the selected TCP port through the server machine's local firewall only on trusted networks. Stop the server with Ctrl+C when finished.
-
-Private and link-local traceroute hops are redacted by default. Interface addresses, gateway addresses, DNS addresses, public IP, MAC address, hostname, and SSID are also omitted by default. Public transit-hop addresses remain because they are the traceroute result.
+Permit the selected TCP port through the server firewall only on trusted networks and stop the server with Ctrl+C afterward.
 
 ## Privacy and accuracy
 
-The main speed path contacts only the project's same-origin Cloudflare deployment. It does not use M-Lab or publish test records to an external speed-test dataset. This project promises **no application-level retention**, not invisibility on the Internet: Cloudflare necessarily processes the traffic, and the opt-in common-service battery sends one request to each named provider.
+The main speed path contacts only project-operated first-party endpoints. Cloudflare necessarily processes the connection and traffic. Full and Stress service checks also contact the named providers. The project promises no application-level server retention, not invisibility on the Internet.
+
+Native reports hide local interface addresses, gateways, resolver addresses, private route details, hostname, public IP, MAC address, and SSID by default. Enabling local identifiers makes the report sensitive diagnostic material. Public traceroute hops and hardware/interface descriptions can still reveal network context.
 
 See [Privacy model](docs/privacy.md) and [Measurement methodology](docs/methodology.md) for the complete data flow, formulas, grading thresholds, and limitations.
 
 ## Deployment
 
-The recommended production location is `network.johnnyli.dev`, linked from the portfolio at `johnnyli.dev`. GitHub Pages can showcase or link to the project but cannot provide the dynamic upload, ping, and metadata endpoints, so the complete app is deployed as a Cloudflare Worker with bundled static assets.
+The complete browser application is deployed as a Cloudflare Worker with bundled static assets at `network.johnnyli.dev`. GitHub Actions builds and packages native artifacts but does not sign or automatically publish an installer release.
 
-See [Deployment guide](docs/deployment.md) for the exact workflow, custom-domain setup, and production safeguards.
+See [Deployment guide](docs/deployment.md) for Cloudflare configuration and production safeguards.
 
 ## Repository map
 
 ```text
-src/                    React application and browser test engine
-worker/                 Cloudflare Worker measurement endpoints
-scripts/                Deterministic static speed-payload generation
-public/speed/            Generated same-origin download payloads (ignored)
-tools/DeepProbe/        Cross-platform native network probe
-tools/DeepProbe.Tests/  Probe unit tests
-tests/                  Browser and Worker unit tests
-docs/                   Methodology, privacy, and deployment notes
+contracts/                           Shared profile and report contracts
+src/                                 React application and browser test engine
+worker/                              Cloudflare Worker measurement endpoints
+scripts/                             Build, conformance, and asset tooling
+public/speed/                        Generated first-party payloads (ignored)
+tools/NetworkDiagnostics.Core/       Shared native planning and diagnostics
+tools/NetworkDiagnostics.Desktop/    Cross-platform graphical application
+tools/DeepProbe/                     Backward-compatible command-line host
+tools/DeepProbe.Tests/               Native unit and contract tests
+tests/                               Browser and Worker tests
+docs/                                Methodology, privacy, architecture, deployment
 ```
 
 ## License
