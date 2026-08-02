@@ -9,7 +9,8 @@ internal static class ProbeProgram
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public static async Task<int> RunAsync(string[] args)
@@ -55,18 +56,27 @@ internal static class ProbeProgram
 
         Console.WriteLine("Network Deep Probe");
         Console.WriteLine("Local-only collection; public IP, MAC address, hostname, and SSID are omitted.");
+        if (options.IncludeInternetTransfer)
+        {
+            var plan = NetworkDeepProbe.Planning.NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
+            Console.WriteLine($"Internet transfer: {plan.ProfileName} / {plan.Method} / up to {plan.TransferCapBytes:N0} bytes.");
+        }
         Console.WriteLine();
         var progress = new Progress<string>(message => Console.WriteLine($"  • {message}"));
 
         try
         {
-            var report = await ProbeRunner.RunAsync(options, progress, cancellation.Token);
+            object report = options.IncludeInternetTransfer
+                ? await FullDiagnosticRunner.RunAsync(options, progress, cancellation.Token)
+                : await ProbeRunner.RunAsync(options, progress, cancellation.Token);
             var outputPath = Path.GetFullPath(options.OutputPath);
-            var json = JsonSerializer.Serialize(report, JsonOptions);
+            var json = JsonSerializer.Serialize(report, report.GetType(), JsonOptions);
             await File.WriteAllTextAsync(outputPath, json, cancellation.Token);
             Console.WriteLine();
             Console.WriteLine($"Report written to {outputPath}");
-            Console.WriteLine("Import that JSON file into the browser dashboard to view the deep results.");
+            Console.WriteLine(options.IncludeInternetTransfer
+                ? "This schema 2.0 report contains Internet transfer and operating-system diagnostics."
+                : "Import that JSON file into the browser dashboard to view the deep results.");
             return 0;
         }
         catch (OperationCanceledException)
@@ -85,11 +95,18 @@ internal static class ProbeProgram
     {
         Console.WriteLine("NetworkDeepProbe [options]");
         Console.WriteLine();
+        Console.WriteLine("Deep diagnostics:");
         Console.WriteLine("  --target <host>       Ping and traceroute target (default: 1.1.1.1)");
         Console.WriteLine("  --output <file>       JSON report path");
         Console.WriteLine("  --pings <5-100>       Internet ping count (default: 20)");
         Console.WriteLine("  --max-hops <5-64>     Traceroute hop limit (default: 30)");
         Console.WriteLine("  --include-addresses   Include local IP, gateway, and DNS addresses");
+        Console.WriteLine();
+        Console.WriteLine("First-party Internet transfer:");
+        Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
+        Console.WriteLine("  --profile <name>      quick, full, or stress (default: quick)");
+        Console.WriteLine("  --transfer-method <m> compare, single, or aggregate (default: compare)");
+        Console.WriteLine("  --test-origin <url>   Project endpoint origin (default: https://network.johnnyli.dev/)");
         Console.WriteLine();
         Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
         Console.WriteLine("  --lan-server          Run the local throughput server until Ctrl+C");
@@ -100,6 +117,7 @@ internal static class ProbeProgram
         Console.WriteLine();
         Console.WriteLine("  --help                Show this help");
         Console.WriteLine();
+        Console.WriteLine("The default deep-only report remains schema 1.1. --internet-transfer emits schema 2.0.");
         Console.WriteLine("The default report omits hostname, public IP, MAC address, SSID, and local addresses.");
     }
 }
