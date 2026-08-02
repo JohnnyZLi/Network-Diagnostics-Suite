@@ -72,10 +72,6 @@ function compactEstimatedTime(value: string): string {
     .replace(/\s+seconds?$/i, " sec");
 }
 
-function compactTransferCap(bytes: number): string {
-  return formatBytes(bytes).replace(/\.0 (?=[A-Z]+$)/, " ");
-}
-
 export function TestControls({
   mode,
   transferMode,
@@ -91,7 +87,7 @@ export function TestControls({
   const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
   const config = { ...profileConfig, estimatedTime: plan.estimatedTime };
   const transferCap = plan.transferCapBytes;
-  const transferCapLabel = compactTransferCap(transferCap);
+  const transferCapLabel = formatBytes(transferCap);
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
@@ -183,7 +179,7 @@ export function TestControls({
           <div className="test-controls__summary-label">Test limits</div>
           <dl>
             <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
-            <div><dt>Transfer cap</dt><dd>{transferCapLabel}</dd></div>
+            <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
             <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           </dl>
         </div>
