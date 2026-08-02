@@ -96,7 +96,7 @@ internal static class PlatformNetworkDetailsProbe
         var channelText = Get(values, "channel");
         var channel = ParseInteger(channelText?.Split(',')[0]);
         var rssi = ParseInteger(Get(values, "agrCtlRSSI"));
-        var signal = rssi is null ? null : Math.Clamp((rssi.Value + 100) * 2, 0, 100);
+        int? signal = rssi is null ? null : Math.Clamp((rssi.Value + 100) * 2, 0, 100);
         var ssid = Get(values, "SSID");
         var status = string.IsNullOrWhiteSpace(ssid) ? "not-connected" : "available";
 
