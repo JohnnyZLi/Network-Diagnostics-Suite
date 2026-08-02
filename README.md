@@ -112,7 +112,7 @@ Individual scripts such as `npm run probe:build:mac-arm64` and `npm run desktop:
 
 ## Native desktop application
 
-Continuous integration publishes these 30-day desktop artifacts:
+The [Desktop app workflow](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/desktop.yml) publishes these 30-day artifacts when desktop, shared-core, or contract files change:
 
 | Artifact | Intended system |
 | --- | --- |
@@ -150,7 +150,7 @@ The initial macOS CI builds are not Apple-signed or notarized. Review the source
 
 ## Command-line deep probe
 
-CI also builds the scriptable `NetworkDeepProbe` executable for the same five runtime targets. Running it without transfer options preserves the lower-data deep-diagnostics workflow and writes schema 1.2 JSON.
+The [Native probe workflow](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/native-probe.yml) builds the scriptable `NetworkDeepProbe` executable for the same five runtime targets. Running it without transfer options preserves the lower-data deep-diagnostics workflow and writes schema 1.2 JSON.
 
 ```text
 NetworkDeepProbe [options]

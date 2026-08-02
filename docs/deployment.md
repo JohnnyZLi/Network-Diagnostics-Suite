@@ -147,16 +147,20 @@ Signing credentials must be held in protected repository environments or an exte
 
 ## Continuous integration
 
-Pull requests and `main` runs retain all existing gates:
+Component workflows use path filters so unrelated changes do not rebuild all ten native packages:
 
-- design-system drift, integration, and conformance;
-- browser and Worker typechecking, tests, build, and Wrangler dry run;
+- `.github/workflows/ci.yml` validates the browser, Worker, design-system integration, TypeScript, tests, production build, and Wrangler bundle when browser-facing files or shared contracts change.
+- `.github/workflows/native-probe.yml` runs the native test suite and packages the command-line probe when CLI, tests, shared-core, contract, or packaging files change.
+- `.github/workflows/desktop.yml` builds, smoke-tests, and packages the desktop application when desktop, shared-core, deep-diagnostic, contract, or packaging files change.
+
+Contract changes under `contracts/**` trigger all three component workflows. Changes to `tools/NetworkDiagnostics.Core/**` or `tools/DeepProbe/**` trigger both native workflows because both hosts consume that implementation. Each component workflow also supports manual `workflow_dispatch` runs.
+
+Repository-wide gates remain separate and continue to cover:
+
+- design-system conformance;
 - browser UI regression and visual audit;
 - performance baseline;
-- CodeQL and secret scanning;
-- native unit and contract tests;
-- five command-line build/smoke/package jobs;
-- five desktop build/smoke/package jobs.
+- CodeQL and secret scanning.
 
 Deployment, R2 provisioning, signing, notarization, and installer publication remain deliberate manual processes.
 

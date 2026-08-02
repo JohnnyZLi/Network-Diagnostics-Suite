@@ -1,0 +1,111 @@
+name: Desktop app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/desktop.yml"
+      - "contracts/**"
+      - "tools/DeepProbe/**"
+      - "tools/NetworkDiagnostics.Core/**"
+      - "tools/NetworkDiagnostics.Desktop/**"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - "LICENSE"
+  pull_request:
+    paths:
+      - ".github/workflows/desktop.yml"
+      - "contracts/**"
+      - "tools/DeepProbe/**"
+      - "tools/NetworkDiagnostics.Core/**"
+      - "tools/NetworkDiagnostics.Desktop/**"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - "LICENSE"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-app:
+    name: ${{ matrix.label }} desktop
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows 11 x64
+            os: windows-latest
+            rid: win-x64
+            binary: NetworkDiagnosticsDesktop.exe
+            package: zip
+          - label: macOS Apple Silicon
+            os: macos-latest
+            rid: osx-arm64
+            binary: NetworkDiagnosticsDesktop
+            package: tar
+          - label: macOS Intel
+            os: macos-15-intel
+            rid: osx-x64
+            binary: NetworkDiagnosticsDesktop
+            package: tar
+          - label: Linux x64
+            os: ubuntu-latest
+            rid: linux-x64
+            binary: NetworkDiagnosticsDesktop
+            package: tar
+          - label: Linux ARM64
+            os: ubuntu-24.04-arm
+            rid: linux-arm64
+            binary: NetworkDiagnosticsDesktop
+            package: tar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish desktop application
+        run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/desktop-${{ matrix.rid }}/publish
+      - name: Smoke-test desktop bootstrap
+        shell: bash
+        run: artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }} --smoke-test
+      - name: Stage desktop distribution
+        shell: bash
+        run: |
+          package="artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}"
+          mkdir -p "$package"
+          cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$package/${{ matrix.binary }}"
+          cp LICENSE "$package/LICENSE.txt"
+          cp tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md "$package/README.md"
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            chmod +x "$package/${{ matrix.binary }}"
+          fi
+      - name: Package Windows desktop distribution
+        if: matrix.package == 'zip'
+        shell: pwsh
+        run: |
+          $archive = "artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}.zip"
+          Compress-Archive -Path "artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}" -DestinationPath $archive
+          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          "$hash  NetworkDiagnosticsDesktop-${{ matrix.rid }}.zip" | Out-File -Encoding ascii "$archive.sha256"
+      - name: Package Unix desktop distribution
+        if: matrix.package == 'tar'
+        shell: bash
+        run: |
+          archive="artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}.tar.gz"
+          tar -C "artifacts/desktop-${{ matrix.rid }}" -czf "$archive" "NetworkDiagnosticsDesktop-${{ matrix.rid }}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd "artifacts/desktop-${{ matrix.rid }}" && sha256sum "NetworkDiagnosticsDesktop-${{ matrix.rid }}.tar.gz" > "NetworkDiagnosticsDesktop-${{ matrix.rid }}.tar.gz.sha256")
+          else
+            (cd "artifacts/desktop-${{ matrix.rid }}" && shasum -a 256 "NetworkDiagnosticsDesktop-${{ matrix.rid }}.tar.gz" > "NetworkDiagnosticsDesktop-${{ matrix.rid }}.tar.gz.sha256")
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NetworkDiagnosticsDesktop-${{ matrix.rid }}
+          path: artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}.*
+          if-no-files-found: error
+          retention-days: 30
