@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "1.0",
+  "transferMethods": ["compare", "single", "aggregate"],
+  "profiles": [
+    {
+      "id": "quick",
+      "name": "Quick",
+      "estimatedSeconds": 20,
+      "idlePingCount": 12,
+      "pingIntervalMs": 150,
+      "downloadDurationMs": 8000,
+      "downloadCapBytes": 600000000,
+      "downloadSamples": 3,
+      "uploadDurationMs": 8000,
+      "uploadCapBytes": 128000000,
+      "aggregateDownloadConnections": 6,
+      "aggregateUploadConnections": 6,
+      "includeServices": false,
+      "comparison": {
+        "singleDownloadDurationMs": 4000,
+        "singleDownloadCapBytes": 150000000,
+        "singleUploadDurationMs": 0,
+        "singleUploadCapBytes": 0
+      },
+      "downloadScaling": []
+    },
+    {
+      "id": "standard",
+      "name": "Full",
+      "estimatedSeconds": 35,
+      "idlePingCount": 20,
+      "pingIntervalMs": 175,
+      "downloadDurationMs": 12000,
+      "downloadCapBytes": 900000000,
+      "downloadSamples": 3,
+      "uploadDurationMs": 12000,
+      "uploadCapBytes": 256000000,
+      "aggregateDownloadConnections": 8,
+      "aggregateUploadConnections": 8,
+      "includeServices": true,
+      "comparison": {
+        "singleDownloadDurationMs": 6000,
+        "singleDownloadCapBytes": 250000000,
+        "singleUploadDurationMs": 6000,
+        "singleUploadCapBytes": 64000000
+      },
+      "downloadScaling": []
+    },
+    {
+      "id": "extended",
+      "name": "Stress",
+      "estimatedSeconds": 60,
+      "idlePingCount": 30,
+      "pingIntervalMs": 175,
+      "downloadDurationMs": 20000,
+      "downloadCapBytes": 3000000000,
+      "downloadSamples": 3,
+      "uploadDurationMs": 20000,
+      "uploadCapBytes": 512000000,
+      "aggregateDownloadConnections": 10,
+      "aggregateUploadConnections": 8,
+      "includeServices": true,
+      "comparison": {
+        "singleDownloadDurationMs": 4000,
+        "singleDownloadCapBytes": 400000000,
+        "singleUploadDurationMs": 8000,
+        "singleUploadCapBytes": 128000000
+      },
+      "downloadScaling": [
+        { "connections": 1, "durationMs": 4000, "capBytes": 400000000 },
+        { "connections": 2, "durationMs": 4000, "capBytes": 500000000 },
+        { "connections": 4, "durationMs": 4000, "capBytes": 600000000 },
+        { "connections": 8, "durationMs": 4000, "capBytes": 600000000 },
+        { "connections": 10, "durationMs": 8000, "capBytes": 900000000 }
+      ]
+    }
+  ]
+}

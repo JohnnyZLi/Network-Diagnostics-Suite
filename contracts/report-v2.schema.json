@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://network.johnnyli.dev/contracts/report-v2.schema.json",
+  "title": "Network Diagnostics Suite report",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "run"],
+  "properties": {
+    "schemaVersion": { "const": "2.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "run": {
+      "type": "object",
+      "required": ["id", "platform", "profile", "transferMethod", "startedAt", "completedAt"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 },
+        "architecture": { "type": ["string", "null"] },
+        "profile": { "enum": ["quick", "standard", "extended"] },
+        "transferMethod": { "enum": ["compare", "single", "aggregate"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "includesLocalAddresses": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "transferPlan": {
+      "type": "object",
+      "properties": {
+        "estimatedSeconds": { "type": "integer", "minimum": 0 },
+        "transferCapBytes": { "type": "integer", "minimum": 0 },
+        "downloadStages": { "$ref": "#/$defs/stages" },
+        "uploadStages": { "$ref": "#/$defs/stages" }
+      },
+      "additionalProperties": true
+    },
+    "internetTransfer": { "type": ["object", "null"], "additionalProperties": true },
+    "deepDiagnostics": { "type": ["object", "null"], "additionalProperties": true },
+    "localLink": { "type": ["object", "null"], "additionalProperties": true }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "required": ["id", "strategy", "direction", "connections", "durationMs", "capBytes"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "strategy": { "enum": ["single", "aggregate"] },
+        "direction": { "enum": ["download", "upload"] },
+        "connections": { "type": "integer", "minimum": 1 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "capBytes": { "type": "integer", "minimum": 0 },
+        "samples": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "additionalProperties": true
+}
