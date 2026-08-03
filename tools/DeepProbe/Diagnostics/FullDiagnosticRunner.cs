@@ -22,6 +22,16 @@ internal static class FullDiagnosticRunner
     {
         var startedAt = DateTimeOffset.UtcNow;
         var plan = NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
+
+        progress?.Report("Selecting the measurement endpoint");
+        var endpointSelection = await EndpointSelector.SelectAsync(
+            [MeasurementEndpointCatalog.FromOrigin(options.TestOrigin)],
+            cancellationToken);
+        var measurement = EndpointSelector.CreateContext(
+            endpointSelection,
+            "network-diagnostics-native",
+            Capabilities(options));
+
         var lastStage = string.Empty;
         var transferProgress = new Progress<NativeTransferProgress>(current =>
         {
@@ -40,13 +50,18 @@ internal static class FullDiagnosticRunner
 
         var internetTransfer = await InternetTransferProbe.RunAsync(
             plan,
-            options.TestOrigin,
+            endpointSelection.Selected.Origin,
             transferProgress,
             cancellationToken);
-        var deepDiagnostics = await ProbeRunner.RunAsync(options, progress, cancellationToken);
-        var completedAt = DateTimeOffset.UtcNow;
 
-        return new NetworkDiagnosticsReportV2(
+        DeepProbeReport? deepDiagnostics = null;
+        if (options.Profile is TestProfileId.Standard or TestProfileId.Extended)
+        {
+            deepDiagnostics = await ProbeRunner.RunAsync(options, progress, cancellationToken);
+        }
+
+        var completedAt = DateTimeOffset.UtcNow;
+        var report = new NetworkDiagnosticsReportV2(
             "2.0",
             completedAt,
             new DiagnosticRunMetadata(
@@ -61,6 +76,32 @@ internal static class FullDiagnosticRunner
             NativeTransferPlanReport.FromPlan(plan),
             internetTransfer,
             deepDiagnostics,
-            deepDiagnostics.LocalLink);
+            deepDiagnostics?.LocalLink,
+            null,
+            measurement,
+            null);
+
+        return report with { Findings = DiagnosticClassifier.Classify(report) };
+    }
+
+    private static IEnumerable<string> Capabilities(ProbeOptions options)
+    {
+        yield return "http-latency";
+        yield return "download-throughput";
+        yield return "upload-throughput";
+        yield return "loaded-latency";
+
+        if (options.Profile is not (TestProfileId.Standard or TestProfileId.Extended)) yield break;
+
+        yield return "network-interfaces";
+        yield return "gateway-latency";
+        yield return "icmp-latency";
+        yield return "traceroute";
+        yield return "dns-resolvers";
+        yield return "path-mtu";
+        yield return "service-reachability";
+        yield return "wifi-details";
+        yield return "routing-details";
+        if (options.LanTarget is not null) yield return "local-link-throughput";
     }
 }
