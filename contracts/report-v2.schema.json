@@ -66,6 +66,39 @@
     "findings": {
       "type": "array",
       "items": { "$ref": "#/$defs/finding" }
+    },
+    "browserEvidence": {
+      "type": ["object", "null"],
+      "properties": {
+        "edge": {
+          "type": ["object", "null"],
+          "properties": {
+            "edge": { "type": ["string", "null"] },
+            "network": { "type": ["string", "null"] },
+            "asn": { "type": ["integer", "null"], "minimum": 0 },
+            "protocol": { "type": ["string", "null"] },
+            "tlsVersion": { "type": ["string", "null"] },
+            "ipVersion": { "type": ["string", "null"] }
+          },
+          "additionalProperties": true
+        },
+        "serviceChecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "reachable"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "reachable": { "type": "boolean" },
+              "durationMs": { "type": ["number", "null"], "minimum": 0 },
+              "note": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
     }
   },
   "$defs": {
