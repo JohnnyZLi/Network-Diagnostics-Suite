@@ -128,4 +128,7 @@ public sealed record NetworkDiagnosticsReportV2(
     NativeTransferPlanReport TransferPlan,
     NativeInternetTransferReport? InternetTransfer,
     DeepProbeReport? DeepDiagnostics,
-    LanThroughputReport? LocalLink);
+    LanThroughputReport? LocalLink,
+    ReportProducer? Producer = null,
+    MeasurementContextReport? Measurement = null,
+    IReadOnlyList<DiagnosticFinding>? Findings = null);

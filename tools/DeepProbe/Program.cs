@@ -1,6 +1,8 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NetworkDeepProbe.Diagnostics;
+using NetworkDeepProbe.Models;
 
 return await ProbeProgram.RunAsync(args);
 
@@ -69,13 +71,22 @@ internal static class ProbeProgram
             object report = options.IncludeInternetTransfer
                 ? await FullDiagnosticRunner.RunAsync(options, progress, cancellation.Token)
                 : await ProbeRunner.RunAsync(options, progress, cancellation.Token);
+            if (report is NetworkDiagnosticsReportV2 schemaTwo)
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
+                report = schemaTwo with
+                {
+                    Producer = new ReportProducer("cli", version, "network-diagnostics-native")
+                };
+            }
+
             var outputPath = Path.GetFullPath(options.OutputPath);
             var json = JsonSerializer.Serialize(report, report.GetType(), JsonOptions);
             await File.WriteAllTextAsync(outputPath, json, cancellation.Token);
             Console.WriteLine();
             Console.WriteLine($"Report written to {outputPath}");
             Console.WriteLine(options.IncludeInternetTransfer
-                ? "This schema 2.0 report contains Internet transfer and operating-system diagnostics."
+                ? "This schema 2.0 report contains profile-appropriate native measurements and findings."
                 : "Import that schema 1.2 JSON file into the browser dashboard to view the deep results.");
             return 0;
         }

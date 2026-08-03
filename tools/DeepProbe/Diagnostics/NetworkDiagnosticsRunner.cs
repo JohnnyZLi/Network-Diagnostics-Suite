@@ -16,7 +16,9 @@ public sealed record NativeDiagnosticRunOptions(
     string? LanTarget = null,
     int LanPort = 8765,
     int LanDurationSeconds = 8,
-    int LanConnections = 4);
+    int LanConnections = 4,
+    string ProducerApplication = "desktop",
+    string? ProducerVersion = null);
 
 public sealed record NativeRunProgress(
     string Phase,
@@ -70,11 +72,18 @@ public static class NetworkDiagnosticsRunner
                 current.LiveLatencyMs,
                 current.BytesTransferred)));
 
-        return await FullDiagnosticRunner.RunAsync(
+        var report = await FullDiagnosticRunner.RunAsync(
             probeOptions,
             messageProgress,
             transferProgress,
             cancellationToken);
+        return report with
+        {
+            Producer = new ReportProducer(
+                options.ProducerApplication,
+                options.ProducerVersion,
+                "network-diagnostics-native")
+        };
     }
 
     private static string ProgressMessage(NativeTransferProgress progress) => progress.Phase switch
@@ -95,6 +104,7 @@ public static class NetworkDiagnosticsRunner
         if (options.LanPort is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(options), "LAN port must be between 1024 and 65535.");
         if (options.LanDurationSeconds is < 3 or > 30) throw new ArgumentOutOfRangeException(nameof(options), "LAN duration must be between 3 and 30 seconds.");
         if (options.LanConnections is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "LAN connections must be between 1 and 16.");
+        if (string.IsNullOrWhiteSpace(options.ProducerApplication)) throw new ArgumentException("A producer application is required.", nameof(options));
     }
 }
 
@@ -103,12 +113,33 @@ public static class NetworkDiagnosticsJson
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public static string Serialize(NetworkDiagnosticsReportV2 report) =>
         JsonSerializer.Serialize(report, Options);
+
+    public static NetworkDiagnosticsReportV2 Deserialize(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        var report = JsonSerializer.Deserialize<NetworkDiagnosticsReportV2>(json, Options)
+            ?? throw new InvalidDataException("The report JSON did not contain a schema 2.0 report.");
+        if (!string.Equals(report.SchemaVersion, "2.0", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"Unsupported report schema '{report.SchemaVersion}'.");
+        }
+        return report;
+    }
+
+    public static async Task<NetworkDiagnosticsReportV2> ReadAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Deserialize(await File.ReadAllTextAsync(path, cancellationToken));
+    }
 
     public static async Task WriteAsync(
         string path,
