@@ -11,9 +11,22 @@ public sealed class ProbeOptionsTransferTests
         var options = ProbeOptions.Parse([]);
 
         Assert.False(options.IncludeInternetTransfer);
-        Assert.Equal(TestProfileId.Quick, options.Profile);
+        Assert.Equal(TestProfileId.ConnectionCheck, options.Profile);
         Assert.Equal(TransferMethod.Compare, options.TransferMethod);
         Assert.Equal(InternetTransferProbe.DefaultOrigin, options.TestOrigin);
+    }
+
+    [Theory]
+    [InlineData("connection-check", TestProfileId.ConnectionCheck)]
+    [InlineData("quick", TestProfileId.Quick)]
+    [InlineData("full", TestProfileId.Standard)]
+    [InlineData("stress", TestProfileId.Extended)]
+    public void ParsesAllNativeProfiles(string value, TestProfileId expected)
+    {
+        var options = ProbeOptions.Parse(["--internet-transfer", "--profile", value]);
+
+        Assert.True(options.IncludeInternetTransfer);
+        Assert.Equal(expected, options.Profile);
     }
 
     [Fact]
