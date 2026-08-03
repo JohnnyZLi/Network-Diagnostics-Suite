@@ -16,15 +16,20 @@ public static class DiagnosticReportPresenter
             .OrderByDescending(item => SeverityRank(item.Severity))
             .ToArray();
         var hasMeasurements = report.InternetTransfer is not null || report.DeepDiagnostics is not null;
+        var hasSectionFailure = findings.Any(item => item.Id == "deep-diagnostics-failed");
         var outcome = !hasMeasurements
             ? ConnectionCheckOutcome.Unavailable
-            : actionable.Length == 0
-                ? ConnectionCheckOutcome.Healthy
-                : actionable.All(item => item.Confidence == "low")
-                    ? ConnectionCheckOutcome.Inconclusive
-                    : ConnectionCheckOutcome.Problematic;
+            : hasSectionFailure
+                ? ConnectionCheckOutcome.Inconclusive
+                : actionable.Length == 0
+                    ? ConnectionCheckOutcome.Healthy
+                    : actionable.All(item => item.Confidence == "low")
+                        ? ConnectionCheckOutcome.Inconclusive
+                        : ConnectionCheckOutcome.Problematic;
         var profileName = ProfileName(report.Run.Profile);
-        var primary = actionable.FirstOrDefault() ?? findings.FirstOrDefault();
+        var primary = hasSectionFailure
+            ? findings.First(item => item.Id == "deep-diagnostics-failed")
+            : actionable.FirstOrDefault() ?? findings.FirstOrDefault();
 
         var label = outcome switch
         {
@@ -32,7 +37,7 @@ public static class DiagnosticReportPresenter
             ConnectionCheckOutcome.Problematic => actionable.Any(item => item.Severity == "critical")
                 ? "Significant problem detected"
                 : "Problem detected",
-            ConnectionCheckOutcome.Inconclusive => "Result is inconclusive",
+            ConnectionCheckOutcome.Inconclusive => hasSectionFailure ? "Completed with partial evidence" : "Result is inconclusive",
             ConnectionCheckOutcome.Unavailable => "Partially measured",
             _ => "Test did not complete"
         };
@@ -40,6 +45,7 @@ public static class DiagnosticReportPresenter
         {
             ConnectionCheckOutcome.Healthy => $"{profileName} completed without an obvious problem.",
             ConnectionCheckOutcome.Problematic => $"{profileName} found evidence worth investigating.",
+            ConnectionCheckOutcome.Inconclusive when hasSectionFailure => $"{profileName} preserved its completed Internet measurements.",
             ConnectionCheckOutcome.Inconclusive => $"{profileName} found a weak or inconsistent signal.",
             ConnectionCheckOutcome.Unavailable => $"{profileName} did not contain supported performance measurements.",
             _ => $"{profileName} could not finish."
@@ -51,7 +57,7 @@ public static class DiagnosticReportPresenter
                 ? NextHealthyAction(report.Run.Profile)
                 : "Repeat the same profile once and compare the saved reports.");
 
-        var presentedFindings = (actionable.Length > 0 ? actionable : findings.Take(3).ToArray())
+        var presentedFindings = (actionable.Length > 0 && !hasSectionFailure ? actionable : findings.Take(3).ToArray())
             .Select(item => new FindingPresentation(
                 item.Category.Replace('-', ' '),
                 item.Title,
