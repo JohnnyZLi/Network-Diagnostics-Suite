@@ -1,26 +1,25 @@
 # Network Diagnostics Desktop
 
-This archive contains the graphical native application for Network Diagnostics Suite. It uses the same .NET core as the command-line deep probe and adds profile-driven first-party Internet transfer testing, operating-system diagnostics, local report history, and optional two-machine LAN isolation.
+This archive contains the native graphical application for Network Diagnostics Suite. It shares its diagnostic engine and schema 2.0 report contract with the command-line deep probe.
 
 The application is self-contained; the .NET runtime does not need to be installed.
 
-## Included test controls
+## Diagnostic profiles
 
-- Quick, Full, and Stress profiles
-- Compare, Single, and Aggregate transfer methods
-- separate download and upload connection plans
-- transfer-cap and estimated-time summaries
-- single-versus-aggregate result comparison
-- Stress download scaling across 1, 2, 4, 8, and 10 connections
-- optional LAN target and local-address disclosure
+- **Connection Check** — lightweight first-party reachability, latency, request-loss, download, and upload measurement.
+- **Quick** — broader single-versus-aggregate throughput and loaded-responsiveness evidence.
+- **Full** — Internet measurements plus operating-system local-network, route, resolver, service, Wi-Fi, and path evidence.
+- **Stress** — sustained load and progressive connection scaling plus the Full diagnostic evidence set.
 
-Full and Stress can transfer substantial data. The application shows the current transfer ceiling and requires confirmation before those profiles run.
+Full and Stress can transfer substantial data. The application shows the current transfer ceiling and requires confirmation before those profiles run. Remembered approval applies only to the current ceiling; a future increase asks again.
 
-## Native diagnostics
+## Reports and privacy
 
-The application also reports raw ICMP packet loss, default-gateway latency, traceroute, DNS resolver timing, path MTU, DNS/TCP/TLS connection phases, interfaces, platform Wi-Fi details, route-table details, and optional two-machine LAN throughput. Unsupported or permission-restricted platform fields are shown as unavailable rather than inferred.
+Completed reports are saved under the operating system's local application-data directory. History can reopen saved reports through the same renderer used for live results. Schema 2.0 JSON reports can also be imported or exported.
 
-SSID, local addresses, gateways, and resolver addresses remain hidden from saved reports unless the user explicitly enables local identifiers.
+The reader ignores unknown optional fields. Native sections absent from a website report are treated as **Not measured**, not failures.
+
+SSID, local addresses, gateways, and resolver addresses remain hidden from saved reports unless the user explicitly enables local identifiers in Settings. A custom measurement endpoint can be configured under Advanced settings.
 
 ## Run
 
@@ -30,15 +29,17 @@ Windows:
 .\NetworkDiagnosticsDesktop.exe
 ```
 
-macOS or Linux:
+Linux:
 
 ```bash
 chmod +x NetworkDiagnosticsDesktop
 ./NetworkDiagnosticsDesktop
 ```
 
-Reports are saved under the operating system's local application-data directory. The application can open that folder or copy the latest report into the user's Documents folder.
+macOS packages contain **Network Diagnostics.app**. Move it to Applications or open it from the extracted folder.
 
-## macOS notice
+## macOS signing status
 
-The initial CI packages are not Apple-signed or notarized. Review the source and checksum, build locally, or explicitly approve the application in **System Settings → Privacy & Security** if you trust it. Do not disable Gatekeeper globally.
+Pull-request and ordinary CI artifacts are bundled as proper macOS applications but are not signed or notarized. macOS may therefore require explicit approval through **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
+
+Release signing and notarization require an Apple Developer ID certificate and notarization credentials configured as repository secrets. Once those credentials are available, the release workflow can produce a notarized distribution without the warning.
