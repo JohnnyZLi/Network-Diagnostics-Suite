@@ -460,8 +460,7 @@
                 <TextBlock Classes="eyebrow" Text="REPORT PRIVACY" />
                 <CheckBox Name="IncludeIdentifiersCheckBox"
                           Content="Include local addresses and Wi-Fi network name"
-                          Checked="IncludeIdentifiersChanged"
-                          Unchecked="IncludeIdentifiersChanged" />
+                          Click="IncludeIdentifiersChanged" />
                 <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Off by default. Public reports should normally keep local identifiers excluded." TextWrapping="Wrap" />
               </StackPanel>
 
@@ -470,7 +469,7 @@
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="ADVANCED ENDPOINT" />
                 <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Leave blank to use the default first-party measurement endpoint. Overrides must expose the same ping and transfer routes." TextWrapping="Wrap" />
-                <TextBox Name="TestOriginTextBox" Watermark="https://network.johnnyli.dev/" />
+                <TextBox Name="TestOriginTextBox" PlaceholderText="https://network.johnnyli.dev/" />
                 <Button Classes="secondary" Content="Save endpoint setting" Click="SaveAdvancedSettingsClicked" />
               </StackPanel>
 
