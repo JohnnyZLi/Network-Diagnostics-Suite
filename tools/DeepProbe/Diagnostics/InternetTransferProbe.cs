@@ -346,7 +346,7 @@ public static class InternetTransferProbe
 
         void AddBytes(int count)
         {
-            var total = Interlocked.Add(ref bytes, count);
+            var total = AddCapped(ref bytes, count, capBytes);
             if (total >= capBytes && Interlocked.Exchange(ref capReached, 1) == 0)
             {
                 phase.Cancel();
@@ -457,7 +457,7 @@ public static class InternetTransferProbe
 
         void AddBytes(int count)
         {
-            var total = Interlocked.Add(ref transferredBytes, count);
+            var total = AddCapped(ref transferredBytes, count, stage.CapBytes);
             if (total >= stage.CapBytes && Interlocked.Exchange(ref capReached, 1) == 0)
             {
                 phase.Cancel();
@@ -564,6 +564,18 @@ public static class InternetTransferProbe
             }
             lastBytes = total;
             lastTimestamp = now;
+        }
+    }
+
+    private static long AddCapped(ref long totalBytes, int count, long capBytes)
+    {
+        while (true)
+        {
+            var current = Interlocked.Read(ref totalBytes);
+            if (current >= capBytes) return current;
+            var accepted = Math.Min(count, capBytes - current);
+            var next = current + accepted;
+            if (Interlocked.CompareExchange(ref totalBytes, next, current) == current) return next;
         }
     }
 

@@ -8,11 +8,19 @@ The browser, desktop application, and opt-in CLI Internet-transfer mode consume 
 
 Profiles define idle-sample counts, transfer durations, byte ceilings, download sample counts, aggregate connection counts, service checks, comparison allocations, and Stress scaling stages. Transfer methods produce ordered stages:
 
-- **Compare:** independent single and aggregate stages. Quick compares download and then runs aggregate upload. Full compares both directions. Stress runs 1, 2, 4, 8, and 10 connection download stages, followed by single and aggregate upload.
+- **Compare:** independent single and aggregate stages. Connection Check (the backward-compatible `quick` identifier) compares download and then runs aggregate upload. Full compares both directions. Stress runs 1, 2, 4, 8, and 10 connection download stages, followed by single and aggregate upload.
 - **Single:** one connection in each direction using the profile's full configured duration and cap.
 - **Aggregate:** the profile's parallel connection count in each direction using the full configured duration and cap.
 
 Every method preserves the selected profile's maximum combined transfer ceiling. The displayed estimated time is the larger of the profile base estimate and the sum of idle, transfer, service-check, and fixed-overhead allowances rounded to five seconds.
+
+Connection Check is the low-data triage path: eight idle samples, short two-connection transfer stages, one download sample, no service battery, and a 28 MB combined transfer ceiling. A cap-limited result is explicitly labeled as measurement context rather than presented as a peak-capacity claim.
+
+## Engines and endpoint selection
+
+Every combined report identifies the measurement engine, engine version, capabilities actually available to it, the selected endpoint, and every endpoint preflight result. The browser currently has one authorized first-party endpoint and records it explicitly. Native clients accept repeated `--test-origin` candidates, probe each twice, reject unavailable origins, and select the lowest median preflight latency.
+
+This is an endpoint abstraction, not a claim of provider independence. The production catalog remains single-provider until an independently operated endpoint passes the deployment gates in `docs/validation-and-release-gates.md`.
 
 ## Browser measurements
 
@@ -24,7 +32,7 @@ Timed-out or failed requests divided by attempts are reported as **request loss*
 
 ### Browser download delivery
 
-Automatic mode probes the deterministic incompressible R2 object on `speed.johnnyli.dev`, prefers direct range requests, and falls back to the Worker stream if validation fails. The explicit R2 and Worker paths remain available for comparison.
+Automatic mode probes the deterministic incompressible R2 object on `speed.johnnyli.dev`, prefers direct range requests, and falls back to the Worker stream if validation fails. The explicit R2 and Worker paths remain available for Full and Stress comparison. Connection Check uses the first-party Worker stream and skips the transfer warm-up so it stays inside its low-data ceiling.
 
 The browser records direct and fallback requests, cache evidence, response validation failures, request generations, warm-up bytes, started/completed/interrupted requests, replacements, and Resource Timing protocols where cross-origin timing permission is available.
 
@@ -105,6 +113,21 @@ parallel gain = (aggregate steady Mbps ÷ single steady Mbps - 1) × 100
 
 A lower single share means parallel transfers used materially more of the measured path. It does not identify the cause. TCP congestion control, endpoint limits, routing, packet loss, radio conditions, security software, CPU load, and server behavior can all affect a single flow.
 
+## Evidence-backed interpretation
+
+`contracts/diagnostic-rules.v1.json` is the canonical interpretation contract for browser and native combined reports. It defines visible thresholds for application request loss, idle latency and jitter, loaded delay, single-flow share, throughput stability, gateway/public-path separation, resolver latency, Wi-Fi signal, and optional LAN comparison.
+
+Each emitted finding contains:
+
+- a stable identifier and category;
+- severity and confidence;
+- a bounded summary that distinguishes evidence from inference;
+- the exact metrics and rendered values that triggered it;
+- one or more recommendations;
+- an optional next test that can increase confidence.
+
+There is deliberately no composite health score. A score would conceal which scope was measured, turn unlike units into a false universal ranking, and imply precision the current endpoint and sample coverage cannot support.
+
 ## Native operating-system diagnostics
 
 ### ICMP latency and packet loss
@@ -163,7 +186,7 @@ This removes the ISP, public transit, and public test platform. It does not remo
 
 - **1.0 and 1.1:** historical native deep-probe formats.
 - **1.2:** additive deep-probe format with optional Wi-Fi and routing details.
-- **2.0:** combined envelope containing run metadata, transfer plan, native Internet transfer, deep diagnostics, and optional LAN result.
+- **2.0:** additive combined envelope containing run metadata, transfer plan, engine/endpoint context, evidence-backed findings, native Internet transfer, deep diagnostics, and optional LAN result.
 
 The browser importer accepts all four versions. Missing optional sections mean that scope was not run or was unavailable.
 

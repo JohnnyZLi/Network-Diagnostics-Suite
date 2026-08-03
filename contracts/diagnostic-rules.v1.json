@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "applicationLatency": {
+    "requestLossWarningPercent": 0.1,
+    "requestLossCriticalPercent": 5,
+    "idleMedianWarningMs": 80,
+    "idleJitterWarningMs": 20
+  },
+  "loadedLatency": {
+    "warningIncreaseMs": 40,
+    "criticalIncreaseMs": 100
+  },
+  "throughput": {
+    "singleFlowShareWarningPercent": 70,
+    "minimumAggregateMbpsForFlowComparison": 10,
+    "stabilityWarningPercent": 70
+  },
+  "localDiagnostics": {
+    "healthyGatewayMedianMs": 25,
+    "highInternetMedianMs": 80,
+    "slowDnsMedianMs": 100,
+    "weakWifiSignalPercent": 50,
+    "localLinkShareWarningPercent": 75
+  }
+}

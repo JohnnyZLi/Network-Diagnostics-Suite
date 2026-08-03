@@ -112,7 +112,7 @@ function comparePlan(config: TestModeConfig): Pick<DiagnosticTestPlan, "download
       : String(config.uploadConcurrency),
     sampleLabel: `1 single + ${config.downloadSamples} parallel`,
     methodDescription: config.id === "quick"
-      ? "Compares single and parallel download speed, then tests parallel upload."
+      ? "Samples one and two-connection content delivery, then checks upload responsiveness."
       : "Compares single and parallel speed in both directions."
   };
 }

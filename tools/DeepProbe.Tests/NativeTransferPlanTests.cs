@@ -5,15 +5,16 @@ namespace NetworkDeepProbe.Tests;
 public sealed class NativeTransferPlanTests
 {
     [Fact]
-    public void QuickCompareMatchesTheBrowserPlan()
+    public void ConnectionCheckMatchesTheLightweightBrowserPlan()
     {
         var plan = NativeTransferPlanBuilder.Build(TestProfileId.Quick, TransferMethod.Compare);
 
-        Assert.Equal(728_000_000, plan.TransferCapBytes);
-        Assert.Equal(25, plan.EstimatedSeconds);
-        Assert.Equal([1, 6], plan.DownloadStages.Select(stage => stage.Connections));
-        Assert.Equal([6], plan.UploadStages.Select(stage => stage.Connections));
-        Assert.Equal(3, plan.DownloadStages[1].Samples);
+        Assert.Equal("Connection Check", plan.ProfileName);
+        Assert.Equal(28_000_000, plan.TransferCapBytes);
+        Assert.Equal(15, plan.EstimatedSeconds);
+        Assert.Equal([1, 2], plan.DownloadStages.Select(stage => stage.Connections));
+        Assert.Equal([2], plan.UploadStages.Select(stage => stage.Connections));
+        Assert.Equal(1, plan.DownloadStages[1].Samples);
     }
 
     [Fact]

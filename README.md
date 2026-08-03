@@ -6,7 +6,7 @@
 A privacy-first connection-quality suite with three clients built around the same measurement model:
 
 - The **browser application** measures first-party Internet throughput, latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, and service reachability.
-- The **native desktop application** adds the same Quick, Full, Stress and Compare, Single, Aggregate test concepts to a cross-platform graphical interface, then combines them with operating-system diagnostics.
+- The **native desktop application** adds the same Connection Check, Full, Stress and Compare, Single, Aggregate test concepts to a cross-platform graphical interface, then combines them with operating-system diagnostics.
 - The **command-line deep probe** preserves scriptable ICMP, traceroute, DNS, path MTU, interface, Wi-Fi, routing, TCP/TLS, and optional two-machine LAN diagnostics.
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a project-operated results database. Browser measurements remain in that browser. Native reports are written to the user's computer. The primary transfer path uses the project's own Cloudflare deployment rather than publishing results to a public speed-test dataset.
@@ -22,7 +22,7 @@ The desktop application translates the same approved product hierarchy and restr
 | Measurement | Browser | Native desktop | Deep-probe CLI |
 | --- | :---: | :---: | :---: |
 | First-party Internet download and upload | Yes | Yes | Opt-in |
-| Quick, Full, and Stress profiles | Yes | Yes | Opt-in |
+| Connection Check, Full, and Stress profiles | Yes | Yes | Opt-in |
 | Compare, Single, and Aggregate methods | Yes | Yes | Opt-in |
 | Single-flow and aggregate results | Yes | Yes | Opt-in |
 | Stress 1, 2, 4, 8, and 10 connection scaling | Yes | Yes | Opt-in |
@@ -39,6 +39,8 @@ The desktop application translates the same approved product hierarchy and restr
 | Wi-Fi signal, channel, band, and link rates | — | When exposed by the OS | When exposed by the OS |
 | Route-table and default-route details | — | When exposed by the OS | When exposed by the OS |
 | Isolated two-machine LAN throughput | — | Optional | Optional |
+| Evidence-backed findings and next tests | Yes | Yes | With Internet transfer |
+| Selected endpoint, engine, and capability metadata | Yes | Yes | With Internet transfer |
 
 A browser cannot send arbitrary ICMP packets or run a truthful traceroute. Browser timeouts are therefore labeled **request loss**, never packet loss. Unsupported native fields are reported as unavailable rather than guessed.
 
@@ -46,17 +48,17 @@ A browser cannot send arbitrary ICMP packets or run a truthful traceroute. Brows
 
 | Profile | Browser base estimate | Download cap | Upload cap | Maximum combined transfer | Service checks |
 | --- | ---: | ---: | ---: | ---: | :---: |
-| Quick | 20 seconds | 600 MB | 128 MB | 728 MB | No |
+| Connection Check (`quick`) | 15 seconds | 20 MB | 8 MB | 28 MB | No |
 | Full | 35 seconds | 900 MB | 256 MB | 1.156 GB | Yes |
 | Stress | 60 seconds | 3 GB | 512 MB | 3.512 GB | Yes |
 
-Caps are ceilings. Slower connections stop at the stage duration and transfer less data. Compare can require longer than the browser base estimate because it runs independent single and aggregate stages. Each client calculates and displays the selected plan's actual estimate and transfer ceiling before starting. Full and Stress require an explicit data-use confirmation.
+Caps are ceilings. Slower connections stop at the stage duration and transfer less data. Connection Check deliberately uses the first-party Worker path without transfer warm-up so its browser run remains within the lightweight ceiling. Compare can require longer than the base estimate because it runs independent single and aggregate stages. Each client calculates and displays the selected plan's actual estimate and transfer ceiling before starting. Full and Stress require an explicit data-use confirmation.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    Contract["Shared profile and report contracts"] --> Browser["React browser app"]
+    Contract["Shared profiles, interpretation rules, and report contracts"] --> Browser["React browser app"]
     Contract --> Core[".NET native core"]
     Browser --> Assets["Cloudflare static speed assets"]
     Browser --> Worker["Cloudflare Worker APIs"]
@@ -75,6 +77,7 @@ flowchart TD
 - **Cloudflare Workers Static Assets** and optional R2 delivery provide deterministic first-party download payloads.
 - **Cloudflare Workers** provide same-origin latency, upload, metadata, and fallback download endpoints.
 - **NetworkDiagnostics.Core on .NET 10** owns native planning, Internet transfers, deep diagnostics, platform capability reporting, and report serialization.
+- **Versioned interpretation rules** produce evidence, confidence, recommendations, and a suggested next test in both engines without inventing a universal health score.
 - **Avalonia** provides the Windows, macOS, and Linux desktop host.
 - Imported native JSON is read locally by the browser File API and is not uploaded.
 
@@ -128,6 +131,7 @@ Each package contains the self-contained binary, license, run/privacy notes, and
 - computed time, cap, connection, and run summaries;
 - progress and cancellation;
 - headline transfer, latency, and packet-loss metrics;
+- evidence-backed findings with confidence, supporting measurements, and next actions;
 - single-versus-aggregate and Stress scaling results;
 - interface, Wi-Fi, routing, DNS, TLS, MTU, and traceroute views;
 - optional LAN-target testing;
@@ -164,9 +168,9 @@ Deep diagnostics:
 
 First-party Internet transfer:
   --internet-transfer   Add native Internet download/upload measurements
-  --profile <name>      quick, full, or stress
+  --profile <name>      quick (Connection Check), full, or stress
   --transfer-method <m> compare, single, or aggregate
-  --test-origin <url>   Override the project endpoint origin
+  --test-origin <url>   Candidate endpoint; repeat to select the lowest-latency available origin
 
 Local-link isolation:
   --lan-server          Run the LAN throughput server until Ctrl+C
@@ -176,7 +180,7 @@ Local-link isolation:
   --lan-streams <1-16>  Parallel streams (default: 4)
 ```
 
-`--internet-transfer` emits the combined schema 2.0 report. The default deep-only run emits schema 1.2. The browser importer continues to accept native schemas 1.0, 1.1, 1.2, and 2.0.
+`--internet-transfer` emits the combined schema 2.0 report, including engine capabilities, endpoint preflight evidence, and deterministic findings. The default deep-only run emits schema 1.2. The browser importer continues to accept native schemas 1.0, 1.1, 1.2, and 2.0.
 
 ### Isolate the local network
 

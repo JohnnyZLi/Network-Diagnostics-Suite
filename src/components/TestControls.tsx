@@ -72,6 +72,12 @@ function compactEstimatedTime(value: string): string {
     .replace(/\s+seconds?$/i, " sec");
 }
 
+function runLabel(mode: TestMode): string {
+  if (mode === "quick") return "Run connection check";
+  if (mode === "standard") return "Run full diagnostic";
+  return "Run stress test";
+}
+
 export function TestControls({
   mode,
   transferMode,
@@ -136,7 +142,7 @@ export function TestControls({
   return (
     <section className="test-controls" aria-labelledby="test-controls-title">
       <div className="eyebrow" id="test-controls-title">Test profile</div>
-      <div className="mode-selector" role="radiogroup" aria-label="Diagnostic test profile">
+      <div className="mode-selector profile-selector" role="radiogroup" aria-label="Diagnostic test profile">
         {(Object.keys(TEST_MODES) as TestMode[]).map((option) => {
           const optionConfig = TEST_MODES[option];
           return (
@@ -180,7 +186,7 @@ export function TestControls({
           <dl>
             <div><dt>Estimated time</dt><dd>{compactEstimatedTime(config.estimatedTime)}</dd></div>
             <div><dt>Transfer cap</dt><dd>{formatBytes(transferCap)}</dd></div>
-            <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{DOWNLOAD_PATHS[downloadPath].name}</dd></div>
+            <div><dt>Download path</dt><dd className={downloadPath === "auto" ? "path-recommendation" : ""}>{mode === "quick" ? "Worker · low data" : DOWNLOAD_PATHS[downloadPath].name}</dd></div>
           </dl>
         </div>
 
@@ -204,22 +210,26 @@ export function TestControls({
 
       <details className="advanced-path">
         <summary>Advanced download path</summary>
-        <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
-          {(Object.keys(DOWNLOAD_PATHS) as DownloadPathPreference[]).map((option) => (
-            <button
-              className={downloadPath === option ? "mode-option mode-option--active" : "mode-option"}
-              type="button"
-              role="radio"
-              aria-checked={downloadPath === option}
-              disabled={running}
-              onClick={() => onDownloadPathChange(option)}
-              key={option}
-            >
-              <span>{DOWNLOAD_PATHS[option].name}</span>
-              <small>{DOWNLOAD_PATHS[option].detail}</small>
-            </button>
-          ))}
-        </div>
+        {mode === "quick" ? (
+          <p className="advanced-path__note">Connection Check uses the first-party Worker path and skips transfer warm-up to keep the run within its 28 MB ceiling. Choose Full or Stress to compare direct and fallback delivery paths.</p>
+        ) : (
+          <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
+            {(Object.keys(DOWNLOAD_PATHS) as DownloadPathPreference[]).map((option) => (
+              <button
+                className={downloadPath === option ? "mode-option mode-option--active" : "mode-option"}
+                type="button"
+                role="radio"
+                aria-checked={downloadPath === option}
+                disabled={running}
+                onClick={() => onDownloadPathChange(option)}
+                key={option}
+              >
+                <span>{DOWNLOAD_PATHS[option].name}</span>
+                <small>{DOWNLOAD_PATHS[option].detail}</small>
+              </button>
+            ))}
+          </div>
+        )}
       </details>
 
       <div className={`data-use-note data-use-note--${mode}`}>
@@ -240,7 +250,7 @@ export function TestControls({
           aria-controls={requiresConfirmation ? "data-confirmation-dialog" : undefined}
           onClick={requestStart}
         >
-          Run {config.name.toLowerCase()} test
+          {runLabel(mode)}
           <span aria-hidden="true">→</span>
         </button>
       )}
@@ -281,7 +291,7 @@ export function TestControls({
               Cancel
             </button>
             <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary" onClick={confirmStart}>
-              Run {config.name.toLowerCase()} test
+              {runLabel(mode)}
             </button>
           </div>
         </div>

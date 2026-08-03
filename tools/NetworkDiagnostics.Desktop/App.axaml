@@ -1,8 +1,113 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.App"
-             RequestedThemeVariant="Light">
+             Name="Network Diagnostics Suite"
+             RequestedThemeVariant="Default">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F2EFE8" />
+          <SolidColorBrush x:Key="RailBackgroundBrush" Color="#ECE5DA" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#FBF8F2" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#F6F2EB" />
+          <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#ECE5DA" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E5DFD5" />
+          <SolidColorBrush x:Key="SurfaceActiveBrush" Color="#D9B8A5" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#171714" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#3F3D38" />
+          <SolidColorBrush x:Key="TextTertiaryBrush" Color="#706B64" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#29171714" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#47171714" />
+          <SolidColorBrush x:Key="AccentBrush" Color="#9F553E" />
+          <SolidColorBrush x:Key="AccentHoverBrush" Color="#8F4D39" />
+          <SolidColorBrush x:Key="AccentSoftBrush" Color="#D9B8A5" />
+          <SolidColorBrush x:Key="AccentInkBrush" Color="#FFFAF4" />
+          <SolidColorBrush x:Key="SelectionBrush" Color="#D9B8A5" />
+          <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#E7F0EA" />
+          <SolidColorBrush x:Key="SuccessTextBrush" Color="#2F6F54" />
+          <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#F3EADC" />
+          <SolidColorBrush x:Key="WarningBorderBrush" Color="#A08158" />
+          <SolidColorBrush x:Key="WarningTextBrush" Color="#7D541F" />
+          <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#F5E5E2" />
+          <SolidColorBrush x:Key="DangerBorderBrush" Color="#B6736D" />
+          <SolidColorBrush x:Key="DangerTextBrush" Color="#9A4038" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#171714" />
+          <SolidColorBrush x:Key="RailBackgroundBrush" Color="#11110F" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#1F1E1A" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#282621" />
+          <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#302E29" />
+          <SolidColorBrush x:Key="SurfacePressedBrush" Color="#38352F" />
+          <SolidColorBrush x:Key="SurfaceActiveBrush" Color="#392721" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2EFE8" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C7C1B7" />
+          <SolidColorBrush x:Key="TextTertiaryBrush" Color="#9D978D" />
+          <SolidColorBrush x:Key="BorderBrush" Color="#29F2EFE8" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#47F2EFE8" />
+          <SolidColorBrush x:Key="AccentBrush" Color="#A55D45" />
+          <SolidColorBrush x:Key="AccentHoverBrush" Color="#9F553E" />
+          <SolidColorBrush x:Key="AccentSoftBrush" Color="#3A2822" />
+          <SolidColorBrush x:Key="AccentInkBrush" Color="#FFFAF4" />
+          <SolidColorBrush x:Key="SelectionBrush" Color="#7F4231" />
+          <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#173029" />
+          <SolidColorBrush x:Key="SuccessTextBrush" Color="#79D0AE" />
+          <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2F291B" />
+          <SolidColorBrush x:Key="WarningBorderBrush" Color="#655631" />
+          <SolidColorBrush x:Key="WarningTextBrush" Color="#E5CB86" />
+          <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#3A2027" />
+          <SolidColorBrush x:Key="DangerBorderBrush" Color="#6E3541" />
+          <SolidColorBrush x:Key="DangerTextBrush" Color="#FF9EAA" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
+    <Style Selector="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="9">
+            <Border Name="CheckChrome"
+                    Width="18"
+                    Height="18"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <TextBlock Name="CheckGlyph"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource AccentInkBrush}"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         LineHeight="13"
+                         Opacity="0"
+                         Text="✓" />
+            </Border>
+            <ContentPresenter Grid.Column="1"
+                              VerticalAlignment="Center"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ Border#CheckChrome">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#CheckChrome">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ TextBlock#CheckGlyph">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
   </Application.Styles>
 </Application>

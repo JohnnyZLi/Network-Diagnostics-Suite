@@ -9,7 +9,7 @@ const contract = JSON.parse(
 
 describe("shared test-profile contract", () => {
   it("matches the browser configuration", () => {
-    expect(contract.schemaVersion).toBe("1.0");
+    expect(contract.schemaVersion).toBe("1.1");
     expect(contract.transferMethods).toEqual(["compare", "single", "aggregate"]);
 
     for (const profile of contract.profiles) {

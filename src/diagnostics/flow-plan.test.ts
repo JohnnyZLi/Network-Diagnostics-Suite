@@ -12,8 +12,8 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.uploads[0]?.concurrency).toBe(1);
     expect(plan.downloadConnectionLabel).toBe("1");
     expect(plan.uploadConnectionLabel).toBe("1");
-    expect(plan.sampleLabel).toBe("3 single");
-    expect(plan.transferCapBytes).toBe(728 * 1_000_000);
+    expect(plan.sampleLabel).toBe("1 single");
+    expect(plan.transferCapBytes).toBe(28 * 1_000_000);
   });
 
   it("preserves the existing aggregate profile", () => {
@@ -27,17 +27,17 @@ describe("buildDiagnosticTestPlan", () => {
     expect(plan.transferCapBytes).toBe(1_156 * 1_000_000);
   });
 
-  it("adds a compact single-flow download to Quick Compare without raising its cap", () => {
+  it("keeps Connection Check lightweight while sampling two flow shapes", () => {
     const plan = buildDiagnosticTestPlan(TEST_MODES.quick, "compare");
 
-    expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 6]);
-    expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([150, 450].map((megabytes) => megabytes * 1_000_000));
-    expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([6]);
-    expect(plan.downloadConnectionLabel).toBe("1 + 6");
-    expect(plan.uploadConnectionLabel).toBe("6");
-    expect(plan.sampleLabel).toBe("1 single + 3 parallel");
-    expect(plan.transferCapBytes).toBe(728 * 1_000_000);
-    expect(plan.estimatedTime).toBe("25 seconds");
+    expect(plan.downloads.map((stage) => stage.concurrency)).toEqual([1, 2]);
+    expect(plan.downloads.map((stage) => stage.capBytes)).toEqual([5, 15].map((megabytes) => megabytes * 1_000_000));
+    expect(plan.uploads.map((stage) => stage.concurrency)).toEqual([2]);
+    expect(plan.downloadConnectionLabel).toBe("1 + 2");
+    expect(plan.uploadConnectionLabel).toBe("2");
+    expect(plan.sampleLabel).toBe("1 single + 1 parallel");
+    expect(plan.transferCapBytes).toBe(28 * 1_000_000);
+    expect(plan.estimatedTime).toBe("15 seconds");
   });
 
   it("splits the Full payload budget across single and aggregate stages", () => {

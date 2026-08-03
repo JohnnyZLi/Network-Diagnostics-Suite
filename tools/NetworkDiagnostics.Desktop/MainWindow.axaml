@@ -2,105 +2,251 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="NetworkDiagnostics.Desktop.MainWindow"
         Title="Network Diagnostics Suite"
-        Width="1420"
-        Height="900"
-        MinWidth="1120"
-        MinHeight="720"
-        Background="#F2EFE8"
-        Foreground="#171714">
+        Width="1320"
+        Height="820"
+        MinWidth="840"
+        MinHeight="640"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        SizeChanged="MainWindowSizeChanged">
   <Window.Styles>
-    <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#9F553E" />
+    <Style Selector="TextBlock.overline">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="FontFamily" Value="Menlo" />
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="LetterSpacing" Value="1.5" />
-    </Style>
-    <Style Selector="TextBlock.sectionTitle">
-      <Setter Property="FontSize" Value="24" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LineHeight" Value="29" />
-    </Style>
-    <Style Selector="TextBlock.metricValue">
-      <Setter Property="FontSize" Value="31" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LineHeight" Value="35" />
+      <Setter Property="LetterSpacing" Value="1.2" />
     </Style>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#706B64" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.pageTitle">
+      <Setter Property="FontSize" Value="30" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="-0.8" />
+      <Setter Property="LineHeight" Value="35" />
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="FontSize" Value="21" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="-0.35" />
+      <Setter Property="LineHeight" Value="26" />
+    </Style>
+    <Style Selector="TextBlock.metricValue">
+      <Setter Property="FontFamily" Value="Menlo" />
+      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontWeight" Value="Normal" />
+      <Setter Property="LetterSpacing" Value="-1" />
+      <Setter Property="LineHeight" Value="33" />
+    </Style>
+    <Style Selector="TextBlock.mono">
+      <Setter Property="FontFamily" Value="Menlo" />
     </Style>
 
     <Style Selector="Button">
       <Setter Property="MinHeight" Value="40" />
-      <Setter Property="Padding" Value="15,8" />
-      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="ButtonChrome"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    </Style>
+    <Style Selector="Button:pressed">
+      <Setter Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
+    </Style>
+    <Style Selector="Button:focus-visible /template/ Border#ButtonChrome">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button:disabled">
+      <Setter Property="Opacity" Value="0.42" />
     </Style>
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#9F553E" />
-      <Setter Property="Foreground" Value="#FFFAF4" />
-      <Setter Property="BorderBrush" Value="#9F553E" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentInkBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="Button.primary:pointerover">
-      <Setter Property="Background" Value="#8F4D39" />
-      <Setter Property="BorderBrush" Value="#8F4D39" />
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}" />
     </Style>
-    <Style Selector="Button.primary:pressed">
-      <Setter Property="Background" Value="#7F4231" />
-      <Setter Property="BorderBrush" Value="#7F4231" />
+    <Style Selector="Button.stop">
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
+      <Setter Property="CornerRadius" Value="9" />
     </Style>
-    <Style Selector="Button.headerAction">
+    <Style Selector="Button.ghost">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="12,6" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#F2EFE8" />
-      <Setter Property="BorderBrush" Value="#55534E" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="MinHeight" Value="36" />
-      <Setter Property="Padding" Value="13,7" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="FontSize" Value="12" />
     </Style>
-    <Style Selector="Button.headerAction:pointerover">
-      <Setter Property="Background" Value="#2A2926" />
-      <Setter Property="BorderBrush" Value="#8A857D" />
-    </Style>
-    <Style Selector="Button.secondary">
+    <Style Selector="Button.nav">
+      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Margin" Value="0,0,0,5" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#171714" />
-      <Setter Property="BorderBrush" Value="#AAA39A" />
-      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     </Style>
-    <Style Selector="Button.secondary:pointerover">
-      <Setter Property="Background" Value="#ECE5DA" />
-      <Setter Property="BorderBrush" Value="#706B64" />
+    <Style Selector="Button.nav:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.nav.active">
+      <Setter Property="Background" Value="{DynamicResource SurfaceActiveBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.nav.theme">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
 
-    <Style Selector="ComboBox">
-      <Setter Property="MinHeight" Value="42" />
-      <Setter Property="Background" Value="#F6F2EB" />
-      <Setter Property="BorderBrush" Value="#C7C1B7" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="10,6" />
-      <Setter Property="FontSize" Value="14" />
+    <Style Selector="ListBox.segmented">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="Padding" Value="4" />
     </Style>
-    <Style Selector="ComboBox:pointerover">
-      <Setter Property="BorderBrush" Value="#9F553E" />
+    <Style Selector="ListBoxItem.segment">
+      <Setter Property="MinHeight" Value="74" />
+      <Setter Property="Padding" Value="13,11" />
+      <Setter Property="Margin" Value="2" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="SegmentChrome"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
     </Style>
+    <Style Selector="ListBoxItem.segment:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem.segment:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
     <Style Selector="TextBox">
-      <Setter Property="MinHeight" Value="42" />
-      <Setter Property="Background" Value="#F6F2EB" />
-      <Setter Property="BorderBrush" Value="#C7C1B7" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="10,7" />
-      <Setter Property="FontSize" Value="14" />
+      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="Padding" Value="13,9" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="FontFamily" Value="Menlo" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="SelectionBrush" Value="{DynamicResource SelectionBrush}" />
     </Style>
     <Style Selector="TextBox:pointerover">
-      <Setter Property="BorderBrush" Value="#9F553E" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
     </Style>
+    <Style Selector="TextBox:focus-within">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+
     <Style Selector="CheckBox">
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="Foreground" Value="#3F3D38" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+            <Border Name="CheckChrome"
+                    Width="18"
+                    Height="18"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <TextBlock Name="CheckGlyph"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource AccentInkBrush}"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         LineHeight="13"
+                         Opacity="0"
+                         Text="✓" />
+            </Border>
+            <ContentPresenter Grid.Column="1"
+                              VerticalAlignment="Center"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ Border#CheckChrome">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#CheckChrome">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ TextBlock#CheckGlyph">
+      <Setter Property="Opacity" Value="1" />
     </Style>
 
     <Style Selector="TabControl">
@@ -109,528 +255,576 @@
       <Setter Property="Padding" Value="0" />
     </Style>
     <Style Selector="TabItem">
+      <Setter Property="Width" Value="176" />
+      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="Padding" Value="13,10" />
+      <Setter Property="Margin" Value="0,0,0,4" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#706B64" />
+      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0,0,0,2" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="0,0,0,10" />
-      <Setter Property="Margin" Value="0,0,28,0" />
-      <Setter Property="FontSize" Value="14" />
+      <Setter Property="BorderThickness" Value="2,0,0,0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="12" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="TabChrome"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Content="{TemplateBinding Header}"
+                              ContentTemplate="{TemplateBinding HeaderTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
     </Style>
     <Style Selector="TabItem:pointerover">
-      <Setter Property="Foreground" Value="#171714" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="TabItem:selected">
-      <Setter Property="Foreground" Value="#171714" />
-      <Setter Property="BorderBrush" Value="#9F553E" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceActiveBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="ListBox">
+    <Style Selector="ProgressBar">
+      <Setter Property="Height" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <Style Selector="ListBox.history">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
     </Style>
-    <Style Selector="ProgressBar">
-      <Setter Property="Height" Value="4" />
-      <Setter Property="Background" Value="#DCD5CA" />
-      <Setter Property="Foreground" Value="#9F553E" />
-      <Setter Property="CornerRadius" Value="999" />
+    <Style Selector="ListBox.history ListBoxItem">
+      <Setter Property="MinHeight" Value="58" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="Margin" Value="0,0,0,6" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ListBox.history ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="64,Auto,Auto,*">
-    <Border Grid.Row="0"
-            Background="#171714"
-            Padding="28,0">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal"
-                    Spacing="13"
-                    VerticalAlignment="Center">
-          <Border Width="3"
-                  Height="30"
-                  Background="#9F553E" />
-          <StackPanel Spacing="1"
-                      VerticalAlignment="Center">
-            <TextBlock Foreground="#D9B8A5"
-                       FontSize="10"
+  <Grid Name="ShellGrid"
+        ColumnDefinitions="216,*"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <Border Grid.Column="0"
+            Background="{DynamicResource RailBackgroundBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="76,Auto,*,Auto,Auto"
+            Margin="12">
+        <Grid Grid.Row="0"
+              ColumnDefinitions="40,*"
+              ColumnSpacing="11"
+              VerticalAlignment="Center">
+          <Border Width="38"
+                  Height="38"
+                  Background="{DynamicResource AccentBrush}"
+                  CornerRadius="10">
+            <TextBlock HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AccentInkBrush}"
+                       FontFamily="Menlo"
+                       FontSize="13"
                        FontWeight="Bold"
-                       LetterSpacing="1.5"
-                       Text="JOHNNY LI" />
-            <TextBlock Foreground="#F2EFE8"
-                       FontSize="16"
-                       FontWeight="SemiBold"
-                       Text="Network Diagnostics" />
+                       Text="ND" />
+          </Border>
+          <StackPanel Name="BrandCopy"
+                      Grid.Column="1"
+                      Spacing="1"
+                      VerticalAlignment="Center">
+            <TextBlock FontSize="13" FontWeight="Bold" Text="Network" />
+            <TextBlock Classes="muted" FontSize="11" Text="Diagnostics Suite" />
           </StackPanel>
+        </Grid>
+
+        <TextBlock Name="NavWorkspaceLabel"
+                   Grid.Row="1"
+                   Classes="overline"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
+                   Margin="10,8,0,12"
+                   Text="WORKSPACE" />
+
+        <StackPanel Grid.Row="2">
+          <Button Name="NewTestNavButton"
+                  Classes="nav active"
+                  Click="NewTestNavClicked">
+            <Grid ColumnDefinitions="28,*">
+              <TextBlock FontFamily="Menlo" FontSize="18" VerticalAlignment="Center" Text="+" />
+              <TextBlock Name="NewTestNavLabel" Grid.Column="1" VerticalAlignment="Center" Text="New test" />
+            </Grid>
+          </Button>
+          <Button Name="ResultsNavButton"
+                  Classes="nav"
+                  Click="ResultsNavClicked">
+            <Grid ColumnDefinitions="28,*">
+              <TextBlock FontFamily="Menlo" FontSize="15" VerticalAlignment="Center" Text="↗" />
+              <TextBlock Name="ResultsNavLabel" Grid.Column="1" VerticalAlignment="Center" Text="Results" />
+            </Grid>
+          </Button>
+          <Button Name="HistoryNavButton"
+                  Classes="nav"
+                  Click="HistoryNavClicked">
+            <Grid ColumnDefinitions="28,*">
+              <TextBlock FontFamily="Menlo" FontSize="14" VerticalAlignment="Center" Text="▤" />
+              <TextBlock Name="HistoryNavLabel" Grid.Column="1" VerticalAlignment="Center" Text="Report history" />
+            </Grid>
+          </Button>
         </StackPanel>
 
-        <StackPanel Grid.Column="1"
-                    Orientation="Horizontal"
-                    Spacing="10"
-                    VerticalAlignment="Center">
-          <TextBlock Foreground="#C7C1B7"
-                     FontSize="12"
-                     VerticalAlignment="Center"
-                     Margin="0,0,6,0"
-                     Text="Local reports only" />
-          <Button Classes="headerAction"
-                  Content="Export latest"
-                  Click="ExportLatestClicked" />
-          <Button Classes="headerAction"
-                  Content="Reports folder"
-                  Click="OpenReportsFolderClicked" />
+        <Button Name="ThemeButton"
+                Grid.Row="3"
+                Classes="nav theme"
+                ToolTip.Tip="Choose System, Light, or Dark appearance"
+                Click="ThemeClicked">
+          <Grid ColumnDefinitions="28,*">
+            <TextBlock Name="ThemeGlyphText" FontFamily="Menlo" FontSize="15" VerticalAlignment="Center" Text="◐" />
+            <TextBlock Name="ThemeModeText" Grid.Column="1" VerticalAlignment="Center" Text="Appearance · System" />
+          </Grid>
+        </Button>
+
+        <StackPanel Name="PrivacyCopy"
+                    Grid.Row="4"
+                    Spacing="5"
+                    Margin="10,0,8,10">
+          <TextBlock Classes="overline" Foreground="{DynamicResource TextTertiaryBrush}" Text="PRIVACY" />
+          <TextBlock Classes="muted"
+                     FontSize="10"
+                     LineHeight="15"
+                     Text="Reports stay on this device. No account or telemetry."
+                     TextWrapping="Wrap" />
         </StackPanel>
       </Grid>
     </Border>
 
-    <Border Grid.Row="1"
-            Background="#FBF8F2"
-            BorderBrush="#CFC8BE"
-            BorderThickness="0,0,0,1"
-            Padding="28,22,28,18">
-      <Grid RowDefinitions="Auto,Auto,Auto"
-            ColumnDefinitions="260,1.05*,1.55*,1*,1*,180">
-        <StackPanel Grid.RowSpan="3"
-                    Grid.Column="0"
-                    Spacing="6"
-                    Margin="0,0,26,0">
-          <TextBlock Classes="eyebrow"
-                     Text="COMPLETE CONNECTION TEST" />
-          <TextBlock FontSize="25"
-                     FontWeight="SemiBold"
-                     LineHeight="30"
-                     Text="Test the connection."
-                     TextWrapping="Wrap" />
-          <TextBlock Classes="muted"
-                     FontSize="13"
-                     LineHeight="19"
-                     Text="Measure capacity, latency, packet loss, routing, DNS, TLS, Wi-Fi, and optional LAN performance."
-                     TextWrapping="Wrap" />
-        </StackPanel>
-
-        <Border Grid.Column="1"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,0,12,0">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="eyebrow"
-                       Text="PROFILE" />
-            <ComboBox Name="ProfileSelector"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="PlanSelectionChanged">
-              <ComboBoxItem Content="Quick" />
-              <ComboBoxItem Content="Full" />
-              <ComboBoxItem Content="Stress" />
-            </ComboBox>
+    <Grid Grid.Column="1"
+          RowDefinitions="64,*">
+      <Border Grid.Row="0"
+              Background="{DynamicResource AppBackgroundBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,0,1"
+              Padding="28,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="9"
+                      VerticalAlignment="Center">
+            <TextBlock Name="HeaderContextText"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Text="New test" />
+            <Border Width="5" Height="5" Background="{DynamicResource AccentBrush}" CornerRadius="3" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" FontSize="11" Text="On-device diagnostics" VerticalAlignment="Center" />
           </StackPanel>
-        </Border>
-
-        <Border Grid.Column="2"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,0,12,0">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="eyebrow"
-                       Text="TRANSFER METHOD" />
-            <ComboBox Name="MethodSelector"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="PlanSelectionChanged">
-              <ComboBoxItem Content="Compare — single and aggregate" />
-              <ComboBoxItem Content="Single — one connection" />
-              <ComboBoxItem Content="Aggregate — parallel connections" />
-            </ComboBox>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="3"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,0,12,0">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="eyebrow"
-                       Text="TARGET" />
-            <TextBox Name="TargetInput"
-                     Text="1.1.1.1"
-                     Watermark="Host or IP" />
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="4"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,0,12,0">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="eyebrow"
-                       Text="LAN SERVER" />
-            <TextBox Name="LanTargetInput"
-                     Watermark="Optional" />
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="5"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,16,0,0">
-          <Grid ColumnDefinitions="*,Auto">
-            <Button Name="RunButton"
-                    Grid.Column="0"
-                    Classes="primary"
-                    Content="Run diagnostic"
-                    Click="RunClicked" />
-            <Button Name="StopButton"
-                    Grid.Column="1"
-                    Classes="secondary"
-                    Content="Stop"
-                    IsVisible="False"
-                    Margin="8,0,0,0"
-                    Click="StopClicked" />
-          </Grid>
-        </Border>
-
-        <Grid Grid.Row="1"
-              Grid.Column="1"
-              Grid.ColumnSpan="5"
-              Margin="20,16,0,0"
-              ColumnDefinitions="Auto,*">
-          <CheckBox Name="IncludeAddressesCheck"
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Content="Include local addresses and Wi-Fi name" />
           <StackPanel Grid.Column="1"
                       Orientation="Horizontal"
-                      Spacing="22"
-                      HorizontalAlignment="Right">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="muted" Text="Time" />
-              <TextBlock Name="EstimatedTimeText" FontWeight="SemiBold" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="muted" Text="Cap" />
-              <TextBlock Name="TransferCapText" FontWeight="SemiBold" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="muted" Text="Download" />
-              <TextBlock Name="DownloadConnectionsText" FontWeight="SemiBold" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="muted" Text="Upload" />
-              <TextBlock Name="UploadConnectionsText" FontWeight="SemiBold" />
-            </StackPanel>
-            <TextBlock Name="DownloadRunsText"
-                       Classes="muted"
-                       VerticalAlignment="Center" />
+                      Spacing="8"
+                      VerticalAlignment="Center">
+            <Button Classes="ghost" Content="Export latest" Click="ExportLatestClicked" />
+            <Button Classes="ghost" Content="Open folder" Click="OpenReportsFolderClicked" />
           </StackPanel>
         </Grid>
+      </Border>
 
-        <Grid Grid.Row="2"
-              Grid.Column="1"
-              Grid.ColumnSpan="5"
-              Margin="20,14,0,0"
-              ColumnDefinitions="Auto,*,Auto">
-          <StackPanel Grid.Column="0"
-                      Orientation="Horizontal"
-                      Spacing="8">
-            <TextBlock Name="StatusText"
-                       FontWeight="SemiBold"
-                       Text="Ready." />
-            <TextBlock Name="LiveText"
-                       Classes="muted"
-                       Text="No active measurement." />
-          </StackPanel>
-          <ProgressBar Name="RunProgress"
-                       Grid.Column="1"
-                       Margin="18,7"
-                       Minimum="0"
-                       Maximum="100"
-                       Value="0" />
-          <StackPanel Grid.Column="2"
-                      Spacing="2"
-                      VerticalAlignment="Center"
-                      MaxWidth="360">
-            <TextBlock Name="DataUseText"
-                       Classes="muted"
-                       FontSize="12"
-                       TextWrapping="Wrap" />
-            <TextBlock Name="ReportPathText"
-                       Classes="muted"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Text="Reports are stored locally after each completed run." />
-          </StackPanel>
-        </Grid>
-      </Grid>
-    </Border>
+      <Grid Grid.Row="1">
+        <ScrollViewer Name="SetupPage"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <Grid MaxWidth="1080"
+                HorizontalAlignment="Stretch"
+                Margin="32,28,32,36"
+                RowDefinitions="Auto,Auto">
+            <StackPanel Grid.Row="0" Spacing="7">
+              <TextBlock Classes="overline" Text="START A DIAGNOSTIC" />
+              <TextBlock Classes="pageTitle" Text="Measure this connection" />
+              <TextBlock Classes="muted"
+                         HorizontalAlignment="Left"
+                         MaxWidth="680"
+                         FontSize="13"
+                         LineHeight="20"
+                         Text="Choose a profile and transfer method. Each run combines throughput measurements with system-level network checks in one local report."
+                         TextWrapping="Wrap" />
+            </StackPanel>
 
-    <Border Grid.Row="2"
-            Margin="28,22,28,0"
-            Background="#FBF8F2"
-            BorderBrush="#CFC8BE"
-            BorderThickness="0,1,0,1">
-      <Grid ColumnDefinitions="*,*,*,*">
-        <Border Grid.Column="0"
-                Padding="20,15">
-          <StackPanel Spacing="3">
-            <TextBlock Classes="eyebrow"
-                       Text="DOWNLOAD" />
-            <TextBlock Name="DownloadMetric"
-                       Classes="metricValue"
-                       Text="—" />
-            <TextBlock Name="DownloadDetail"
-                       Classes="muted"
-                       FontSize="13"
-                       Text="Steady rate" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="1"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,15">
-          <StackPanel Spacing="3">
-            <TextBlock Classes="eyebrow"
-                       Text="UPLOAD" />
-            <TextBlock Name="UploadMetric"
-                       Classes="metricValue"
-                       Text="—" />
-            <TextBlock Name="UploadDetail"
-                       Classes="muted"
-                       FontSize="13"
-                       Text="Steady rate" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="2"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,15">
-          <StackPanel Spacing="3">
-            <TextBlock Classes="eyebrow"
-                       Text="ICMP LOSS" />
-            <TextBlock Name="LossMetric"
-                       Classes="metricValue"
-                       Text="—" />
-            <TextBlock Name="LossDetail"
-                       Classes="muted"
-                       FontSize="13"
-                       Text="Raw packet loss" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="3"
-                BorderBrush="#D6D0C7"
-                BorderThickness="1,0,0,0"
-                Padding="20,15">
-          <StackPanel Spacing="3">
-            <TextBlock Classes="eyebrow"
-                       Text="LATENCY" />
-            <TextBlock Name="LatencyMetric"
-                       Classes="metricValue"
-                       Text="—" />
-            <TextBlock Name="LatencyDetail"
-                       Classes="muted"
-                       FontSize="13"
-                       Text="ICMP median" />
-          </StackPanel>
-        </Border>
-      </Grid>
-    </Border>
-
-    <Grid Grid.Row="3"
-          Margin="28,22,28,28">
-      <TabControl>
-        <TabItem Header="Transfer comparison">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="22"
-                        Margin="0,24,0,0">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="5">
-                  <TextBlock Classes="eyebrow"
-                             Text="SINGLE VERSUS AGGREGATE" />
-                  <TextBlock Classes="sectionTitle"
-                             Text="Connection scaling" />
-                  <TextBlock Classes="muted"
-                             FontSize="14"
-                             Text="See whether one connection can use the path or parallel transfers are required."
-                             TextWrapping="Wrap" />
-                </StackPanel>
-                <TextBlock Grid.Column="1"
-                           Classes="muted"
-                           FontSize="12"
-                           VerticalAlignment="Bottom"
-                           Text="Each stage runs independently against the same first-party origin." />
-              </Grid>
-
-              <Border BorderBrush="#CFC8BE"
-                      BorderThickness="0,1,0,0">
-                <StackPanel Name="FlowResultsPanel"
-                            Spacing="0">
-                  <Grid ColumnDefinitions="*,*,*"
-                        Margin="0,18,0,20">
-                    <StackPanel Grid.Column="0"
-                                Spacing="5"
-                                Margin="0,0,24,0">
-                      <TextBlock FontWeight="SemiBold"
-                                 Text="Single connection" />
-                      <TextBlock Classes="muted"
-                                 FontSize="13"
-                                 Text="Measures one ordinary flow without parallelism."
-                                 TextWrapping="Wrap" />
+            <Grid Name="SetupContentGrid"
+                  Grid.Row="1"
+                  ColumnDefinitions="*,310"
+                  RowDefinitions="Auto"
+                  ColumnSpacing="24"
+                  Margin="0,26,0,0">
+              <StackPanel Name="SetupConfigPane"
+                          Grid.Column="0"
+                          Spacing="11">
+                <TextBlock FontSize="12" FontWeight="SemiBold" Text="Test profile" />
+                <ListBox Name="ProfileSelector"
+                         Classes="segmented"
+                         SelectionMode="Single"
+                         SelectionChanged="PlanSelectionChanged">
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="3" />
+                    </ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Connection check" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Lightweight · 28 MB" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1"
-                                Spacing="5"
-                                Margin="0,0,24,0">
-                      <TextBlock FontWeight="SemiBold"
-                                 Text="Aggregate capacity" />
-                      <TextBlock Classes="muted"
-                                 FontSize="13"
-                                 Text="Measures total path capacity across parallel connections."
-                                 TextWrapping="Wrap" />
+                  </ListBoxItem>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Full" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Balanced report" />
                     </StackPanel>
-                    <StackPanel Grid.Column="2"
-                                Spacing="5">
-                      <TextBlock FontWeight="SemiBold"
-                                 Text="Loaded latency" />
-                      <TextBlock Classes="muted"
-                                 FontSize="13"
-                                 Text="Shows responsiveness while the connection is busy."
-                                 TextWrapping="Wrap" />
+                  </ListBoxItem>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Stress" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Scaling analysis" />
+                    </StackPanel>
+                  </ListBoxItem>
+                </ListBox>
+
+                <TextBlock FontSize="12" FontWeight="SemiBold" Margin="0,8,0,0" Text="Transfer method" />
+                <ListBox Name="MethodSelector"
+                         Classes="segmented"
+                         SelectionMode="Single"
+                         SelectionChanged="PlanSelectionChanged">
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="3" />
+                    </ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Compare" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Single + parallel" />
+                    </StackPanel>
+                  </ListBoxItem>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Single" />
+                      <TextBlock Classes="muted" FontSize="10" Text="One connection" />
+                    </StackPanel>
+                  </ListBoxItem>
+                  <ListBoxItem Classes="segment">
+                    <StackPanel Spacing="5">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="Aggregate" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Parallel capacity" />
+                    </StackPanel>
+                  </ListBoxItem>
+                </ListBox>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="14" Margin="0,8,0,0">
+                  <StackPanel Grid.Column="0" Spacing="6">
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="Diagnostic target" />
+                    <TextBox Name="TargetInput" Text="1.1.1.1" PlaceholderText="Host or IP address" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="6">
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="LAN test server" />
+                    <TextBox Name="LanTargetInput" PlaceholderText="Optional host or IP address" />
+                  </StackPanel>
+                </Grid>
+
+                <CheckBox Name="IncludeAddressesCheck"
+                          Margin="0,6,0,0"
+                          Content="Include local IP addresses and Wi-Fi network name in this report" />
+              </StackPanel>
+
+              <Border Name="PlanPane"
+                      Grid.Column="1"
+                      Background="{DynamicResource SurfaceBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      CornerRadius="12"
+                      Padding="20">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="16">
+                  <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="3">
+                      <TextBlock Classes="overline" Text="TEST PLAN" />
+                      <TextBlock FontSize="18" FontWeight="SemiBold" Text="Ready to run" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{DynamicResource SuccessSurfaceBrush}" CornerRadius="12" Padding="9,5" VerticalAlignment="Top">
+                      <TextBlock Foreground="{DynamicResource SuccessTextBrush}" FontFamily="Menlo" FontSize="9" Text="LOCAL" />
+                    </Border>
+                  </Grid>
+
+                  <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+                      <TextBlock Classes="muted" FontSize="9" Text="ESTIMATED TIME" />
+                      <TextBlock Name="EstimatedTimeText" FontFamily="Menlo" FontSize="12" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
+                      <TextBlock Classes="muted" FontSize="9" Text="TRANSFER CAP" />
+                      <TextBlock Name="TransferCapText" FontFamily="Menlo" FontSize="12" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
+                      <TextBlock Classes="muted" FontSize="9" Text="DOWNLOAD CONNECTIONS" />
+                      <TextBlock Name="DownloadConnectionsText" FontFamily="Menlo" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                      <TextBlock Classes="muted" FontSize="9" Text="UPLOAD CONNECTIONS" />
+                      <TextBlock Name="UploadConnectionsText" FontFamily="Menlo" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="2">
+                      <TextBlock Classes="muted" FontSize="9" Text="DOWNLOAD RUNS" />
+                      <TextBlock Name="DownloadRunsText" FontFamily="Menlo" FontSize="10" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Grid>
+
+                  <Border Grid.Row="2" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="11">
+                    <TextBlock Name="DataUseText" Foreground="{DynamicResource WarningTextBrush}" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
+                  </Border>
+
+                  <Grid Grid.Row="3">
+                    <Button Name="RunButton" Classes="primary" Content="Run test" Click="RunClicked" />
+                    <Button Name="StopButton" Classes="stop" Content="Stop test" IsVisible="False" Click="StopClicked" />
+                  </Grid>
+                </Grid>
+              </Border>
+            </Grid>
+          </Grid>
+        </ScrollViewer>
+
+        <Grid Name="ResultsPage"
+              IsVisible="False"
+              RowDefinitions="Auto,Auto,Auto,*"
+              Margin="28,24,28,26">
+          <Grid Name="ResultsHeaderGrid" Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+            <StackPanel Name="ResultsStatusBlock" Spacing="4">
+              <TextBlock Classes="overline" Text="RUN STATUS" />
+              <TextBlock Name="StatusText" Classes="pageTitle" FontSize="26" Text="No results yet" />
+              <TextBlock Name="LiveText" Classes="muted" FontFamily="Menlo" FontSize="10" Text="Run a test to populate this workspace." TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Name="ReportPathText"
+                       Grid.Column="1"
+                       Classes="muted"
+                       MaxWidth="360"
+                       FontFamily="Menlo"
+                       FontSize="9"
+                       LineHeight="14"
+                       Text="Completed reports are saved locally on this Mac."
+                       TextAlignment="Right"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
+          </Grid>
+
+          <Border Grid.Row="1"
+                  Background="{DynamicResource SurfaceBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="14,12"
+                  Margin="0,16,0,14">
+            <ProgressBar Name="RunProgress" Minimum="0" Maximum="100" Value="0" />
+          </Border>
+
+          <Border Grid.Row="2"
+                  Background="{DynamicResource SurfaceBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="10">
+            <Grid ColumnDefinitions="*,*,*,*">
+              <Border Grid.Column="0" Padding="16,13">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="overline" Text="DOWNLOAD" />
+                  <TextBlock Name="DownloadMetric" Classes="metricValue" Text="—" />
+                  <TextBlock Name="DownloadDetail" Classes="muted" FontSize="10" Text="Steady rate" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Border>
-              <StackPanel Name="ScalingResultsPanel"
-                          Spacing="0" />
-            </StackPanel>
-          </ScrollViewer>
-        </TabItem>
+              <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Padding="16,13">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="overline" Text="UPLOAD" />
+                  <TextBlock Name="UploadMetric" Classes="metricValue" Text="—" />
+                  <TextBlock Name="UploadDetail" Classes="muted" FontSize="10" Text="Steady rate" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Padding="16,13">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="overline" Text="ICMP LOSS" />
+                  <TextBlock Name="LossMetric" Classes="metricValue" Text="—" />
+                  <TextBlock Name="LossDetail" Classes="muted" FontSize="10" Text="Raw packet loss" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="3" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Padding="16,13">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="overline" Text="LATENCY" />
+                  <TextBlock Name="LatencyMetric" Classes="metricValue" Text="—" />
+                  <TextBlock Name="LatencyDetail" Classes="muted" FontSize="10" Text="ICMP median" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </Border>
 
-        <TabItem Header="Deep diagnostics">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="24"
-                        Margin="0,24,0,0">
-              <StackPanel Spacing="5">
-                <TextBlock Classes="eyebrow"
-                           Text="LOCAL NETWORK AND ROUTING" />
-                <TextBlock Classes="sectionTitle"
-                           Text="Interface and resolver details" />
-                <TextBlock Classes="muted"
-                           FontSize="14"
-                           Text="Inspect the local link, default route, active interfaces, and DNS resolver timing."
-                           TextWrapping="Wrap" />
-              </StackPanel>
-
-              <Grid ColumnDefinitions="*,*">
-                <Border Grid.Column="0"
-                        BorderBrush="#CFC8BE"
-                        BorderThickness="0,1,1,1"
-                        Padding="0,18,24,18">
-                  <StackPanel Spacing="6">
-                    <TextBlock Classes="eyebrow"
-                               Text="WI-FI" />
-                    <TextBlock Name="WifiTitleText"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Text="Not measured" />
-                    <TextBlock Name="WifiDetailText"
+          <TabControl Name="AnalysisTabs"
+                      Grid.Row="3"
+                      TabStripPlacement="Left"
+                      Margin="0,18,0,0">
+            <TabItem Header="Findings">
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="17" Margin="22,0,8,18">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="overline" Text="EVIDENCE-BASED INTERPRETATION" />
+                      <TextBlock Classes="sectionTitle" Text="What this run suggests" />
+                      <TextBlock Classes="muted" FontSize="11" MaxWidth="620" HorizontalAlignment="Left" Text="Findings use shared, versioned thresholds. Each one shows the evidence behind it and avoids assigning a cause the measurements cannot prove." TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Name="FindingEndpointText"
+                               Grid.Column="1"
                                Classes="muted"
-                               FontSize="13"
+                               MaxWidth="250"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Bottom"
+                               FontFamily="Menlo"
+                               FontSize="9"
+                               LineHeight="14"
+                               Text="Endpoint context unavailable"
+                               TextAlignment="Right"
                                TextWrapping="Wrap" />
-                  </StackPanel>
-                </Border>
-                <Border Grid.Column="1"
-                        BorderBrush="#CFC8BE"
-                        BorderThickness="0,1,0,1"
-                        Padding="24,18,0,18">
-                  <StackPanel Spacing="6">
-                    <TextBlock Classes="eyebrow"
-                               Text="ROUTING" />
-                    <TextBlock Name="RoutingTitleText"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Text="Not measured" />
-                    <TextBlock Name="RoutingDetailText"
-                               Classes="muted"
-                               FontSize="13"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </Border>
-              </Grid>
-
-              <StackPanel Spacing="10">
-                <TextBlock Classes="eyebrow"
-                           Text="ACTIVE INTERFACES" />
-                <StackPanel Name="InterfacesPanel"
-                            Spacing="0">
-                  <TextBlock Classes="muted"
-                             Text="No interface report loaded." />
-                </StackPanel>
-              </StackPanel>
-
-              <Border BorderBrush="#CFC8BE"
-                      BorderThickness="0,1,0,0"
-                      Padding="0,20,0,0">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="eyebrow"
-                             Text="ROUTE AND RESOLVERS" />
-                  <TextBlock Name="RouteSummaryText"
-                             Classes="muted"
-                             FontSize="13"
-                             Text="No route report loaded."
-                             TextWrapping="Wrap" />
-                  <StackPanel Name="DnsPanel"
-                              Spacing="0" />
-                </StackPanel>
-              </Border>
-            </StackPanel>
-          </ScrollViewer>
-        </TabItem>
-
-        <TabItem Header="Path and services">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="24"
-                        Margin="0,24,0,0">
-              <StackPanel Spacing="5">
-                <TextBlock Classes="eyebrow"
-                           Text="END-TO-END PATH" />
-                <TextBlock Classes="sectionTitle"
-                           Text="Route and service reachability" />
-                <TextBlock Classes="muted"
-                           FontSize="14"
-                           Text="Review traceroute hops and DNS, TCP, and TLS timing for the tested services."
-                           TextWrapping="Wrap" />
-              </StackPanel>
-
-              <StackPanel Spacing="10">
-                <TextBlock Classes="eyebrow"
-                           Text="TRACEROUTE" />
-                <TextBlock Name="TraceSummaryText"
-                           Classes="muted"
-                           FontSize="13"
-                           Text="No path report loaded."
-                           TextWrapping="Wrap" />
-                <StackPanel Name="TracePanel"
-                            Spacing="0" />
-              </StackPanel>
-
-              <Border BorderBrush="#CFC8BE"
-                      BorderThickness="0,1,0,0"
-                      Padding="0,20,0,0">
-                <StackPanel Spacing="10">
-                  <TextBlock Classes="eyebrow"
-                             Text="DNS / TCP / TLS" />
-                  <StackPanel Name="ServicesPanel"
-                              Spacing="0">
-                    <TextBlock Classes="muted"
-                               Text="No service timing report loaded." />
+                  </Grid>
+                  <StackPanel Name="FindingsPanel" Spacing="0">
+                    <TextBlock Classes="muted" Text="Run a diagnostic to generate findings." />
                   </StackPanel>
                 </StackPanel>
-              </Border>
-            </StackPanel>
-          </ScrollViewer>
-        </TabItem>
-      </TabControl>
+              </ScrollViewer>
+            </TabItem>
 
-      <StackPanel IsVisible="False">
-        <ListBox Name="HistoryList" />
-      </StackPanel>
+            <TabItem Header="Transfer">
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="17" Margin="22,0,8,18">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="overline" Text="CONNECTION SCALING" />
+                    <TextBlock Classes="sectionTitle" Text="Single flow and aggregate capacity" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Independent stages show whether one connection can use the path or parallel transfers are required." TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel Name="FlowResultsPanel" Spacing="0">
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,1" Padding="0,14">
+                      <Grid ColumnDefinitions="165,*">
+                        <TextBlock FontWeight="SemiBold" Text="Awaiting measurement" />
+                        <TextBlock Grid.Column="1" Classes="muted" Text="Run a diagnostic to compare transfer methods and loaded delay." TextWrapping="Wrap" />
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+                  <StackPanel Name="ScalingResultsPanel" Spacing="0" />
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Network">
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="17" Margin="22,0,8,18">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="overline" Text="LOCAL NETWORK" />
+                    <TextBlock Classes="sectionTitle" Text="Interfaces, Wi-Fi, and routing" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Inspect the local link, default route, active interfaces, and DNS resolver timing." TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,*">
+                    <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8,0,0,8" Padding="15">
+                      <StackPanel Spacing="5">
+                        <TextBlock Classes="overline" Text="WI-FI" />
+                        <TextBlock Name="WifiTitleText" FontSize="16" FontWeight="SemiBold" Text="Not measured" TextWrapping="Wrap" />
+                        <TextBlock Name="WifiDetailText" Classes="muted" FontSize="10" MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,1,1" CornerRadius="0,8,8,0" Padding="15">
+                      <StackPanel Spacing="5">
+                        <TextBlock Classes="overline" Text="ROUTING" />
+                        <TextBlock Name="RoutingTitleText" FontSize="16" FontWeight="SemiBold" Text="Not measured" TextWrapping="Wrap" />
+                        <TextBlock Name="RoutingDetailText" Classes="muted" FontSize="10" MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="overline" Text="ACTIVE INTERFACES" />
+                    <StackPanel Name="InterfacesPanel" Spacing="0">
+                      <TextBlock Classes="muted" Text="No interface report loaded." />
+                    </StackPanel>
+                  </StackPanel>
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="overline" Text="ROUTE AND RESOLVERS" />
+                    <TextBlock Name="RouteSummaryText" Classes="muted" FontSize="10" Text="No route report loaded." TextWrapping="Wrap" />
+                    <StackPanel Name="DnsPanel" Spacing="0" />
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Path &amp; services">
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="17" Margin="22,0,8,18">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="overline" Text="END-TO-END PATH" />
+                    <TextBlock Classes="sectionTitle" Text="Route and service reachability" />
+                    <TextBlock Classes="muted" FontSize="11" Text="Review traceroute hops and DNS, TCP, and TLS timing for the tested services." TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="overline" Text="TRACEROUTE" />
+                    <TextBlock Name="TraceSummaryText" Classes="muted" FontSize="10" Text="No path report loaded." TextWrapping="Wrap" />
+                    <StackPanel Name="TracePanel" Spacing="0" />
+                  </StackPanel>
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="overline" Text="DNS / TCP / TLS" />
+                    <StackPanel Name="ServicesPanel" Spacing="0">
+                      <TextBlock Classes="muted" Text="No service timing report loaded." />
+                    </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+          </TabControl>
+        </Grid>
+
+        <ScrollViewer Name="HistoryPage"
+                      IsVisible="False"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <Grid MaxWidth="980"
+                HorizontalAlignment="Stretch"
+                Margin="32,28,32,36"
+                RowDefinitions="Auto,Auto">
+            <Grid Grid.Row="0">
+              <StackPanel Spacing="7">
+                <TextBlock Classes="overline" Text="LOCAL REPORTS" />
+                <TextBlock Classes="pageTitle" Text="Report history" />
+                <TextBlock Classes="muted" HorizontalAlignment="Left" MaxWidth="700" FontSize="13" Text="Your 12 most recent reports are stored on this Mac and never uploaded." TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+            <ListBox Name="HistoryList"
+                     Grid.Row="1"
+                     Classes="history"
+                     Margin="0,24,0,0">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="180,*" ColumnSpacing="18">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="{Binding DisplayTitle}" FontSize="12" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding DisplayDate}" Classes="muted" FontSize="10" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding FileName}" Classes="muted" FontFamily="Menlo" FontSize="10" LineHeight="15" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </ScrollViewer>
+      </Grid>
     </Grid>
   </Grid>
 </Window>

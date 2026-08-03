@@ -22,6 +22,11 @@ internal static class FullDiagnosticRunner
     {
         var startedAt = DateTimeOffset.UtcNow;
         var plan = NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
+        progress?.Report("Selecting the measurement endpoint");
+        var endpointSelection = await EndpointSelector.SelectAsync(
+            options.TestEndpoints ?? [MeasurementEndpointCatalog.FromOrigin(options.TestOrigin)],
+            cancellationToken);
+        progress?.Report($"Using {endpointSelection.Selected.Name} for Internet transfer measurements");
         var lastStage = string.Empty;
         var transferProgress = new Progress<NativeTransferProgress>(current =>
         {
@@ -40,13 +45,13 @@ internal static class FullDiagnosticRunner
 
         var internetTransfer = await InternetTransferProbe.RunAsync(
             plan,
-            options.TestOrigin,
+            endpointSelection.Selected.Origin,
             transferProgress,
             cancellationToken);
         var deepDiagnostics = await ProbeRunner.RunAsync(options, progress, cancellationToken);
         var completedAt = DateTimeOffset.UtcNow;
 
-        return new NetworkDiagnosticsReportV2(
+        var report = new NetworkDiagnosticsReportV2(
             "2.0",
             completedAt,
             new DiagnosticRunMetadata(
@@ -61,6 +66,32 @@ internal static class FullDiagnosticRunner
             NativeTransferPlanReport.FromPlan(plan),
             internetTransfer,
             deepDiagnostics,
-            deepDiagnostics.LocalLink);
+            deepDiagnostics.LocalLink)
+        {
+            Measurement = EndpointSelector.CreateContext(
+                endpointSelection,
+                options.EngineName,
+                NativeCapabilities(options))
+        };
+        return report with { Findings = DiagnosticClassifier.Classify(report) };
+    }
+
+    private static IEnumerable<string> NativeCapabilities(ProbeOptions options)
+    {
+        yield return "application-latency";
+        yield return "content-throughput";
+        yield return "loaded-latency";
+        yield return "single-flow";
+        yield return "aggregate-flow";
+        yield return "icmp";
+        yield return "gateway-latency";
+        yield return "traceroute";
+        yield return "dns-resolvers";
+        yield return "path-mtu-ipv4";
+        yield return "tls-phases";
+        yield return "interfaces";
+        yield return "wifi";
+        yield return "routing";
+        if (options.LanTarget is not null) yield return "lan-throughput";
     }
 }

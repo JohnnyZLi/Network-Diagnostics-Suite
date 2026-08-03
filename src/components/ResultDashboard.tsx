@@ -8,6 +8,7 @@ import type {
 } from "../types/diagnostics";
 import { LatencyTable } from "./LatencyTable";
 import { MetricCard } from "./MetricCard";
+import { DiagnosticFindings } from "./DiagnosticFindings";
 import { ServiceMatrix } from "./ServiceMatrix";
 import { Sparkline } from "./Sparkline";
 
@@ -152,64 +153,6 @@ function rejectionDescription(delivery: DownloadDeliverySummary | undefined): st
   return `${delivery.rejectedStaticRequests} · ${details}`;
 }
 
-function buildFindings(result: DiagnosticResult): string[] {
-  const findings: string[] = [];
-  const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
-  const delivery = result.download.delivery;
-  const uploadDelivery = result.upload.uploadDelivery;
-
-  if (result.idleLatency.lossPercent > 0) findings.push("One or more application requests timed out while the connection was idle.");
-  if ((result.idleLatency.jitterMs ?? 0) > 20) findings.push("Idle latency varied enough to affect calls, games, or remote sessions.");
-  if (worstLoadedIncrease > 30) findings.push(`Latency rose by as much as ${formatLatency(worstLoadedIncrease)} ms under load, which suggests queueing or bufferbloat.`);
-  if (result.download.qualification === "cap-limited") findings.push("The download reached this profile’s data cap before the timed sample finished.");
-  if (result.upload.qualification === "cap-limited") findings.push("The upload reached this profile’s data cap before the timed sample finished.");
-  if (result.download.qualification === "still-ramping" || result.upload.qualification === "still-ramping") findings.push("At least one transfer was still accelerating when the measurement ended.");
-  if (result.download.qualification === "declining" || result.upload.qualification === "declining") findings.push("At least one direction slowed materially during the measured phase, so its average hides a declining second half.");
-  if (delivery?.pathFallbackReason) findings.push(`The preferred download path fell back: ${delivery.pathFallbackReason}`);
-  if (delivery && delivery.rejectedStaticRequests > 0) findings.push("One or more download responses failed validation.");
-  if (delivery && delivery.replacementRequests > 0) findings.push("One or more long-lived download responses completed early and required a replacement request.");
-  if (delivery && delivery.workerFallbackRequests > 0) findings.push("One or more download requests used the dynamically generated Worker fallback.");
-  if (uploadDelivery && uploadDelivery.replacementRequests > 0) findings.push("One or more upload requests completed during the phase and required a replacement request.");
-  if (delivery?.edgeCacheServedPercent !== null && delivery?.edgeCacheServedPercent !== undefined && delivery.edgeCacheServedPercent < 80) {
-    findings.push("The measured download was not consistently served from a warm Cloudflare edge cache.");
-  }
-  if (delivery?.selectedPath === "r2-direct-v1" && delivery.protocols.length === 0) findings.push("The browser did not expose the direct R2 transport protocol.");
-  if (result.services.some((service) => !service.reachable)) findings.push("At least one common service did not answer the browser reachability check.");
-  if (findings.length === 0) findings.push("No obvious instability appeared in this browser test.");
-  return findings;
-}
-
-function buildRecommendations(result: DiagnosticResult): string[] {
-  const recommendations = new Set<string>();
-  const worstLoadedIncrease = Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0);
-
-  if (result.idleLatency.lossPercent > 0 || (result.idleLatency.jitterMs ?? 0) > 20) {
-    recommendations.add("Repeat the test over Ethernet, or close to the access point, to separate Wi-Fi conditions from the wider Internet path.");
-  }
-  if (worstLoadedIncrease > 30) {
-    recommendations.add("Enable Smart Queue Management on the router, or limit heavy uploads and downloads, then compare the loaded-latency grade again.");
-  }
-  if (result.download.qualification === "cap-limited" || result.upload.qualification === "cap-limited") {
-    recommendations.add("Use a longer profile when you need a more representative result for a fast connection.");
-  }
-  if (
-    result.download.qualification === "still-ramping"
-    || result.upload.qualification === "still-ramping"
-    || result.download.qualification === "declining"
-    || result.upload.qualification === "declining"
-  ) {
-    recommendations.add("Run the test again after background traffic settles; compare several runs rather than relying on one transient sample.");
-  }
-  if (result.services.some((service) => !service.reachable)) {
-    recommendations.add("Retry the unreachable service directly before treating the result as an outage; browser privacy controls and extensions can also block these checks.");
-  }
-  if (recommendations.size === 0) {
-    recommendations.add("No immediate change is suggested. Save this report as a baseline and compare it with a future run if the connection feels worse.");
-  }
-
-  return [...recommendations].slice(0, 4);
-}
-
 interface ResultDashboardProps {
   result: DiagnosticResult;
   onExport: () => void;
@@ -219,8 +162,6 @@ interface ResultDashboardProps {
 
 export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDashboardProps) {
   const grade = worstGrade(result.downloadLatency, result.uploadLatency);
-  const findings = buildFindings(result);
-  const recommendations = buildRecommendations(result);
   const delivery = result.download.delivery;
   const uploadDelivery = result.upload.uploadDelivery;
 
@@ -248,18 +189,7 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
         <MetricCard label="Loaded-latency grade" value={grade} detail={`+${formatLatency(Math.max(result.downloadLatency.increaseMs ?? 0, result.uploadLatency.increaseMs ?? 0))} ms worst case`} tone="neutral" />
       </div>
 
-      <div className="report-columns report-columns--priority">
-        <section className="report-panel findings-panel report-panel--accent">
-          <span className="eyebrow">Interpretation</span>
-          <h3 className="text-accent">What stood out</h3>
-          <ul>{findings.map((finding) => <li key={finding}>{finding}</li>)}</ul>
-        </section>
-        <section className="report-panel recommendations-panel report-panel--green">
-          <span className="eyebrow">Next steps</span>
-          <h3 className="text-green">What to try next</h3>
-          <ul>{recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul>
-        </section>
-      </div>
+      <DiagnosticFindings result={result} />
 
       <section className="report-panel latency-panel">
         <div className="report-panel__heading">
@@ -283,7 +213,7 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
           <section className="report-panel scope-panel">
             <div className="report-panel__heading">
               <div><span className="eyebrow">Measurement scope</span><h3><span className="text-amber">Internet path</span>, not an isolated access-line benchmark</h3></div>
-              <p>The browser result includes this device, the local link, router, Internet service provider, route, and the selected Cloudflare test endpoint.</p>
+              <p>The browser result includes this device, the local link, router, Internet service provider, route, and the selected measurement endpoint.</p>
             </div>
             <div className="scope-grid">
               <article><span>Path</span><strong>{pathDescription(delivery)}</strong><p>Remote endpoint and route remain part of the result.</p></article>
@@ -298,6 +228,9 @@ export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultD
             <h3 className="text-blue">Edge session</h3>
             <dl>
               <div><dt>Scope</dt><dd>Internet path · endpoint included</dd></div>
+              <div><dt>Measurement engine</dt><dd>{result.measurement ? `${result.measurement.engine} · ${result.measurement.engineVersion}` : "Legacy browser report"}</dd></div>
+              <div><dt>Selected endpoint</dt><dd>{result.measurement?.selectedEndpoint.name ?? "Network Diagnostics primary"}</dd></div>
+              <div><dt>Endpoint provider</dt><dd>{result.measurement?.selectedEndpoint.provider ?? "Cloudflare"}</dd></div>
               <div><dt>Network</dt><dd>{result.edge?.network ?? "Unavailable"}{result.edge?.asn ? ` · AS${result.edge.asn}` : ""}</dd></div>
               <div><dt>Worker edge</dt><dd>{result.edge?.edge ?? "Unavailable"}</dd></div>
               <div><dt>IP path</dt><dd>{result.edge?.ipVersion ?? "Unknown"}</dd></div>

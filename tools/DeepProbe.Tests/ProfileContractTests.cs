@@ -10,9 +10,14 @@ public sealed class ProfileContractTests
     {
         var contract = TestProfileContract.Load();
 
-        Assert.Equal("1.0", contract.SchemaVersion);
+        Assert.Equal("1.1", contract.SchemaVersion);
         Assert.Equal(["compare", "single", "aggregate"], contract.TransferMethods);
-        Assert.Equal(["Quick", "Full", "Stress"], contract.Profiles.Select(profile => profile.Name));
+        Assert.Equal(["Connection Check", "Full", "Stress"], contract.Profiles.Select(profile => profile.Name));
+
+        var connection = Assert.Single(contract.Profiles, profile => profile.Id == "quick");
+        Assert.Equal(15, connection.EstimatedSeconds);
+        Assert.Equal(28_000_000, connection.DownloadCapBytes + connection.UploadCapBytes);
+        Assert.Equal(2, connection.AggregateDownloadConnections);
 
         var stress = Assert.Single(contract.Profiles, profile => profile.Id == "extended");
         Assert.Equal(3_512_000_000, stress.DownloadCapBytes + stress.UploadCapBytes);

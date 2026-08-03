@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NetworkDeepProbe.Diagnostics;
+using NetworkDeepProbe.Models;
 
 return await ProbeProgram.RunAsync(args);
 
@@ -72,6 +73,17 @@ internal static class ProbeProgram
             var outputPath = Path.GetFullPath(options.OutputPath);
             var json = JsonSerializer.Serialize(report, report.GetType(), JsonOptions);
             await File.WriteAllTextAsync(outputPath, json, cancellation.Token);
+            if (report is NetworkDiagnosticsReportV2 combined)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"Measurement endpoint: {combined.Measurement?.SelectedEndpoint.Name ?? "Unavailable"}");
+                Console.WriteLine("Findings:");
+                foreach (var finding in combined.Findings.Take(6))
+                {
+                    Console.WriteLine($"  [{finding.Severity.ToUpperInvariant()}] {finding.Title}");
+                    Console.WriteLine($"    {finding.Summary}");
+                }
+            }
             Console.WriteLine();
             Console.WriteLine($"Report written to {outputPath}");
             Console.WriteLine(options.IncludeInternetTransfer
@@ -104,9 +116,9 @@ internal static class ProbeProgram
         Console.WriteLine();
         Console.WriteLine("First-party Internet transfer:");
         Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
-        Console.WriteLine("  --profile <name>      quick, full, or stress (default: quick)");
+        Console.WriteLine("  --profile <name>      quick (Connection Check), full, or stress (default: quick)");
         Console.WriteLine("  --transfer-method <m> compare, single, or aggregate (default: compare)");
-        Console.WriteLine("  --test-origin <url>   Project endpoint origin (default: https://network.johnnyli.dev/)");
+        Console.WriteLine("  --test-origin <url>   Candidate endpoint origin; repeat to select the lowest-latency available endpoint");
         Console.WriteLine();
         Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
         Console.WriteLine("  --lan-server          Run the local throughput server until Ctrl+C");

@@ -5,6 +5,16 @@
   align-items: stretch;
 }
 
+.profile-selector {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, .75fr) minmax(0, .8fr);
+}
+
+.profile-selector .mode-option span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .mode-option {
   min-width: 0;
   min-height: 56px;
@@ -129,6 +139,8 @@
   .mode-selector {
     grid-template-columns: 1fr;
   }
+
+  .profile-selector { grid-template-columns: 1fr; }
 
   .mode-option {
     min-height: 52px;

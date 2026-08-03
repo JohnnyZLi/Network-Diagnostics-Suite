@@ -13,6 +13,7 @@ public sealed record NativeDiagnosticRunOptions(
     int MaximumHops = 30,
     bool IncludeAddresses = false,
     Uri? TestOrigin = null,
+    IReadOnlyList<MeasurementEndpoint>? TestEndpoints = null,
     string? LanTarget = null,
     int LanPort = 8765,
     int LanDurationSeconds = 8,
@@ -54,7 +55,11 @@ public static class NetworkDiagnosticsRunner
             options.Profile,
             options.TransferMethod,
             options.TestOrigin ?? InternetTransferProbe.DefaultOrigin,
-            false);
+            false)
+        {
+            EngineName = "native-desktop",
+            TestEndpoints = options.TestEndpoints
+        };
         var messageProgress = progress is null
             ? null
             : new Progress<string>(message => progress.Report(new NativeRunProgress(
@@ -95,6 +100,7 @@ public static class NetworkDiagnosticsRunner
         if (options.LanPort is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(options), "LAN port must be between 1024 and 65535.");
         if (options.LanDurationSeconds is < 3 or > 30) throw new ArgumentOutOfRangeException(nameof(options), "LAN duration must be between 3 and 30 seconds.");
         if (options.LanConnections is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "LAN connections must be between 1 and 16.");
+        if (options.TestEndpoints is { Count: 0 }) throw new ArgumentException("Test endpoints cannot be an empty list.", nameof(options));
     }
 }
 

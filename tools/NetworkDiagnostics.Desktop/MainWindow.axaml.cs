@@ -2,8 +2,11 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
@@ -12,18 +15,209 @@ namespace NetworkDiagnostics.Desktop;
 
 public sealed partial class MainWindow : Window
 {
+    private enum AppPage
+    {
+        Setup,
+        Results,
+        History
+    }
+
+    private enum ThemePreference
+    {
+        System,
+        Light,
+        Dark
+    }
+
     private CancellationTokenSource? runCancellation;
     private string? latestReportPath;
     private bool initialized;
+    private bool? compactLayout;
+    private AppPage currentPage;
+    private ThemePreference themePreference;
+    private NetworkDiagnosticsReportV2? displayedReport;
+    private readonly DispatcherTimer progressAnimationTimer;
+    private NativeTransferPlan? runningPlan;
+    private double displayedProgress;
+    private double targetProgress;
+    private double progressAnimationStart;
+    private double progressAnimationDurationMs;
+    private long progressAnimationStartedAt;
 
     public MainWindow()
     {
         InitializeComponent();
+        progressAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        progressAnimationTimer.Tick += ProgressAnimationTick;
+        themePreference = ThemeStore.Load();
+        ApplyThemePreference();
+        if (Application.Current is { } application)
+        {
+            application.ActualThemeVariantChanged += (_, _) => HandleActualThemeChanged();
+        }
         ProfileSelector.SelectedIndex = 0;
         MethodSelector.SelectedIndex = 0;
         initialized = true;
         RefreshPlan();
         LoadHistory();
+        ShowPage(AppPage.Setup);
+        ApplyResponsiveLayout(ClientSize.Width > 0 ? ClientSize.Width : Width);
+    }
+
+    private void MainWindowSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyResponsiveLayout(eventArgs.NewSize.Width);
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var compact = width < 1020;
+        if (compactLayout == compact) return;
+        compactLayout = compact;
+
+        if (compact)
+        {
+            ShellGrid.ColumnDefinitions = new ColumnDefinitions("76,*");
+            BrandCopy.IsVisible = false;
+            NavWorkspaceLabel.IsVisible = false;
+            NewTestNavLabel.IsVisible = false;
+            ResultsNavLabel.IsVisible = false;
+            HistoryNavLabel.IsVisible = false;
+            ThemeModeText.IsVisible = false;
+            PrivacyCopy.IsVisible = false;
+
+            SetupContentGrid.ColumnDefinitions = new ColumnDefinitions("*");
+            SetupContentGrid.RowDefinitions = new RowDefinitions("Auto,Auto");
+            Grid.SetRow(SetupConfigPane, 0);
+            Grid.SetColumn(SetupConfigPane, 0);
+            Grid.SetRow(PlanPane, 1);
+            Grid.SetColumn(PlanPane, 0);
+            PlanPane.Margin = new Thickness(0, 20, 0, 0);
+
+            ResultsHeaderGrid.ColumnDefinitions = new ColumnDefinitions("*");
+            ResultsHeaderGrid.RowDefinitions = new RowDefinitions("Auto,Auto");
+            Grid.SetRow(ReportPathText, 1);
+            Grid.SetColumn(ReportPathText, 0);
+            ReportPathText.HorizontalAlignment = HorizontalAlignment.Left;
+            ReportPathText.TextAlignment = TextAlignment.Left;
+            ReportPathText.Margin = new Thickness(0, 8, 0, 0);
+
+            AnalysisTabs.TabStripPlacement = Dock.Top;
+            foreach (var tab in AnalysisTabs.Items.OfType<TabItem>())
+            {
+                tab.Width = 160;
+                tab.Margin = new Thickness(0, 0, 5, 8);
+            }
+        }
+        else
+        {
+            ShellGrid.ColumnDefinitions = new ColumnDefinitions("216,*");
+            BrandCopy.IsVisible = true;
+            NavWorkspaceLabel.IsVisible = true;
+            NewTestNavLabel.IsVisible = true;
+            ResultsNavLabel.IsVisible = true;
+            HistoryNavLabel.IsVisible = true;
+            ThemeModeText.IsVisible = true;
+            PrivacyCopy.IsVisible = true;
+
+            SetupContentGrid.ColumnDefinitions = new ColumnDefinitions("*,310");
+            SetupContentGrid.RowDefinitions = new RowDefinitions("Auto");
+            Grid.SetRow(SetupConfigPane, 0);
+            Grid.SetColumn(SetupConfigPane, 0);
+            Grid.SetRow(PlanPane, 0);
+            Grid.SetColumn(PlanPane, 1);
+            PlanPane.Margin = new Thickness(0);
+
+            ResultsHeaderGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto");
+            ResultsHeaderGrid.RowDefinitions = new RowDefinitions("Auto");
+            Grid.SetRow(ReportPathText, 0);
+            Grid.SetColumn(ReportPathText, 1);
+            ReportPathText.HorizontalAlignment = HorizontalAlignment.Right;
+            ReportPathText.TextAlignment = TextAlignment.Right;
+            ReportPathText.Margin = new Thickness(0);
+
+            AnalysisTabs.TabStripPlacement = Dock.Left;
+            foreach (var tab in AnalysisTabs.Items.OfType<TabItem>())
+            {
+                tab.Width = 176;
+                tab.Margin = new Thickness(0, 0, 0, 4);
+            }
+        }
+    }
+
+    private void ThemeClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        themePreference = themePreference switch
+        {
+            ThemePreference.System => ThemePreference.Light,
+            ThemePreference.Light => ThemePreference.Dark,
+            _ => ThemePreference.System
+        };
+        ThemeStore.Save(themePreference);
+        ApplyThemePreference();
+    }
+
+    private void ApplyThemePreference()
+    {
+        if (Application.Current is not { } application) return;
+        application.RequestedThemeVariant = themePreference switch
+        {
+            ThemePreference.Light => ThemeVariant.Light,
+            ThemePreference.Dark => ThemeVariant.Dark,
+            _ => ThemeVariant.Default
+        };
+        UpdateThemeControl();
+    }
+
+    private void HandleActualThemeChanged()
+    {
+        UpdateThemeControl();
+        if (displayedReport is not null) RenderReport(displayedReport);
+    }
+
+    private void UpdateThemeControl()
+    {
+        if (ThemeModeText is null || ThemeGlyphText is null) return;
+        var dark = Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+        ThemeGlyphText.Text = dark ? "☾" : "☀";
+        ThemeModeText.Text = themePreference switch
+        {
+            ThemePreference.Light => "Appearance · Light",
+            ThemePreference.Dark => "Appearance · Dark",
+            _ => "Appearance · System"
+        };
+    }
+
+    private void NewTestNavClicked(object? sender, RoutedEventArgs eventArgs) => ShowPage(AppPage.Setup);
+
+    private void ResultsNavClicked(object? sender, RoutedEventArgs eventArgs) => ShowPage(AppPage.Results);
+
+    private void HistoryNavClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        LoadHistory();
+        ShowPage(AppPage.History);
+    }
+
+    private void ShowPage(AppPage page)
+    {
+        currentPage = page;
+        SetupPage.IsVisible = page == AppPage.Setup;
+        ResultsPage.IsVisible = page == AppPage.Results;
+        HistoryPage.IsVisible = page == AppPage.History;
+        SetActive(NewTestNavButton, page == AppPage.Setup);
+        SetActive(ResultsNavButton, page == AppPage.Results);
+        SetActive(HistoryNavButton, page == AppPage.History);
+        HeaderContextText.Text = page switch
+        {
+            AppPage.Setup => "New test",
+            AppPage.Results => runCancellation is null ? "Results" : "Test running",
+            AppPage.History => "Report history",
+            _ => "Network diagnostics"
+        };
+    }
+
+    private static void SetActive(Button button, bool active)
+    {
+        if (active && !button.Classes.Contains("active")) button.Classes.Add("active");
+        if (!active) button.Classes.Remove("active");
     }
 
     private void PlanSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
@@ -40,7 +234,7 @@ public sealed partial class MainWindow : Window
         UploadConnectionsText.Text = JoinConnections(plan.UploadStages);
         DownloadRunsText.Text = DescribeDownloadRuns(plan);
         DataUseText.Text = $"Transfers up to {FormatBytes(plan.TransferCapBytes)}. Avoid metered or cellular connections.";
-        RunButton.Content = $"Run {plan.ProfileName.ToLowerInvariant()} diagnostic";
+        RunButton.Content = RunLabel(plan.Profile);
     }
 
     private async void RunClicked(object? sender, RoutedEventArgs eventArgs)
@@ -55,6 +249,8 @@ public sealed partial class MainWindow : Window
         }
 
         runCancellation = new CancellationTokenSource();
+        runningPlan = plan;
+        ShowPage(AppPage.Results);
         SetRunning(true);
         ResetResults();
         var profile = SelectedProfile();
@@ -64,7 +260,7 @@ public sealed partial class MainWindow : Window
             Target: string.IsNullOrWhiteSpace(TargetInput.Text) ? "1.1.1.1" : TargetInput.Text.Trim(),
             PingCount: profile switch
             {
-                TestProfileId.Quick => 12,
+                TestProfileId.Quick => 8,
                 TestProfileId.Standard => 20,
                 TestProfileId.Extended => 30,
                 _ => 20
@@ -72,6 +268,7 @@ public sealed partial class MainWindow : Window
             IncludeAddresses: IncludeAddressesCheck.IsChecked == true,
             LanTarget: string.IsNullOrWhiteSpace(LanTargetInput.Text) ? null : LanTargetInput.Text.Trim());
 
+        var completed = false;
         try
         {
             var report = await NetworkDiagnosticsRunner.RunAsync(
@@ -81,24 +278,26 @@ public sealed partial class MainWindow : Window
             latestReportPath = await SaveReportAsync(report, runCancellation.Token);
             RenderReport(report);
             LoadHistory();
-            StatusText.Text = "Diagnostic complete.";
-            ReportPathText.Text = $"Saved locally: {latestReportPath}";
-            RunProgress.IsIndeterminate = false;
-            RunProgress.Value = 100;
-            LiveText.Text = $"Measured {FormatBytes(report.InternetTransfer?.DataUsedBytes ?? 0)} of transfer payload.";
+            StatusText.Text = "Diagnostic complete";
+            ReportPathText.Text = $"Saved report: {latestReportPath}";
+            SetProgressTarget(100);
+            LiveText.Text = $"{FormatBytes(report.InternetTransfer?.DataUsedBytes ?? 0)} transferred during this test.";
+            completed = true;
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Diagnostic stopped.";
-            LiveText.Text = "No report was saved for the interrupted run.";
+            StatusText.Text = "Diagnostic stopped";
+            LiveText.Text = "Interrupted tests are not saved.";
         }
         catch (Exception error)
         {
-            StatusText.Text = "Diagnostic failed.";
+            StatusText.Text = "Diagnostic failed";
             LiveText.Text = error.Message;
         }
         finally
         {
+            if (!completed) FreezeProgressAnimation();
+            runningPlan = null;
             runCancellation.Dispose();
             runCancellation = null;
             SetRunning(false);
@@ -110,8 +309,7 @@ public sealed partial class MainWindow : Window
     private void UpdateProgress(NativeRunProgress progress)
     {
         StatusText.Text = progress.Message;
-        RunProgress.IsIndeterminate = progress.Phase == "diagnostics";
-        if (!RunProgress.IsIndeterminate) RunProgress.Value = Math.Clamp(progress.Fraction * 100, 0, 100);
+        SetProgressTarget(OverallProgress(progress));
         var live = new List<string>();
         if (progress.LiveMbps is not null) live.Add($"{progress.LiveMbps:0.#} Mbps");
         if (progress.LiveLatencyMs is not null) live.Add($"{progress.LiveLatencyMs:0.#} ms");
@@ -122,18 +320,118 @@ public sealed partial class MainWindow : Window
     private void SetRunning(bool running)
     {
         RunButton.IsEnabled = !running;
+        RunButton.IsVisible = !running;
         StopButton.IsVisible = running;
         ProfileSelector.IsEnabled = !running;
         MethodSelector.IsEnabled = !running;
         TargetInput.IsEnabled = !running;
         LanTargetInput.IsEnabled = !running;
         IncludeAddressesCheck.IsEnabled = !running;
+        NewTestNavButton.IsEnabled = !running;
+        HistoryNavButton.IsEnabled = !running;
+        ResultsNavButton.IsEnabled = true;
         if (running)
         {
             StatusText.Text = "Starting native diagnostic…";
             RunProgress.IsIndeterminate = false;
-            RunProgress.Value = 0;
+            SetProgressTarget(2, immediate: true);
         }
+        if (currentPage == AppPage.Results)
+        {
+            HeaderContextText.Text = running ? "Test running" : "Results";
+        }
+    }
+
+    private double OverallProgress(NativeRunProgress progress)
+    {
+        if (progress.Phase == "diagnostics") return DiagnosticCheckpoint(progress.Message);
+        if (progress.Phase == "idle") return 2 + Math.Clamp(progress.Fraction, 0, 1) * 8;
+        if (progress.Phase == "complete") return 82;
+        if (runningPlan is null) return targetProgress;
+
+        var direction = progress.Phase switch
+        {
+            "download" => TransferDirection.Download,
+            "upload" => TransferDirection.Upload,
+            _ => (TransferDirection?)null
+        };
+        if (direction is null) return targetProgress;
+
+        var stages = runningPlan.DownloadStages.Concat(runningPlan.UploadStages).ToArray();
+        var stage = stages.FirstOrDefault(item =>
+            item.Direction == direction.Value && item.Id == progress.Stage);
+        if (stage is null) return targetProgress;
+
+        var totalDuration = stages.Sum(item => Math.Max(item.DurationMs, 1));
+        var elapsedBeforeStage = stages
+            .TakeWhile(item => !ReferenceEquals(item, stage))
+            .Sum(item => Math.Max(item.DurationMs, 1));
+        var stageFraction = Math.Clamp(progress.Fraction, 0, 1);
+        var transferFraction = (elapsedBeforeStage + Math.Max(stage.DurationMs, 1) * stageFraction)
+            / (double)Math.Max(totalDuration, 1);
+        return 10 + transferFraction * 72;
+    }
+
+    private double DiagnosticCheckpoint(string message)
+    {
+        if (message.StartsWith("Selecting the measurement endpoint", StringComparison.Ordinal)) return 3;
+        if (message.StartsWith("Using ", StringComparison.Ordinal)) return 4;
+        if (message.StartsWith("Inspecting active network interfaces", StringComparison.Ordinal)) return 83;
+        if (message.StartsWith("Inspecting Wi-Fi and routing details", StringComparison.Ordinal)) return 85;
+        if (message.StartsWith("Resolving ", StringComparison.Ordinal)) return 87;
+        if (message.StartsWith("Measuring the default gateway", StringComparison.Ordinal)) return 89;
+        if (message.StartsWith("Sending ", StringComparison.Ordinal)) return 91;
+        if (message.StartsWith("Tracing the route", StringComparison.Ordinal)) return 93;
+        if (message.StartsWith("Testing Domain Name System resolvers", StringComparison.Ordinal)) return 95;
+        if (message.StartsWith("Estimating the IPv4 path", StringComparison.Ordinal)) return 97;
+        if (message.StartsWith("Timing common Transport Layer Security endpoints", StringComparison.Ordinal)) return 98;
+        if (message.StartsWith("Checking the local throughput server", StringComparison.Ordinal)) return 98.3;
+        if (message.StartsWith("Measuring local download", StringComparison.Ordinal)) return 98.6;
+        if (message.StartsWith("Measuring local upload", StringComparison.Ordinal)) return 99;
+        return targetProgress;
+    }
+
+    private void SetProgressTarget(double value, bool immediate = false)
+    {
+        value = Math.Clamp(value, 0, 100);
+        if (immediate)
+        {
+            progressAnimationTimer.Stop();
+            displayedProgress = value;
+            targetProgress = value;
+            RunProgress.Value = value;
+            return;
+        }
+
+        // Progress callbacks from different probes can arrive slightly out of order.
+        // Ignoring regressions prevents the indicator from flashing back to an earlier phase.
+        if (value <= targetProgress) return;
+        progressAnimationStart = displayedProgress;
+        targetProgress = value;
+        progressAnimationStartedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+        progressAnimationDurationMs = Math.Clamp((targetProgress - displayedProgress) * 18, 160, 560);
+        if (!progressAnimationTimer.IsEnabled) progressAnimationTimer.Start();
+    }
+
+    private void ProgressAnimationTick(object? sender, EventArgs eventArgs)
+    {
+        var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(progressAnimationStartedAt).TotalMilliseconds;
+        var position = Math.Clamp(elapsedMs / progressAnimationDurationMs, 0, 1);
+        var eased = 1 - Math.Pow(1 - position, 3);
+        displayedProgress = progressAnimationStart + (targetProgress - progressAnimationStart) * eased;
+        RunProgress.Value = displayedProgress;
+        if (position < 1) return;
+
+        displayedProgress = targetProgress;
+        RunProgress.Value = targetProgress;
+        progressAnimationTimer.Stop();
+    }
+
+    private void FreezeProgressAnimation()
+    {
+        progressAnimationTimer.Stop();
+        targetProgress = displayedProgress;
+        RunProgress.Value = displayedProgress;
     }
 
     private void ResetResults()
@@ -145,28 +443,56 @@ public sealed partial class MainWindow : Window
         FlowResultsPanel.Children.Clear();
         FlowResultsPanel.Children.Add(Muted("Measurement in progress."));
         ScalingResultsPanel.Children.Clear();
+        FindingEndpointText.Text = "Selecting measurement endpoint…";
+        FindingsPanel.Children.Clear();
+        FindingsPanel.Children.Add(Muted("Findings will appear after the diagnostic completes."));
     }
 
     private void RenderReport(NetworkDiagnosticsReportV2 report)
     {
+        displayedReport = report;
         var transfer = report.InternetTransfer;
         var deep = report.DeepDiagnostics;
         if (transfer is not null)
         {
             DownloadMetric.Text = $"{transfer.Download.SteadyMbps:0.#}";
-            DownloadDetail.Text = $"Mbps steady · {transfer.Download.Qualification}";
+            DownloadDetail.Text = $"Mbps · {QualificationLabel(transfer.Download.Qualification)}";
             UploadMetric.Text = $"{transfer.Upload.SteadyMbps:0.#}";
-            UploadDetail.Text = $"Mbps steady · {transfer.Upload.Qualification}";
+            UploadDetail.Text = $"Mbps · {QualificationLabel(transfer.Upload.Qualification)}";
         }
         if (deep is not null)
         {
             LossMetric.Text = $"{deep.InternetPing.Statistics.LossPercent:0.#}%";
-            LossDetail.Text = $"{deep.InternetPing.Statistics.Received}/{deep.InternetPing.Statistics.Sent} replies";
+            LossDetail.Text = $"{deep.InternetPing.Statistics.Received} of {deep.InternetPing.Statistics.Sent} replies";
             LatencyMetric.Text = deep.InternetPing.Statistics.MedianMs is null ? "—" : $"{deep.InternetPing.Statistics.MedianMs:0.#}";
-            LatencyDetail.Text = $"ms median · {deep.InternetPing.Statistics.JitterMs:0.#} ms jitter";
+            LatencyDetail.Text = $"ms median · jitter {Ms(deep.InternetPing.Statistics.JitterMs)}";
         }
         RenderFlows(transfer);
         RenderDeep(deep);
+        RenderFindings(report);
+    }
+
+    private void RenderFindings(NetworkDiagnosticsReportV2 report)
+    {
+        FindingsPanel.Children.Clear();
+        var findings = report.Findings.Count > 0
+            ? report.Findings
+            : DiagnosticClassifier.Classify(report);
+        var endpoint = report.Measurement?.SelectedEndpoint;
+        FindingEndpointText.Text = endpoint is null
+            ? "Legacy report · endpoint context unavailable"
+            : $"{report.Measurement!.Engine} engine · {endpoint.Name}\n{endpoint.Provider} · {endpoint.SelectionReason}";
+
+        if (findings.Count == 0)
+        {
+            FindingsPanel.Children.Add(Muted("No interpretation is available for this report."));
+            return;
+        }
+
+        foreach (var finding in findings)
+        {
+            FindingsPanel.Children.Add(FindingRow(finding));
+        }
     }
 
     private void RenderFlows(NativeInternetTransferReport? transfer)
@@ -186,7 +512,7 @@ public sealed partial class MainWindow : Window
                 $"{item.Connections} connection{(item.Connections == 1 ? string.Empty : "s")}",
                 item.Download is null ? "Download not sampled" : $"{item.Download.SteadyMbps:0.#} Mbps download",
                 item.Upload is null ? "Upload not sampled" : $"{item.Upload.SteadyMbps:0.#} Mbps upload",
-                item.DownloadLatency?.IncreaseMs is null ? "Loaded delay unavailable" : $"+{item.DownloadLatency.IncreaseMs:0.#} ms loaded download delay"));
+                item.DownloadLatency?.IncreaseMs is null ? "Loaded delay unavailable" : $"Loaded download delay: +{item.DownloadLatency.IncreaseMs:0.#} ms"));
         }
 
         var single = transfer.FlowMeasurements.FirstOrDefault(item => item.Strategy == TransferStrategy.Single)?.Download;
@@ -209,9 +535,9 @@ public sealed partial class MainWindow : Window
             {
                 ScalingResultsPanel.Children.Add(Card(
                     $"{point.Connections} connection{(point.Connections == 1 ? string.Empty : "s")}",
-                    $"{point.Download.SteadyMbps:0.#} Mbps steady",
+                    $"{point.Download.SteadyMbps:0.#} Mbps steady rate",
                     $"{point.Download.Mbps:0.#} Mbps whole phase",
-                    $"+{point.DownloadLatency.IncreaseMs:0.#} ms loaded delay · {point.Download.Qualification}"));
+                    $"Loaded delay: +{point.DownloadLatency.IncreaseMs:0.#} ms · {QualificationLabel(point.Download.Qualification)}"));
             }
         }
     }
@@ -246,7 +572,7 @@ public sealed partial class MainWindow : Window
 
         foreach (var resolver in deep.DnsResolvers.OrderBy(item => item.MedianMs ?? double.MaxValue))
         {
-            DnsPanel.Children.Add(Line(resolver.Name, $"{resolver.Successful}/{resolver.Attempts} · median {Ms(resolver.MedianMs)} · p95 {Ms(resolver.P95Ms)}"));
+            DnsPanel.Children.Add(Line(resolver.Name, $"{resolver.Successful} of {resolver.Attempts} replies · Median {Ms(resolver.MedianMs)} · P95 {Ms(resolver.P95Ms)}"));
         }
 
         TraceSummaryText.Text = $"{deep.TraceRoute.Hops.Count} hops to {deep.TraceRoute.Target} · {(deep.TraceRoute.ReachedDestination ? "destination reached" : "partial path")}.";
@@ -270,13 +596,13 @@ public sealed partial class MainWindow : Window
         if (wifi is null || wifi.Status == "unavailable")
         {
             WifiTitleText.Text = "Unavailable";
-            WifiDetailText.Text = wifi?.Error ?? "This report does not contain Wi-Fi details.";
+            WifiDetailText.Text = "Wi-Fi details could not be read on this Mac.";
             return;
         }
         if (wifi.Status == "not-connected")
         {
             WifiTitleText.Text = "Not connected";
-            WifiDetailText.Text = wifi.Error ?? "A wireless interface was found without an active association.";
+            WifiDetailText.Text = "A Wi-Fi interface was found, but it is not connected.";
             return;
         }
         WifiTitleText.Text = wifi.Ssid ?? wifi.InterfaceName ?? "Connected Wi-Fi";
@@ -296,7 +622,7 @@ public sealed partial class MainWindow : Window
         if (routing is null || routing.Status != "available")
         {
             RoutingTitleText.Text = "Unavailable";
-            RoutingDetailText.Text = routing?.Error ?? "This report does not contain route-table details.";
+            RoutingDetailText.Text = "Routing details could not be read on this Mac.";
             return;
         }
         var defaultRoute = routing.Entries.FirstOrDefault(entry => entry.IsDefault);
@@ -431,46 +757,304 @@ public sealed partial class MainWindow : Window
 
     private static string Ms(double? value) => value is null ? "—" : $"{value:0.#} ms";
 
-    private static TextBlock Muted(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = Brush.Parse("#68645E") };
+    private static string QualificationLabel(string qualification) => qualification switch
+    {
+        "cap-limited" => "Profile cap reached early",
+        "still-ramping" => "Still ramping at finish",
+        "declining" => "Declined during sample",
+        "unstable" => "Variable sample",
+        _ => "Qualified duration sample"
+    };
 
-    private static TextBlock Label(string text) => new() { Text = text, FontSize = 11, FontWeight = FontWeight.Bold, Foreground = Brush.Parse("#A4553B") };
+    private static string RunLabel(TestProfileId profile) => profile switch
+    {
+        TestProfileId.Quick => "Run connection check",
+        TestProfileId.Standard => "Run full diagnostic",
+        TestProfileId.Extended => "Run stress test",
+        _ => "Run diagnostic"
+    };
+
+    private static TextBlock Muted(string text) => new()
+    {
+        Text = text,
+        FontSize = 12,
+        LineHeight = 17,
+        TextWrapping = TextWrapping.Wrap,
+        Foreground = ThemeBrush("TextSecondaryBrush")
+    };
+
+    private static TextBlock Label(string text) => new()
+    {
+        Text = text,
+        FontFamily = new FontFamily("Menlo"),
+        FontSize = 10,
+        FontWeight = FontWeight.Bold,
+        LetterSpacing = 1.1,
+        Foreground = ThemeBrush("AccentBrush"),
+        Margin = new Thickness(0, 10, 0, 3)
+    };
 
     private static Border Card(string title, params string[] lines)
     {
-        var panel = new StackPanel { Spacing = 5 };
-        panel.Children.Add(new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold });
-        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line))) panel.Children.Add(Muted(line));
+        var titleText = new TextBlock
+        {
+            Text = title,
+            FontSize = 13,
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 18, 0)
+        };
+        var details = new StackPanel { Spacing = 3 };
+        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line))) details.Children.Add(Muted(line));
+        Grid.SetColumn(details, 1);
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("170,*") };
+        row.Children.Add(titleText);
+        row.Children.Add(details);
         return new Border
         {
-            Background = Brush.Parse("#FCFBF8"),
-            BorderBrush = Brush.Parse("#DED8CE"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(14),
-            Child = panel
+            BorderBrush = ThemeBrush("BorderBrush"),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding = new Thickness(0, 11),
+            Child = row
         };
     }
 
     private static Border Line(string title, string detail)
     {
-        var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
-        var detailText = new TextBlock { Text = detail, Foreground = Brush.Parse("#68645E"), TextWrapping = TextWrapping.Wrap };
+        var titleText = new TextBlock
+        {
+            Text = title,
+            FontFamily = new FontFamily("Menlo"),
+            FontSize = 11,
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 18, 0)
+        };
+        var detailText = new TextBlock
+        {
+            Text = detail,
+            FontFamily = new FontFamily("Menlo"),
+            FontSize = 10,
+            LineHeight = 15,
+            Foreground = ThemeBrush("TextSecondaryBrush"),
+            TextWrapping = TextWrapping.Wrap
+        };
         Grid.SetColumn(detailText, 1);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("180,*") };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("170,*") };
         grid.Children.Add(titleText);
         grid.Children.Add(detailText);
         return new Border
         {
-            BorderBrush = Brush.Parse("#E2DCD2"),
+            BorderBrush = ThemeBrush("BorderBrush"),
             BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(0, 6, 0, 8),
+            Padding = new Thickness(0, 8),
+            Child = grid
+        };
+    }
+
+    private static Border FindingRow(DiagnosticFinding finding)
+    {
+        var tone = finding.Severity switch
+        {
+            "critical" => ThemeBrush("DangerTextBrush"),
+            "warning" => ThemeBrush("AccentBrush"),
+            _ => ThemeBrush("SuccessTextBrush")
+        };
+        var status = finding.Severity switch
+        {
+            "critical" => "ACTION RECOMMENDED",
+            "warning" => "WORTH INVESTIGATING",
+            _ => "CONTEXT"
+        };
+        var content = new StackPanel { Spacing = 7 };
+        content.Children.Add(new TextBlock
+        {
+            Text = $"{status} · {finding.Confidence.ToUpperInvariant()} CONFIDENCE",
+            FontFamily = new FontFamily("Menlo"),
+            FontSize = 9,
+            FontWeight = FontWeight.Bold,
+            LetterSpacing = 1,
+            Foreground = tone,
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = finding.Title,
+            FontSize = 16,
+            FontWeight = FontWeight.SemiBold,
+            LetterSpacing = -0.2,
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = finding.Summary,
+            FontSize = 11,
+            LineHeight = 17,
+            Foreground = ThemeBrush("TextSecondaryBrush"),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        if (finding.Evidence.Count > 0)
+        {
+            var evidence = new WrapPanel
+            {
+                Orientation = Orientation.Horizontal,
+                ItemWidth = 210,
+                ItemHeight = double.NaN
+            };
+            foreach (var item in finding.Evidence)
+            {
+                evidence.Children.Add(new Border
+                {
+                    BorderBrush = ThemeBrush("BorderBrush"),
+                    BorderThickness = new Thickness(0, 1, 0, 0),
+                    Margin = new Thickness(0, 5, 16, 0),
+                    Padding = new Thickness(0, 7, 0, 0),
+                    Child = new StackPanel
+                    {
+                        Spacing = 2,
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = item.Label.ToUpperInvariant(),
+                                FontFamily = new FontFamily("Menlo"),
+                                FontSize = 8,
+                                LetterSpacing = 0.8,
+                                Foreground = ThemeBrush("TextTertiaryBrush"),
+                                TextWrapping = TextWrapping.Wrap
+                            },
+                            new TextBlock
+                            {
+                                Text = item.Value,
+                                FontFamily = new FontFamily("Menlo"),
+                                FontSize = 11,
+                                FontWeight = FontWeight.SemiBold,
+                                TextWrapping = TextWrapping.Wrap
+                            }
+                        }
+                    }
+                });
+            }
+            content.Children.Add(evidence);
+        }
+
+        if (finding.Recommendations.Count > 0)
+        {
+            content.Children.Add(Label("WHAT TO TRY"));
+            foreach (var recommendation in finding.Recommendations)
+            {
+                content.Children.Add(Muted($"→  {recommendation}"));
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(finding.NextTest))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = $"NEXT TEST  {finding.NextTest}",
+                FontFamily = new FontFamily("Menlo"),
+                FontSize = 9,
+                LineHeight = 14,
+                Foreground = tone,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+        }
+
+        var marker = new Border
+        {
+            Width = 3,
+            MinHeight = 28,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = tone
+        };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("3,*"), ColumnSpacing = 14 };
+        Grid.SetColumn(content, 1);
+        grid.Children.Add(marker);
+        grid.Children.Add(content);
+        return new Border
+        {
+            BorderBrush = ThemeBrush("BorderBrush"),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 16, 0, 18),
             Child = grid
         };
     }
 
     private sealed record ReportItem(string Path, DateTime Modified)
     {
-        public override string ToString() => $"{Modified:g}  ·  {System.IO.Path.GetFileName(Path)}";
+        public string FileName => System.IO.Path.GetFileName(Path);
+
+        public string DisplayDate => Modified.ToString("MMM d, yyyy · h:mm tt");
+
+        public string DisplayTitle
+        {
+            get
+            {
+                var parts = System.IO.Path.GetFileNameWithoutExtension(Path).Split('-');
+                if (parts.Length < 2) return "Completed test";
+                var profile = parts[^2] switch
+                {
+                    "quick" => "Connection Check",
+                    "standard" => "Full",
+                    "extended" => "Stress",
+                    _ => "Completed"
+                };
+                var method = parts[^1] switch
+                {
+                    "compare" => "Compare",
+                    "single" => "Single",
+                    "aggregate" => "Aggregate",
+                    _ => "Test"
+                };
+                return $"{profile} · {method}";
+            }
+        }
+    }
+
+    private static IBrush ThemeBrush(string key)
+    {
+        if (Application.Current is { } application
+            && application.TryFindResource(key, application.ActualThemeVariant, out var value)
+            && value is IBrush brush)
+        {
+            return brush;
+        }
+        return Brushes.Gray;
+    }
+
+    private static class ThemeStore
+    {
+        public static ThemePreference Load()
+        {
+            try
+            {
+                if (!File.Exists(SettingsPath())) return ThemePreference.System;
+                return Enum.TryParse<ThemePreference>(File.ReadAllText(SettingsPath()).Trim(), true, out var value)
+                    ? value
+                    : ThemePreference.System;
+            }
+            catch
+            {
+                return ThemePreference.System;
+            }
+        }
+
+        public static void Save(ThemePreference preference)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath())!);
+                File.WriteAllText(SettingsPath(), preference.ToString().ToLowerInvariant());
+            }
+            catch
+            {
+                // Appearance persistence is optional; the current session still uses the selection.
+            }
+        }
+
+        private static string SettingsPath() => Path.Combine(ReportDirectory(), "..", "appearance.txt");
     }
 
     private static class ConfirmationStore

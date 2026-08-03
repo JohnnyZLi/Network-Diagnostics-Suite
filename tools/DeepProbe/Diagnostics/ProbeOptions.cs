@@ -1,3 +1,4 @@
+using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 
 namespace NetworkDeepProbe.Diagnostics;
@@ -19,6 +20,10 @@ internal sealed record ProbeOptions(
     Uri TestOrigin,
     bool ShowHelp)
 {
+    public IReadOnlyList<MeasurementEndpoint>? TestEndpoints { get; init; }
+
+    public string EngineName { get; init; } = "native-cli";
+
     public static ProbeOptions Parse(string[] args, DateTimeOffset? now = null)
     {
         var target = "1.1.1.1";
@@ -35,6 +40,7 @@ internal sealed record ProbeOptions(
         var profile = TestProfileId.Quick;
         var transferMethod = TransferMethod.Compare;
         var testOrigin = InternetTransferProbe.DefaultOrigin;
+        var testOrigins = new List<Uri>();
         var showHelp = false;
 
         for (var index = 0; index < args.Length; index++)
@@ -67,6 +73,7 @@ internal sealed record ProbeOptions(
                     break;
                 case "--test-origin":
                     testOrigin = ParseOrigin(RequireValue(args, ref index, "--test-origin"));
+                    testOrigins.Add(testOrigin);
                     break;
                 case "--lan-target":
                     lanTarget = RequireValue(args, ref index, "--lan-target");
@@ -116,7 +123,12 @@ internal sealed record ProbeOptions(
             profile,
             transferMethod,
             testOrigin,
-            showHelp);
+            showHelp)
+        {
+            TestEndpoints = testOrigins.Count == 0
+                ? null
+                : testOrigins.Select(MeasurementEndpointCatalog.FromOrigin).ToArray()
+        };
     }
 
     private static string RequireValue(string[] args, ref int index, string option)

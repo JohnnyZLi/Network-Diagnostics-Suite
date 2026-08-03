@@ -1,3 +1,5 @@
+import type { DiagnosticFinding, MeasurementContext } from "./diagnostics";
+
 export interface DeepLatencyStatistics {
   sent: number;
   received: number;
@@ -204,4 +206,6 @@ export interface NativeCombinedReport {
   internetTransfer?: NativeInternetTransferReport;
   deepDiagnostics: DeepProbeReport;
   localLink?: DeepLanThroughput;
+  measurement?: MeasurementContext;
+  findings?: DiagnosticFinding[];
 }

@@ -14,6 +14,13 @@ import type {
   TransferStrategy
 } from "../types/diagnostics";
 import { TEST_MODES } from "./config";
+import {
+  createWebMeasurementContext,
+  PRIMARY_MEASUREMENT_ENDPOINT,
+  selectMeasurementEndpoint,
+  type MeasurementEndpointDefinition
+} from "./endpoints";
+import { classifyDiagnosticResult } from "./findings";
 import { buildDiagnosticTestPlan, type ThroughputStagePlan } from "./flow-plan";
 import { fetchMetadata, TestCancelledError, throwIfAborted } from "./http";
 import { collectLatencySamples, collectLatencyUntilStopped } from "./latency";
@@ -26,6 +33,7 @@ interface RunTestOptions {
   downloadPath: DownloadPathPreference;
   signal: AbortSignal;
   onProgress: (progress: TestProgress) => void;
+  endpoint?: MeasurementEndpointDefinition;
 }
 
 interface StageResult {
@@ -194,7 +202,7 @@ async function runLoadedStage(
       liveLatencyMs: sample ?? undefined,
       bytesTransferred: bytesOffset
     });
-  });
+  }, options.endpoint);
 
   let throughput: ThroughputSummary;
   try {
@@ -215,6 +223,8 @@ async function runLoadedStage(
           concurrency: stage.concurrency,
           signal: options.signal,
           downloadPath: options.downloadPath,
+          endpoint: options.endpoint,
+          skipWarmup: options.mode === "quick",
           onProgress: (liveMbps, bytesTransferred) => {
             const sampleFraction = Math.min(1, bytesTransferred / Math.max(capBytes, 1));
             options.onProgress({
@@ -241,6 +251,7 @@ async function runLoadedStage(
         capBytes: stage.capBytes,
         concurrency: stage.concurrency,
         signal: options.signal,
+        endpoint: options.endpoint,
         onProgress: (liveMbps, bytesTransferred) => {
           const elapsedFraction = Math.min(1, bytesTransferred / Math.max(stage.capBytes, 1));
           options.onProgress({
@@ -329,10 +340,20 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
   const plan = buildDiagnosticTestPlan(config, options.transferMode);
   const startedAt = new Date();
   throwIfAborted(options.signal);
+  const endpointSelection = await selectMeasurementEndpoint(
+    [options.endpoint ?? PRIMARY_MEASUREMENT_ENDPOINT],
+    options.signal
+  );
+  const selectedEndpoint = endpointSelection.endpoint;
+  const runOptions: RunTestOptions = {
+    ...options,
+    endpoint: selectedEndpoint,
+    downloadPath: options.mode === "quick" ? "worker-stream" : options.downloadPath
+  };
 
   // Metadata is useful context, but it must never make the measurement fail or
   // leave a rejected background promise when the user cancels midway through.
-  const metadataPromise = fetchMetadata(options.signal).catch(() => null);
+  const metadataPromise = fetchMetadata(options.signal, selectedEndpoint).catch(() => null);
   let idleSamplesSoFar = 0;
   const idleSamples = await collectLatencySamples(
     config.idlePingCount,
@@ -346,12 +367,13 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
         liveLatencyMs: sample ?? undefined,
         bytesTransferred: 0
       });
-    }
+    },
+    selectedEndpoint
   );
   const idleLatency = summarizeLatency(idleSamples);
 
-  const downloadResults = await runStageSequence("download", plan.downloads, idleLatency, options, 0.15, 0.35);
-  const uploadResults = await runStageSequence("upload", plan.uploads, idleLatency, options, 0.5, 0.35);
+  const downloadResults = await runStageSequence("download", plan.downloads, idleLatency, runOptions, 0.15, 0.35);
+  const uploadResults = await runStageSequence("upload", plan.uploads, idleLatency, runOptions, 0.5, 0.35);
 
   let services: DiagnosticResult["services"] = [];
   if (config.includeServices) {
@@ -406,7 +428,7 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
     bytesTransferred: dataUsedBytes
   });
 
-  return {
+  const result: DiagnosticResult = {
     id: crypto.randomUUID(),
     startedAt: startedAt.toISOString(),
     completedAt: completedAt.toISOString(),
@@ -421,8 +443,11 @@ export async function runDiagnosticTest(options: RunTestOptions): Promise<Diagno
     flowMeasurements,
     downloadScaling,
     services,
-    dataUsedBytes
+    dataUsedBytes,
+    measurement: createWebMeasurementContext(endpointSelection)
   };
+  result.findings = classifyDiagnosticResult(result);
+  return result;
 }
 
 export { TestCancelledError };

@@ -1,0 +1,185 @@
+.diagnostic-findings {
+  margin-top: var(--jl-space-6);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.diagnostic-findings__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--jl-space-8);
+  padding: var(--jl-space-8) 0 var(--jl-space-6);
+}
+
+.diagnostic-findings__header h3 {
+  margin: var(--jl-space-2) 0 0;
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 590;
+  letter-spacing: -.035em;
+}
+
+.diagnostic-findings__header h3 em {
+  color: var(--accent);
+  font-family: var(--jl-font-editorial);
+  font-weight: 400;
+}
+
+.diagnostic-findings__header > p {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--muted);
+  font: 500 10px/1.5 var(--jl-font-mono);
+  letter-spacing: .04em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.diagnostic-findings__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagnostic-finding {
+  --finding-tone: var(--jl-semantic-info-text);
+  display: grid;
+  grid-template-columns: minmax(250px, .82fr) minmax(0, 1.18fr);
+  gap: clamp(32px, 6vw, 88px);
+  padding: clamp(28px, 4vw, 48px) 0;
+  border-top: 1px solid var(--line);
+}
+
+.diagnostic-finding--critical { --finding-tone: var(--jl-semantic-danger-text); }
+.diagnostic-finding--warning { --finding-tone: var(--jl-color-accent); }
+.diagnostic-finding--info { --finding-tone: var(--jl-semantic-success-text); }
+
+.diagnostic-finding__summary {
+  position: relative;
+  padding-left: 18px;
+}
+
+.diagnostic-finding__summary::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 3px;
+  background: var(--finding-tone);
+}
+
+.diagnostic-finding__status,
+.diagnostic-finding__confidence {
+  color: var(--finding-tone);
+  font: 650 9px/1.4 var(--jl-font-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.diagnostic-finding h4 {
+  max-width: 24ch;
+  margin: 12px 0 9px;
+  font-size: 20px;
+  line-height: 1.18;
+}
+
+.diagnostic-finding__summary p {
+  max-width: 47ch;
+  margin: 0 0 14px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.diagnostic-finding__confidence { color: var(--muted); }
+
+.diagnostic-finding__support {
+  display: grid;
+  grid-template-columns: minmax(180px, .72fr) minmax(220px, 1fr);
+  gap: clamp(24px, 4vw, 52px);
+}
+
+.diagnostic-finding__evidence {
+  margin: 0;
+}
+
+.diagnostic-finding__evidence > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--jl-color-rule);
+}
+
+.diagnostic-finding__evidence dt {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.diagnostic-finding__evidence dd {
+  margin: 0;
+  font: 600 11px/1.4 var(--jl-font-mono);
+}
+
+.diagnostic-finding__evidence small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.diagnostic-finding__actions > strong {
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.diagnostic-finding__actions ul {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 15px;
+  padding-left: 17px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diagnostic-finding__actions > p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.diagnostic-finding__actions > p span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--finding-tone);
+  font: 650 9px/1.4 var(--jl-font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .diagnostic-finding,
+  .diagnostic-finding__support {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .diagnostic-finding { gap: var(--jl-space-6); }
+  .diagnostic-finding__support { gap: var(--jl-space-6); }
+}
+
+@media (max-width: 600px) {
+  .diagnostic-findings__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .diagnostic-findings__header > p { text-align: left; }
+  .diagnostic-finding { padding: var(--jl-space-6) 0; }
+}
+
+@media (forced-colors: active) {
+  .diagnostic-finding__summary::before { background: CanvasText; }
+}

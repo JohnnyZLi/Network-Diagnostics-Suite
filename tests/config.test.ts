@@ -4,7 +4,8 @@ import { UPLOAD_REQUEST_TIMEOUT_MS } from "../src/diagnostics/http";
 import { uploadRequestBytesForDuration } from "../src/diagnostics/throughput";
 
 describe("test modes", () => {
-  it("keeps the quick test below the full test data caps", () => {
+  it("keeps Connection Check below 30 MB and below the full test caps", () => {
+    expect(TEST_MODES.quick.downloadCapBytes + TEST_MODES.quick.uploadCapBytes).toBeLessThanOrEqual(30_000_000);
     expect(TEST_MODES.quick.downloadCapBytes).toBeLessThan(TEST_MODES.standard.downloadCapBytes);
     expect(TEST_MODES.quick.uploadCapBytes).toBeLessThan(TEST_MODES.standard.uploadCapBytes);
   });
@@ -30,7 +31,7 @@ describe("test modes", () => {
     expect(uploadRequestBytesForDuration(TEST_MODES.extended.uploadDurationMs)).toBe(32 * 1024 * 1024);
   });
 
-  it("does not contact third-party service targets during the quick test", () => {
+  it("does not contact third-party service targets during Connection Check", () => {
     expect(TEST_MODES.quick.includeServices).toBe(false);
     expect(TEST_MODES.standard.includeServices).toBe(true);
   });

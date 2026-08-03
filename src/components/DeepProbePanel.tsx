@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { formatBytes, formatLatency, formatRate } from "../core/format";
 import type { DeepProbeReport, NativeCombinedReport } from "../types/deep-probe";
+import { DiagnosticFindingList } from "./DiagnosticFindings";
 
 type DisplayProbeReport = DeepProbeReport & { combined?: NativeCombinedReport };
 
@@ -130,6 +131,15 @@ export function DeepProbePanel() {
         <article><span>Path MTU</span><strong>{report.pathMtu.estimatedIpv4Mtu ?? "—"}<small>bytes</small></strong><p>{report.pathMtu.status}</p></article>
         <article><span>Fastest DNS</span><strong>{formatLatency(fastestDns?.medianMs)}<small>ms</small></strong><p>{fastestDns?.name ?? "No resolver answered"}</p></article>
       </div>
+
+      {combined?.findings && combined.findings.length > 0 && (
+        <DiagnosticFindingList
+          findings={combined.findings}
+          context={combined.measurement
+            ? `${combined.measurement.engine} engine · ${combined.measurement.selectedEndpoint.name}`
+            : "Imported native report · endpoint context unavailable"}
+        />
+      )}
 
       {combined && transfer && (
         <section className="report-panel native-transfer-panel">

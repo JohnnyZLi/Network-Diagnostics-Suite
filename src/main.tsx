@@ -17,6 +17,7 @@ import "./hero-layout.css";
 import "./editorial-panels.css";
 import "./design-system-adapter.css";
 import "./content-primitive-mappings.css";
+import "./diagnostic-findings.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -166,6 +166,56 @@ export interface ServiceCheckResult {
   note?: string;
 }
 
+export type FindingSeverity = "info" | "warning" | "critical";
+export type FindingConfidence = "low" | "medium" | "high";
+
+export interface MeasurementEndpointProbe {
+  id: string;
+  name: string;
+  provider: string;
+  origin: string;
+  available: boolean;
+  medianLatencyMs: number | null;
+  error: string | null;
+}
+
+export interface SelectedMeasurementEndpoint {
+  id: string;
+  name: string;
+  provider: string;
+  origin: string;
+  selectionReason: string;
+  preflightLatencyMs: number | null;
+}
+
+export interface MeasurementContext {
+  contractVersion: string;
+  engine: string;
+  engineVersion: string;
+  capabilities: string[];
+  selectedEndpoint: SelectedMeasurementEndpoint;
+  endpointCandidates: MeasurementEndpointProbe[];
+}
+
+export interface DiagnosticEvidence {
+  metric: string;
+  label: string;
+  value: string;
+  detail?: string | null;
+}
+
+export interface DiagnosticFinding {
+  id: string;
+  category: string;
+  severity: FindingSeverity;
+  confidence: FindingConfidence;
+  title: string;
+  summary: string;
+  evidence: DiagnosticEvidence[];
+  recommendations: string[];
+  nextTest?: string | null;
+}
+
 export interface DiagnosticResult {
   id: string;
   startedAt: string;
@@ -182,6 +232,8 @@ export interface DiagnosticResult {
   downloadScaling?: FlowScalingPoint[];
   services: ServiceCheckResult[];
   dataUsedBytes: number;
+  measurement?: MeasurementContext;
+  findings?: DiagnosticFinding[];
 }
 
 export interface TestProgress {
