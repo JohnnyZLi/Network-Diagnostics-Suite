@@ -147,6 +147,9 @@ export interface NativeThroughputSummary {
   rampRatio?: number;
   capReached: boolean;
   qualification: string;
+  timeline?: Array<{ elapsedMs: number; mbps: number }>;
+  aggregation?: string;
+  samples?: Array<Record<string, unknown>>;
 }
 
 export interface NativeLoadedLatencyReport {
@@ -183,25 +186,36 @@ export interface NativeInternetTransferReport {
 export interface NativeCombinedReport {
   schemaVersion: "2.0";
   generatedAt: string;
+  producer?: {
+    application?: "web" | "desktop" | "cli" | string;
+    version?: string | null;
+    engine?: string | null;
+  } | null;
   run: {
     id: string;
     platform: string;
-    architecture: string;
-    profile: "quick" | "standard" | "extended";
+    architecture?: string | null;
+    profile: "connection-check" | "quick" | "standard" | "extended";
     transferMethod: "compare" | "single" | "aggregate";
     startedAt: string;
     completedAt: string;
-    includesLocalAddresses: boolean;
+    includesLocalAddresses?: boolean;
   };
-  transferPlan: {
-    profile: "quick" | "standard" | "extended";
-    method: "compare" | "single" | "aggregate";
-    profileName: string;
-    estimatedSeconds: number;
-    transferCapBytes: number;
-    includeServices: boolean;
-  };
-  internetTransfer?: NativeInternetTransferReport;
-  deepDiagnostics: DeepProbeReport;
-  localLink?: DeepLanThroughput;
+  transferPlan?: {
+    profile?: "connection-check" | "quick" | "standard" | "extended";
+    method?: "compare" | "single" | "aggregate";
+    profileName?: string;
+    estimatedSeconds?: number;
+    transferCapBytes?: number;
+    includeServices?: boolean;
+    downloadStages?: Array<Record<string, unknown>>;
+    uploadStages?: Array<Record<string, unknown>>;
+  } | null;
+  internetTransfer?: NativeInternetTransferReport | null;
+  deepDiagnostics?: DeepProbeReport | null;
+  localLink?: DeepLanThroughput | null;
+  measurement?: Record<string, unknown> | null;
+  findings?: Array<Record<string, unknown>> | null;
+  browserEvidence?: Record<string, unknown> | null;
+  [key: string]: unknown;
 }
