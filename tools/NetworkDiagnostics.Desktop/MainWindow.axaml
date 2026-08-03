@@ -345,22 +345,22 @@
                 </StackPanel>
 
                 <StackPanel Spacing="0">
-                  <Grid Padding="0,12" ColumnDefinitions="*,Auto">
+                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Network access" />
                     <TextBlock Name="NetworkPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
                   </Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Padding="0,12" ColumnDefinitions="*,Auto">
+                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Latency and packet loss" />
                     <TextBlock Name="LatencyPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
                   </Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Padding="0,12" ColumnDefinitions="*,Auto">
+                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Download sample" />
                     <TextBlock Name="DownloadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
                   </Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Padding="0,12" ColumnDefinitions="*,Auto">
+                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Upload sample" />
                     <TextBlock Name="UploadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
                   </Grid>
