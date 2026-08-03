@@ -124,12 +124,29 @@ public static class NetworkDiagnosticsJson
     public static NetworkDiagnosticsReportV2 Deserialize(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions
+        {
+            AllowTrailingCommas = true,
+            CommentHandling = JsonCommentHandling.Skip,
+            MaxDepth = 128
+        });
+        var root = document.RootElement;
+        if (BrowserReportAdapter.Matches(root))
+        {
+            return BrowserReportAdapter.Deserialize(json, Options);
+        }
+
+        if (!root.TryGetProperty("schemaVersion", out var schemaVersion))
+        {
+            throw new InvalidDataException("The JSON is neither a website diagnostic export nor a versioned Network Diagnostics report.");
+        }
+        if (!string.Equals(schemaVersion.GetString(), "2.0", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"Unsupported report schema '{schemaVersion.GetString()}'.");
+        }
+
         var report = JsonSerializer.Deserialize<NetworkDiagnosticsReportV2>(json, Options)
             ?? throw new InvalidDataException("The report JSON did not contain a schema 2.0 report.");
-        if (!string.Equals(report.SchemaVersion, "2.0", StringComparison.Ordinal))
-        {
-            throw new InvalidDataException($"Unsupported report schema '{report.SchemaVersion}'.");
-        }
         return report;
     }
 
