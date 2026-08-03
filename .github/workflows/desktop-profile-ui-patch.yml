@@ -1,0 +1,102 @@
+name: Apply desktop profile UI patch
+
+on:
+  push:
+    branches:
+      - agent/desktop-diagnostics-suite
+    paths:
+      - .github/workflows/desktop-profile-ui-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/desktop-diagnostics-suite
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Add Connection Check to the desktop selector
+        shell: python
+        run: |
+          from pathlib import Path
+
+          xaml_path = Path("tools/NetworkDiagnostics.Desktop/MainWindow.axaml")
+          xaml = xaml_path.read_text()
+          old_profiles = '''              <ComboBoxItem Content="Quick" />
+              <ComboBoxItem Content="Full" />
+              <ComboBoxItem Content="Stress" />'''
+          new_profiles = '''              <ComboBoxItem Content="Connection Check" />
+              <ComboBoxItem Content="Quick" />
+              <ComboBoxItem Content="Full" />
+              <ComboBoxItem Content="Stress" />'''
+          if old_profiles not in xaml:
+              raise SystemExit("Desktop profile selector block was not found")
+          xaml_path.write_text(xaml.replace(old_profiles, new_profiles, 1))
+
+          code_path = Path("tools/NetworkDiagnostics.Desktop/MainWindow.axaml.cs")
+          code = code_path.read_text()
+
+          replacements = {
+              '''        if (plan.Profile != TestProfileId.Quick && !ConfirmationStore.IsApproved(plan.Profile, plan.TransferCapBytes))''':
+              '''        if ((plan.Profile is TestProfileId.Standard or TestProfileId.Extended)
+            && !ConfirmationStore.IsApproved(plan.Profile, plan.TransferCapBytes))''',
+              '''            PingCount: profile switch
+            {
+                TestProfileId.Quick => 12,
+                TestProfileId.Standard => 20,
+                TestProfileId.Extended => 30,
+                _ => 20
+            },''':
+              '''            PingCount: profile switch
+            {
+                TestProfileId.ConnectionCheck => 8,
+                TestProfileId.Quick => 12,
+                TestProfileId.Standard => 20,
+                TestProfileId.Extended => 30,
+                _ => 20
+            },''',
+              '''    private TestProfileId SelectedProfile() => ProfileSelector.SelectedIndex switch
+    {
+        1 => TestProfileId.Standard,
+        2 => TestProfileId.Extended,
+        _ => TestProfileId.Quick
+    };''':
+              '''    private TestProfileId SelectedProfile() => ProfileSelector.SelectedIndex switch
+    {
+        1 => TestProfileId.Quick,
+        2 => TestProfileId.Standard,
+        3 => TestProfileId.Extended,
+        _ => TestProfileId.ConnectionCheck
+    };'''
+          }
+
+          for old, new in replacements.items():
+              if old not in code:
+                  raise SystemExit(f"Expected desktop code block was not found:\n{old}")
+              code = code.replace(old, new, 1)
+
+          code_path.write_text(code)
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/desktop-profile-ui-patch.yml
+
+      - name: Validate native tests
+        run: dotnet test tools/DeepProbe.Tests/NetworkDeepProbe.Tests.csproj -c Release
+
+      - name: Commit patched desktop files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/NetworkDiagnostics.Desktop/MainWindow.axaml \
+                  tools/NetworkDiagnostics.Desktop/MainWindow.axaml.cs \
+                  .github/workflows/desktop-profile-ui-patch.yml
+          git commit -m "Add Connection Check to desktop UI"
+          git push origin HEAD:agent/desktop-diagnostics-suite
