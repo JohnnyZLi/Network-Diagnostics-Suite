@@ -5,7 +5,7 @@ import type {
   DiagnosticResult,
   LatencySummary,
   LoadedLatencySummary,
-  ThroughputResult,
+  ThroughputSummary,
 } from "./types/diagnostics";
 
 function nativeLatency(latency: LatencySummary) {
@@ -14,12 +14,12 @@ function nativeLatency(latency: LatencySummary) {
     received: latency.received,
     lost: latency.lost,
     lossPercent: latency.lossPercent,
-    minimumMs: latency.minMs,
-    maximumMs: latency.maxMs,
-    meanMs: latency.meanMs,
-    medianMs: latency.medianMs,
-    p95Ms: latency.p95Ms,
-    jitterMs: latency.jitterMs,
+    minimumMs: latency.minMs ?? undefined,
+    maximumMs: latency.maxMs ?? undefined,
+    meanMs: latency.meanMs ?? undefined,
+    medianMs: latency.medianMs ?? undefined,
+    p95Ms: latency.p95Ms ?? undefined,
+    jitterMs: latency.jitterMs ?? undefined,
     samples: latency.samples,
   };
 }
@@ -27,12 +27,12 @@ function nativeLatency(latency: LatencySummary) {
 function nativeLoadedLatency(latency: LoadedLatencySummary) {
   return {
     statistics: nativeLatency(latency),
-    increaseMs: latency.increaseMs,
+    increaseMs: latency.increaseMs ?? undefined,
     grade: latency.grade,
   };
 }
 
-function nativeThroughput(throughput: ThroughputResult) {
+function nativeThroughput(throughput: ThroughputSummary) {
   return {
     mbps: throughput.mbps,
     steadyMbps: throughput.steadyMbps,
@@ -40,7 +40,7 @@ function nativeThroughput(throughput: ThroughputResult) {
     durationMs: throughput.durationMs,
     peakMbps: throughput.peakMbps,
     stabilityPercent: throughput.stabilityPercent,
-    rampRatio: throughput.rampRatio,
+    rampRatio: throughput.rampRatio ?? undefined,
     capReached: throughput.capReached,
     qualification: throughput.qualification,
     timeline: throughput.timeline.map((point) => ({
@@ -48,7 +48,10 @@ function nativeThroughput(throughput: ThroughputResult) {
       mbps: point.value,
     })),
     aggregation: throughput.aggregation ?? "single",
-    samples: throughput.samples ?? [],
+    samples: (throughput.samples ?? []).map((sample) => ({
+      ...sample,
+      rampRatio: sample.rampRatio ?? undefined,
+    })),
   };
 }
 
@@ -60,7 +63,7 @@ function internetTransfer(result: DiagnosticResult): NativeInternetTransferRepor
     upload: nativeThroughput(result.upload),
     downloadLatency: nativeLoadedLatency(result.downloadLatency),
     uploadLatency: nativeLoadedLatency(result.uploadLatency),
-    flowMeasurements: result.flowMeasurements.map((measurement) => ({
+    flowMeasurements: (result.flowMeasurements ?? []).map((measurement) => ({
       strategy: measurement.strategy,
       connections: measurement.concurrency,
       download: measurement.download ? nativeThroughput(measurement.download) : undefined,
@@ -68,7 +71,7 @@ function internetTransfer(result: DiagnosticResult): NativeInternetTransferRepor
       downloadLatency: measurement.downloadLatency ? nativeLoadedLatency(measurement.downloadLatency) : undefined,
       uploadLatency: measurement.uploadLatency ? nativeLoadedLatency(measurement.uploadLatency) : undefined,
     })),
-    downloadScaling: result.downloadScaling.map((point) => ({
+    downloadScaling: (result.downloadScaling ?? []).map((point) => ({
       connections: point.concurrency,
       download: nativeThroughput(point.download),
       downloadLatency: nativeLoadedLatency(point.downloadLatency),
@@ -79,7 +82,10 @@ function internetTransfer(result: DiagnosticResult): NativeInternetTransferRepor
 
 export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombinedReport {
   const config = TEST_MODES[result.mode];
-  const plan = buildDiagnosticTestPlan(config, result.transferMode);
+  const transferMode = result.transferMode ?? "compare";
+  const flowMeasurements = result.flowMeasurements ?? [];
+  const downloadScaling = result.downloadScaling ?? [];
+  const plan = buildDiagnosticTestPlan(config, transferMode);
   const estimatedSeconds = Number.parseInt(plan.estimatedTime, 10);
   const stage = (direction: "download" | "upload") =>
     (item: (typeof plan.downloads)[number]) => ({
@@ -105,14 +111,14 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
       platform: globalThis.navigator?.platform || "browser",
       architecture: null,
       profile: result.mode,
-      transferMethod: result.transferMode,
+      transferMethod,
       startedAt: result.startedAt,
       completedAt: result.completedAt,
       includesLocalAddresses: false,
     },
     transferPlan: {
       profile: result.mode,
-      method: result.transferMode,
+      method: transferMode,
       profileName: config.name,
       estimatedSeconds: Number.isFinite(estimatedSeconds) ? estimatedSeconds : 0,
       transferCapBytes: plan.transferCapBytes,
@@ -132,13 +138,13 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
         "download-throughput",
         "upload-throughput",
         "loaded-latency",
-        ...(result.flowMeasurements.length > 1 ? ["flow-comparison"] : []),
-        ...(result.downloadScaling.length > 0 ? ["connection-scaling"] : []),
+        ...(flowMeasurements.length > 1 ? ["flow-comparison"] : []),
+        ...(downloadScaling.length > 0 ? ["connection-scaling"] : []),
         ...(result.services.length > 0 ? ["service-reachability"] : []),
       ],
       selectedEndpoint: {
         id: "website-edge",
-        name: result.edge.edge ?? "Website edge",
+        name: result.edge?.edge ?? "Website edge",
         provider: "Cloudflare",
         origin: "https://network.johnnyli.dev/",
         selectionReason: "selected-by-browser",
@@ -147,14 +153,16 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
       endpointCandidates: [],
     },
     browserEvidence: {
-      edge: {
-        edge: result.edge.edge,
-        network: result.edge.network,
-        asn: result.edge.asn,
-        protocol: result.edge.protocol,
-        tlsVersion: result.edge.tlsVersion,
-        ipVersion: result.edge.ipVersion,
-      },
+      edge: result.edge
+        ? {
+            edge: result.edge.edge,
+            network: result.edge.network,
+            asn: result.edge.asn,
+            protocol: result.edge.protocol,
+            tlsVersion: result.edge.tlsVersion,
+            ipVersion: result.edge.ipVersion,
+          }
+        : null,
       serviceChecks: result.services.map((service) => ({
         id: service.id,
         name: service.name,
