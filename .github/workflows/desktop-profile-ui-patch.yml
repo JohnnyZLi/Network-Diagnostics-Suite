@@ -1,22 +1,21 @@
 name: Apply desktop profile UI patch
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/desktop-diagnostics-suite
-    paths:
-      - .github/workflows/desktop-profile-ui-patch.yml
+      - agent/redesign-desktop-ui
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/desktop-diagnostics-suite
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
@@ -99,4 +98,4 @@ jobs:
                   tools/NetworkDiagnostics.Desktop/MainWindow.axaml.cs \
                   .github/workflows/desktop-profile-ui-patch.yml
           git commit -m "Add Connection Check to desktop UI"
-          git push origin HEAD:agent/desktop-diagnostics-suite
+          git push origin HEAD:${{ github.head_ref }}
