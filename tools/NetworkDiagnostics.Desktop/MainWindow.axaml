@@ -128,6 +128,18 @@
     <Style Selector="Button.secondary:pointerover">
       <Setter Property="Background" Value="#232728" />
     </Style>
+    <Style Selector="Button.historyItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#E9E6E0" />
+      <Setter Property="BorderBrush" Value="#34383A" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="0,14" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.historyItem:pointerover">
+      <Setter Property="Background" Value="#1B1F20" />
+    </Style>
 
     <Style Selector="ProgressBar">
       <Setter Property="Foreground" Value="#C96346" />
@@ -139,6 +151,13 @@
       <Setter Property="Foreground" Value="#E9E5DE" />
       <Setter Property="BorderBrush" Value="#4B412F" />
       <Setter Property="MinHeight" Value="42" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#292317" />
+      <Setter Property="Foreground" Value="#E9E5DE" />
+      <Setter Property="BorderBrush" Value="#4B412F" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="Padding" Value="12,9" />
     </Style>
     <Style Selector="CheckBox">
       <Setter Property="Foreground" Value="#E4E0D8" />
@@ -175,7 +194,7 @@
                 BorderThickness="1"
                 CornerRadius="12"
                 Padding="14,9">
-          <TextBlock Classes="eyebrow" Text="PROTOTYPE" />
+          <TextBlock Classes="eyebrow" Text="NATIVE BETA" />
         </Border>
       </Grid>
     </Border>
@@ -237,26 +256,10 @@
                   <TextBlock Classes="eyebrow" Text="TEST PROFILE" />
                   <Border Classes="panelInner" Padding="6">
                     <Grid ColumnDefinitions="*,*,*,*">
-                      <Button Name="ConnectionProfileButton"
-                              Grid.Column="0"
-                              Classes="segment active"
-                              Content="Check"
-                              Click="ConnectionProfileClicked" />
-                      <Button Name="QuickProfileButton"
-                              Grid.Column="1"
-                              Classes="segment"
-                              Content="Quick"
-                              Click="QuickProfileClicked" />
-                      <Button Name="FullProfileButton"
-                              Grid.Column="2"
-                              Classes="segment"
-                              Content="Full"
-                              Click="FullProfileClicked" />
-                      <Button Name="StressProfileButton"
-                              Grid.Column="3"
-                              Classes="segment"
-                              Content="Stress"
-                              Click="StressProfileClicked" />
+                      <Button Name="ConnectionProfileButton" Grid.Column="0" Classes="segment active" Content="Check" Click="ConnectionProfileClicked" />
+                      <Button Name="QuickProfileButton" Grid.Column="1" Classes="segment" Content="Quick" Click="QuickProfileClicked" />
+                      <Button Name="FullProfileButton" Grid.Column="2" Classes="segment" Content="Full" Click="FullProfileClicked" />
+                      <Button Name="StressProfileButton" Grid.Column="3" Classes="segment" Content="Stress" Click="StressProfileClicked" />
                     </Grid>
                   </Border>
                   <ComboBox Name="ProfileSelector" IsVisible="False" SelectionChanged="ProfileSelectionChanged">
@@ -288,17 +291,10 @@
                 </StackPanel>
 
                 <Border Classes="panelInner">
-                  <TextBlock Name="ProfileAvailabilityText"
-                             Classes="muted"
-                             FontSize="13"
-                             LineHeight="20"
-                             TextWrapping="Wrap" />
+                  <TextBlock Name="ProfileAvailabilityText" Classes="muted" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
                 </Border>
 
-                <Button Name="RunButton"
-                        Classes="primary"
-                        Content="Run Connection Check"
-                        Click="RunClicked" />
+                <Button Name="RunButton" Classes="primary" Content="Run Connection Check" Click="RunClicked" />
 
                 <TextBlock Classes="muted"
                            FontSize="12"
@@ -313,27 +309,18 @@
         <ScrollViewer Name="RunningView" IsVisible="False" VerticalScrollBarVisibility="Auto">
           <Grid Margin="72,48,64,52" ColumnDefinitions="1.38*,0.78*">
             <StackPanel Grid.Column="0" Margin="0,10,58,0" Spacing="26">
-              <TextBlock Classes="eyebrow" Text="CONNECTION CHECK" />
+              <TextBlock Name="RunningProfileText" Classes="eyebrow" Text="CONNECTION CHECK" />
               <StackPanel Spacing="0">
                 <TextBlock Classes="heroMain" Text="Reading the path," />
                 <TextBlock Classes="heroAccent" Text="one layer at a time." />
               </StackPanel>
-              <TextBlock Name="CurrentPhaseText"
-                         FontSize="25"
-                         FontWeight="SemiBold"
-                         Text="Preparing the test…"
-                         TextWrapping="Wrap" />
-              <TextBlock Name="LiveMeasurementText"
-                         Classes="muted"
-                         FontSize="17"
-                         LineHeight="26"
-                         Text="Starting…"
-                         TextWrapping="Wrap" />
+              <TextBlock Name="CurrentPhaseText" FontSize="25" FontWeight="SemiBold" Text="Preparing the test…" TextWrapping="Wrap" />
+              <TextBlock Name="LiveMeasurementText" Classes="muted" FontSize="17" LineHeight="26" Text="Starting…" TextWrapping="Wrap" />
               <TextBlock Classes="muted"
                          MaxWidth="650"
                          FontSize="15"
                          LineHeight="23"
-                         Text="Connection Check gathers a small, ordered evidence set. A later unavailable measurement does not erase evidence that already completed."
+                         Text="Completed measurements remain distinct from unavailable or cancelled phases. The final report is saved only after a complete run."
                          TextWrapping="Wrap" />
             </StackPanel>
 
@@ -345,25 +332,15 @@
                 </StackPanel>
 
                 <StackPanel Spacing="0">
-                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Network access" />
-                    <TextBlock Name="NetworkPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
-                  </Grid>
+                  <Grid Margin="0,10" ColumnDefinitions="*,Auto"><TextBlock Text="Endpoint access" /><TextBlock Name="NetworkPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" /></Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Latency and packet loss" />
-                    <TextBlock Name="LatencyPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
-                  </Grid>
+                  <Grid Margin="0,10" ColumnDefinitions="*,Auto"><TextBlock Text="Latency and request loss" /><TextBlock Name="LatencyPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" /></Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Download sample" />
-                    <TextBlock Name="DownloadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
-                  </Grid>
+                  <Grid Margin="0,10" ColumnDefinitions="*,Auto"><TextBlock Text="Download measurements" /><TextBlock Name="DownloadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" /></Grid>
                   <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
-                  <Grid Margin="0,12" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Upload sample" />
-                    <TextBlock Name="UploadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" />
-                  </Grid>
+                  <Grid Margin="0,10" ColumnDefinitions="*,Auto"><TextBlock Text="Upload measurements" /><TextBlock Name="UploadPhaseStatus" Grid.Column="1" Classes="muted" Text="Waiting" /></Grid>
+                  <Border BorderBrush="#393225" BorderThickness="0,1,0,0" />
+                  <Grid Margin="0,10" ColumnDefinitions="*,Auto"><TextBlock Text="Local and path evidence" /><TextBlock Name="DeepPhaseStatus" Grid.Column="1" Classes="muted" Text="Not included" /></Grid>
                 </StackPanel>
 
                 <Button Classes="secondary" Content="Stop test" Click="StopClicked" />
@@ -376,37 +353,24 @@
           <Grid Margin="72,42,64,52" ColumnDefinitions="1.22*,0.88*">
             <StackPanel Grid.Column="0" Margin="0,8,56,0" Spacing="24">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="eyebrow" Text="CONNECTION CHECK / RESULT" />
-                <Button Grid.Column="1" Classes="secondary" Content="New test" Click="RunAgainClicked" />
+                <TextBlock Name="ResultProfileText" Classes="eyebrow" Text="CONNECTION CHECK / RESULT" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9">
+                  <Button Name="ExportReportButton" Classes="secondary" Content="Export JSON" Click="ExportReportClicked" IsVisible="False" />
+                  <Button Classes="secondary" Content="New test" Click="RunAgainClicked" />
+                </StackPanel>
               </Grid>
 
               <StackPanel Spacing="7">
                 <TextBlock Name="VerdictLabelText" Classes="eyebrow" />
-                <TextBlock Name="VerdictText"
-                           Classes="display"
-                           MaxWidth="720"
-                           TextWrapping="Wrap" />
-                <TextBlock Name="VerdictSummaryText"
-                           Classes="muted"
-                           MaxWidth="700"
-                           FontSize="17"
-                           LineHeight="27"
-                           TextWrapping="Wrap" />
+                <TextBlock Name="VerdictText" Classes="display" MaxWidth="720" TextWrapping="Wrap" />
+                <TextBlock Name="VerdictSummaryText" Classes="muted" MaxWidth="700" FontSize="17" LineHeight="27" TextWrapping="Wrap" />
               </StackPanel>
 
               <Grid ColumnDefinitions="*,*,*,*">
-                <Border Grid.Column="0" Classes="metric" BorderThickness="0,1,0,0">
-                  <StackPanel Spacing="5"><TextBlock Name="Metric1Label" Classes="eyebrow" /><TextBlock Name="Metric1Value" Classes="metricValue" /><TextBlock Name="Metric1Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel>
-                </Border>
-                <Border Grid.Column="1" Classes="metric">
-                  <StackPanel Spacing="5"><TextBlock Name="Metric2Label" Classes="eyebrow" /><TextBlock Name="Metric2Value" Classes="metricValue" /><TextBlock Name="Metric2Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel>
-                </Border>
-                <Border Grid.Column="2" Classes="metric">
-                  <StackPanel Spacing="5"><TextBlock Name="Metric3Label" Classes="eyebrow" /><TextBlock Name="Metric3Value" Classes="metricValue" /><TextBlock Name="Metric3Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel>
-                </Border>
-                <Border Grid.Column="3" Classes="metric">
-                  <StackPanel Spacing="5"><TextBlock Name="Metric4Label" Classes="eyebrow" /><TextBlock Name="Metric4Value" Classes="metricValue" /><TextBlock Name="Metric4Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel>
-                </Border>
+                <Border Grid.Column="0" Classes="metric" BorderThickness="0,1,0,0"><StackPanel Spacing="5"><TextBlock Name="Metric1Label" Classes="eyebrow" /><TextBlock Name="Metric1Value" Classes="metricValue" /><TextBlock Name="Metric1Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel></Border>
+                <Border Grid.Column="1" Classes="metric"><StackPanel Spacing="5"><TextBlock Name="Metric2Label" Classes="eyebrow" /><TextBlock Name="Metric2Value" Classes="metricValue" /><TextBlock Name="Metric2Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel></Border>
+                <Border Grid.Column="2" Classes="metric"><StackPanel Spacing="5"><TextBlock Name="Metric3Label" Classes="eyebrow" /><TextBlock Name="Metric3Value" Classes="metricValue" /><TextBlock Name="Metric3Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel></Border>
+                <Border Grid.Column="3" Classes="metric"><StackPanel Spacing="5"><TextBlock Name="Metric4Label" Classes="eyebrow" /><TextBlock Name="Metric4Value" Classes="metricValue" /><TextBlock Name="Metric4Detail" Classes="muted" TextWrapping="Wrap" /></StackPanel></Border>
               </Grid>
             </StackPanel>
 
@@ -436,7 +400,7 @@
 
       <ScrollViewer Name="HistoryArea" IsVisible="False" VerticalScrollBarVisibility="Auto">
         <Grid Margin="72,48,64,52" ColumnDefinitions="1.28*,0.82*">
-          <StackPanel Grid.Column="0" Margin="0,8,58,0" Spacing="25">
+          <StackPanel Grid.Column="0" Margin="0,8,58,0" Spacing="22">
             <TextBlock Classes="eyebrow" Text="LOCAL REPORTS" />
             <StackPanel Spacing="0">
               <TextBlock Classes="heroMain" Text="Reports stay local." />
@@ -446,21 +410,28 @@
                        MaxWidth="680"
                        FontSize="17"
                        LineHeight="27"
-                       Text="History will reuse the same report renderer as live results, so imported and newly measured reports present the same verdict, measurements, findings, and technical evidence."
+                       Text="Live runs, imported website reports, and richer desktop reports all reopen through the same result renderer. Unknown optional fields remain safe to ignore."
                        TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button Classes="primary" Content="Import JSON" Click="ImportReportClicked" />
+              <Button Classes="secondary" Content="Open reports folder" Click="OpenReportsFolderClicked" />
+            </StackPanel>
+            <TextBlock Name="HistoryCountText" Classes="eyebrow" Text="0 SAVED REPORTS" />
+            <StackPanel Name="HistoryListPanel" MaxWidth="720" Spacing="0" />
           </StackPanel>
 
           <Border Grid.Column="1" Classes="panel" VerticalAlignment="Top">
             <StackPanel Spacing="18">
               <TextBlock Classes="eyebrow" Text="MOST RECENT" />
               <StackPanel Spacing="6">
-                <TextBlock Name="HistoryFixtureTitle" FontSize="23" FontWeight="SemiBold" Text="Prototype result" TextWrapping="Wrap" />
-                <TextBlock Name="HistoryFixtureDetail" Classes="muted" FontSize="14" LineHeight="21" TextWrapping="Wrap" />
+                <TextBlock Name="HistoryFixtureTitle" FontSize="23" FontWeight="SemiBold" Text="No saved report" TextWrapping="Wrap" />
+                <TextBlock Name="HistoryFixtureDetail" Classes="muted" FontSize="14" LineHeight="21" Text="Complete or import a diagnostic to populate local history." TextWrapping="Wrap" />
               </StackPanel>
               <Border Classes="panelInner">
-                <TextBlock Classes="muted"
-                           Text="Prototype previews do not write files. Real report history and detail navigation follow after the visual workflow is approved."
-                           TextWrapping="Wrap" />
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="eyebrow" Text="STORAGE" />
+                  <TextBlock Name="ReportsFolderText" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
               </Border>
             </StackPanel>
           </Border>
@@ -479,7 +450,7 @@
                        MaxWidth="680"
                        FontSize="17"
                        LineHeight="27"
-                       Text="Saved reports exclude local addresses and Wi-Fi network names by default. Advanced identifiers should be opt-in and visibly separated from normal diagnostic evidence."
+                       Text="Saved reports exclude local addresses and Wi-Fi network names by default. Endpoint overrides and remembered high-data approvals remain local settings."
                        TextWrapping="Wrap" />
           </StackPanel>
 
@@ -487,24 +458,44 @@
             <StackPanel Spacing="22">
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="REPORT PRIVACY" />
-                <CheckBox Content="Include local addresses and Wi-Fi network name" />
+                <CheckBox Name="IncludeIdentifiersCheckBox"
+                          Content="Include local addresses and Wi-Fi network name"
+                          Checked="IncludeIdentifiersChanged"
+                          Unchecked="IncludeIdentifiersChanged" />
                 <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Off by default. Public reports should normally keep local identifiers excluded." TextWrapping="Wrap" />
               </StackPanel>
 
               <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />
 
               <StackPanel Spacing="11">
-                <TextBlock Classes="eyebrow" Text="RESULT PREVIEW" />
-                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Temporary review control for every Connection Check outcome before the real engine is connected." TextWrapping="Wrap" />
-                <ComboBox Name="FixtureSelector">
-                  <ComboBoxItem Content="Healthy" />
-                  <ComboBoxItem Content="Problematic" />
-                  <ComboBoxItem Content="Inconclusive" />
-                  <ComboBoxItem Content="Unavailable measurement" />
-                  <ComboBoxItem Content="Failed with partial evidence" />
-                </ComboBox>
-                <Button Classes="primary" Content="Preview selected result" Click="PreviewFixtureClicked" />
+                <TextBlock Classes="eyebrow" Text="ADVANCED ENDPOINT" />
+                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Leave blank to use the default first-party measurement endpoint. Overrides must expose the same ping and transfer routes." TextWrapping="Wrap" />
+                <TextBox Name="TestOriginTextBox" Watermark="https://network.johnnyli.dev/" />
+                <Button Classes="secondary" Content="Save endpoint setting" Click="SaveAdvancedSettingsClicked" />
               </StackPanel>
+
+              <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />
+
+              <StackPanel Spacing="11">
+                <TextBlock Classes="eyebrow" Text="DATA APPROVALS" />
+                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Full and Stress can remember approval only for the current transfer ceiling. A higher cap asks again automatically." TextWrapping="Wrap" />
+                <Button Classes="secondary" Content="Reset remembered approvals" Click="ResetApprovalsClicked" />
+              </StackPanel>
+
+              <TextBlock Name="SettingsStatusText" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+
+              <Expander Header="Developer result previews">
+                <StackPanel Margin="0,12,0,0" Spacing="11">
+                  <ComboBox Name="FixtureSelector">
+                    <ComboBoxItem Content="Healthy" />
+                    <ComboBoxItem Content="Problematic" />
+                    <ComboBoxItem Content="Inconclusive" />
+                    <ComboBoxItem Content="Unavailable measurement" />
+                    <ComboBoxItem Content="Failed with partial evidence" />
+                  </ComboBox>
+                  <Button Classes="secondary" Content="Preview selected result" Click="PreviewFixtureClicked" />
+                </StackPanel>
+              </Expander>
             </StackPanel>
           </Border>
         </Grid>
