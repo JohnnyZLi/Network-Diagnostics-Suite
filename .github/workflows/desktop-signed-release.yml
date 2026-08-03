@@ -1,0 +1,188 @@
+name: Signed desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, without a leading v
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  macos-release:
+    name: macOS ${{ matrix.architecture }} signed release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    environment: desktop-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: Apple Silicon
+            os: macos-latest
+            rid: osx-arm64
+          - architecture: Intel
+            os: macos-15-intel
+            rid: osx-x64
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Validate release inputs and secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_VERSION"
+          case "$RELEASE_VERSION" in
+            *[!0-9A-Za-z.-]*) echo "Version contains unsupported characters." >&2; exit 1 ;;
+          esac
+          for name in \
+            APPLE_CERTIFICATE_P12_BASE64 \
+            APPLE_CERTIFICATE_PASSWORD \
+            APPLE_SIGNING_IDENTITY \
+            APPLE_ID \
+            APPLE_APP_PASSWORD \
+            APPLE_TEAM_ID; do
+            test -n "${!name}" || { echo "Required secret $name is missing." >&2; exit 1; }
+          done
+
+      - name: Publish desktop application
+        run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/release-${{ matrix.rid }}/publish
+
+      - name: Smoke-test desktop bootstrap
+        shell: bash
+        run: artifacts/release-${{ matrix.rid }}/publish/NetworkDiagnosticsDesktop --smoke-test
+
+      - name: Create macOS application bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="artifacts/release-${{ matrix.rid }}"
+          app="$root/Network Diagnostics.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp "$root/publish/NetworkDiagnosticsDesktop" "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+          chmod +x "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+          cp LICENSE "$app/Contents/Resources/LICENSE.txt"
+          cp tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md "$app/Contents/Resources/README.md"
+          cat > "$app/Contents/Info.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>Network Diagnostics</string>
+            <key>CFBundleExecutable</key>
+            <string>NetworkDiagnosticsDesktop</string>
+            <key>CFBundleIdentifier</key>
+            <string>dev.johnnyli.networkdiagnostics</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>Network Diagnostics</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${RELEASE_VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${{ github.run_number }}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$app/Contents/Info.plist"
+
+      - name: Import Developer ID certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/network-diagnostics-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+          certificate="$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | /usr/bin/base64 -D > "$certificate"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Sign application
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="artifacts/release-${{ matrix.rid }}/Network Diagnostics.app"
+          codesign --force --deep --options runtime --timestamp --keychain "$SIGNING_KEYCHAIN" --sign "$APPLE_SIGNING_IDENTITY" "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          spctl --assess --type execute --verbose=2 "$app" || true
+
+      - name: Notarize and staple application
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="artifacts/release-${{ matrix.rid }}"
+          app="$root/Network Diagnostics.app"
+          archive="$root/NetworkDiagnosticsDesktop-${{ matrix.rid }}-${RELEASE_VERSION}.zip"
+          ditto -c -k --keepParent "$app" "$archive"
+          xcrun notarytool submit "$archive" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$app"
+          xcrun stapler validate "$app"
+
+      - name: Create, sign, and notarize DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="artifacts/release-${{ matrix.rid }}"
+          app="$root/Network Diagnostics.app"
+          dmg="$root/NetworkDiagnosticsDesktop-${{ matrix.rid }}-${RELEASE_VERSION}.dmg"
+          hdiutil create -volname "Network Diagnostics" -srcfolder "$app" -ov -format UDZO "$dmg"
+          codesign --force --timestamp --keychain "$SIGNING_KEYCHAIN" --sign "$APPLE_SIGNING_IDENTITY" "$dmg"
+          xcrun notarytool submit "$dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
+          shasum -a 256 "$dmg" > "$dmg.sha256"
+
+      - name: Upload signed release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NetworkDiagnosticsDesktop-${{ matrix.rid }}-signed
+          path: |
+            artifacts/release-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}-${{ inputs.version }}.dmg
+            artifacts/release-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}-${{ inputs.version }}.dmg.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary signing keychain
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then
+            security delete-keychain "$SIGNING_KEYCHAIN" || true
+          fi
+          rm -f "$RUNNER_TEMP/developer-id.p12"
