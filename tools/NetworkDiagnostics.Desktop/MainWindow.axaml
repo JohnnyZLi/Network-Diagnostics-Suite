@@ -219,6 +219,7 @@
             <ComboBox Name="ProfileSelector"
                       HorizontalAlignment="Stretch"
                       SelectionChanged="PlanSelectionChanged">
+              <ComboBoxItem Content="Connection Check" />
               <ComboBoxItem Content="Quick" />
               <ComboBoxItem Content="Full" />
               <ComboBoxItem Content="Stress" />

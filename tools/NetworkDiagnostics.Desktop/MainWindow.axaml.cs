@@ -47,7 +47,8 @@ public sealed partial class MainWindow : Window
     {
         if (runCancellation is not null) return;
         var plan = CurrentPlan();
-        if (plan.Profile != TestProfileId.Quick && !ConfirmationStore.IsApproved(plan.Profile, plan.TransferCapBytes))
+        if ((plan.Profile is TestProfileId.Standard or TestProfileId.Extended)
+            && !ConfirmationStore.IsApproved(plan.Profile, plan.TransferCapBytes))
         {
             var confirmation = await new DataUseDialog(plan).ShowDialog<DataUseConfirmation?>(this);
             if (confirmation is null || !confirmation.Confirmed) return;
@@ -64,6 +65,7 @@ public sealed partial class MainWindow : Window
             Target: string.IsNullOrWhiteSpace(TargetInput.Text) ? "1.1.1.1" : TargetInput.Text.Trim(),
             PingCount: profile switch
             {
+                TestProfileId.ConnectionCheck => 8,
                 TestProfileId.Quick => 12,
                 TestProfileId.Standard => 20,
                 TestProfileId.Extended => 30,
@@ -310,9 +312,10 @@ public sealed partial class MainWindow : Window
 
     private TestProfileId SelectedProfile() => ProfileSelector.SelectedIndex switch
     {
-        1 => TestProfileId.Standard,
-        2 => TestProfileId.Extended,
-        _ => TestProfileId.Quick
+        1 => TestProfileId.Quick,
+        2 => TestProfileId.Standard,
+        3 => TestProfileId.Extended,
+        _ => TestProfileId.ConnectionCheck
     };
 
     private TransferMethod SelectedMethod() => MethodSelector.SelectedIndex switch
