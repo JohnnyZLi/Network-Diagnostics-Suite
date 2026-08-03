@@ -111,7 +111,7 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
       platform: globalThis.navigator?.platform || "browser",
       architecture: null,
       profile: result.mode,
-      transferMethod,
+      transferMethod: transferMode,
       startedAt: result.startedAt,
       completedAt: result.completedAt,
       includesLocalAddresses: false,
