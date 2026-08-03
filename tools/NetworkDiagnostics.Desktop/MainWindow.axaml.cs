@@ -34,6 +34,25 @@ public sealed partial class MainWindow : Window
         if (initialized) RenderProfileSelection();
     }
 
+    private void ConnectionProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(0);
+
+    private void QuickProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(1);
+
+    private void FullProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(2);
+
+    private void StressProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(3);
+
+    private void SelectProfile(int index)
+    {
+        if (ProfileSelector.SelectedIndex == index)
+        {
+            RenderProfileSelection();
+            return;
+        }
+
+        ProfileSelector.SelectedIndex = index;
+    }
+
     private async void RunClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (ProfileSelector.SelectedIndex != 0 || previewCancellation is not null) return;
@@ -111,9 +130,9 @@ public sealed partial class MainWindow : Window
         HistoryArea.IsVisible = area == DesktopArea.History;
         SettingsArea.IsVisible = area == DesktopArea.Settings;
 
-        SetActiveNav(TestNavButton, area == DesktopArea.Test);
-        SetActiveNav(HistoryNavButton, area == DesktopArea.History);
-        SetActiveNav(SettingsNavButton, area == DesktopArea.Settings);
+        SetActiveState(TestNavButton, area == DesktopArea.Test);
+        SetActiveState(HistoryNavButton, area == DesktopArea.History);
+        SetActiveState(SettingsNavButton, area == DesktopArea.Settings);
 
         if (area == DesktopArea.Test) ShowTestState(currentTestState);
     }
@@ -128,7 +147,8 @@ public sealed partial class MainWindow : Window
 
     private void RenderProfileSelection()
     {
-        var profile = ProfileSelector.SelectedIndex switch
+        var selectedIndex = ProfileSelector.SelectedIndex;
+        var profile = selectedIndex switch
         {
             1 => new ProfileCopy(
                 "What performance am I getting now?",
@@ -167,6 +187,11 @@ public sealed partial class MainWindow : Window
                 "Run Connection Check",
                 true)
         };
+
+        SetActiveState(ConnectionProfileButton, selectedIndex == 0);
+        SetActiveState(QuickProfileButton, selectedIndex == 1);
+        SetActiveState(FullProfileButton, selectedIndex == 2);
+        SetActiveState(StressProfileButton, selectedIndex == 3);
 
         ProfileQuestionText.Text = profile.Question;
         ProfilePurposeText.Text = profile.Purpose;
@@ -278,7 +303,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static void SetActiveNav(Button button, bool active)
+    private static void SetActiveState(Button button, bool active)
     {
         if (active)
         {
