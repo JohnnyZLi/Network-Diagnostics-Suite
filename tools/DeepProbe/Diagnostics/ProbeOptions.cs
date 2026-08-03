@@ -32,7 +32,7 @@ internal sealed record ProbeOptions(
         var lanConcurrency = 4;
         var lanServer = false;
         var includeInternetTransfer = false;
-        var profile = TestProfileId.Quick;
+        var profile = TestProfileId.ConnectionCheck;
         var transferMethod = TransferMethod.Compare;
         var testOrigin = InternetTransferProbe.DefaultOrigin;
         var showHelp = false;
