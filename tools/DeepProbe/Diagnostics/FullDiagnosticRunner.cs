@@ -55,9 +55,22 @@ internal static class FullDiagnosticRunner
             cancellationToken);
 
         DeepProbeReport? deepDiagnostics = null;
+        string? deepFailure = null;
         if (options.Profile is TestProfileId.Standard or TestProfileId.Extended)
         {
-            deepDiagnostics = await ProbeRunner.RunAsync(options, progress, cancellationToken);
+            try
+            {
+                deepDiagnostics = await ProbeRunner.RunAsync(options, progress, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                deepFailure = SafeError(error);
+                progress?.Report("Local and path diagnostics did not complete; preserving Internet measurements");
+            }
         }
 
         var completedAt = DateTimeOffset.UtcNow;
@@ -81,7 +94,22 @@ internal static class FullDiagnosticRunner
             measurement,
             null);
 
-        return report with { Findings = DiagnosticClassifier.Classify(report) };
+        var findings = DiagnosticClassifier.Classify(report).ToList();
+        if (deepFailure is not null)
+        {
+            findings.Insert(0, new DiagnosticFinding(
+                "deep-diagnostics-failed",
+                "measurement-quality",
+                "info",
+                "high",
+                "Local and path diagnostics did not complete",
+                "The Internet transfer phases completed and remain available, but the operating-system deep-probe section failed before it could produce evidence.",
+                [new DiagnosticEvidence("deepDiagnostics.status", "Deep diagnostics", "Failed", deepFailure)],
+                ["Repeat the same profile. If the section fails again, inspect permissions and the technical error before changing network settings."],
+                "Repeat Full or Stress after resolving the local diagnostic error."));
+        }
+
+        return report with { Findings = findings };
     }
 
     private static IEnumerable<string> Capabilities(ProbeOptions options)
@@ -103,5 +131,13 @@ internal static class FullDiagnosticRunner
         yield return "wifi-details";
         yield return "routing-details";
         if (options.LanTarget is not null) yield return "local-link-throughput";
+    }
+
+    private static string SafeError(Exception error)
+    {
+        var message = string.IsNullOrWhiteSpace(error.Message)
+            ? error.GetType().Name
+            : $"{error.GetType().Name}: {error.Message}";
+        return message.Length <= 320 ? message : $"{message[..317]}...";
     }
 }
