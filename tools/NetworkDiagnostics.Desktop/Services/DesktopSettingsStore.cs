@@ -57,7 +57,7 @@ public sealed record DesktopSettings(
     private static Uri EnsureTrailingSlash(Uri uri)
     {
         var builder = new UriBuilder(uri);
-        if (!builder.Path.EndsWith('/', StringComparison.Ordinal)) builder.Path += "/";
+        if (!builder.Path.EndsWith("/", StringComparison.Ordinal)) builder.Path += "/";
         return builder.Uri;
     }
 }
