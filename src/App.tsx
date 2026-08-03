@@ -11,6 +11,7 @@ import { ProgressStage } from "./components/ProgressStage";
 import { RecentResultsPanel } from "./components/RecentResultsPanel";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
+import { serializeBrowserReport } from "./report-serialization";
 import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress, TransferMode } from "./types/diagnostics";
 
 type RunState = "idle" | "running" | "complete" | "error";
@@ -50,7 +51,7 @@ function createResultSummary(result: DiagnosticResult): string {
 }
 
 function downloadResultFile(result: DiagnosticResult): void {
-  const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+  const blob = new Blob([serializeBrowserReport(result)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
