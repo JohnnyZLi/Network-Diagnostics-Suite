@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { serializeBrowserReport, toSchemaTwoBrowserReport } from "../src/report-serialization";
-import type { DiagnosticResult, LatencySummary, ThroughputResult } from "../src/types/diagnostics";
+import type { DiagnosticResult, LatencySummary, ThroughputSummary } from "../src/types/diagnostics";
 
 const latency = (medianMs: number): LatencySummary => ({
   sent: 8,
@@ -16,7 +16,7 @@ const latency = (medianMs: number): LatencySummary => ({
   samples: [medianMs - 2, medianMs - 1, medianMs, medianMs, medianMs + 1, medianMs + 2, medianMs + 3, medianMs + 4],
 });
 
-const throughput = (steadyMbps: number): ThroughputResult => ({
+const throughput = (steadyMbps: number): ThroughputSummary => ({
   mbps: steadyMbps + 5,
   steadyMbps,
   bytes: 50_000_000,
