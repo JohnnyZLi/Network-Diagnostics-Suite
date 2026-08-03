@@ -7,6 +7,15 @@
   "properties": {
     "schemaVersion": { "const": "2.0" },
     "generatedAt": { "type": "string", "format": "date-time" },
+    "producer": {
+      "type": ["object", "null"],
+      "properties": {
+        "application": { "enum": ["web", "desktop", "cli"] },
+        "version": { "type": ["string", "null"] },
+        "engine": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
     "run": {
       "type": "object",
       "required": ["id", "platform", "profile", "transferMethod", "startedAt", "completedAt"],
@@ -14,7 +23,7 @@
         "id": { "type": "string", "minLength": 1 },
         "platform": { "type": "string", "minLength": 1 },
         "architecture": { "type": ["string", "null"] },
-        "profile": { "enum": ["quick", "standard", "extended"] },
+        "profile": { "enum": ["connection-check", "quick", "standard", "extended"] },
         "transferMethod": { "enum": ["compare", "single", "aggregate"] },
         "startedAt": { "type": "string", "format": "date-time" },
         "completedAt": { "type": "string", "format": "date-time" },
@@ -34,9 +43,86 @@
     },
     "internetTransfer": { "type": ["object", "null"], "additionalProperties": true },
     "deepDiagnostics": { "type": ["object", "null"], "additionalProperties": true },
-    "localLink": { "type": ["object", "null"], "additionalProperties": true }
+    "localLink": { "type": ["object", "null"], "additionalProperties": true },
+    "measurement": {
+      "type": ["object", "null"],
+      "properties": {
+        "contractVersion": { "type": "string", "minLength": 1 },
+        "engine": { "type": "string", "minLength": 1 },
+        "engineVersion": { "type": "string", "minLength": 1 },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "selectedEndpoint": { "$ref": "#/$defs/selectedEndpoint" },
+        "endpointCandidates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/endpointProbe" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
   },
   "$defs": {
+    "selectedEndpoint": {
+      "type": "object",
+      "required": ["id", "name", "provider", "origin", "selectionReason"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "origin": { "type": "string", "format": "uri" },
+        "selectionReason": { "type": "string", "minLength": 1 },
+        "preflightLatencyMs": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "endpointProbe": {
+      "type": "object",
+      "required": ["id", "name", "provider", "origin", "available"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "origin": { "type": "string", "format": "uri" },
+        "available": { "type": "boolean" },
+        "medianLatencyMs": { "type": ["number", "null"], "minimum": 0 },
+        "error": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["metric", "label", "value"],
+      "properties": {
+        "metric": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 },
+        "detail": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "category", "severity", "confidence", "title", "summary", "evidence", "recommendations"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["info", "warning", "critical"] },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "recommendations": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "nextTest": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
     "stage": {
       "type": "object",
       "required": ["id", "strategy", "direction", "connections", "durationMs", "capBytes"],
