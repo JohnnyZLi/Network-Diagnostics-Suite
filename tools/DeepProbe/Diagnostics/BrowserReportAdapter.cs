@@ -85,7 +85,7 @@ internal static class BrowserReportAdapter
             "upload-throughput",
             "loaded-latency"
         };
-        if (flows.Count > 1) capabilities.Add("flow-comparison");
+        if (flows.Length > 1) capabilities.Add("flow-comparison");
         if (scaling.Length > 0) capabilities.Add("connection-scaling");
         if (evidence.ServiceChecks.Count > 0) capabilities.Add("service-reachability");
         var edgeName = browser.Edge?.Edge ?? "Website edge";
