@@ -5,7 +5,7 @@ namespace NetworkDeepProbe.Contracts;
 
 public static class TestProfileContract
 {
-    private const string ResourceName = "NetworkDiagnostics.Contracts.test-profiles.v1.json";
+    private const string ResourceName = "NetworkDiagnostics.Contracts.desktop-test-profiles.v1.json";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true

@@ -104,7 +104,7 @@ internal static class ProbeProgram
         Console.WriteLine();
         Console.WriteLine("First-party Internet transfer:");
         Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
-        Console.WriteLine("  --profile <name>      quick, full, or stress (default: quick)");
+        Console.WriteLine("  --profile <name>      connection-check, quick, full, or stress (default: connection-check)");
         Console.WriteLine("  --transfer-method <m> compare, single, or aggregate (default: compare)");
         Console.WriteLine("  --test-origin <url>   Project endpoint origin (default: https://network.johnnyli.dev/)");
         Console.WriteLine();
