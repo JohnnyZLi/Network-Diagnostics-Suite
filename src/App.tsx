@@ -155,22 +155,26 @@ export default function App() {
         downloadPath,
         signal: controller.signal,
         selectedEndpoint: preflightSelection ?? undefined,
-        onProgress: (next) => setProgress((previous) => {
-          if (next.phase !== previous.phase) return next;
-          return {
-            phase: next.phase,
-            fraction: Math.max(previous.fraction, next.fraction),
-            liveMbps: next.liveMbps ?? previous.liveMbps,
-            liveLatencyMs: next.liveLatencyMs ?? previous.liveLatencyMs,
-            bytesTransferred: Math.max(previous.bytesTransferred, next.bytesTransferred)
-          };
-        })
+        onProgress: (next) => {
+          if (controller.signal.aborted || controllerRef.current !== controller) return;
+          setProgress((previous) => {
+            if (next.phase !== previous.phase) return next;
+            return {
+              phase: next.phase,
+              fraction: Math.max(previous.fraction, next.fraction),
+              liveMbps: next.liveMbps ?? previous.liveMbps,
+              liveLatencyMs: next.liveLatencyMs ?? previous.liveLatencyMs,
+              bytesTransferred: Math.max(previous.bytesTransferred, next.bytesTransferred)
+            };
+          });
+        }
       });
       if (controller.signal.aborted || controllerRef.current !== controller) return;
       setResult(nextResult);
       setHistory(saveRecentResult(nextResult));
       setRunState("complete");
     } catch (error) {
+      if (controllerRef.current !== controller) return;
       if (error instanceof TestCancelledError || controller.signal.aborted) {
         setRunState("idle");
         setProgress(INITIAL_PROGRESS);
