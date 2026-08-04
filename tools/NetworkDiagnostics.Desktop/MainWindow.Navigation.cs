@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Models;
 using NetworkDiagnostics.Desktop.Navigation;
@@ -88,78 +87,47 @@ public sealed partial class MainWindow
         navigationService.Initialize(new TestSetupDestination(), CaptureCurrentViewState());
     }
 
-    private void TestNavClicked(object? sender, RoutedEventArgs eventArgs) =>
-        NavigateToWorkspace(WorkspaceKind.Test);
+    private void SelectProfile(int index) => _ = SelectProfileAsync(index);
 
-    private void HistoryNavClicked(object? sender, RoutedEventArgs eventArgs) =>
-        NavigateToWorkspace(WorkspaceKind.Reports);
-
-    private void SettingsNavClicked(object? sender, RoutedEventArgs eventArgs) =>
-        NavigateToWorkspace(WorkspaceKind.Settings);
-
-    private async void ProfileSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    private async Task SelectProfileAsync(int index)
     {
-        if (!initialized) return;
+        index = Math.Clamp(index, 0, 3);
+        var changed = selectedProfileIndex != index;
+        selectedProfileIndex = index;
         RenderProfileSelection();
-        settings = settings with { DefaultProfile = DesktopSettings.ContractId(SelectedProfile()) };
-        await PersistSettingsAsync();
-        await RefreshPreflightAsync();
+
+        if (initialized && changed)
+        {
+            settings = settings with { DefaultProfile = DesktopSettings.ContractId(SelectedProfile()) };
+            await PersistSettingsAsync();
+            await RefreshPreflightAsync();
+        }
+
         SyncTestWorkspace();
         SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
     }
 
-    private async void MethodSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    private void SelectMethod(int index) => _ = SelectMethodAsync(index);
+
+    private async Task SelectMethodAsync(int index)
     {
-        if (!initialized) return;
+        index = Math.Clamp(index, 0, 2);
+        var changed = selectedMethodIndex != index;
+        selectedMethodIndex = index;
         RenderMethodSelection();
-        settings = settings with { DefaultTransferMethod = DesktopSettings.ContractId(SelectedMethod()) };
-        await PersistSettingsAsync();
         RenderProfileSelection();
-        await RefreshPreflightAsync();
+
+        if (initialized && changed)
+        {
+            settings = settings with { DefaultTransferMethod = DesktopSettings.ContractId(SelectedMethod()) };
+            await PersistSettingsAsync();
+            await RefreshPreflightAsync();
+        }
+
         SyncTestWorkspace();
         SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
-    }
-
-    private void ConnectionProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(0);
-
-    private void QuickProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(1);
-
-    private void FullProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(2);
-
-    private void StressProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(3);
-
-    private void CompareMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(0);
-
-    private void SingleMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(1);
-
-    private void AggregateMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(2);
-
-    private void SelectProfile(int index)
-    {
-        if (ProfileSelector.SelectedIndex == index)
-        {
-            RenderProfileSelection();
-            SyncTestWorkspace();
-            SyncSettingsWorkspace();
-            RefreshWorkbenchChrome();
-            return;
-        }
-        ProfileSelector.SelectedIndex = index;
-    }
-
-    private void SelectMethod(int index)
-    {
-        if (MethodSelector.SelectedIndex == index)
-        {
-            RenderMethodSelection();
-            SyncTestWorkspace();
-            SyncSettingsWorkspace();
-            RefreshWorkbenchChrome();
-            return;
-        }
-        MethodSelector.SelectedIndex = index;
     }
 
     private async void NavigationChanged(object? sender, NavigationChangedEventArgs eventArgs)
@@ -422,10 +390,6 @@ public sealed partial class MainWindow
         HistoryArea.IsVisible = area == DesktopArea.History;
         SettingsArea.IsVisible = area == DesktopArea.Settings;
 
-        SetActiveState(TestNavButton, area == DesktopArea.Test);
-        SetActiveState(HistoryNavButton, area == DesktopArea.History);
-        SetActiveState(SettingsNavButton, area == DesktopArea.Settings);
-
         if (area == DesktopArea.Test) ShowTestState(currentTestState);
     }
 
@@ -572,7 +536,7 @@ public sealed partial class MainWindow
         return firstLine.Length <= 42 ? firstLine : $"{firstLine[..39]}…";
     }
 
-    private TestProfileId SelectedProfile() => ProfileSelector.SelectedIndex switch
+    private TestProfileId SelectedProfile() => selectedProfileIndex switch
     {
         1 => TestProfileId.Quick,
         2 => TestProfileId.Standard,
@@ -580,7 +544,7 @@ public sealed partial class MainWindow
         _ => TestProfileId.ConnectionCheck
     };
 
-    private TransferMethod SelectedMethod() => MethodSelector.SelectedIndex switch
+    private TransferMethod SelectedMethod() => selectedMethodIndex switch
     {
         1 => TransferMethod.Single,
         2 => TransferMethod.Aggregate,
@@ -601,16 +565,4 @@ public sealed partial class MainWindow
         TransferMethod.Aggregate => 2,
         _ => 0
     };
-
-    private static void SetActiveState(Button button, bool active)
-    {
-        if (active)
-        {
-            if (!button.Classes.Contains("active")) button.Classes.Add("active");
-        }
-        else
-        {
-            button.Classes.Remove("active");
-        }
-    }
 }
