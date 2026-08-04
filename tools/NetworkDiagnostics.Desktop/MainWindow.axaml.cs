@@ -75,11 +75,9 @@ public sealed partial class MainWindow : Window
     private string transferCap = "—";
     private string confirmation = "Not required";
     private string profileAvailability = "Connection Check runs the real native engine and saves its report locally when complete.";
-    private string preflightStatus = "Checking the path…";
     private string preflightNetwork = string.Empty;
     private string preflightEndpoint = string.Empty;
     private string preflightInterface = "Automatic system routing";
-    private string preflightHttp3 = string.Empty;
     private string testOriginsText = string.Empty;
     private string lanTargetText = string.Empty;
     private string lanPortText = "8765";
