@@ -22,7 +22,6 @@ public sealed partial class MainWindow
         activeRunNavigationId = activeRunSession.Start(runProfile, runMethod);
         currentReport = null;
         ResetRunningState();
-        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(runProfile).ToUpperInvariant()} / {MethodName(runMethod).ToUpperInvariant()}";
         ShowTestState(TestViewState.Running);
         var progress = new Progress<NativeRunProgress>(RenderRunProgress);
 
@@ -82,84 +81,27 @@ public sealed partial class MainWindow
 
     private void RenderRunProgress(NativeRunProgress progress)
     {
-        CurrentPhaseText.Text = progress.Message;
-        LiveMeasurementText.Text = LiveProgressText(progress);
-        displayedRunProgress = Math.Max(displayedRunProgress, OverallProgress(progress));
-        RunProgress.Value = displayedRunProgress;
+        var nextProgress = Math.Max(displayedRunProgress, OverallProgress(progress));
+        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
+        if (progress.Phase == "diagnostics" && nextProgress >= 20 && deepProfile)
+        {
+            nextProgress = Math.Min(96, nextProgress + 2.5);
+        }
+
+        displayedRunProgress = nextProgress;
         activeRunSession.UpdateProgress(
             progress.Phase,
-            LiveMeasurementText.Text ?? progress.Message,
+            LiveProgressText(progress),
             displayedRunProgress,
             progress.LiveMbps,
             progress.LiveLatencyMs,
             progress.BytesTransferred);
-
-        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
-        if (progress.Phase == "diagnostics")
-        {
-            if (displayedRunProgress < 20)
-            {
-                NetworkPhaseStatus.Text = "In progress";
-            }
-            else if (deepProfile)
-            {
-                DeepPhaseStatus.Text = "In progress";
-                displayedRunProgress = Math.Min(96, displayedRunProgress + 2.5);
-                RunProgress.Value = displayedRunProgress;
-                activeRunSession.UpdateProgress(
-                    progress.Phase,
-                    LiveMeasurementText.Text ?? progress.Message,
-                    displayedRunProgress,
-                    progress.LiveMbps,
-                    progress.LiveLatencyMs,
-                    progress.BytesTransferred);
-            }
-            RefreshWorkbenchChrome();
-            return;
-        }
-
-        switch (progress.Phase)
-        {
-            case "idle":
-                NetworkPhaseStatus.Text = "Complete";
-                LatencyPhaseStatus.Text = "In progress";
-                break;
-            case "download":
-                NetworkPhaseStatus.Text = "Complete";
-                LatencyPhaseStatus.Text = "Complete";
-                DownloadPhaseStatus.Text = "In progress";
-                break;
-            case "upload":
-                NetworkPhaseStatus.Text = "Complete";
-                LatencyPhaseStatus.Text = "Complete";
-                DownloadPhaseStatus.Text = "Complete";
-                UploadPhaseStatus.Text = "In progress";
-                break;
-            case "complete":
-                NetworkPhaseStatus.Text = "Complete";
-                LatencyPhaseStatus.Text = "Complete";
-                DownloadPhaseStatus.Text = "Complete";
-                UploadPhaseStatus.Text = "Complete";
-                DeepPhaseStatus.Text = deepProfile ? "Waiting" : "Not included";
-                break;
-        }
-
         RefreshWorkbenchChrome();
     }
 
     private void ResetRunningState()
     {
         displayedRunProgress = 0;
-        RunProgress.Value = 0;
-        CurrentPhaseText.Text = "Preparing the test…";
-        LiveMeasurementText.Text = "Starting…";
-        NetworkPhaseStatus.Text = "Waiting";
-        LatencyPhaseStatus.Text = "Waiting";
-        DownloadPhaseStatus.Text = "Waiting";
-        UploadPhaseStatus.Text = "Waiting";
-        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
-            ? "Waiting"
-            : "Not included";
         SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
@@ -167,14 +109,6 @@ public sealed partial class MainWindow
     private void CompleteRunningState()
     {
         displayedRunProgress = 100;
-        RunProgress.Value = 100;
-        NetworkPhaseStatus.Text = "Complete";
-        LatencyPhaseStatus.Text = "Complete";
-        DownloadPhaseStatus.Text = "Complete";
-        UploadPhaseStatus.Text = "Complete";
-        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
-            ? "Complete"
-            : "Not included";
         SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }

@@ -169,10 +169,7 @@ public sealed partial class MainWindow
     {
         var reports = await reportStore.ListAsync();
         comparisonBaselineReport ??= currentReport;
-        HistoryListPanel.Children.Clear();
         HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
-        ReportsFolderText.Text = reportStore.ReportsDirectory;
-        SetHistoryPanelEyebrow("LOCAL REPORTS");
 
         ReportBrowserState? browserState = viewState is null
             ? null
@@ -182,26 +179,6 @@ public sealed partial class MainWindow
                 viewState.SortDescending,
                 viewState.SelectedReportId);
         reportBrowserWorkspace?.Render(reports, browserState);
-
-        var trend = ReportComparisonService.AnalyzeTrend(reports);
-        HistoryFixtureTitle.Text = reports.Count == 0
-            ? "No local reports"
-            : trend.CompatibleRuns >= 2
-                ? "Compatible-run trend"
-                : "Trend needs another equivalent run";
-        HistoryFixtureDetail.Text = reports.Count == 0
-            ? "Completed diagnostics and imported schema 2.0 reports will appear here."
-            : trend.Summary;
-
-        var legacySummary = new TextBlock
-        {
-            Text = reports.Count == 0
-                ? "No saved reports yet."
-                : $"{reports.Count} reports are available in the redesigned report browser.",
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap
-        };
-        legacySummary.Classes.Add("muted");
-        HistoryListPanel.Children.Add(legacySummary);
     }
 
     private void SavedReportClicked(object? sender, RoutedEventArgs eventArgs)
