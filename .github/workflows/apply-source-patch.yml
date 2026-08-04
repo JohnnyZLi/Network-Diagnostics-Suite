@@ -1,17 +1,17 @@
 name: Apply source patch
 
 on:
-  push:
-    branches:
-      - agent/desktop-app-rebuild
+  pull_request:
     paths:
       - '.automation/apply'
+      - '.github/workflows/apply-source-patch.yml'
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: ${{ hashFiles('.automation/apply') != '' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
