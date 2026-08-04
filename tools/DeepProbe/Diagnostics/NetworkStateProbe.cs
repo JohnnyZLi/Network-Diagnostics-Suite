@@ -14,9 +14,7 @@ internal static class NetworkStateProbe
 {
     public static CapturedNetworkState Capture(Uri origin, string? selectedInterfaceId, bool includeLocalIdentifiers)
     {
-        var active = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(item => item.OperationalStatus == OperationalStatus.Up && item.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-            .ToArray();
+        var active = ActiveInterfaces();
         var selected = active.FirstOrDefault(item => string.Equals(item.Id, selectedInterfaceId, StringComparison.Ordinal))
             ?? active.FirstOrDefault(HasGateway)
             ?? active.FirstOrDefault();
@@ -40,6 +38,10 @@ internal static class NetworkStateProbe
             {
                 // A disappearing interface is represented by the after-snapshot comparison.
             }
+            catch (PlatformNotSupportedException)
+            {
+                // The snapshot remains useful without address details.
+            }
         }
 
         var tunnels = active
@@ -48,11 +50,11 @@ internal static class NetworkStateProbe
             .ToArray();
         var proxy = ProxyFor(origin);
         var report = new NetworkStateSnapshot(
-            selected?.Id,
-            selected?.Name,
+            selected is null ? null : includeLocalIdentifiers ? selected.Id : "active-interface",
+            selected is null ? null : includeLocalIdentifiers ? selected.Name : "Active interface",
             includeLocalIdentifiers ? gateway : null,
             families.OrderBy(item => item, StringComparer.Ordinal).ToArray(),
-            proxy,
+            proxy is null ? null : includeLocalIdentifiers ? proxy : "Configured system proxy",
             tunnels);
         var fingerprint = string.Join('|',
             selected?.Id ?? string.Empty,
@@ -66,7 +68,8 @@ internal static class NetworkStateProbe
     public static NetworkChangeReport Compare(CapturedNetworkState before, CapturedNetworkState after, bool captivePortal)
     {
         var changes = new List<string>();
-        if (!string.Equals(before.Report.InterfaceId, after.Report.InterfaceId, StringComparison.Ordinal))
+        if (!string.Equals(before.Report.InterfaceId, after.Report.InterfaceId, StringComparison.Ordinal)
+            || InterfaceFingerprint(before) != InterfaceFingerprint(after))
         {
             changes.Add("The active interface changed during the run.");
         }
@@ -78,7 +81,8 @@ internal static class NetworkStateProbe
         {
             changes.Add("The active IP address families changed during the run.");
         }
-        if (!string.Equals(before.Report.Proxy, after.Report.Proxy, StringComparison.Ordinal))
+        if (!string.Equals(before.Report.Proxy, after.Report.Proxy, StringComparison.Ordinal)
+            || ProxyFingerprint(before) != ProxyFingerprint(after))
         {
             changes.Add("The effective system proxy changed during the run.");
         }
@@ -112,6 +116,24 @@ internal static class NetworkStateProbe
         }
     }
 
+    private static NetworkInterface[] ActiveInterfaces()
+    {
+        try
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(item => item.OperationalStatus == OperationalStatus.Up && item.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .ToArray();
+        }
+        catch (NetworkInformationException)
+        {
+            return [];
+        }
+        catch (PlatformNotSupportedException)
+        {
+            return [];
+        }
+    }
+
     private static bool HasGateway(NetworkInterface networkInterface)
     {
         try
@@ -119,6 +141,10 @@ internal static class NetworkStateProbe
             return networkInterface.GetIPProperties().GatewayAddresses.Any(item => !item.Address.Equals(IPAddress.Any));
         }
         catch (NetworkInformationException)
+        {
+            return false;
+        }
+        catch (PlatformNotSupportedException)
         {
             return false;
         }
@@ -149,6 +175,12 @@ internal static class NetworkStateProbe
             return null;
         }
     }
+
+    private static string InterfaceFingerprint(CapturedNetworkState state) =>
+        state.Fingerprint.Split('|').ElementAtOrDefault(0) ?? string.Empty;
+
+    private static string ProxyFingerprint(CapturedNetworkState state) =>
+        state.Fingerprint.Split('|').ElementAtOrDefault(3) ?? string.Empty;
 
     private static bool SameAuthority(Uri left, Uri right) =>
         string.Equals(left.Scheme, right.Scheme, StringComparison.OrdinalIgnoreCase)
