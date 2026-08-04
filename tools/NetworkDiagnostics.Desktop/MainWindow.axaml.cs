@@ -37,7 +37,9 @@ public sealed partial class MainWindow : Window
     private ReportBrowserWorkspace? reportBrowserWorkspace;
     private ReportDetailWorkspace? reportDetailWorkspace;
     private ComparisonWorkspace? comparisonWorkspace;
+    private SettingsWorkspace? settingsWorkspace;
     private bool initialized;
+    private bool settingsLoaded;
     private bool applyingNavigation;
     private TestViewState currentTestState = TestViewState.Setup;
     private ConnectionCheckPresentation currentPresentationValue = ConnectionCheckFixtures.All[0];
@@ -84,6 +86,7 @@ public sealed partial class MainWindow : Window
     private async void WindowOpened(object? sender, EventArgs eventArgs)
     {
         initialized = false;
+        settingsLoaded = false;
         settings = await settingsStore.LoadAsync();
         reportStore.Configure(settings.ReportDirectory);
         ProfileSelector.SelectedIndex = ProfileIndex(settings.SelectedProfile);
@@ -102,6 +105,9 @@ public sealed partial class MainWindow : Window
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
         SyncTestWorkspace();
+        SyncSettingsWorkspace();
+        settingsLoaded = true;
+        await RestorePersistedWorkbenchStateAsync();
         RefreshWorkbenchChrome();
     }
 
