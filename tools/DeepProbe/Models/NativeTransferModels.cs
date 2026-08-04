@@ -155,4 +155,5 @@ public sealed record NetworkDiagnosticsReportV2(
     LoadedPathLocalizationReport? LoadLocalization = null,
     DualStackReport? DualStack = null,
     NetworkChangeReport? NetworkChange = null,
-    HostResourceReport? HostResources = null);
+    HostResourceReport? HostResources = null,
+    ReportAnnotations? Annotations = null);
