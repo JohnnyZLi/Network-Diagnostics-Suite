@@ -135,7 +135,7 @@ export function TestControls({
 
     setRememberChoice(true);
     restoreRunButtonFocusRef.current = true;
-    window.setTimeout(() => setConfirmationOpen(true), 0);
+    window.setTimeout(() => setConfirmationOpen(true), 50);
   };
 
   const confirmStart = () => {
