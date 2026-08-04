@@ -127,7 +127,7 @@ export function TestControls({
       restoreRunButtonFocusRef.current = true;
       window.requestAnimationFrame(() => {
         if (!dialog.open) dialog.showModal();
-        window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
+        cancelButtonRef.current?.focus();
       });
     }
   };
