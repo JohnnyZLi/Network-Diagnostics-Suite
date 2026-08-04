@@ -61,6 +61,13 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<NetworkInterfaceChoice> interfaceChoices = [];
     private double displayedRunProgress;
     private Guid activeRunNavigationId = Guid.NewGuid();
+    private string profileQuestion = "Is the connection working normally?";
+    private string profilePurpose = "A lightweight first-party reachability, latency, request-loss, download, and upload check with a clear verdict.";
+    private string methodExplanation = "Measures isolated and aggregate behavior separately.";
+    private string estimatedTime = "—";
+    private string transferCap = "—";
+    private string confirmation = "Not required";
+    private string profileAvailability = "Connection Check runs the real native engine and saves its report locally when complete.";
 
     public MainWindow()
     {
@@ -74,7 +81,6 @@ public sealed partial class MainWindow : Window
         initialized = true;
         RenderProfileSelection();
         RenderMethodSelection();
-        RenderPresentation(currentPresentation);
         SyncTestWorkspace();
         ShowArea(DesktopArea.Test);
         ShowTestState(TestViewState.Setup);
@@ -97,7 +103,6 @@ public sealed partial class MainWindow : Window
         LanPortTextBox.Text = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
         LanDurationTextBox.Text = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
         LanConnectionsTextBox.Text = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        ReportsFolderText.Text = reportStore.ReportsDirectory;
         PopulateInterfaceSelector();
         initialized = true;
         RenderProfileSelection();
