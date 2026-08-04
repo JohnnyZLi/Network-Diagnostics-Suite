@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using NetworkDeepProbe.Models;
+using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 
@@ -216,17 +217,13 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private async void SetComparisonBaselineClicked(object? sender, RoutedEventArgs eventArgs)
+    private void SetComparisonBaselineClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }) return;
-        comparisonBaselineId = stored.Report.Run.Id;
-        comparisonCandidateId = null;
-        comparisonBaselineReport = stored.Report;
-        comparisonCandidateReport = null;
-        await RefreshComparisonHistoryAsync();
+        NavigateToDestination(new ComparisonDestination(stored.Report.Run.Id));
     }
 
-    private async void CompareToBaselineClicked(object? sender, RoutedEventArgs eventArgs)
+    private void CompareToBaselineClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }
             || comparisonBaselineId is null
@@ -235,19 +232,11 @@ public sealed partial class MainWindow
             return;
         }
 
-        comparisonCandidateId = stored.Report.Run.Id;
-        comparisonCandidateReport = stored.Report;
-        await RefreshComparisonHistoryAsync();
+        NavigateToDestination(new ComparisonDestination(comparisonBaselineId, stored.Report.Run.Id));
     }
 
-    private async void ClearComparisonClicked(object? sender, RoutedEventArgs eventArgs)
-    {
-        comparisonBaselineId = null;
-        comparisonCandidateId = null;
-        comparisonBaselineReport = null;
-        comparisonCandidateReport = null;
-        await RefreshComparisonHistoryAsync();
-    }
+    private void ClearComparisonClicked(object? sender, RoutedEventArgs eventArgs) =>
+        NavigateToDestination(new ComparisonDestination());
 
     private void ComparisonHistoryReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
@@ -257,8 +246,7 @@ public sealed partial class MainWindow
         activeProfile = stored.Report.Run.Profile;
         currentPresentation = DiagnosticReportPresenter.FromReport(stored.Report);
         RenderPresentation(currentPresentation);
-        ShowArea(Models.DesktopArea.Test);
-        ShowTestState(Models.TestViewState.Results);
+        NavigateToDestination(new ReportDetailDestination(stored.Report.Run.Id));
     }
 
     private async void ComparisonEditReportAnnotationsClicked(object? sender, RoutedEventArgs eventArgs)
@@ -275,6 +263,7 @@ public sealed partial class MainWindow
             if (comparisonBaselineId == updated.Report.Run.Id) comparisonBaselineReport = updated.Report;
             if (comparisonCandidateId == updated.Report.Run.Id) comparisonCandidateReport = updated.Report;
             await RefreshComparisonHistoryAsync();
+            RefreshWorkbenchChrome();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
