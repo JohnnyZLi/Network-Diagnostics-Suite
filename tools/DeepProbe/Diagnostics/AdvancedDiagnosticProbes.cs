@@ -18,6 +18,8 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
     private readonly HostResourceMonitor hostMonitor;
     private readonly Task<DualStackReport> dualStackTask;
     private readonly Task<bool> captivePortalTask;
+    private LoadedPathLocalizationReport? loadLocalization;
+    private bool transferEvidenceCompleted;
     private bool completed;
 
     private AdvancedEvidenceSession(
@@ -58,6 +60,7 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
             localization = await LoadedPathLatencyCollector.CreateAsync(
                 origin,
                 before.GatewayAddress,
+                includeLocalIdentifiers,
                 cancellationToken);
             localization.Start();
         }
@@ -75,13 +78,21 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
 
     public void SetPhase(string phase) => localization?.SetPhase(phase);
 
+    public async Task FinishTransferEvidenceAsync(CancellationToken cancellationToken)
+    {
+        if (transferEvidenceCompleted) return;
+        transferEvidenceCompleted = true;
+        if (localization is not null)
+        {
+            loadLocalization = await localization.StopAsync(cancellationToken);
+        }
+    }
+
     public async Task<AdvancedEvidenceResult> CompleteAsync(CancellationToken cancellationToken)
     {
         if (completed) throw new InvalidOperationException("Advanced evidence has already been completed.");
         completed = true;
-        var loadLocalization = localization is null
-            ? null
-            : await localization.StopAsync(cancellationToken);
+        await FinishTransferEvidenceAsync(cancellationToken);
         var hostResources = await hostMonitor.StopAsync(cancellationToken);
         var dualStack = await dualStackTask.WaitAsync(cancellationToken);
         var captivePortal = await captivePortalTask.WaitAsync(cancellationToken);
