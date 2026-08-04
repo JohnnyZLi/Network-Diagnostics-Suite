@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 
@@ -18,8 +19,7 @@ public sealed partial class MainWindow
         activeProfile = TestProfileId.ConnectionCheck;
         currentPresentation = ConnectionCheckFixtures.Get(FixtureSelector.SelectedIndex);
         RenderPresentation(currentPresentation);
-        ShowArea(Models.DesktopArea.Test);
-        ShowTestState(Models.TestViewState.Results);
+        NavigateToDestination(new TestResultDestination(Guid.Empty));
     }
 
     private async void ImportReportClicked(object? sender, RoutedEventArgs eventArgs)
@@ -43,15 +43,13 @@ public sealed partial class MainWindow
             currentPresentation = DiagnosticReportPresenter.FromReport(currentReport);
             RenderPresentation(currentPresentation);
             await RefreshHistoryAsync();
-            ShowArea(Models.DesktopArea.Test);
-            ShowTestState(Models.TestViewState.Results);
+            NavigateToDestination(new ReportDetailDestination(stored.Report.Run.Id));
         }
         catch (Exception error)
         {
             currentPresentation = DiagnosticReportPresenter.FromFailure(activeProfile, error);
             RenderPresentation(currentPresentation);
-            ShowArea(Models.DesktopArea.Test);
-            ShowTestState(Models.TestViewState.Results);
+            NavigateToDestination(new TestResultDestination(Guid.Empty));
         }
     }
 
@@ -78,6 +76,7 @@ public sealed partial class MainWindow
         settings = settings with { IncludeLocalIdentifiers = IncludeIdentifiersCheckBox.IsChecked == true };
         await PersistSettingsAsync();
         await RefreshPreflightAsync();
+        RefreshWorkbenchChrome();
     }
 
     private async void SaveAdvancedSettingsClicked(object? sender, RoutedEventArgs eventArgs)
@@ -112,6 +111,7 @@ public sealed partial class MainWindow
             ? "Using the default first-party endpoint. LAN settings saved."
             : $"Saved {originValues.Count} endpoint candidate{(originValues.Count == 1 ? string.Empty : "s")} and LAN settings.";
         await RefreshPreflightAsync();
+        RefreshWorkbenchChrome();
     }
 
     private bool TryParseLanSettings(out int port, out int duration, out int connections)
@@ -151,6 +151,7 @@ public sealed partial class MainWindow
         HistoryListPanel.Children.Clear();
         HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
         ReportsFolderText.Text = reportStore.ReportsDirectory;
+        SetHistoryPanelEyebrow("LOCAL REPORTS");
 
         if (reports.Count == 0)
         {
@@ -215,7 +216,7 @@ public sealed partial class MainWindow
             openButton.Click += SavedReportClicked;
             var compareButton = new Button
             {
-                Content = comparisonBaselineReport is null ? "Use as comparison baseline" : "Compare with baseline",
+                Content = "Compare",
                 Tag = stored,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
             };
@@ -256,31 +257,15 @@ public sealed partial class MainWindow
         activeProfile = stored.Report.Run.Profile;
         currentPresentation = DiagnosticReportPresenter.FromReport(stored.Report);
         RenderPresentation(currentPresentation);
-        ShowArea(Models.DesktopArea.Test);
-        ShowTestState(Models.TestViewState.Results);
+        NavigateToDestination(new ReportDetailDestination(stored.Report.Run.Id));
     }
 
     private void CompareReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }) return;
         selectedHistoryReport = stored;
-        if (comparisonBaselineReport is null || comparisonBaselineReport.Run.Id == stored.Report.Run.Id)
-        {
-            comparisonBaselineReport = stored.Report;
-            HistoryFixtureTitle.Text = "Comparison baseline selected";
-            HistoryFixtureDetail.Text = $"{stored.Label ?? stored.ProfileName} · {stored.DisplayDate}\n{ReportComparisonService.ContextLabel(stored.Report)}";
-            return;
-        }
-
-        var comparison = ReportComparisonService.Compare(comparisonBaselineReport, stored.Report);
-        var warningText = comparison.Warnings.Count == 0
-            ? "Equivalent test conditions"
-            : $"Comparison cautions: {string.Join(" ", comparison.Warnings)}";
-        var metricText = string.Join(
-            Environment.NewLine,
-            comparison.Metrics.Take(8).Select(item => $"{item.Label}: {item.Baseline} → {item.Candidate} · {item.Change}"));
-        HistoryFixtureTitle.Text = comparison.Comparable ? "Report comparison" : "Report comparison with cautions";
-        HistoryFixtureDetail.Text = $"{warningText}\n{comparison.Summary}\n{metricText}";
+        comparisonBaselineReport = stored.Report;
+        NavigateToDestination(new ComparisonDestination(stored.Report.Run.Id));
     }
 
     private async void EditReportAnnotationsClicked(object? sender, RoutedEventArgs eventArgs)
@@ -300,6 +285,7 @@ public sealed partial class MainWindow
             HistoryFixtureDetail.Text = updated.Tags.Count == 0
                 ? "The label was saved inside the local report."
                 : $"Tags: {string.Join(", ", updated.Tags)}";
+            RefreshWorkbenchChrome();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
