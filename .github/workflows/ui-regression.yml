@@ -166,9 +166,10 @@ jobs:
             }
 
             const context = await browser.newContext({ viewport: { width: 720, height: 900 }, reducedMotion: 'reduce' });
-            await context.addInitScript((key) => localStorage.removeItem(key), confirmationKey);
             const page = await context.newPage();
             await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await page.evaluate((key) => localStorage.removeItem(key), confirmationKey);
+            await page.reload({ waitUntil: 'networkidle' });
 
             await page.getByRole('radio', { name: /^Full,/ }).click();
             let runButton = page.getByRole('button', { name: 'Run full test' }).first();
