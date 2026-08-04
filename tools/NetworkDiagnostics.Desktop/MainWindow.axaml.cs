@@ -41,6 +41,8 @@ public sealed partial class MainWindow : Window
     private bool initialized;
     private bool settingsLoaded;
     private bool applyingNavigation;
+    private int selectedProfileIndex;
+    private int selectedMethodIndex;
     private TestViewState currentTestState = TestViewState.Setup;
     private ConnectionCheckPresentation currentPresentationValue = ConnectionCheckFixtures.All[0];
     private ConnectionCheckPresentation currentPresentation
@@ -75,8 +77,6 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         InstallTestWorkspace();
         InstallWorkbenchShell();
-        ProfileSelector.SelectedIndex = 0;
-        MethodSelector.SelectedIndex = 0;
         FixtureSelector.SelectedIndex = 0;
         initialized = true;
         RenderProfileSelection();
@@ -95,8 +95,8 @@ public sealed partial class MainWindow : Window
         settingsLoaded = false;
         settings = await settingsStore.LoadAsync();
         reportStore.Configure(settings.ReportDirectory);
-        ProfileSelector.SelectedIndex = ProfileIndex(settings.SelectedProfile);
-        MethodSelector.SelectedIndex = MethodIndex(settings.SelectedTransferMethod);
+        selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
+        selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
         IncludeIdentifiersCheckBox.IsChecked = settings.IncludeLocalIdentifiers;
         TestOriginTextBox.Text = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
         LanTargetTextBox.Text = settings.LanTarget ?? string.Empty;
