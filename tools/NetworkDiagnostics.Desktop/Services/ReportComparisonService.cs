@@ -170,5 +170,5 @@ public static class ReportComparisonService
 
     private static string Format(double? value, string unit) => value is null
         ? "Not measured"
-        : $"{value.Value.ToString(value >= 100 ? "0" : "0.0", CultureInfo.InvariantCulture)} {unit}";
+        : $"{value.Value.ToString(value.Value >= 100 ? "0" : "0.0", CultureInfo.InvariantCulture)} {unit}";
 }
