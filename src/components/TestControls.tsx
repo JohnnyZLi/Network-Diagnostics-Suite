@@ -101,11 +101,11 @@ export function TestControls({
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
-  const [confirmationSubmitted, setConfirmationSubmitted] = useState(false);
   const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
   const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
@@ -122,7 +122,7 @@ export function TestControls({
     const dialog = confirmationDialogRef.current;
     if (dialog && !dialog.open) {
       setRememberChoice(true);
-      setConfirmationSubmitted(false);
+      confirmButtonRef.current?.removeAttribute("aria-label");
       restoreRunButtonFocusRef.current = true;
       dialog.showModal();
       cancelButtonRef.current?.focus();
@@ -131,7 +131,7 @@ export function TestControls({
   };
 
   const confirmStart = () => {
-    setConfirmationSubmitted(true);
+    confirmButtonRef.current?.setAttribute("aria-label", `Starting ${config.name.toLowerCase()} test`);
     if (rememberChoice && confirmationMode) {
       const nextRecord: ConfirmationRecord = {
         ...acknowledgedCaps,
@@ -313,9 +313,9 @@ export function TestControls({
               Cancel
             </button>
             <button
+              ref={confirmButtonRef}
               type="button"
               className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary"
-              aria-label={confirmationSubmitted ? `Starting ${config.name.toLowerCase()} test` : undefined}
               onClick={confirmStart}
             >
               Run {config.name.toLowerCase()} test
