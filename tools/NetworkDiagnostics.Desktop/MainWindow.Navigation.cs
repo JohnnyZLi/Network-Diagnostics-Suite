@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using NetworkDeepProbe.Planning;
@@ -18,54 +17,42 @@ public sealed partial class MainWindow
         MinWidth = 720;
         MinHeight = 560;
 
-        if (Content is not Grid legacyRoot)
+        if (Content is not Grid workspaceGrid)
         {
             return;
         }
 
-        var workspace = legacyRoot.Children.FirstOrDefault(control => Grid.GetRow(control) == 1);
-        if (workspace is null)
-        {
-            return;
-        }
+        reportBrowserWorkspace = new ReportBrowserWorkspace { IsVisible = false };
+        reportDetailWorkspace = new ReportDetailWorkspace { IsVisible = false };
+        comparisonWorkspace = new ComparisonWorkspace { IsVisible = false };
 
-        legacyRoot.Children.Remove(workspace);
-        Grid.SetRow(workspace, 0);
+        workspaceGrid.Children.Add(reportBrowserWorkspace);
+        workspaceGrid.Children.Add(reportDetailWorkspace);
+        workspaceGrid.Children.Add(comparisonWorkspace);
+        InstallSettingsWorkspace(workspaceGrid);
 
-        if (workspace is Grid workspaceGrid)
-        {
-            reportBrowserWorkspace = new ReportBrowserWorkspace { IsVisible = false };
-            reportDetailWorkspace = new ReportDetailWorkspace { IsVisible = false };
-            comparisonWorkspace = new ComparisonWorkspace { IsVisible = false };
+        reportBrowserWorkspace.ImportRequested += ReportBrowserImportRequested;
+        reportBrowserWorkspace.OpenFolderRequested += ReportBrowserOpenFolderRequested;
+        reportBrowserWorkspace.OpenReportRequested += ReportBrowserOpenReportRequested;
+        reportBrowserWorkspace.CompareReportRequested += ReportBrowserCompareReportRequested;
+        reportBrowserWorkspace.EditReportRequested += ReportBrowserEditReportRequested;
+        reportBrowserWorkspace.StateChanged += ReportBrowserStateChanged;
+        reportBrowserWorkspace.StateChanged += ReportBrowserPersistenceStateChanged;
 
-            workspaceGrid.Children.Add(reportBrowserWorkspace);
-            workspaceGrid.Children.Add(reportDetailWorkspace);
-            workspaceGrid.Children.Add(comparisonWorkspace);
-            InstallSettingsWorkspace(workspaceGrid);
+        reportDetailWorkspace.BackRequested += ReportDetailBackRequested;
+        reportDetailWorkspace.CompareRequested += ReportDetailCompareRequested;
+        reportDetailWorkspace.EditRequested += ReportDetailEditRequested;
+        reportDetailWorkspace.ExportRequested += ReportDetailExportRequested;
 
-            reportBrowserWorkspace.ImportRequested += ReportBrowserImportRequested;
-            reportBrowserWorkspace.OpenFolderRequested += ReportBrowserOpenFolderRequested;
-            reportBrowserWorkspace.OpenReportRequested += ReportBrowserOpenReportRequested;
-            reportBrowserWorkspace.CompareReportRequested += ReportBrowserCompareReportRequested;
-            reportBrowserWorkspace.EditReportRequested += ReportBrowserEditReportRequested;
-            reportBrowserWorkspace.StateChanged += ReportBrowserStateChanged;
-            reportBrowserWorkspace.StateChanged += ReportBrowserPersistenceStateChanged;
-
-            reportDetailWorkspace.BackRequested += ReportDetailBackRequested;
-            reportDetailWorkspace.CompareRequested += ReportDetailCompareRequested;
-            reportDetailWorkspace.EditRequested += ReportDetailEditRequested;
-            reportDetailWorkspace.ExportRequested += ReportDetailExportRequested;
-
-            comparisonWorkspace.ClearRequested += ComparisonWorkspaceClearRequested;
-            comparisonWorkspace.BaselineRequested += ComparisonWorkspaceBaselineRequested;
-            comparisonWorkspace.CandidateRequested += ComparisonWorkspaceCandidateRequested;
-            comparisonWorkspace.OpenReportRequested += ComparisonWorkspaceOpenReportRequested;
-            comparisonWorkspace.EditReportRequested += ComparisonWorkspaceEditReportRequested;
-        }
+        comparisonWorkspace.ClearRequested += ComparisonWorkspaceClearRequested;
+        comparisonWorkspace.BaselineRequested += ComparisonWorkspaceBaselineRequested;
+        comparisonWorkspace.CandidateRequested += ComparisonWorkspaceCandidateRequested;
+        comparisonWorkspace.OpenReportRequested += ComparisonWorkspaceOpenReportRequested;
+        comparisonWorkspace.EditReportRequested += ComparisonWorkspaceEditReportRequested;
 
         workbenchShell = new WorkbenchShell
         {
-            WorkspaceContent = workspace
+            WorkspaceContent = workspaceGrid
         };
         workbenchShell.BackRequested += WorkbenchBackRequested;
         workbenchShell.ForwardRequested += WorkbenchForwardRequested;
@@ -387,17 +374,12 @@ public sealed partial class MainWindow
     {
         HideRedesignedWorkspaces();
         TestArea.IsVisible = area == DesktopArea.Test;
-        HistoryArea.IsVisible = area == DesktopArea.History;
-        SettingsArea.IsVisible = area == DesktopArea.Settings;
-
         if (area == DesktopArea.Test) ShowTestState(currentTestState);
     }
 
     private void ShowWorkspaceSurface(Control? surface)
     {
         TestArea.IsVisible = false;
-        HistoryArea.IsVisible = false;
-        SettingsArea.IsVisible = false;
         HideRedesignedWorkspaces();
         if (surface is not null) surface.IsVisible = true;
     }
@@ -443,9 +425,9 @@ public sealed partial class MainWindow
     {
         if (workbenchShell is null) return;
 
-        var interfaceLabel = CompactStatusValue(PreflightInterfaceText.Text);
-        var endpointLabel = CompactStatusValue(PreflightEndpointText.Text);
-        var networkLabel = CompactStatusValue(PreflightNetworkText.Text);
+        var interfaceLabel = CompactStatusValue(preflightInterface);
+        var endpointLabel = CompactStatusValue(preflightEndpoint);
+        var networkLabel = CompactStatusValue(preflightNetwork);
         var session = activeRunSession.Snapshot;
         var running = session.IsActive;
         string activity = running
@@ -453,7 +435,7 @@ public sealed partial class MainWindow
             : navigationService.Current?.Destination.Workspace switch
             {
                 WorkspaceKind.Reports => reportBrowserWorkspace is null
-                    ? HistoryCountText.Text ?? "Reports"
+                    ? $"{savedReportCount} reports"
                     : $"{reportBrowserWorkspace.VisibleReportCount} reports",
                 WorkspaceKind.Comparisons => comparisonCandidateId is null ? "Choose reports" : "Comparison ready",
                 WorkspaceKind.Settings => "Settings",

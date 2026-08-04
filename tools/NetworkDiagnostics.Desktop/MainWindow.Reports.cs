@@ -12,13 +12,13 @@ namespace NetworkDiagnostics.Desktop;
 
 public sealed partial class MainWindow
 {
-    private void PreviewFixtureClicked(object? sender, RoutedEventArgs eventArgs)
+    private void PreviewFixture()
     {
         currentReport = null;
         comparisonBaselineReport = null;
         selectedHistoryReport = null;
         activeProfile = TestProfileId.ConnectionCheck;
-        currentPresentation = ConnectionCheckFixtures.Get(FixtureSelector.SelectedIndex);
+        currentPresentation = ConnectionCheckFixtures.Get(fixtureIndex);
         RenderPresentation(currentPresentation);
         NavigateToDestination(new TestResultDestination(Guid.Empty));
     }
@@ -79,37 +79,30 @@ public sealed partial class MainWindow
         await reportStore.ExportAsync(report, path);
     }
 
-    private void OpenReportsFolderClicked(object? sender, RoutedEventArgs eventArgs) => reportStore.OpenReportsFolder();
-
-    private async void IncludeIdentifiersChanged(object? sender, RoutedEventArgs eventArgs) =>
-        await SaveIdentifiersSettingAsync(IncludeIdentifiersCheckBox.IsChecked == true);
-
     private async Task SaveIdentifiersSettingAsync(bool includeIdentifiers)
     {
         if (!initialized) return;
         settings = settings with { IncludeLocalIdentifiers = includeIdentifiers };
-        IncludeIdentifiersCheckBox.IsChecked = includeIdentifiers;
         await PersistSettingsAsync();
         await RefreshPreflightAsync();
+        SyncTestWorkspace();
+        SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
     }
 
-    private async void SaveAdvancedSettingsClicked(object? sender, RoutedEventArgs eventArgs) =>
-        await SaveAdvancedSettingsAsync();
-
     private async Task SaveAdvancedSettingsAsync()
     {
-        var originValues = DesktopSettings.ParseOriginLines(TestOriginTextBox.Text);
+        var originValues = DesktopSettings.ParseOriginLines(testOriginsText);
         if (originValues.Count > 8)
         {
-            SettingsStatusText.Text = "Configure no more than eight measurement endpoint candidates.";
+            settingsStatus = "Configure no more than eight measurement endpoint candidates.";
             return;
         }
         foreach (var value in originValues)
         {
             if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
             {
-                SettingsStatusText.Text = $"Endpoint '{value}' must be an absolute HTTP or HTTPS URL.";
+                settingsStatus = $"Endpoint '{value}' must be an absolute HTTP or HTTPS URL.";
                 return;
             }
         }
@@ -119,57 +112,55 @@ public sealed partial class MainWindow
         {
             TestOrigin = null,
             TestOrigins = originValues.Count == 0 ? null : originValues,
-            LanTarget = string.IsNullOrWhiteSpace(LanTargetTextBox.Text) ? null : LanTargetTextBox.Text.Trim(),
+            LanTarget = string.IsNullOrWhiteSpace(lanTargetText) ? null : lanTargetText.Trim(),
             LanPort = lanPort,
             LanDurationSeconds = lanDuration,
             LanConnections = lanConnections
         };
         await PersistSettingsAsync();
-        SettingsStatusText.Text = originValues.Count == 0
+        settingsStatus = originValues.Count == 0
             ? "Using the default first-party endpoint. LAN settings saved."
             : $"Saved {originValues.Count} endpoint candidate{(originValues.Count == 1 ? string.Empty : "s")} and LAN settings.";
         await RefreshPreflightAsync();
+        SyncSettingsWorkspace("Measurement");
         RefreshWorkbenchChrome();
     }
 
     private bool TryParseLanSettings(out int port, out int duration, out int connections)
     {
-        if (!int.TryParse(LanPortTextBox.Text, out port) || port is < 1024 or > 65535)
+        if (!int.TryParse(lanPortText, out port) || port is < 1024 or > 65535)
         {
             duration = 0;
             connections = 0;
-            SettingsStatusText.Text = "LAN port must be between 1024 and 65535.";
+            settingsStatus = "LAN port must be between 1024 and 65535.";
             return false;
         }
-        if (!int.TryParse(LanDurationTextBox.Text, out duration) || duration is < 3 or > 30)
+        if (!int.TryParse(lanDurationText, out duration) || duration is < 3 or > 30)
         {
             connections = 0;
-            SettingsStatusText.Text = "LAN duration must be between 3 and 30 seconds.";
+            settingsStatus = "LAN duration must be between 3 and 30 seconds.";
             return false;
         }
-        if (!int.TryParse(LanConnectionsTextBox.Text, out connections) || connections is < 1 or > 16)
+        if (!int.TryParse(lanConnectionsText, out connections) || connections is < 1 or > 16)
         {
-            SettingsStatusText.Text = "LAN connections must be between 1 and 16.";
+            settingsStatus = "LAN connections must be between 1 and 16.";
             return false;
         }
         return true;
     }
 
-    private async void ResetApprovalsClicked(object? sender, RoutedEventArgs eventArgs) =>
-        await ResetApprovalsAsync();
-
     private async Task ResetApprovalsAsync()
     {
         settings = settings.ResetDataApprovals();
         await PersistSettingsAsync();
-        SettingsStatusText.Text = "Full and Stress data-use approvals were reset.";
+        settingsStatus = "Full and Stress data-use approvals were reset.";
     }
 
     private async Task RefreshHistoryAsync(NavigationViewState? viewState = null)
     {
         var reports = await reportStore.ListAsync();
         comparisonBaselineReport ??= currentReport;
-        HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
+        savedReportCount = reports.Count;
 
         ReportBrowserState? browserState = viewState is null
             ? null
@@ -258,8 +249,8 @@ public sealed partial class MainWindow
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            HistoryFixtureTitle.Text = "Report annotations were not saved";
-            HistoryFixtureDetail.Text = error.Message;
+            settingsStatus = $"Report annotations were not saved: {error.Message}";
+            RefreshWorkbenchChrome();
         }
     }
 
@@ -271,7 +262,8 @@ public sealed partial class MainWindow
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            SettingsStatusText.Text = $"Settings could not be saved: {error.Message}";
+            settingsStatus = $"Settings could not be saved: {error.Message}";
+            SyncSettingsWorkspace();
         }
     }
 

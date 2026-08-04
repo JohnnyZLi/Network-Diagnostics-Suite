@@ -9,54 +9,11 @@
         Background="#111415"
         Foreground="#E9E6E0"
         FontFamily="Inter">
-  <!--
-    WorkbenchShell and the dedicated workspace controls own the visible application.
-    The zero-height bridge contains only the remaining preflight and Settings adapters
-    that have not yet moved to plain state.
-  -->
-  <Grid RowDefinitions="0,*">
-    <Grid Grid.Row="0"
-          IsVisible="False"
-          IsHitTestVisible="False">
-      <TextBlock Name="PreflightStatusText" Text="Checking the path…" />
-      <TextBlock Name="PreflightNetworkText" />
-      <TextBlock Name="PreflightEndpointText" />
-      <TextBlock Name="PreflightInterfaceText" />
-      <TextBlock Name="PreflightHttp3Text" />
-
-      <TextBlock Name="HistoryCountText" Text="0 saved reports" />
-      <TextBlock Name="HistoryFixtureTitle" Text="No saved report" />
-      <TextBlock Name="HistoryFixtureDetail" />
-
-      <CheckBox Name="IncludeIdentifiersCheckBox" />
-      <TextBox Name="TestOriginTextBox" AcceptsReturn="True" />
-      <ComboBox Name="InterfaceSelector"
-                SelectionChanged="InterfaceSelectionChanged" />
-      <TextBox Name="LanTargetTextBox" />
-      <TextBox Name="LanPortTextBox" />
-      <TextBox Name="LanDurationTextBox" />
-      <TextBox Name="LanConnectionsTextBox" />
-      <Button Name="StartLanServerButton" />
-      <Button Name="StopLanServerButton" IsEnabled="False" />
-      <TextBlock Name="LanServerStatusText" Text="Server stopped." />
-      <TextBlock Name="SettingsStatusText" />
-      <ComboBox Name="FixtureSelector">
-        <ComboBoxItem Content="Healthy" />
-        <ComboBoxItem Content="Problematic" />
-        <ComboBoxItem Content="Inconclusive" />
-        <ComboBoxItem Content="Unavailable measurement" />
-        <ComboBoxItem Content="Failed with partial evidence" />
-      </ComboBox>
-    </Grid>
-
-    <Grid Grid.Row="1">
-      <Grid Name="TestArea">
-        <ContentControl Name="SetupView" />
-        <ContentControl Name="RunningView" IsVisible="False" />
-        <ContentControl Name="ResultsView" IsVisible="False" />
-      </Grid>
-      <Grid Name="HistoryArea" IsVisible="False" />
-      <Grid Name="SettingsArea" IsVisible="False" />
+  <Grid Name="WorkspaceRoot">
+    <Grid Name="TestArea">
+      <ContentControl Name="SetupView" />
+      <ContentControl Name="RunningView" IsVisible="False" />
+      <ContentControl Name="ResultsView" IsVisible="False" />
     </Grid>
   </Grid>
 </Window>

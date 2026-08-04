@@ -1,4 +1,3 @@
-using Avalonia.Controls;
 using Avalonia.Interactivity;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
@@ -77,23 +76,13 @@ public sealed partial class MainWindow
         }
     }
 
-    private void TestConfigurationInterfaceRequested(object? sender, IndexRequestedEventArgs eventArgs)
-    {
-        if (InterfaceSelector.SelectedIndex != eventArgs.Index)
-        {
-            InterfaceSelector.SelectedIndex = eventArgs.Index;
-        }
-        SyncTestWorkspace();
-    }
+    private async void TestConfigurationInterfaceRequested(object? sender, IndexRequestedEventArgs eventArgs) =>
+        await SelectInterfaceAsync(eventArgs.Index);
 
     private async void TestConfigurationIdentifiersChanged(object? sender, EventArgs eventArgs)
     {
         if (testConfigurationPanel is null) return;
-        var includeIdentifiers = testConfigurationPanel.IncludeIdentifiers;
-        IncludeIdentifiersCheckBox.IsChecked = includeIdentifiers;
-        settings = settings with { IncludeLocalIdentifiers = includeIdentifiers };
-        await PersistSettingsAsync();
-        await RefreshPreflightAsync();
+        await SaveIdentifiersSettingAsync(testConfigurationPanel.IncludeIdentifiers);
         SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
@@ -160,10 +149,6 @@ public sealed partial class MainWindow
         var snapshot = activeRunSession.Snapshot;
         var profileName = DiagnosticReportPresenter.ProfileName(snapshot.IsActive ? snapshot.Profile : SelectedProfile());
         var methodName = MethodName(snapshot.IsActive ? snapshot.Method : SelectedMethod());
-        var interfaceLabels = InterfaceSelector.Items
-            .OfType<ComboBoxItem>()
-            .Select(item => item.Content?.ToString() ?? "Interface")
-            .ToArray();
 
         testSetupWorkspace.Render(new TestSetupWorkspaceModel(
             selectedProfileIndex,
@@ -175,9 +160,9 @@ public sealed partial class MainWindow
             transferCap,
             confirmation,
             profileAvailability,
-            CompactStatusValue(PreflightInterfaceText.Text),
-            CompactStatusValue(PreflightEndpointText.Text),
-            CompactStatusValue(PreflightNetworkText.Text),
+            CompactStatusValue(preflightInterface),
+            CompactStatusValue(preflightEndpoint),
+            CompactStatusValue(preflightNetwork),
             snapshot.IsActive,
             $"{profileName} · {methodName}",
             snapshot.Detail,
@@ -185,10 +170,10 @@ public sealed partial class MainWindow
 
         testConfigurationPanel.Render(new TestConfigurationModel(
             interfaceLabels,
-            InterfaceSelector.SelectedIndex,
+            selectedInterfaceIndex,
             settings.IncludeLocalIdentifiers,
-            CompactStatusValue(PreflightEndpointText.Text),
-            CompactStatusValue(PreflightNetworkText.Text)));
+            CompactStatusValue(preflightEndpoint),
+            CompactStatusValue(preflightNetwork)));
 
         SyncRunResultWorkspaces();
     }
