@@ -13,6 +13,7 @@ public sealed partial class MainWindow
     private void PreviewFixtureClicked(object? sender, RoutedEventArgs eventArgs)
     {
         currentReport = null;
+        comparisonBaselineReport = null;
         activeProfile = TestProfileId.ConnectionCheck;
         currentPresentation = ConnectionCheckFixtures.Get(FixtureSelector.SelectedIndex);
         RenderPresentation(currentPresentation);
@@ -35,6 +36,7 @@ public sealed partial class MainWindow
         {
             var stored = await reportStore.ImportAsync(path);
             currentReport = stored.Report;
+            comparisonBaselineReport = stored.Report;
             activeProfile = currentReport.Run.Profile;
             currentPresentation = DiagnosticReportPresenter.FromReport(currentReport);
             RenderPresentation(currentPresentation);
@@ -143,6 +145,7 @@ public sealed partial class MainWindow
     private async Task RefreshHistoryAsync()
     {
         var reports = await reportStore.ListAsync();
+        comparisonBaselineReport ??= currentReport;
         HistoryListPanel.Children.Clear();
         HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
         ReportsFolderText.Text = reportStore.ReportsDirectory;
@@ -156,6 +159,8 @@ public sealed partial class MainWindow
             };
             empty.Classes.Add("muted");
             HistoryListPanel.Children.Add(empty);
+            HistoryFixtureTitle.Text = "No local trend yet";
+            HistoryFixtureDetail.Text = "Save two equivalent reports to compare changes over time.";
             return;
         }
 
@@ -178,36 +183,77 @@ public sealed partial class MainWindow
             };
             var date = new TextBlock { Text = stored.DisplayDate, FontSize = 12 };
             date.Classes.Add("muted");
+            var context = new TextBlock
+            {
+                Text = ReportComparisonService.ContextLabel(stored.Report),
+                FontSize = 12,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            };
+            context.Classes.Add("muted");
             var content = new StackPanel { Spacing = 4 };
             content.Children.Add(profile);
             content.Children.Add(title);
             content.Children.Add(date);
-            var button = new Button
+            content.Children.Add(context);
+            var openButton = new Button
             {
                 Content = content,
                 Tag = stored,
                 HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
             };
-            button.Classes.Add("historyItem");
-            button.Click += SavedReportClicked;
-            HistoryListPanel.Children.Add(button);
+            openButton.Classes.Add("historyItem");
+            openButton.Click += SavedReportClicked;
+            var compareButton = new Button
+            {
+                Content = comparisonBaselineReport is null ? "Use as comparison baseline" : "Compare with baseline",
+                Tag = stored,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
+            };
+            compareButton.Classes.Add("compact");
+            compareButton.Click += CompareReportClicked;
+            var item = new StackPanel { Spacing = 6 };
+            item.Children.Add(openButton);
+            item.Children.Add(compareButton);
+            HistoryListPanel.Children.Add(item);
         }
 
-        var latest = reports[0];
-        var presentation = DiagnosticReportPresenter.FromReport(latest.Report);
-        HistoryFixtureTitle.Text = presentation.Verdict;
-        HistoryFixtureDetail.Text = $"{latest.ProfileName} · {latest.DisplayDate}. {presentation.Summary}";
+        var trend = ReportComparisonService.AnalyzeTrend(reports);
+        HistoryFixtureTitle.Text = trend.CompatibleRuns >= 2 ? "Compatible-run trend" : "Trend needs another equivalent run";
+        HistoryFixtureDetail.Text = trend.Summary;
     }
 
     private void SavedReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }) return;
         currentReport = stored.Report;
+        comparisonBaselineReport = stored.Report;
         activeProfile = stored.Report.Run.Profile;
         currentPresentation = DiagnosticReportPresenter.FromReport(stored.Report);
         RenderPresentation(currentPresentation);
         ShowArea(Models.DesktopArea.Test);
         ShowTestState(Models.TestViewState.Results);
+    }
+
+    private void CompareReportClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not Button { Tag: StoredReport stored }) return;
+        if (comparisonBaselineReport is null || comparisonBaselineReport.Run.Id == stored.Report.Run.Id)
+        {
+            comparisonBaselineReport = stored.Report;
+            HistoryFixtureTitle.Text = "Comparison baseline selected";
+            HistoryFixtureDetail.Text = $"{stored.ProfileName} · {stored.DisplayDate}\n{ReportComparisonService.ContextLabel(stored.Report)}";
+            return;
+        }
+
+        var comparison = ReportComparisonService.Compare(comparisonBaselineReport, stored.Report);
+        var warningText = comparison.Warnings.Count == 0
+            ? "Equivalent test conditions"
+            : $"Comparison cautions: {string.Join(' ', comparison.Warnings)}";
+        var metricText = string.Join(
+            Environment.NewLine,
+            comparison.Metrics.Take(8).Select(item => $"{item.Label}: {item.Baseline} → {item.Candidate} · {item.Change}"));
+        HistoryFixtureTitle.Text = comparison.Comparable ? "Report comparison" : "Report comparison with cautions";
+        HistoryFixtureDetail.Text = $"{warningText}\n{comparison.Summary}\n{metricText}";
     }
 
     private async Task PersistSettingsAsync()
