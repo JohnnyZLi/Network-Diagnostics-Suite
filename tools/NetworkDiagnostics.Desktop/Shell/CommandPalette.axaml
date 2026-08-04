@@ -15,6 +15,26 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.5" />
     </Style>
+    <Style Selector="TextBox.commandSearch">
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="Padding" Value="12,9" />
+      <Setter Property="Background" Value="#111415" />
+      <Setter Property="Foreground" Value="#E9E6E0" />
+      <Setter Property="BorderBrush" Value="#414748" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CaretBrush" Value="#F0EDE7" />
+      <Setter Property="SelectionBrush" Value="#754737" />
+      <Setter Property="SelectionForegroundBrush" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="TextBox.commandSearch:pointerover">
+      <Setter Property="Background" Value="#141819" />
+      <Setter Property="BorderBrush" Value="#596061" />
+    </Style>
+    <Style Selector="TextBox.commandSearch:focus">
+      <Setter Property="Background" Value="#111415" />
+      <Setter Property="BorderBrush" Value="#C77E68" />
+    </Style>
     <Style Selector="Button.command">
       <Setter Property="MinHeight" Value="54" />
       <Setter Property="Padding" Value="12,9" />
@@ -53,14 +73,25 @@
 
         <Border Grid.Row="1" BorderBrush="#303536" BorderThickness="0,1,0,1" Padding="14,12">
           <TextBox Name="SearchBox"
-                   MinHeight="42"
-                   Padding="12,9"
-                   Background="#111415"
-                   Foreground="#E9E6E0"
-                   BorderBrush="#414748"
+                   Classes="commandSearch"
                    PlaceholderText="Type a command or workspace…"
                    TextChanged="SearchChanged"
-                   KeyDown="SearchKeyDown" />
+                   KeyDown="SearchKeyDown">
+            <TextBox.Resources>
+              <SolidColorBrush x:Key="TextControlBackground">#111415</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#141819</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBackgroundFocused">#111415</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForeground">#E9E6E0</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForegroundPointerOver">#F0EDE7</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForegroundFocused">#F0EDE7</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForeground">#777D7E</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#8F9596</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#8F9596</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrush">#414748</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#596061</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrushFocused">#C77E68</SolidColorBrush>
+            </TextBox.Resources>
+          </TextBox>
         </Border>
 
         <ScrollViewer Grid.Row="2" MaxHeight="430" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
