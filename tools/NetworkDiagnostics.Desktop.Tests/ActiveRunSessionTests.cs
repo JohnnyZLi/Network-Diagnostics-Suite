@@ -20,6 +20,8 @@ public sealed class ActiveRunSessionTests
         Assert.Equal(TransferMethod.Compare, session.Snapshot.Method);
         Assert.True(session.Snapshot.IsActive);
         Assert.True(session.CancellationToken.CanBeCanceled);
+        Assert.Single(session.Events);
+        Assert.Equal("Preparing", session.Events[0].Phase);
     }
 
     [Fact]
@@ -36,6 +38,22 @@ public sealed class ActiveRunSessionTests
         Assert.Equal(79, session.Snapshot.LiveMbps);
         Assert.Equal(26, session.Snapshot.LiveLatencyMs);
         Assert.Equal(8_000_000, session.Snapshot.BytesTransferred);
+        Assert.Contains(session.Events, item => item.Phase == "download" && item.BytesTransferred == 8_000_000);
+    }
+
+    [Fact]
+    public void TimelineRecordsPhaseTransitionsAndTerminalState()
+    {
+        using var session = new ActiveRunSession();
+        session.Start(TestProfileId.Standard, TransferMethod.Compare);
+
+        session.UpdateProgress("idle", "Measuring idle latency", 12, liveLatencyMs: 18);
+        session.UpdateProgress("download", "Downloading", 38, liveMbps: 120, bytesTransferred: 12_000_000);
+        session.RequestCancel();
+        session.MarkCancelled();
+
+        Assert.Equal(new[] { "Preparing", "idle", "download", "Cancelling", "Cancelled" },
+            session.Events.Select(item => item.Phase));
     }
 
     [Fact]
@@ -78,5 +96,7 @@ public sealed class ActiveRunSessionTests
 
         Assert.NotEqual(Guid.Empty, secondRun);
         Assert.Equal(ActiveRunStatus.Preparing, session.Snapshot.Status);
+        Assert.Single(session.Events);
+        Assert.Equal("Preparing", session.Events[0].Phase);
     }
 }

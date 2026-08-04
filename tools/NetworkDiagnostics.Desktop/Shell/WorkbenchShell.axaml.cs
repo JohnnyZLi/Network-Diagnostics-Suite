@@ -135,11 +135,11 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ApplyResponsiveLayout(double width)
     {
-        var compactSidebar = width < 1120;
+        var compactSidebar = width < 1080;
         var showInspector = inspectorRequested && width >= 760;
 
-        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 64 : 220);
-        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 300 : 0);
+        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 60 : 204);
+        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 284 : 0);
 
         ProductNameText.IsVisible = !compactSidebar;
         ProductModeText.IsVisible = !compactSidebar;

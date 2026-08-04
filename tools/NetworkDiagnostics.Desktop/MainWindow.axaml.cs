@@ -32,13 +32,24 @@ public sealed partial class MainWindow : Window
     private WorkbenchShell? workbenchShell;
     private TestSetupWorkspace? testSetupWorkspace;
     private TestConfigurationPanel? testConfigurationPanel;
+    private RunningTestWorkspace? runningTestWorkspace;
+    private TestResultWorkspace? testResultWorkspace;
     private ReportBrowserWorkspace? reportBrowserWorkspace;
     private ReportDetailWorkspace? reportDetailWorkspace;
     private ComparisonWorkspace? comparisonWorkspace;
     private bool initialized;
     private bool applyingNavigation;
     private TestViewState currentTestState = TestViewState.Setup;
-    private ConnectionCheckPresentation currentPresentation = ConnectionCheckFixtures.All[0];
+    private ConnectionCheckPresentation currentPresentationValue = ConnectionCheckFixtures.All[0];
+    private ConnectionCheckPresentation currentPresentation
+    {
+        get => currentPresentationValue;
+        set
+        {
+            currentPresentationValue = value;
+            SyncRunResultWorkspaces();
+        }
+    }
     private DesktopSettings settings = new();
     private NetworkDiagnosticsReportV2? currentReport;
     private NetworkDiagnosticsReportV2? comparisonBaselineReport;
