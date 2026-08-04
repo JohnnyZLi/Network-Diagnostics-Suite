@@ -11,7 +11,7 @@ public sealed class AdvancedEvidenceTests
     {
         var now = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.Zero);
         var plan = NativeTransferPlanBuilder.Build(TestProfileId.Standard, TransferMethod.Compare);
-        var emptyStatistics = new LatencyStatistics(0, 0, 0, 0, null, null, null, null, null, null, []);
+        var emptyStatistics = EmptyStatistics();
         var report = new NetworkDiagnosticsReportV2(
             "2.0",
             now,
@@ -62,11 +62,11 @@ public sealed class AdvancedEvidenceTests
         var before = new CapturedNetworkState(
             new NetworkStateSnapshot("wifi", "Wi-Fi", null, ["IPv4", "IPv6"], null, []),
             "192.168.1.1",
-            "before");
+            "wifi|192.168.1.1|IPv4,IPv6||wifi");
         var after = new CapturedNetworkState(
             new NetworkStateSnapshot("ethernet", "Ethernet", null, ["IPv4"], "http://proxy.example:8080", ["Tunnel interface 1"]),
             "192.168.2.1",
-            "after");
+            "ethernet|192.168.2.1|IPv4|http://proxy.example:8080|ethernet");
 
         var result = NetworkStateProbe.Compare(before, after, captivePortal: true);
 
@@ -76,6 +76,37 @@ public sealed class AdvancedEvidenceTests
         Assert.Contains(result.Changes, item => item.Contains("gateway", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Changes, item => item.Contains("address families", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Changes, item => item.Contains("proxy", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void LoadedPathLocalizationIdentifiesTheFirstAffectedBoundary()
+    {
+        var gateway = new LoadedPathTargetReport(
+            "gateway",
+            "Default gateway",
+            null,
+            StatisticsAt(5),
+            StatisticsAt(35),
+            StatisticsAt(30));
+        var publicHop = new LoadedPathTargetReport(
+            "first-public-hop",
+            "First responsive public hop",
+            "203.0.113.1",
+            StatisticsAt(12),
+            StatisticsAt(45),
+            StatisticsAt(40));
+        var endpoint = new LoadedPathTargetReport(
+            "endpoint",
+            "Measurement endpoint",
+            "203.0.113.10",
+            StatisticsAt(15),
+            StatisticsAt(55),
+            StatisticsAt(50));
+
+        var result = LoadedPathLatencyCollector.Interpret([gateway, publicHop, endpoint]);
+
+        Assert.Equal("local-network", result.Boundary);
+        Assert.Contains("default gateway", result.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -90,8 +121,14 @@ public sealed class AdvancedEvidenceTests
         Assert.True(report.PeakWorkingSetBytes >= 0);
         Assert.All(report.Interfaces, item =>
         {
-            Assert.StartsWith("interface-", item.InterfaceId, StringComparison.Ordinal);
-            Assert.StartsWith("Interface ", item.Name, StringComparison.Ordinal);
+            Assert.StartsWith("interface-", item.InterfaceId);
+            Assert.StartsWith("Interface ", item.Name);
         });
     }
+
+    private static LatencyStatistics EmptyStatistics() =>
+        new(0, 0, 0, 0, null, null, null, null, null, null, []);
+
+    private static LatencyStatistics StatisticsAt(double median) =>
+        new(3, 3, 0, 0, median, median, median, median, median, 0, [median, median, median]);
 }
