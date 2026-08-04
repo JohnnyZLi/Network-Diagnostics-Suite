@@ -61,6 +61,7 @@ internal static class FullDiagnosticRunner
             transferProgress,
             cancellationToken,
             preflight.Binding?.SourceAddress);
+        advancedSession.SetPhase("complete");
 
         DeepProbeReport? deepDiagnostics = null;
         string? deepFailure = null;
@@ -324,7 +325,8 @@ internal static class FullDiagnosticRunner
                     "Repeat Full with the client otherwise idle."));
             }
 
-            if (MemoryPressurePercent(resources) is >= 90 is var pressureHigh && pressureHigh)
+            var memoryPressure = MemoryPressurePercent(resources);
+            if (memoryPressure is >= 90)
             {
                 findings.Add(new DiagnosticFinding(
                     "host-memory-pressure",
@@ -333,15 +335,14 @@ internal static class FullDiagnosticRunner
                     "medium",
                     "High memory pressure was observed during the run",
                     "The runtime-reported system memory load was near its high-memory threshold, which can make application scheduling and throughput less representative.",
-                    [new DiagnosticEvidence("hostResources.memoryPressurePercent", "Memory pressure", Percent(MemoryPressurePercent(resources)!.Value))],
+                    [new DiagnosticEvidence("hostResources.memoryPressurePercent", "Memory pressure", Percent(memoryPressure.Value))],
                     ["Close memory-heavy applications and repeat the same profile before treating this result as the connection ceiling."],
                     "Repeat the same profile after reducing memory pressure."));
             }
         }
     }
 
-    private static bool FamilyUsable(AddressFamilyProbeReport family) =>
-        family.HttpReachable || (family.TcpReachable && family.TlsReachable);
+    private static bool FamilyUsable(AddressFamilyProbeReport family) => family.HttpReachable;
 
     private static double? FamilyResponseMs(AddressFamilyProbeReport family) =>
         family.HttpResponseMs ?? family.TlsHandshakeMs ?? family.TcpConnectMs;
