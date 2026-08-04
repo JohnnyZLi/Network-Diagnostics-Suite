@@ -22,14 +22,26 @@ public sealed record AddressFamilyProbeReport(
     double? PingMedianMs,
     bool TcpReachable,
     double? TcpConnectMs,
-    string? Error);
+    string? Error,
+    bool TlsReachable = false,
+    double? TlsHandshakeMs = null,
+    string? TlsProtocol = null,
+    string? ApplicationProtocol = null,
+    bool HttpReachable = false,
+    double? HttpResponseMs = null,
+    int? HttpStatusCode = null);
 
 public sealed record DualStackReport(
     AddressFamilyProbeReport Ipv4,
     AddressFamilyProbeReport Ipv6,
     string PreferredFamily,
     bool Nat64Suspected,
-    string Status);
+    string Status,
+    double? DnsResolutionMs = null,
+    int Ipv4AddressCount = 0,
+    int Ipv6AddressCount = 0,
+    string? ParallelConnectWinner = null,
+    double? ParallelConnectDifferenceMs = null);
 
 public sealed record NetworkStateSnapshot(
     string? InterfaceId,
@@ -63,3 +75,7 @@ public sealed record HostResourceReport(
     long ManagedMemoryAfterBytes,
     IReadOnlyList<InterfaceCounterDelta> Interfaces,
     bool PotentialClientBottleneck);
+
+public sealed record ReportAnnotations(
+    string? Label,
+    IReadOnlyList<string> Tags);
