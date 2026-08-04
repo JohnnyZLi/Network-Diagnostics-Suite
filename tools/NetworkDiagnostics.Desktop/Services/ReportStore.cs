@@ -20,10 +20,15 @@ public sealed record StoredReport(
     };
 
     public string DisplayDate => Report.GeneratedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt");
+    public string? Label => Report.Annotations?.Label;
+    public IReadOnlyList<string> Tags => Report.Annotations?.Tags ?? [];
 }
 
 public sealed class ReportStore
 {
+    private const int MaximumLabelLength = 80;
+    private const int MaximumTagLength = 32;
+    private const int MaximumTags = 10;
     private readonly string defaultDirectory;
 
     public ReportStore(string settingsRootDirectory, string? configuredDirectory = null)
@@ -90,6 +95,26 @@ public sealed class ReportStore
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var report = await NetworkDiagnosticsJson.ReadAsync(sourcePath, cancellationToken);
         return await SaveAsync(report, cancellationToken);
+    }
+
+    public async Task<StoredReport> UpdateAnnotationsAsync(
+        StoredReport stored,
+        string? label,
+        IEnumerable<string> tags,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stored);
+        ArgumentNullException.ThrowIfNull(tags);
+        var normalizedLabel = NormalizeLabel(label);
+        var normalizedTags = NormalizeTags(tags);
+        var updatedReport = stored.Report with
+        {
+            Annotations = normalizedLabel is null && normalizedTags.Count == 0
+                ? null
+                : new ReportAnnotations(normalizedLabel, normalizedTags)
+        };
+        await WriteAtomicAsync(stored.Path, updatedReport, cancellationToken);
+        return new StoredReport(stored.Path, updatedReport, DateTimeOffset.UtcNow);
     }
 
     public Task ExportAsync(
@@ -163,6 +188,21 @@ public sealed class ReportStore
             }
         }
     }
+
+    private static string? NormalizeLabel(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (normalized is null) return null;
+        return normalized.Length <= MaximumLabelLength ? normalized : normalized[..MaximumLabelLength];
+    }
+
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string> values) => values
+        .Select(value => value.Trim())
+        .Where(value => value.Length > 0)
+        .Select(value => value.Length <= MaximumTagLength ? value : value[..MaximumTagLength])
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Take(MaximumTags)
+        .ToArray();
 
     private static string ProfileFileName(TestProfileId profile) => profile switch
     {
