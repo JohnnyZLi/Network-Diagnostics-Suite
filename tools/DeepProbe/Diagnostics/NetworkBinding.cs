@@ -44,7 +44,7 @@ internal static class NetworkBindingResolver
         var candidate = GetCandidates().FirstOrDefault(item =>
             string.Equals(item.Network.Id, interfaceId, StringComparison.Ordinal)
             || string.Equals(item.Network.Name, interfaceId, StringComparison.OrdinalIgnoreCase));
-        if (candidate is null)
+        if (candidate.Network is null || candidate.Properties is null)
         {
             throw new ArgumentException($"Network interface '{interfaceId}' is not active or no longer exists.", nameof(interfaceId));
         }
