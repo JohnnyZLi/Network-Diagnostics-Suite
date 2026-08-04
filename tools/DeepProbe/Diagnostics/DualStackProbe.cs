@@ -30,7 +30,7 @@ internal static class DualStackProbe
                 : ipv4.TcpReachable || ipv6.TcpReachable
                     ? "measured"
                     : "unreachable";
-            var difference = ipv4.TcpConnectMs is { } ipv4Ms && ipv6.TcpConnectMs is { } ipv6Ms
+            double? difference = ipv4.TcpConnectMs is { } ipv4Ms && ipv6.TcpConnectMs is { } ipv6Ms
                 ? Math.Abs(ipv4Ms - ipv6Ms)
                 : null;
             return new DualStackReport(
@@ -154,7 +154,7 @@ internal static class DualStackProbe
                 {
                     TargetHost = origin.Host,
                     ApplicationProtocols = [SslApplicationProtocol.Http11]
-                }, cancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                }, cancellationToken).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
                 tlsStopwatch.Stop();
                 tlsReachable = true;
                 tlsHandshakeMs = tlsStopwatch.Elapsed.TotalMilliseconds;
