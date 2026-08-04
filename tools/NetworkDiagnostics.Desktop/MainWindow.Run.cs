@@ -75,7 +75,7 @@ public sealed partial class MainWindow
 
     private void ChooseQuickClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        ProfileSelector.SelectedIndex = 1;
+        SelectProfile(1);
         NavigateToDestination(new TestSetupDestination());
     }
 

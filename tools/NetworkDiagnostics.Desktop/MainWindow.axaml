@@ -11,31 +11,13 @@
         FontFamily="Inter">
   <!--
     WorkbenchShell and the dedicated workspace controls own the visible application.
-    The zero-height bridge now contains only the remaining selection, preflight, and
-    settings adapters that have not yet moved to plain state.
+    The zero-height bridge contains only the remaining preflight and Settings adapters
+    that have not yet moved to plain state.
   -->
   <Grid RowDefinitions="0,*">
     <Grid Grid.Row="0"
           IsVisible="False"
           IsHitTestVisible="False">
-      <Button Name="TestNavButton" />
-      <Button Name="HistoryNavButton" />
-      <Button Name="SettingsNavButton" />
-
-      <ComboBox Name="ProfileSelector"
-                SelectionChanged="ProfileSelectionChanged">
-        <ComboBoxItem Content="Connection Check" />
-        <ComboBoxItem Content="Quick" />
-        <ComboBoxItem Content="Full" />
-        <ComboBoxItem Content="Stress" />
-      </ComboBox>
-      <ComboBox Name="MethodSelector"
-                SelectionChanged="MethodSelectionChanged">
-        <ComboBoxItem Content="Compare" />
-        <ComboBoxItem Content="Single" />
-        <ComboBoxItem Content="Aggregate" />
-      </ComboBox>
-
       <TextBlock Name="PreflightStatusText" Text="Checking the path…" />
       <TextBlock Name="PreflightNetworkText" />
       <TextBlock Name="PreflightEndpointText" />

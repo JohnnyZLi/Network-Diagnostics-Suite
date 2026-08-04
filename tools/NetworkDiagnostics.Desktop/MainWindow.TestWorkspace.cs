@@ -166,8 +166,8 @@ public sealed partial class MainWindow
             .ToArray();
 
         testSetupWorkspace.Render(new TestSetupWorkspaceModel(
-            ProfileSelector.SelectedIndex,
-            MethodSelector.SelectedIndex,
+            selectedProfileIndex,
+            selectedMethodIndex,
             profileQuestion,
             profilePurpose,
             methodExplanation,
