@@ -151,6 +151,9 @@ export default function App() {
       setProgress(INITIAL_PROGRESS);
     });
 
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    if (controller.signal.aborted || controllerRef.current !== controller) return;
+
     try {
       const nextResult = await runDiagnosticTest({
         mode,
