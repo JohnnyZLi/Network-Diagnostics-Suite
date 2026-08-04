@@ -151,4 +151,8 @@ public sealed record NetworkDiagnosticsReportV2(
     ReportProducer? Producer = null,
     MeasurementContextReport? Measurement = null,
     IReadOnlyList<DiagnosticFinding>? Findings = null,
-    BrowserReportEvidence? BrowserEvidence = null);
+    BrowserReportEvidence? BrowserEvidence = null,
+    LoadedPathLocalizationReport? LoadLocalization = null,
+    DualStackReport? DualStack = null,
+    NetworkChangeReport? NetworkChange = null,
+    HostResourceReport? HostResources = null);
