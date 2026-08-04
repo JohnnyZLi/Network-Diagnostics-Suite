@@ -114,12 +114,31 @@ public sealed record NativeTransferPlanReport(
 public sealed record DiagnosticRunMetadata(
     Guid Id,
     string Platform,
-    string Architecture,
+    string? Architecture,
     TestProfileId Profile,
     TransferMethod TransferMethod,
     DateTimeOffset StartedAt,
     DateTimeOffset CompletedAt,
     bool IncludesLocalAddresses);
+
+public sealed record BrowserEdgeEvidence(
+    string? Edge,
+    string? Network,
+    int? Asn,
+    string? Protocol,
+    string? TlsVersion,
+    string? IpVersion);
+
+public sealed record BrowserServiceCheck(
+    string Id,
+    string Name,
+    bool Reachable,
+    double? DurationMs,
+    string? Note);
+
+public sealed record BrowserReportEvidence(
+    BrowserEdgeEvidence? Edge,
+    IReadOnlyList<BrowserServiceCheck> ServiceChecks);
 
 public sealed record NetworkDiagnosticsReportV2(
     string SchemaVersion,
@@ -128,4 +147,8 @@ public sealed record NetworkDiagnosticsReportV2(
     NativeTransferPlanReport TransferPlan,
     NativeInternetTransferReport? InternetTransfer,
     DeepProbeReport? DeepDiagnostics,
-    LanThroughputReport? LocalLink);
+    LanThroughputReport? LocalLink,
+    ReportProducer? Producer = null,
+    MeasurementContextReport? Measurement = null,
+    IReadOnlyList<DiagnosticFinding>? Findings = null,
+    BrowserReportEvidence? BrowserEvidence = null);

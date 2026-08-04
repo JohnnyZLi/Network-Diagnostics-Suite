@@ -1,29 +1,13 @@
 import { useRef, useState } from "react";
 import { formatBytes, formatLatency, formatRate } from "../core/format";
+import {
+  combinedReportHasDeepDiagnostics,
+  isCombinedReport,
+  isDeepProbeReport,
+} from "../report-compatibility";
 import type { DeepProbeReport, NativeCombinedReport } from "../types/deep-probe";
 
 type DisplayProbeReport = DeepProbeReport & { combined?: NativeCombinedReport };
-
-function isDeepProbeReport(value: unknown): value is DeepProbeReport {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<DeepProbeReport>;
-  return (candidate.schemaVersion === "1.0" || candidate.schemaVersion === "1.1" || candidate.schemaVersion === "1.2")
-    && typeof candidate.target === "string"
-    && Array.isArray(candidate.interfaces)
-    && Array.isArray(candidate.dnsResolvers)
-    && Array.isArray(candidate.serviceEndpoints)
-    && Array.isArray(candidate.traceRoute?.hops)
-    && typeof candidate.internetPing?.statistics === "object";
-}
-
-function isCombinedReport(value: unknown): value is NativeCombinedReport {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<NativeCombinedReport>;
-  return candidate.schemaVersion === "2.0"
-    && typeof candidate.run === "object"
-    && typeof candidate.transferPlan === "object"
-    && isDeepProbeReport(candidate.deepDiagnostics);
-}
 
 function fastestResolver(report: DeepProbeReport) {
   return report.dnsResolvers
@@ -50,8 +34,99 @@ function wifiSummary(report: DeepProbeReport): string {
   ].filter(Boolean).join(" · ");
 }
 
+function profileName(profile: NativeCombinedReport["run"]["profile"]): string {
+  switch (profile) {
+    case "connection-check": return "Connection Check";
+    case "quick": return "Quick";
+    case "standard": return "Full";
+    case "extended": return "Stress";
+  }
+}
+
+function CombinedOnlyReport({ report, onClose }: { report: NativeCombinedReport; onClose: () => void }) {
+  const transfer = report.internetTransfer;
+  const plan = report.transferPlan;
+  const completedAt = new Date(report.run.completedAt);
+  return (
+    <section className="deep-report" id="deep-probe">
+      <div className="section-heading section-heading--actions">
+        <div>
+          <span className="eyebrow">Desktop report · {report.run.architecture ?? "Architecture unavailable"} · {completedAt.toLocaleString()}</span>
+          <h2>{profileName(report.run.profile)} result</h2>
+          <p className="report-platform">{report.run.platform}</p>
+        </div>
+        <button type="button" onClick={onClose}>Close report</button>
+      </div>
+
+      <div className="deep-summary">
+        {transfer ? (
+          <>
+            <article><span>Internet download</span><strong>{formatRate(transfer.download.steadyMbps)}<small>Mbps</small></strong><p>{transfer.download.qualification}</p></article>
+            <article><span>Internet upload</span><strong>{formatRate(transfer.upload.steadyMbps)}<small>Mbps</small></strong><p>{transfer.upload.qualification}</p></article>
+            <article><span>Request loss</span><strong>{transfer.idleLatency.lossPercent.toFixed(1)}<small>%</small></strong><p>{transfer.idleLatency.received} of {transfer.idleLatency.sent} responses</p></article>
+            <article><span>Internet latency</span><strong>{formatLatency(transfer.idleLatency.medianMs)}<small>ms</small></strong><p>{formatLatency(transfer.idleLatency.jitterMs)} ms jitter</p></article>
+          </>
+        ) : (
+          <>
+            <article><span>Internet download</span><strong>—</strong><p>Not measured</p></article>
+            <article><span>Internet upload</span><strong>—</strong><p>Not measured</p></article>
+            <article><span>Request loss</span><strong>—</strong><p>Not measured</p></article>
+            <article><span>Internet latency</span><strong>—</strong><p>Not measured</p></article>
+          </>
+        )}
+      </div>
+
+      {transfer && (
+        <section className="report-panel native-transfer-panel">
+          <div className="report-panel__heading">
+            <div><span className="eyebrow">Native Internet transfer</span><h3>{plan?.profileName ?? profileName(report.run.profile)} · {report.run.transferMethod}</h3></div>
+            <p>First-party transfer measurements ran against {transfer.origin}.</p>
+          </div>
+          <div className="scope-grid">
+            <article><span>Transfer cap</span><strong>{plan?.transferCapBytes === undefined ? "—" : formatBytes(plan.transferCapBytes)}</strong><p>{plan?.estimatedSeconds === undefined ? "Estimate unavailable" : `${plan.estimatedSeconds} second transfer estimate.`}</p></article>
+            <article><span>Loaded download delay</span><strong>+{formatLatency(transfer.downloadLatency.increaseMs)} ms</strong><p>Grade {transfer.downloadLatency.grade} during the primary download stage.</p></article>
+            <article><span>Loaded upload delay</span><strong>+{formatLatency(transfer.uploadLatency.increaseMs)} ms</strong><p>Grade {transfer.uploadLatency.grade} during the primary upload stage.</p></article>
+            <article><span>Measured data</span><strong>{formatBytes(transfer.dataUsedBytes)}</strong><p>Payload bytes counted by the native transfer engine.</p></article>
+          </div>
+
+          {transfer.flowMeasurements.length > 0 && (
+            <div className="deep-table-wrap">
+              <table className="deep-table">
+                <thead><tr><th>Method</th><th>Connections</th><th>Download</th><th>Upload</th><th>Loaded delay</th></tr></thead>
+                <tbody>{transfer.flowMeasurements.map((measurement) => (
+                  <tr key={measurement.strategy}>
+                    <td>{measurement.strategy}</td>
+                    <td>{measurement.connections}</td>
+                    <td>{measurement.download ? `${formatRate(measurement.download.steadyMbps)} Mbps` : "—"}</td>
+                    <td>{measurement.upload ? `${formatRate(measurement.upload.steadyMbps)} Mbps` : "—"}</td>
+                    <td>{measurement.downloadLatency ? `+${formatLatency(measurement.downloadLatency.increaseMs)} ms down` : "—"}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="report-panel">
+        <div className="report-panel__heading">
+          <div><span className="eyebrow">Operating-system evidence</span><h3>Local network and path diagnostics</h3></div>
+          <p>This profile did not include an embedded deep-probe section. The missing section is neutral and does not change the Internet result.</p>
+        </div>
+        <div className="scope-grid">
+          <article><span>Gateway latency</span><strong>—</strong><p>Not measured</p></article>
+          <article><span>Traceroute</span><strong>—</strong><p>Not measured</p></article>
+          <article><span>DNS resolver timing</span><strong>—</strong><p>Not measured</p></article>
+          <article><span>Wi-Fi and route details</span><strong>—</strong><p>Not measured</p></article>
+        </div>
+      </section>
+    </section>
+  );
+}
+
 export function DeepProbePanel() {
   const [report, setReport] = useState<DisplayProbeReport | null>(null);
+  const [combinedOnly, setCombinedOnly] = useState<NativeCombinedReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -65,19 +140,31 @@ export function DeepProbePanel() {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (isDeepProbeReport(parsed)) {
+        setCombinedOnly(null);
         setReport(parsed);
       } else if (isCombinedReport(parsed)) {
-        setReport({ ...parsed.deepDiagnostics, combined: parsed });
+        if (combinedReportHasDeepDiagnostics(parsed)) {
+          setCombinedOnly(null);
+          setReport({ ...parsed.deepDiagnostics, combined: parsed });
+        } else {
+          setReport(null);
+          setCombinedOnly(parsed);
+        }
       } else {
         throw new Error("This is not a supported Network Deep Probe report.");
       }
     } catch (caught) {
       setReport(null);
+      setCombinedOnly(null);
       setError(caught instanceof Error ? caught.message : "The report could not be read.");
     } finally {
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+
+  if (combinedOnly) {
+    return <CombinedOnlyReport report={combinedOnly} onClose={() => setCombinedOnly(null)} />;
+  }
 
   if (!report) {
     return (
@@ -107,6 +194,7 @@ export function DeepProbePanel() {
   const fastestDns = fastestResolver(report);
   const combined = report.combined;
   const transfer = combined?.internetTransfer;
+  const transferPlan = combined?.transferPlan;
   const defaultRoute = report.routing?.entries.find((entry) => entry.isDefault);
   return (
     <section className="deep-report" id="deep-probe">
@@ -134,11 +222,11 @@ export function DeepProbePanel() {
       {combined && transfer && (
         <section className="report-panel native-transfer-panel">
           <div className="report-panel__heading">
-            <div><span className="eyebrow">Native Internet transfer</span><h3>{combined.transferPlan.profileName} · {combined.run.transferMethod}</h3></div>
+            <div><span className="eyebrow">Native Internet transfer</span><h3>{transferPlan?.profileName ?? profileName(combined.run.profile)} · {combined.run.transferMethod}</h3></div>
             <p>First-party transfer stages ran against {transfer.origin} before the operating-system diagnostics.</p>
           </div>
           <div className="scope-grid">
-            <article><span>Transfer cap</span><strong>{formatBytes(combined.transferPlan.transferCapBytes)}</strong><p>{combined.transferPlan.estimatedSeconds} second transfer estimate.</p></article>
+            <article><span>Transfer cap</span><strong>{transferPlan?.transferCapBytes === undefined ? "—" : formatBytes(transferPlan.transferCapBytes)}</strong><p>{transferPlan?.estimatedSeconds === undefined ? "Estimate unavailable" : `${transferPlan.estimatedSeconds} second transfer estimate.`}</p></article>
             <article><span>Loaded download delay</span><strong>+{formatLatency(transfer.downloadLatency.increaseMs)} ms</strong><p>Grade {transfer.downloadLatency.grade} during the primary download stage.</p></article>
             <article><span>Loaded upload delay</span><strong>+{formatLatency(transfer.uploadLatency.increaseMs)} ms</strong><p>Grade {transfer.uploadLatency.grade} during the primary upload stage.</p></article>
             <article><span>Measured data</span><strong>{formatBytes(transfer.dataUsedBytes)}</strong><p>Payload bytes counted by the native transfer engine.</p></article>

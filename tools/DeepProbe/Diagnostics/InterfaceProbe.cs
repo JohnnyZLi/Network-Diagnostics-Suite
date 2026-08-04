@@ -11,8 +11,9 @@ internal sealed record InterfaceProbeResult(
 
 internal static class InterfaceProbe
 {
-    public static InterfaceProbeResult Collect(bool includeAddresses)
+    public static InterfaceProbeResult Collect(bool includeAddresses, string? selectedInterfaceId = null)
     {
+        var selectedBinding = NetworkBindingResolver.Resolve(selectedInterfaceId);
         var candidates = NetworkInterface.GetAllNetworkInterfaces()
             .Where(network => network.OperationalStatus == OperationalStatus.Up)
             .Where(network => network.NetworkInterfaceType is not NetworkInterfaceType.Loopback and not NetworkInterfaceType.Tunnel)
@@ -43,10 +44,12 @@ internal static class InterfaceProbe
                     : null,
                 includeAddresses
                     ? dnsServers.Select(address => address.ToString()).ToArray()
-                    : null);
+                    : null,
+                item.Network.Id,
+                selectedBinding is not null && string.Equals(item.Network.Id, selectedBinding.Choice.Id, StringComparison.Ordinal));
         }).ToArray();
 
-        var primaryGateway = candidates
+        var primaryGateway = selectedBinding?.Gateway ?? candidates
             .SelectMany(item => TryGetGatewayAddresses(item.Properties!))
             .Select(gateway => gateway.Address)
             .FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.Any.Equals(address));

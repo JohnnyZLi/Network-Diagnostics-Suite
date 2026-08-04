@@ -7,6 +7,64 @@ export type TestPhase = "idle" | "download" | "upload" | "services" | "complete"
 export type DownloadPathPreference = "auto" | "r2-direct" | "worker-stream";
 export type DownloadImplementation = "r2-direct-v1" | "worker-stream-v4";
 
+
+export type FindingSeverity = "info" | "warning" | "critical";
+export type FindingConfidence = "low" | "medium" | "high";
+
+export interface DiagnosticEvidence {
+  metric: string;
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+export interface DiagnosticFinding {
+  id: string;
+  category: string;
+  severity: FindingSeverity;
+  confidence: FindingConfidence;
+  title: string;
+  summary: string;
+  evidence: DiagnosticEvidence[];
+  recommendations: string[];
+  nextTest?: string | null;
+}
+
+export interface MeasurementEndpointProbe {
+  id: string;
+  name: string;
+  provider: string;
+  origin: string;
+  available: boolean;
+  medianLatencyMs: number | null;
+  error: string | null;
+}
+
+export interface SelectedMeasurementEndpoint {
+  id: string;
+  name: string;
+  provider: string;
+  origin: string;
+  selectionReason: string;
+  preflightLatencyMs: number | null;
+}
+
+export interface Http3BrowserEvidence {
+  advertised: boolean;
+  observedProtocol: string | null;
+  note: string;
+}
+
+export interface MeasurementContext {
+  contractVersion: string;
+  engine: string;
+  engineVersion: string;
+  capabilities: string[];
+  selectedEndpoint: SelectedMeasurementEndpoint;
+  endpointCandidates: MeasurementEndpointProbe[];
+  http3?: Http3BrowserEvidence;
+}
+
 export interface TimedSample {
   elapsedMs: number;
   value: number;
@@ -182,6 +240,8 @@ export interface DiagnosticResult {
   downloadScaling?: FlowScalingPoint[];
   services: ServiceCheckResult[];
   dataUsedBytes: number;
+  measurement?: MeasurementContext;
+  findings?: DiagnosticFinding[];
 }
 
 export interface TestProgress {

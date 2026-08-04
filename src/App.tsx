@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { formatLatency, formatRate } from "./core/format";
 import { clearRecentResults, loadRecentResults, MAX_RECENT_RESULTS, saveRecentResult } from "./core/result-history";
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
+import { fetchMetadata } from "./diagnostics/http";
+import { configuredMeasurementEndpoints, selectMeasurementEndpoint, type SelectedWebEndpoint } from "./diagnostics/endpoints";
 import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
@@ -11,6 +14,8 @@ import { ProgressStage } from "./components/ProgressStage";
 import { RecentResultsPanel } from "./components/RecentResultsPanel";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
+import { serializeBrowserReport } from "./report-serialization";
+import type { EdgeMetadata } from "./types/api";
 import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress, TransferMode } from "./types/diagnostics";
 
 type RunState = "idle" | "running" | "complete" | "error";
@@ -50,7 +55,7 @@ function createResultSummary(result: DiagnosticResult): string {
 }
 
 function downloadResultFile(result: DiagnosticResult): void {
-  const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+  const blob = new Blob([serializeBrowserReport(result)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -71,13 +76,45 @@ export default function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
+  const [preflightStatus, setPreflightStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [preflightSelection, setPreflightSelection] = useState<SelectedWebEndpoint | null>(null);
+  const [preflightMetadata, setPreflightMetadata] = useState<EdgeMetadata | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const preflightControllerRef = useRef<AbortController | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const siteSwitcherRef = useRef<HTMLDivElement | null>(null);
   const siteSwitcherControllerRef = useRef<ReturnType<typeof installSiteSwitcher> | null>(null);
   const mobileNavControllerRef = useRef<ReturnType<typeof installHeaderMenu> | null>(null);
 
-  useEffect(() => () => controllerRef.current?.abort("page-unmounted"), []);
+  const refreshPreflight = async () => {
+    preflightControllerRef.current?.abort("preflight-refreshed");
+    const controller = new AbortController();
+    preflightControllerRef.current = controller;
+    setPreflightStatus("loading");
+    try {
+      const selection = await selectMeasurementEndpoint(configuredMeasurementEndpoints(), controller.signal);
+      const metadata = await fetchMetadata(controller.signal, selection.endpoint);
+      if (controller.signal.aborted) return;
+      setPreflightSelection(selection);
+      setPreflightMetadata(metadata);
+      setPreflightStatus("ready");
+    } catch {
+      if (controller.signal.aborted) return;
+      setPreflightSelection(null);
+      setPreflightMetadata(null);
+      setPreflightStatus("error");
+    } finally {
+      if (preflightControllerRef.current === controller) preflightControllerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    void refreshPreflight();
+    return () => {
+      controllerRef.current?.abort("page-unmounted");
+      preflightControllerRef.current?.abort("page-unmounted");
+    };
+  }, []);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -107,10 +144,15 @@ export default function App() {
     controllerRef.current?.abort("new-test");
     const controller = new AbortController();
     controllerRef.current = controller;
-    setRunState("running");
-    setResult(null);
-    setErrorMessage(null);
-    setProgress(INITIAL_PROGRESS);
+    flushSync(() => {
+      setRunState("running");
+      setResult(null);
+      setErrorMessage(null);
+      setProgress(INITIAL_PROGRESS);
+    });
+
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    if (controller.signal.aborted || controllerRef.current !== controller) return;
 
     try {
       const nextResult = await runDiagnosticTest({
@@ -118,21 +160,27 @@ export default function App() {
         transferMode,
         downloadPath,
         signal: controller.signal,
-        onProgress: (next) => setProgress((previous) => {
-          if (next.phase !== previous.phase) return next;
-          return {
-            phase: next.phase,
-            fraction: Math.max(previous.fraction, next.fraction),
-            liveMbps: next.liveMbps ?? previous.liveMbps,
-            liveLatencyMs: next.liveLatencyMs ?? previous.liveLatencyMs,
-            bytesTransferred: Math.max(previous.bytesTransferred, next.bytesTransferred)
-          };
-        })
+        selectedEndpoint: preflightSelection ?? undefined,
+        onProgress: (next) => {
+          if (controller.signal.aborted || controllerRef.current !== controller) return;
+          setProgress((previous) => {
+            if (next.phase !== previous.phase) return next;
+            return {
+              phase: next.phase,
+              fraction: Math.max(previous.fraction, next.fraction),
+              liveMbps: next.liveMbps ?? previous.liveMbps,
+              liveLatencyMs: next.liveLatencyMs ?? previous.liveLatencyMs,
+              bytesTransferred: Math.max(previous.bytesTransferred, next.bytesTransferred)
+            };
+          });
+        }
       });
+      if (controller.signal.aborted || controllerRef.current !== controller) return;
       setResult(nextResult);
       setHistory(saveRecentResult(nextResult));
       setRunState("complete");
     } catch (error) {
+      if (controllerRef.current !== controller) return;
       if (error instanceof TestCancelledError || controller.signal.aborted) {
         setRunState("idle");
         setProgress(INITIAL_PROGRESS);
@@ -145,7 +193,14 @@ export default function App() {
     }
   };
 
-  const cancelTest = () => controllerRef.current?.abort("cancelled-by-user");
+  const cancelTest = () => {
+    const controller = controllerRef.current;
+    if (!controller) return;
+    controller.abort("cancelled-by-user");
+    if (controllerRef.current === controller) controllerRef.current = null;
+    setRunState("idle");
+    setProgress(INITIAL_PROGRESS);
+  };
 
   const exportResult = () => {
     if (result) downloadResultFile(result);
@@ -247,11 +302,15 @@ export default function App() {
               transferMode={transferMode}
               downloadPath={downloadPath}
               running={runState === "running"}
+              preflightStatus={preflightStatus}
+              preflightSelection={preflightSelection}
+              preflightMetadata={preflightMetadata}
               onModeChange={setMode}
               onTransferModeChange={setTransferMode}
               onDownloadPathChange={setDownloadPath}
               onStart={startTest}
               onCancel={cancelTest}
+              onRefreshPreflight={() => void refreshPreflight()}
             />
           </section>
 

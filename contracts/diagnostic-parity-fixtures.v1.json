@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "scenarios": [
+    {
+      "id": "healthy",
+      "sent": 20,
+      "received": 20,
+      "idleMedianMs": 20,
+      "idleJitterMs": 2,
+      "downloadIncreaseMs": 8,
+      "uploadIncreaseMs": 10,
+      "singleMbps": 90,
+      "aggregateMbps": 100,
+      "expectedFindingIds": ["no-obvious-instability"]
+    },
+    {
+      "id": "small-request-loss",
+      "sent": 8,
+      "received": 7,
+      "idleMedianMs": 20,
+      "idleJitterMs": 2,
+      "downloadIncreaseMs": 8,
+      "uploadIncreaseMs": 10,
+      "singleMbps": 90,
+      "aggregateMbps": 100,
+      "expectedFindingIds": ["application-request-loss"]
+    },
+    {
+      "id": "loaded-latency",
+      "sent": 20,
+      "received": 20,
+      "idleMedianMs": 20,
+      "idleJitterMs": 2,
+      "downloadIncreaseMs": 55,
+      "uploadIncreaseMs": 135,
+      "singleMbps": 90,
+      "aggregateMbps": 100,
+      "expectedFindingIds": ["loaded-latency"]
+    },
+    {
+      "id": "single-flow-limited",
+      "sent": 20,
+      "received": 20,
+      "idleMedianMs": 20,
+      "idleJitterMs": 2,
+      "downloadIncreaseMs": 8,
+      "uploadIncreaseMs": 10,
+      "singleMbps": 24,
+      "aggregateMbps": 120,
+      "expectedFindingIds": ["single-flow-limited"]
+    }
+  ]
+}

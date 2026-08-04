@@ -16,7 +16,22 @@ public sealed record NativeDiagnosticRunOptions(
     string? LanTarget = null,
     int LanPort = 8765,
     int LanDurationSeconds = 8,
-    int LanConnections = 4);
+    int LanConnections = 4,
+    string ProducerApplication = "desktop",
+    string? ProducerVersion = null,
+    IReadOnlyList<Uri>? TestOrigins = null,
+    string? InterfaceId = null);
+
+public sealed record NativePreflightOptions(
+    TestProfileId Profile = TestProfileId.ConnectionCheck,
+    TransferMethod TransferMethod = TransferMethod.Compare,
+    IReadOnlyList<Uri>? TestOrigins = null,
+    string? InterfaceId = null,
+    bool IncludeAddresses = false);
+
+public sealed record NativePreflightResult(
+    MeasurementContextReport Measurement,
+    IReadOnlyList<NetworkInterfaceChoice> Interfaces);
 
 public sealed record NativeRunProgress(
     string Phase,
@@ -32,29 +47,53 @@ public static class NetworkDiagnosticsRunner
     public static NativeTransferPlan DescribePlan(TestProfileId profile, TransferMethod method) =>
         NativeTransferPlanBuilder.Build(profile, method);
 
+    public static IReadOnlyList<NetworkInterfaceChoice> ListInterfaces() =>
+        NetworkBindingResolver.ListChoices();
+
+    public static async Task<NativePreflightResult> PreflightAsync(
+        NativePreflightOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var probeOptions = CreateProbeOptions(
+            options.Profile,
+            options.TransferMethod,
+            options.IncludeAddresses,
+            options.TestOrigins,
+            options.InterfaceId,
+            null,
+            8765,
+            8,
+            4);
+        var preflight = await MeasurementPreflight.RunAsync(
+            probeOptions.CandidateOrigins,
+            probeOptions.InterfaceId,
+            probeOptions.IncludeAddresses,
+            "network-diagnostics-native",
+            FullDiagnosticRunner.Capabilities(probeOptions),
+            cancellationToken);
+        return new NativePreflightResult(preflight.Measurement, ListInterfaces());
+    }
+
     public static async Task<NetworkDiagnosticsReportV2> RunAsync(
         NativeDiagnosticRunOptions options,
         IProgress<NativeRunProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         Validate(options);
-        var output = Path.Combine(Path.GetTempPath(), $"network-report-{Guid.NewGuid():N}.json");
-        var probeOptions = new ProbeOptions(
-            options.Target,
-            output,
-            options.PingCount,
-            options.MaximumHops,
+        var probeOptions = CreateProbeOptions(
+            options.Profile,
+            options.TransferMethod,
             options.IncludeAddresses,
+            options.TestOrigins ?? (options.TestOrigin is null ? null : [options.TestOrigin]),
+            options.InterfaceId,
             options.LanTarget,
             options.LanPort,
             options.LanDurationSeconds,
             options.LanConnections,
-            false,
-            true,
-            options.Profile,
-            options.TransferMethod,
-            options.TestOrigin ?? InternetTransferProbe.DefaultOrigin,
-            false);
+            options.Target,
+            options.PingCount,
+            options.MaximumHops);
         var messageProgress = progress is null
             ? null
             : new Progress<string>(message => progress.Report(new NativeRunProgress(
@@ -70,11 +109,66 @@ public static class NetworkDiagnosticsRunner
                 current.LiveLatencyMs,
                 current.BytesTransferred)));
 
-        return await FullDiagnosticRunner.RunAsync(
+        var report = await FullDiagnosticRunner.RunAsync(
             probeOptions,
             messageProgress,
             transferProgress,
             cancellationToken);
+        return report with
+        {
+            Producer = new ReportProducer(
+                options.ProducerApplication,
+                options.ProducerVersion,
+                "network-diagnostics-native")
+        };
+    }
+
+    public static Task RunLanServerAsync(
+        int port,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (port is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+        return LanThroughputServer.RunAsync(port, progress, cancellationToken);
+    }
+
+    private static ProbeOptions CreateProbeOptions(
+        TestProfileId profile,
+        TransferMethod method,
+        bool includeAddresses,
+        IReadOnlyList<Uri>? origins,
+        string? interfaceId,
+        string? lanTarget,
+        int lanPort,
+        int lanDurationSeconds,
+        int lanConnections,
+        string target = "1.1.1.1",
+        int pingCount = 20,
+        int maximumHops = 30)
+    {
+        var candidates = (origins ?? [])
+            .DistinctBy(origin => origin.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+        var primary = candidates.FirstOrDefault() ?? InternetTransferProbe.DefaultOrigin;
+        return new ProbeOptions(
+            target,
+            Path.Combine(Path.GetTempPath(), $"network-report-{Guid.NewGuid():N}.json"),
+            pingCount,
+            maximumHops,
+            includeAddresses,
+            lanTarget,
+            lanPort,
+            lanDurationSeconds,
+            lanConnections,
+            false,
+            true,
+            profile,
+            method,
+            primary,
+            false,
+            candidates.Skip(1).ToArray(),
+            interfaceId);
     }
 
     private static string ProgressMessage(NativeTransferProgress progress) => progress.Phase switch
@@ -95,6 +189,8 @@ public static class NetworkDiagnosticsRunner
         if (options.LanPort is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(options), "LAN port must be between 1024 and 65535.");
         if (options.LanDurationSeconds is < 3 or > 30) throw new ArgumentOutOfRangeException(nameof(options), "LAN duration must be between 3 and 30 seconds.");
         if (options.LanConnections is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(options), "LAN connections must be between 1 and 16.");
+        if (string.IsNullOrWhiteSpace(options.ProducerApplication)) throw new ArgumentException("A producer application is required.", nameof(options));
+        if ((options.TestOrigins?.Count ?? 0) > 8) throw new ArgumentException("No more than eight endpoint candidates may be configured.", nameof(options));
     }
 }
 
@@ -103,12 +199,49 @@ public static class NetworkDiagnosticsJson
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public static string Serialize(NetworkDiagnosticsReportV2 report) =>
         JsonSerializer.Serialize(report, Options);
+
+    public static NetworkDiagnosticsReportV2 Deserialize(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions
+        {
+            AllowTrailingCommas = true,
+            CommentHandling = JsonCommentHandling.Skip,
+            MaxDepth = 128
+        });
+        var root = document.RootElement;
+        if (BrowserReportAdapter.Matches(root))
+        {
+            return BrowserReportAdapter.Deserialize(json, Options);
+        }
+
+        if (!root.TryGetProperty("schemaVersion", out var schemaVersion))
+        {
+            throw new InvalidDataException("The JSON is neither a website diagnostic export nor a versioned Network Diagnostics report.");
+        }
+        if (!string.Equals(schemaVersion.GetString(), "2.0", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"Unsupported report schema '{schemaVersion.GetString()}'.");
+        }
+
+        return JsonSerializer.Deserialize<NetworkDiagnosticsReportV2>(json, Options)
+            ?? throw new InvalidDataException("The report JSON did not contain a schema 2.0 report.");
+    }
+
+    public static async Task<NetworkDiagnosticsReportV2> ReadAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Deserialize(await File.ReadAllTextAsync(path, cancellationToken));
+    }
 
     public static async Task WriteAsync(
         string path,

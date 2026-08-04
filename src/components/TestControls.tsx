@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
+import type { EdgeMetadata } from "../types/api";
+import type { SelectedWebEndpoint } from "../diagnostics/endpoints";
 import type { DownloadPathPreference, TestMode, TransferMode } from "../types/diagnostics";
 
 interface TestControlsProps {
@@ -9,11 +11,15 @@ interface TestControlsProps {
   transferMode: TransferMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
+  preflightStatus: "loading" | "ready" | "error";
+  preflightSelection: SelectedWebEndpoint | null;
+  preflightMetadata: EdgeMetadata | null;
   onModeChange: (mode: TestMode) => void;
   onTransferModeChange: (mode: TransferMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
   onStart: () => void;
   onCancel: () => void;
+  onRefreshPreflight: () => void;
 }
 
 type ConfirmedTestMode = Exclude<TestMode, "quick">;
@@ -77,11 +83,15 @@ export function TestControls({
   transferMode,
   downloadPath,
   running,
+  preflightStatus,
+  preflightSelection,
+  preflightMetadata,
   onModeChange,
   onTransferModeChange,
   onDownloadPathChange,
   onStart,
-  onCancel
+  onCancel,
+  onRefreshPreflight
 }: TestControlsProps) {
   const profileConfig = TEST_MODES[mode];
   const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
@@ -91,6 +101,7 @@ export function TestControls({
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
   const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
@@ -98,8 +109,22 @@ export function TestControls({
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
+  useLayoutEffect(() => {
+    if (!confirmationOpen) return;
+    const dialog = confirmationDialogRef.current;
+    if (!dialog) return;
+
+    if (!dialog.open) dialog.showModal();
+    cancelButtonRef.current?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [confirmationOpen]);
+
   const closeConfirmationDialog = () => {
     confirmationDialogRef.current?.close();
+    setConfirmationOpen(false);
   };
 
   const requestStart = () => {
@@ -108,14 +133,9 @@ export function TestControls({
       return;
     }
 
-    const dialog = confirmationDialogRef.current;
-    if (dialog && !dialog.open) {
-      setRememberChoice(true);
-      restoreRunButtonFocusRef.current = true;
-      dialog.showModal();
-      cancelButtonRef.current?.focus();
-      window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
-    }
+    setRememberChoice(true);
+    restoreRunButtonFocusRef.current = true;
+    window.setTimeout(() => setConfirmationOpen(true), 50);
   };
 
   const confirmStart = () => {
@@ -130,6 +150,7 @@ export function TestControls({
 
     restoreRunButtonFocusRef.current = false;
     confirmationDialogRef.current?.close();
+    setConfirmationOpen(false);
     onStart();
   };
 
@@ -202,6 +223,25 @@ export function TestControls({
         </div>
       </div>
 
+      <div className="endpoint-preflight" aria-live="polite">
+        <div>
+          <span className="test-controls__summary-label">Measurement path</span>
+          {preflightStatus === "loading" && <strong>Checking endpoint and network…</strong>}
+          {preflightStatus === "error" && <strong>Preflight unavailable</strong>}
+          {preflightStatus === "ready" && (
+            <strong>{preflightMetadata?.network ?? preflightSelection?.endpoint.name ?? "Selected endpoint"}</strong>
+          )}
+          <small>
+            {preflightStatus === "ready"
+              ? `${preflightMetadata?.edge ?? "Edge unavailable"} · ${preflightSelection?.endpoint.provider ?? "Provider unavailable"} · ${preflightSelection?.medianLatencyMs?.toFixed(0) ?? "—"} ms preflight`
+              : preflightStatus === "error"
+                ? "The test will retry endpoint selection when it starts."
+                : "Selecting the lowest-latency available configured endpoint."}
+          </small>
+        </div>
+        <button type="button" disabled={running || preflightStatus === "loading"} onClick={onRefreshPreflight}>Refresh</button>
+      </div>
+
       <details className="advanced-path">
         <summary>Advanced download path</summary>
         <div className="mode-selector path-selector" role="radiogroup" aria-label="Download measurement path">
@@ -245,47 +285,54 @@ export function TestControls({
         </button>
       )}
 
-      <dialog
-        className={`data-confirmation-dialog data-confirmation-dialog--${mode} jl-dialog`}
-        id="data-confirmation-dialog"
-        ref={confirmationDialogRef}
-        aria-labelledby="data-confirmation-dialog-title"
-        aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closeConfirmationDialog();
-        }}
-        onClose={() => {
-          if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
-          restoreRunButtonFocusRef.current = true;
-        }}
-      >
-        <div className="data-confirmation-dialog__content jl-dialog__surface">
-          <span className="eyebrow">Confirm data use</span>
-          <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
-          <p className="jl-dialog__message" id="data-confirmation-dialog-description">
-            This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
-          </p>
-          <label className="data-confirmation-dialog__remember">
-            <input
-              type="checkbox"
-              checked={rememberChoice}
-              onChange={(event) => setRememberChoice(event.target.checked)}
-            />
-            <span>Remember this choice for the {config.name} profile on this browser.</span>
-          </label>
-          <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
-            You’ll be asked again if this profile’s transfer cap increases.
-          </p>
-          <div className="data-confirmation-dialog__actions jl-dialog__actions jl-actions">
-            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
-              Cancel
-            </button>
-            <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary" onClick={confirmStart}>
-              Run {config.name.toLowerCase()} test
-            </button>
+      {confirmationOpen && (
+        <dialog
+          className={`data-confirmation-dialog data-confirmation-dialog--${mode} jl-dialog`}
+          id="data-confirmation-dialog"
+          ref={confirmationDialogRef}
+          aria-labelledby="data-confirmation-dialog-title"
+          aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeConfirmationDialog();
+          }}
+          onClose={() => {
+            setConfirmationOpen(false);
+            if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
+            restoreRunButtonFocusRef.current = true;
+          }}
+        >
+          <div className="data-confirmation-dialog__content jl-dialog__surface">
+            <span className="eyebrow">Confirm data use</span>
+            <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
+            <p className="jl-dialog__message" id="data-confirmation-dialog-description">
+              This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
+            </p>
+            <label className="data-confirmation-dialog__remember">
+              <input
+                type="checkbox"
+                checked={rememberChoice}
+                onChange={(event) => setRememberChoice(event.target.checked)}
+              />
+              <span>Remember this choice for the {config.name} profile on this browser.</span>
+            </label>
+            <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
+              You’ll be asked again if this profile’s transfer cap increases.
+            </p>
+            <div className="data-confirmation-dialog__actions jl-dialog__actions jl-actions">
+              <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary"
+                onClick={confirmStart}
+              >
+                Run {config.name.toLowerCase()} test
+              </button>
+            </div>
           </div>
-        </div>
-      </dialog>
+        </dialog>
+      )}
     </section>
   );
 }

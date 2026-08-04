@@ -1,11 +1,20 @@
+using System.Text.Json.Serialization;
 using NetworkDeepProbe.Contracts;
 
 namespace NetworkDeepProbe.Planning;
 
 public enum TestProfileId
 {
+    [JsonStringEnumMemberName("connection-check")]
+    ConnectionCheck,
+
+    [JsonStringEnumMemberName("quick")]
     Quick,
+
+    [JsonStringEnumMemberName("standard")]
     Standard,
+
+    [JsonStringEnumMemberName("extended")]
     Extended
 }
 
@@ -54,10 +63,11 @@ public static class NativeTransferPlanBuilder
 {
     public static TestProfileId ParseProfile(string value) => value.Trim().ToLowerInvariant() switch
     {
+        "connection-check" or "connectioncheck" or "check" => TestProfileId.ConnectionCheck,
         "quick" => TestProfileId.Quick,
         "full" or "standard" => TestProfileId.Standard,
         "stress" or "extended" => TestProfileId.Extended,
-        _ => throw new ArgumentException("Profile must be quick, full, or stress.")
+        _ => throw new ArgumentException("Profile must be connection-check, quick, full, or stress.")
     };
 
     public static TransferMethod ParseMethod(string value) => value.Trim().ToLowerInvariant() switch
@@ -185,6 +195,7 @@ public static class NativeTransferPlanBuilder
 
     private static string ContractId(TestProfileId profile) => profile switch
     {
+        TestProfileId.ConnectionCheck => "connection-check",
         TestProfileId.Quick => "quick",
         TestProfileId.Standard => "standard",
         TestProfileId.Extended => "extended",

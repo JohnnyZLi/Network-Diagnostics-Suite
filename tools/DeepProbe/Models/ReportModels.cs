@@ -65,7 +65,9 @@ public sealed record NetworkInterfaceReport(
     bool SupportsIpv6,
     IReadOnlyList<string>? UnicastAddresses,
     IReadOnlyList<string>? Gateways,
-    IReadOnlyList<string>? DnsServers);
+    IReadOnlyList<string>? DnsServers,
+    string? Id = null,
+    bool Selected = false);
 
 public sealed record PathMtuReport(
     string Target,

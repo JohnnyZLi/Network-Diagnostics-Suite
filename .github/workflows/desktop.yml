@@ -43,26 +43,31 @@ jobs:
             rid: win-x64
             binary: NetworkDiagnosticsDesktop.exe
             package: zip
+            mac_bundle: false
           - label: macOS Apple Silicon
             os: macos-latest
             rid: osx-arm64
             binary: NetworkDiagnosticsDesktop
             package: tar
+            mac_bundle: true
           - label: macOS Intel
             os: macos-15-intel
             rid: osx-x64
             binary: NetworkDiagnosticsDesktop
             package: tar
+            mac_bundle: true
           - label: Linux x64
             os: ubuntu-latest
             rid: linux-x64
             binary: NetworkDiagnosticsDesktop
             package: tar
+            mac_bundle: false
           - label: Linux ARM64
             os: ubuntu-24.04-arm
             rid: linux-arm64
             binary: NetworkDiagnosticsDesktop
             package: tar
+            mac_bundle: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
@@ -78,12 +83,57 @@ jobs:
         run: |
           package="artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}"
           mkdir -p "$package"
-          cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$package/${{ matrix.binary }}"
           cp LICENSE "$package/LICENSE.txt"
           cp tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md "$package/README.md"
-          if [ "${{ runner.os }}" != "Windows" ]; then
-            chmod +x "$package/${{ matrix.binary }}"
+
+          if [ "${{ matrix.mac_bundle }}" = "true" ]; then
+            app="$package/Network Diagnostics.app"
+            mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+            cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+            chmod +x "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+            cat > "$app/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>Network Diagnostics</string>
+            <key>CFBundleExecutable</key>
+            <string>NetworkDiagnosticsDesktop</string>
+            <key>CFBundleIdentifier</key>
+            <string>dev.johnnyli.networkdiagnostics</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>Network Diagnostics</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>0.1.0</string>
+            <key>CFBundleVersion</key>
+            <string>${{ github.run_number }}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+          else
+            cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$package/${{ matrix.binary }}"
+            if [ "${{ runner.os }}" != "Windows" ]; then
+              chmod +x "$package/${{ matrix.binary }}"
+            fi
           fi
+      - name: Validate macOS application bundle
+        if: matrix.mac_bundle
+        shell: bash
+        run: |
+          app="artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}/Network Diagnostics.app"
+          test -x "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+          plutil -lint "$app/Contents/Info.plist"
       - name: Package Windows desktop distribution
         if: matrix.package == 'zip'
         shell: pwsh

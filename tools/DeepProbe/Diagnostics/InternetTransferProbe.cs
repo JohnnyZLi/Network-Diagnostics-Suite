@@ -19,7 +19,8 @@ public static class InternetTransferProbe
         NativeTransferPlan plan,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(origin);
@@ -28,8 +29,8 @@ public static class InternetTransferProbe
             throw new ArgumentException("The test origin must be an absolute HTTP or HTTPS URI.", nameof(origin));
         }
 
-        using var transferClient = CreateClient(32);
-        using var latencyClient = CreateClient(4);
+        using var transferClient = BoundHttpClientFactory.Create(32, sourceAddress);
+        using var latencyClient = BoundHttpClientFactory.Create(4, sourceAddress);
 
         progress?.Report(new NativeTransferProgress("idle", "baseline", 0, null, null, 0));
         var idleSamples = await CollectIdleLatencyAsync(
@@ -123,30 +124,14 @@ public static class InternetTransferProbe
             dataUsed);
     }
 
-    private static HttpClient CreateClient(int maximumConnections)
-    {
-        var handler = new SocketsHttpHandler
-        {
-            AutomaticDecompression = DecompressionMethods.None,
-            ConnectTimeout = TimeSpan.FromSeconds(5),
-            MaxConnectionsPerServer = maximumConnections,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        };
-        var client = new HttpClient(handler)
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("NetworkDiagnosticsSuite/2.0");
-        return client;
-    }
-
     private static async Task<IReadOnlyList<double?>> CollectIdleLatencyAsync(
         HttpClient client,
         Uri origin,
         int count,
         int intervalMs,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var samples = new List<double?>(count);
         for (var index = 0; index < count; index++)
@@ -172,7 +157,8 @@ public static class InternetTransferProbe
         Uri origin,
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var results = new List<StageMeasurement>(stages.Count);
         for (var index = 0; index < stages.Count; index++)
@@ -198,7 +184,8 @@ public static class InternetTransferProbe
         Uri origin,
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         using var latencyCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var loadedLatencyTask = CollectLoadedLatencyAsync(
@@ -291,7 +278,8 @@ public static class InternetTransferProbe
         HttpClient client,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var sampleCount = Math.Max(1, stage.Samples);
         var samples = new List<NativeThroughputSummary>(sampleCount);
@@ -335,26 +323,25 @@ public static class InternetTransferProbe
     {
         using var phase = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         phase.CancelAfter(durationMs);
-        long bytes = 0;
+        var budget = new ConcurrentByteBudget(capBytes);
         var capReached = 0;
         var started = Stopwatch.GetTimestamp();
         var timelineTask = CaptureTimelineAsync(
-            () => Interlocked.Read(ref bytes),
+            () => budget.Consumed,
             started,
             onProgress,
             phase.Token);
 
-        void AddBytes(int count)
+        void MarkCapReached()
         {
-            var total = Interlocked.Add(ref bytes, count);
-            if (total >= capBytes && Interlocked.Exchange(ref capReached, 1) == 0)
+            if (Interlocked.Exchange(ref capReached, 1) == 0)
             {
                 phase.Cancel();
             }
         }
 
         var workers = Enumerable.Range(0, stage.Connections)
-            .Select(_ => DownloadWorkerAsync(client, origin, AddBytes, phase.Token))
+            .Select(_ => DownloadWorkerAsync(client, origin, budget, MarkCapReached, phase.Token))
             .ToArray();
         try
         {
@@ -362,7 +349,7 @@ public static class InternetTransferProbe
         }
         catch (OperationCanceledException) when (phase.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            // Normal duration or cap completion.
+            // Normal duration or exact cap completion.
         }
         finally
         {
@@ -372,7 +359,7 @@ public static class InternetTransferProbe
         var timeline = await timelineTask;
         var elapsed = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         return SummarizeThroughput(
-            Interlocked.Read(ref bytes),
+            budget.Consumed,
             elapsed,
             durationMs,
             capReached != 0,
@@ -383,7 +370,8 @@ public static class InternetTransferProbe
     private static async Task DownloadWorkerAsync(
         HttpClient client,
         Uri origin,
-        Action<int> onBytes,
+        ConcurrentByteBudget budget,
+        Action onCapReached,
         CancellationToken cancellationToken)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(128 * 1024);
@@ -404,9 +392,36 @@ public static class InternetTransferProbe
                 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var read = await stream.ReadAsync(buffer, cancellationToken);
-                    if (read == 0) break;
-                    onBytes(read);
+                    var reservation = budget.Reserve(buffer.Length);
+                    if (reservation == 0)
+                    {
+                        if (budget.IsExhausted) return;
+                        await Task.Delay(1, cancellationToken);
+                        continue;
+                    }
+
+                    int read;
+                    try
+                    {
+                        read = await stream.ReadAsync(buffer.AsMemory(0, reservation), cancellationToken);
+                    }
+                    catch
+                    {
+                        budget.Release(reservation);
+                        throw;
+                    }
+
+                    if (read == 0)
+                    {
+                        budget.Release(reservation);
+                        break;
+                    }
+
+                    if (budget.Commit(reservation, read))
+                    {
+                        onCapReached();
+                        return;
+                    }
                 }
             }
         }
@@ -421,7 +436,8 @@ public static class InternetTransferProbe
         HttpClient client,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         using var phase = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         phase.CancelAfter(stage.DurationMs);
