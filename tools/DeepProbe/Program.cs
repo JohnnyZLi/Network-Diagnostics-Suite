@@ -112,12 +112,13 @@ internal static class ProbeProgram
         Console.WriteLine("  --pings <5-100>       Internet ping count (default: 20)");
         Console.WriteLine("  --max-hops <5-64>     Traceroute hop limit (default: 30)");
         Console.WriteLine("  --include-addresses   Include local addresses, route gateways, and SSID");
+        Console.WriteLine("  --interface <id>      Source-bind HTTP/LAN traffic to an active interface");
         Console.WriteLine();
         Console.WriteLine("First-party Internet transfer:");
         Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
         Console.WriteLine("  --profile <name>      connection-check, quick, full, or stress (default: connection-check)");
         Console.WriteLine("  --transfer-method <m> compare, single, or aggregate (default: compare)");
-        Console.WriteLine("  --test-origin <url>   Project endpoint origin (default: https://network.johnnyli.dev/)");
+        Console.WriteLine("  --test-origin <url>   Endpoint candidate; repeat up to eight times");
         Console.WriteLine();
         Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
         Console.WriteLine("  --lan-server          Run the local throughput server until Ctrl+C");

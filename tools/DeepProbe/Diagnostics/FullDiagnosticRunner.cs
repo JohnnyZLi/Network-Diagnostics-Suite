@@ -6,13 +6,11 @@ namespace NetworkDeepProbe.Diagnostics;
 
 internal static class FullDiagnosticRunner
 {
-    public static async Task<NetworkDiagnosticsReportV2> RunAsync(
+    public static Task<NetworkDiagnosticsReportV2> RunAsync(
         ProbeOptions options,
         IProgress<string>? progress,
-        CancellationToken cancellationToken)
-    {
-        return await RunAsync(options, progress, null, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        RunAsync(options, progress, null, cancellationToken);
 
     public static async Task<NetworkDiagnosticsReportV2> RunAsync(
         ProbeOptions options,
@@ -23,14 +21,14 @@ internal static class FullDiagnosticRunner
         var startedAt = DateTimeOffset.UtcNow;
         var plan = NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
 
-        progress?.Report("Selecting the measurement endpoint");
-        var endpointSelection = await EndpointSelector.SelectAsync(
-            [MeasurementEndpointCatalog.FromOrigin(options.TestOrigin)],
-            cancellationToken);
-        var measurement = EndpointSelector.CreateContext(
-            endpointSelection,
+        progress?.Report("Selecting the measurement endpoint and reading network metadata");
+        var preflight = await MeasurementPreflight.RunAsync(
+            options.CandidateOrigins,
+            options.InterfaceId,
+            options.IncludeAddresses,
             "network-diagnostics-native",
-            Capabilities(options));
+            Capabilities(options),
+            cancellationToken);
 
         var lastStage = string.Empty;
         var transferProgress = new Progress<NativeTransferProgress>(current =>
@@ -50,9 +48,10 @@ internal static class FullDiagnosticRunner
 
         var internetTransfer = await InternetTransferProbe.RunAsync(
             plan,
-            endpointSelection.Selected.Origin,
+            preflight.EndpointSelection.Selected.Origin,
             transferProgress,
-            cancellationToken);
+            cancellationToken,
+            preflight.Binding?.SourceAddress);
 
         DeepProbeReport? deepDiagnostics = null;
         string? deepFailure = null;
@@ -91,10 +90,23 @@ internal static class FullDiagnosticRunner
             deepDiagnostics,
             deepDiagnostics?.LocalLink,
             null,
-            measurement,
+            preflight.Measurement,
             null);
 
         var findings = DiagnosticClassifier.Classify(report).ToList();
+        if (preflight.Measurement.Http3 is { Attempted: true, Supported: false } http3)
+        {
+            findings.Add(new DiagnosticFinding(
+                "http3-unavailable",
+                "protocol",
+                "info",
+                "high",
+                "HTTP/3 was not available on the selected path",
+                "The exact-version HTTP/3 request did not complete. The normal transfer phases still used supported HTTP versions and remain valid.",
+                [new DiagnosticEvidence("measurement.http3.supported", "HTTP/3", "Unavailable", http3.Error)],
+                ["No change is required unless you are diagnosing QUIC or HTTP/3 specifically. Compare another network or endpoint to isolate path filtering."],
+                "Repeat the protocol probe on another network or endpoint."));
+        }
         if (deepFailure is not null)
         {
             findings.Insert(0, new DiagnosticFinding(
@@ -112,12 +124,16 @@ internal static class FullDiagnosticRunner
         return report with { Findings = findings };
     }
 
-    private static IEnumerable<string> Capabilities(ProbeOptions options)
+    internal static IEnumerable<string> Capabilities(ProbeOptions options)
     {
+        yield return "endpoint-preflight";
+        yield return "network-metadata";
+        yield return "http3-probe";
         yield return "http-latency";
         yield return "download-throughput";
         yield return "upload-throughput";
         yield return "loaded-latency";
+        if (!string.IsNullOrWhiteSpace(options.InterfaceId)) yield return "source-interface-binding";
 
         if (options.Profile is not (TestProfileId.Standard or TestProfileId.Extended)) yield break;
 

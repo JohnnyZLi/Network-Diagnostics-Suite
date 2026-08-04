@@ -13,19 +13,27 @@ internal static class LanThroughputServer
     private const int MaximumCommandBytes = 128;
     private static readonly byte[] Payload = CreatePayload(1024 * 1024);
 
-    public static async Task RunAsync(int port, CancellationToken cancellationToken)
+    public static Task RunAsync(int port, CancellationToken cancellationToken) =>
+        RunAsync(port, null, cancellationToken);
+
+    public static async Task RunAsync(int port, IProgress<string>? progress, CancellationToken cancellationToken)
     {
         var listener = new TcpListener(IPAddress.Any, port);
         listener.Start(128);
 
-        Console.WriteLine("LAN throughput server");
-        Console.WriteLine($"Listening on TCP port {port}. Leave this window open during the client test.");
-        foreach (var address in GetLocalAddresses())
+        var addresses = GetLocalAddresses();
+        var message = $"Listening on TCP port {port}. Client target: {string.Join(", ", addresses)}";
+        if (progress is null)
         {
-            Console.WriteLine($"  Client target: {address}");
+            Console.WriteLine("LAN throughput server");
+            Console.WriteLine(message);
+            Console.WriteLine("Leave this window open during the client test. Press Ctrl+C to stop.");
+            Console.WriteLine();
         }
-        Console.WriteLine("Press Ctrl+C to stop.");
-        Console.WriteLine();
+        else
+        {
+            progress.Report(message);
+        }
 
         try
         {
@@ -176,23 +184,24 @@ internal static class LanThroughputClient
         int durationSeconds,
         int concurrency,
         IProgress<string>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var address = await ResolveAsync(target, cancellationToken);
         progress?.Report($"Checking the local throughput server at {target}:{port}");
         var latencySamples = new List<double?>();
         for (var attempt = 0; attempt < 8; attempt++)
         {
-            latencySamples.Add(await MeasureLatencyAsync(address, port, cancellationToken));
+            latencySamples.Add(await MeasureLatencyAsync(address, port, cancellationToken, sourceAddress));
             if (attempt < 7) await Task.Delay(100, cancellationToken);
         }
 
         var durationMs = durationSeconds * 1000;
         progress?.Report($"Measuring local download with {concurrency} parallel streams");
-        var download = await RunDownloadAsync(address, port, durationMs, concurrency, cancellationToken);
+        var download = await RunDownloadAsync(address, port, durationMs, concurrency, cancellationToken, sourceAddress);
 
         progress?.Report($"Measuring local upload with {concurrency} parallel streams");
-        var upload = await RunUploadAsync(address, port, durationMs, concurrency, cancellationToken);
+        var upload = await RunUploadAsync(address, port, durationMs, concurrency, cancellationToken, sourceAddress);
 
         return new LanThroughputReport(
             target,
@@ -207,11 +216,11 @@ internal static class LanThroughputClient
             upload.Bytes);
     }
 
-    private static async Task<double?> MeasureLatencyAsync(IPAddress address, int port, CancellationToken cancellationToken)
+    private static async Task<double?> MeasureLatencyAsync(IPAddress address, int port, CancellationToken cancellationToken, IPAddress? sourceAddress)
     {
         try
         {
-            using var client = await ConnectAsync(address, port, cancellationToken);
+            using var client = await ConnectAsync(address, port, cancellationToken, sourceAddress);
             var stream = client.GetStream();
             var started = Stopwatch.GetTimestamp();
             await stream.WriteAsync("NDS/1 PING\n"u8.ToArray(), cancellationToken);
@@ -232,9 +241,10 @@ internal static class LanThroughputClient
         int port,
         int durationMs,
         int concurrency,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress)
     {
-        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken);
+        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken, sourceAddress);
         var started = Stopwatch.GetTimestamp();
         try
         {
@@ -274,9 +284,10 @@ internal static class LanThroughputClient
         int port,
         int durationMs,
         int concurrency,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress)
     {
-        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken);
+        var clients = await ConnectManyAsync(address, port, concurrency, cancellationToken, sourceAddress);
         var started = Stopwatch.GetTimestamp();
         try
         {
@@ -307,10 +318,11 @@ internal static class LanThroughputClient
         IPAddress address,
         int port,
         int concurrency,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress)
     {
         var tasks = Enumerable.Range(0, concurrency)
-            .Select(_ => ConnectAsync(address, port, cancellationToken))
+            .Select(_ => ConnectAsync(address, port, cancellationToken, sourceAddress))
             .ToArray();
         try
         {
@@ -326,7 +338,7 @@ internal static class LanThroughputClient
         }
     }
 
-    private static async Task<TcpClient> ConnectAsync(IPAddress address, int port, CancellationToken cancellationToken)
+    private static async Task<TcpClient> ConnectAsync(IPAddress address, int port, CancellationToken cancellationToken, IPAddress? sourceAddress)
     {
         var client = new TcpClient(address.AddressFamily)
         {
@@ -336,6 +348,14 @@ internal static class LanThroughputClient
         };
         try
         {
+            if (sourceAddress is not null)
+            {
+                if (sourceAddress.AddressFamily != address.AddressFamily)
+                {
+                    throw new SocketException((int)SocketError.AddressFamilyNotSupported);
+                }
+                client.Client.Bind(new IPEndPoint(sourceAddress, 0));
+            }
             await client.ConnectAsync(address, port, cancellationToken);
             return client;
         }

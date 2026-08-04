@@ -39,15 +39,17 @@ internal static class EndpointSelector
     public static async Task<EndpointSelectionResult> SelectAsync(
         IReadOnlyList<MeasurementEndpoint> endpoints,
         CancellationToken cancellationToken,
-        HttpMessageHandler? handler = null)
+        HttpMessageHandler? handler = null,
+        IPAddress? sourceAddress = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         if (endpoints.Count == 0) throw new ArgumentException("At least one measurement endpoint is required.", nameof(endpoints));
         if (endpoints.Count > 8) throw new ArgumentException("No more than eight measurement endpoints may be probed.", nameof(endpoints));
 
         ValidateEndpoints(endpoints);
-        using var client = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
-        client.Timeout = Timeout.InfiniteTimeSpan;
+        using var client = handler is null
+            ? BoundHttpClientFactory.Create(4, sourceAddress)
+            : new HttpClient(handler, disposeHandler: false) { Timeout = Timeout.InfiniteTimeSpan };
         var probes = await Task.WhenAll(endpoints.Select(endpoint => ProbeAsync(client, endpoint, cancellationToken)));
         var available = probes
             .Where(probe => probe.Report.Available && probe.Report.MedianLatencyMs is not null)

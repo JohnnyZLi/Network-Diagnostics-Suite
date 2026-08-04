@@ -11,7 +11,8 @@ internal static class ProbeRunner
         CancellationToken cancellationToken)
     {
         progress?.Report("Inspecting active network interfaces");
-        var interfaces = InterfaceProbe.Collect(options.IncludeAddresses);
+        var binding = NetworkBindingResolver.Resolve(options.InterfaceId);
+        var interfaces = InterfaceProbe.Collect(options.IncludeAddresses, options.InterfaceId);
 
         progress?.Report("Inspecting Wi-Fi and routing details");
         var platformDetails = await PlatformNetworkDetailsProbe.RunAsync(
@@ -67,7 +68,8 @@ internal static class ProbeRunner
                 options.LanDurationSeconds,
                 options.LanConcurrency,
                 progress,
-                cancellationToken);
+                cancellationToken,
+                binding?.SourceAddress);
         }
 
         return new DeepProbeReport(

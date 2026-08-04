@@ -29,13 +29,40 @@ public sealed record MeasurementEndpointReport(
     string SelectionReason,
     double? PreflightLatencyMs);
 
+public sealed record SelectedInterfaceReport(
+    string Id,
+    string Name,
+    string Description,
+    string Type,
+    long? LinkSpeedMbps,
+    string BindingScope,
+    string? SourceAddress);
+
+public sealed record NetworkMetadataReport(
+    string? Edge,
+    string? Network,
+    int? Asn,
+    string? Protocol,
+    string? TlsVersion,
+    string? IpVersion);
+
+public sealed record Http3ProbeReport(
+    bool Attempted,
+    bool Supported,
+    string? NegotiatedProtocol,
+    double? DurationMs,
+    string? Error);
+
 public sealed record MeasurementContextReport(
     string ContractVersion,
     string Engine,
     string EngineVersion,
     IReadOnlyList<string> Capabilities,
     MeasurementEndpointReport SelectedEndpoint,
-    IReadOnlyList<EndpointProbeReport> EndpointCandidates);
+    IReadOnlyList<EndpointProbeReport> EndpointCandidates,
+    SelectedInterfaceReport? SelectedInterface = null,
+    NetworkMetadataReport? Network = null,
+    Http3ProbeReport? Http3 = null);
 
 public sealed record DiagnosticEvidence(
     string Metric,

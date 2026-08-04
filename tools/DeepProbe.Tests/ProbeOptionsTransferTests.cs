@@ -46,6 +46,32 @@ public sealed class ProbeOptionsTransferTests
     }
 
     [Fact]
+    public void ParsesRepeatableOriginsAndInterfaceSelection()
+    {
+        var options = ProbeOptions.Parse([
+            "--internet-transfer",
+            "--test-origin", "https://first.example",
+            "--test-origin", "https://second.example/path",
+            "--interface", "en0"
+        ]);
+
+        Assert.Equal("en0", options.InterfaceId);
+        Assert.Equal(2, options.CandidateOrigins.Count);
+        Assert.Equal(new Uri("https://first.example/"), options.CandidateOrigins[0]);
+        Assert.Equal(new Uri("https://second.example/path/"), options.CandidateOrigins[1]);
+    }
+
+    [Fact]
+    public void RejectsMoreThanEightEndpointCandidates()
+    {
+        var arguments = Enumerable.Range(1, 9)
+            .SelectMany(index => new[] { "--test-origin", $"https://endpoint-{index}.example" })
+            .ToArray();
+
+        Assert.Throws<ArgumentException>(() => ProbeOptions.Parse(arguments));
+    }
+
+    [Fact]
     public void RejectsServerAndInternetRunnerCombination()
     {
         Assert.Throws<ArgumentException>(() => ProbeOptions.Parse(["--lan-server", "--internet-transfer"]));

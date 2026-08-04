@@ -19,7 +19,8 @@ public static class InternetTransferProbe
         NativeTransferPlan plan,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(origin);
@@ -28,8 +29,8 @@ public static class InternetTransferProbe
             throw new ArgumentException("The test origin must be an absolute HTTP or HTTPS URI.", nameof(origin));
         }
 
-        using var transferClient = CreateClient(32);
-        using var latencyClient = CreateClient(4);
+        using var transferClient = BoundHttpClientFactory.Create(32, sourceAddress);
+        using var latencyClient = BoundHttpClientFactory.Create(4, sourceAddress);
 
         progress?.Report(new NativeTransferProgress("idle", "baseline", 0, null, null, 0));
         var idleSamples = await CollectIdleLatencyAsync(
@@ -123,30 +124,14 @@ public static class InternetTransferProbe
             dataUsed);
     }
 
-    private static HttpClient CreateClient(int maximumConnections)
-    {
-        var handler = new SocketsHttpHandler
-        {
-            AutomaticDecompression = DecompressionMethods.None,
-            ConnectTimeout = TimeSpan.FromSeconds(5),
-            MaxConnectionsPerServer = maximumConnections,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        };
-        var client = new HttpClient(handler)
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("NetworkDiagnosticsSuite/2.0");
-        return client;
-    }
-
     private static async Task<IReadOnlyList<double?>> CollectIdleLatencyAsync(
         HttpClient client,
         Uri origin,
         int count,
         int intervalMs,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var samples = new List<double?>(count);
         for (var index = 0; index < count; index++)
@@ -172,7 +157,8 @@ public static class InternetTransferProbe
         Uri origin,
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var results = new List<StageMeasurement>(stages.Count);
         for (var index = 0; index < stages.Count; index++)
@@ -198,7 +184,8 @@ public static class InternetTransferProbe
         Uri origin,
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         using var latencyCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var loadedLatencyTask = CollectLoadedLatencyAsync(
@@ -291,7 +278,8 @@ public static class InternetTransferProbe
         HttpClient client,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         var sampleCount = Math.Max(1, stage.Samples);
         var samples = new List<NativeThroughputSummary>(sampleCount);
@@ -448,7 +436,8 @@ public static class InternetTransferProbe
         HttpClient client,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IPAddress? sourceAddress = null)
     {
         using var phase = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         phase.CancelAfter(stage.DurationMs);

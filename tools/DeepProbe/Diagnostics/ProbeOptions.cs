@@ -17,8 +17,17 @@ internal sealed record ProbeOptions(
     TestProfileId Profile,
     TransferMethod TransferMethod,
     Uri TestOrigin,
-    bool ShowHelp)
+    bool ShowHelp,
+    IReadOnlyList<Uri>? AdditionalTestOrigins = null,
+    string? InterfaceId = null)
 {
+    public IReadOnlyList<Uri> CandidateOrigins =>
+        new[] { TestOrigin }
+            .Concat(AdditionalTestOrigins ?? [])
+            .DistinctBy(origin => origin.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+
     public static ProbeOptions Parse(string[] args, DateTimeOffset? now = null)
     {
         var target = "1.1.1.1";
@@ -34,7 +43,8 @@ internal sealed record ProbeOptions(
         var includeInternetTransfer = false;
         var profile = TestProfileId.ConnectionCheck;
         var transferMethod = TransferMethod.Compare;
-        var testOrigin = InternetTransferProbe.DefaultOrigin;
+        var testOrigins = new List<Uri>();
+        string? interfaceId = null;
         var showHelp = false;
 
         for (var index = 0; index < args.Length; index++)
@@ -56,6 +66,9 @@ internal sealed record ProbeOptions(
                 case "--include-addresses":
                     includeAddresses = true;
                     break;
+                case "--interface":
+                    interfaceId = RequireValue(args, ref index, "--interface");
+                    break;
                 case "--internet-transfer":
                     includeInternetTransfer = true;
                     break;
@@ -66,7 +79,7 @@ internal sealed record ProbeOptions(
                     transferMethod = NativeTransferPlanBuilder.ParseMethod(RequireValue(args, ref index, "--transfer-method"));
                     break;
                 case "--test-origin":
-                    testOrigin = ParseOrigin(RequireValue(args, ref index, "--test-origin"));
+                    testOrigins.Add(ParseOrigin(RequireValue(args, ref index, "--test-origin")));
                     break;
                 case "--lan-target":
                     lanTarget = RequireValue(args, ref index, "--lan-target");
@@ -92,6 +105,10 @@ internal sealed record ProbeOptions(
             }
         }
 
+        if (testOrigins.Count > 8)
+        {
+            throw new ArgumentException("No more than eight --test-origin candidates may be configured.");
+        }
         if (lanServer && lanTarget is not null)
         {
             throw new ArgumentException("--lan-server and --lan-target cannot be used together.");
@@ -101,6 +118,7 @@ internal sealed record ProbeOptions(
             throw new ArgumentException("--lan-server cannot be combined with --internet-transfer.");
         }
 
+        var primaryOrigin = testOrigins.FirstOrDefault() ?? InternetTransferProbe.DefaultOrigin;
         return new ProbeOptions(
             target,
             output,
@@ -115,8 +133,10 @@ internal sealed record ProbeOptions(
             includeInternetTransfer,
             profile,
             transferMethod,
-            testOrigin,
-            showHelp);
+            primaryOrigin,
+            showHelp,
+            testOrigins.Skip(1).ToArray(),
+            interfaceId);
     }
 
     private static string RequireValue(string[] args, ref int index, string option)
@@ -145,7 +165,10 @@ internal sealed record ProbeOptions(
         {
             throw new ArgumentException("--test-origin must be an absolute HTTP or HTTPS URL.");
         }
-        var builder = new UriBuilder(parsed) { Path = parsed.AbsolutePath.EndsWith('/') ? parsed.AbsolutePath : $"{parsed.AbsolutePath}/" };
+        var builder = new UriBuilder(parsed)
+        {
+            Path = parsed.AbsolutePath.EndsWith('/') ? parsed.AbsolutePath : $"{parsed.AbsolutePath}/"
+        };
         return builder.Uri;
     }
 }
