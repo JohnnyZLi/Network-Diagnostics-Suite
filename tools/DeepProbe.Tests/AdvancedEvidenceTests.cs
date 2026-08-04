@@ -35,25 +35,43 @@ public sealed class AdvancedEvidenceTests
                 "local-network",
                 "Latency rose at the gateway."),
             DualStack: new DualStackReport(
-                new AddressFamilyProbeReport("IPv4", true, "203.0.113.10", true, 12, true, 8, null),
-                new AddressFamilyProbeReport("IPv6", true, "2001:db8::10", true, 14, true, 9, null),
+                new AddressFamilyProbeReport(
+                    "IPv4", true, "203.0.113.10", true, 12, true, 8, null,
+                    true, 10, "Tls13", "http/1.1", true, 18, 204),
+                new AddressFamilyProbeReport(
+                    "IPv6", true, "2001:db8::10", true, 14, true, 9, null,
+                    true, 11, "Tls13", "http/1.1", true, 20, 204),
                 "IPv4",
                 false,
-                "measured"),
+                "measured",
+                4,
+                1,
+                1,
+                "IPv4",
+                1),
             NetworkChange: new NetworkChangeReport(
                 new NetworkStateSnapshot("if0", "Interface 1", null, ["IPv4", "IPv6"], null, []),
                 new NetworkStateSnapshot("if0", "Interface 1", null, ["IPv4", "IPv6"], null, []),
                 false,
                 [],
+                false,
+                new NetworkMetadataReport("LAX", "ExampleNet", 64500, "h2", "TLSv1.3", "IPv4"),
+                new NetworkMetadataReport("LAX", "ExampleNet", 64500, "h2", "TLSv1.3", "IPv4"),
                 false),
-            HostResources: new HostResourceReport(12.5, 100_000_000, 10_000_000, 12_000_000, [], false));
+            HostResources: new HostResourceReport(
+                12.5, 100_000_000, 10_000_000, 12_000_000, [], false,
+                1_000, 5, 0.5, 4_000_000_000, 8_000_000_000),
+            Annotations: new ReportAnnotations("Before router restart", ["Wi-Fi", "VPN off"]));
 
         var parsed = NetworkDiagnosticsJson.Deserialize(NetworkDiagnosticsJson.Serialize(report));
 
         Assert.Equal("local-network", parsed.LoadLocalization?.LikelyBoundary);
-        Assert.True(parsed.DualStack?.Ipv4.TcpReachable);
+        Assert.True(parsed.DualStack?.Ipv4.HttpReachable);
         Assert.False(parsed.NetworkChange?.Changed);
-        Assert.Equal(12.5, parsed.HostResources?.ProcessCpuPercent);
+        Assert.Equal("ExampleNet", parsed.NetworkChange?.PublicNetworkBefore?.Network);
+        Assert.Equal(0.5, parsed.HostResources?.TcpRetransmissionPercent);
+        Assert.Equal("Before router restart", parsed.Annotations?.Label);
+        Assert.Equal(["Wi-Fi", "VPN off"], parsed.Annotations?.Tags);
     }
 
     [Fact]
@@ -67,41 +85,34 @@ public sealed class AdvancedEvidenceTests
             new NetworkStateSnapshot("ethernet", "Ethernet", null, ["IPv4"], "http://proxy.example:8080", ["Tunnel interface 1"]),
             "192.168.2.1",
             "ethernet|192.168.2.1|IPv4|http://proxy.example:8080|ethernet");
+        var publicBefore = new NetworkMetadataReport("LAX", "ExampleNet", 64500, "h2", "TLSv1.3", "IPv4");
+        var publicAfter = new NetworkMetadataReport("SJC", "OtherNet", 64501, "h2", "TLSv1.3", "IPv6");
 
-        var result = NetworkStateProbe.Compare(before, after, captivePortal: true);
+        var result = NetworkStateProbe.Compare(before, after, true, publicBefore, publicAfter);
 
         Assert.True(result.Changed);
         Assert.True(result.CaptivePortalSuspected);
+        Assert.True(result.PublicNetworkChanged);
         Assert.Contains(result.Changes, item => item.Contains("interface", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Changes, item => item.Contains("gateway", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Changes, item => item.Contains("address families", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Changes, item => item.Contains("proxy", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Changes, item => item.Contains("public network", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Changes, item => item.Contains("edge", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public void LoadedPathLocalizationIdentifiesTheFirstAffectedBoundary()
     {
         var gateway = new LoadedPathTargetReport(
-            "gateway",
-            "Default gateway",
-            null,
-            StatisticsAt(5),
-            StatisticsAt(35),
-            StatisticsAt(30));
+            "gateway", "Default gateway", null,
+            StatisticsAt(5), StatisticsAt(35), StatisticsAt(30));
         var publicHop = new LoadedPathTargetReport(
-            "first-public-hop",
-            "First responsive public hop",
-            "203.0.113.1",
-            StatisticsAt(12),
-            StatisticsAt(45),
-            StatisticsAt(40));
+            "first-public-hop", "First responsive public hop", "203.0.113.1",
+            StatisticsAt(12), StatisticsAt(45), StatisticsAt(40));
         var endpoint = new LoadedPathTargetReport(
-            "endpoint",
-            "Measurement endpoint",
-            "203.0.113.10",
-            StatisticsAt(15),
-            StatisticsAt(55),
-            StatisticsAt(50));
+            "endpoint", "Measurement endpoint", "203.0.113.10",
+            StatisticsAt(15), StatisticsAt(55), StatisticsAt(50));
 
         var result = LoadedPathLatencyCollector.Interpret([gateway, publicHop, endpoint]);
 
@@ -119,6 +130,7 @@ public sealed class AdvancedEvidenceTests
 
         Assert.InRange(report.ProcessCpuPercent, 0, 100);
         Assert.True(report.PeakWorkingSetBytes >= 0);
+        Assert.True(report.TcpSegmentsSent >= 0);
         Assert.All(report.Interfaces, item =>
         {
             Assert.StartsWith("interface-", item.InterfaceId);
