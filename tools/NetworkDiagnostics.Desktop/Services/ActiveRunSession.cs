@@ -14,6 +14,15 @@ public enum ActiveRunStatus
     Failed
 }
 
+public sealed record ActiveRunEvent(
+    DateTimeOffset Timestamp,
+    string Phase,
+    string Detail,
+    double Progress,
+    double? LiveMbps = null,
+    double? LiveLatencyMs = null,
+    long BytesTransferred = 0);
+
 public sealed record ActiveRunSnapshot(
     Guid RunId,
     ActiveRunStatus Status,
@@ -51,11 +60,15 @@ public sealed record ActiveRunSnapshot(
 
 public sealed class ActiveRunSession : IDisposable
 {
+    private const int MaximumEvents = 60;
+    private readonly List<ActiveRunEvent> events = [];
     private CancellationTokenSource? cancellation;
 
     public event EventHandler? Changed;
 
     public ActiveRunSnapshot Snapshot { get; private set; } = ActiveRunSnapshot.Empty;
+
+    public IReadOnlyList<ActiveRunEvent> Events => events;
 
     public CancellationToken CancellationToken => cancellation?.Token ?? CancellationToken.None;
 
@@ -70,6 +83,7 @@ public sealed class ActiveRunSession : IDisposable
 
         DisposeCancellation();
         cancellation = new CancellationTokenSource();
+        events.Clear();
         var runId = Guid.NewGuid();
         Snapshot = new ActiveRunSnapshot(
             runId,
@@ -80,6 +94,7 @@ public sealed class ActiveRunSession : IDisposable
             "Preparing",
             "Preparing the diagnostic…",
             0);
+        AppendEvent(Snapshot.Phase, Snapshot.Detail, Snapshot.Progress);
         RaiseChanged();
         return runId;
     }
@@ -97,16 +112,28 @@ public sealed class ActiveRunSession : IDisposable
             return;
         }
 
+        var nextPhase = string.IsNullOrWhiteSpace(phase) ? Snapshot.Phase : phase.Trim();
+        var nextDetail = string.IsNullOrWhiteSpace(detail) ? Snapshot.Detail : detail.Trim();
+        var nextProgress = Math.Clamp(Math.Max(Snapshot.Progress, progress), 0, 100);
+        var shouldAppend = events.Count == 0
+            || !string.Equals(events[^1].Phase, nextPhase, StringComparison.Ordinal)
+            || !string.Equals(events[^1].Detail, nextDetail, StringComparison.Ordinal)
+            || nextProgress - events[^1].Progress >= 5;
+
         Snapshot = Snapshot with
         {
             Status = ActiveRunStatus.Running,
-            Phase = string.IsNullOrWhiteSpace(phase) ? Snapshot.Phase : phase.Trim(),
-            Detail = string.IsNullOrWhiteSpace(detail) ? Snapshot.Detail : detail.Trim(),
-            Progress = Math.Clamp(Math.Max(Snapshot.Progress, progress), 0, 100),
+            Phase = nextPhase,
+            Detail = nextDetail,
+            Progress = nextProgress,
             LiveMbps = liveMbps,
             LiveLatencyMs = liveLatencyMs,
             BytesTransferred = Math.Max(Snapshot.BytesTransferred, bytesTransferred)
         };
+        if (shouldAppend)
+        {
+            AppendEvent(nextPhase, nextDetail, nextProgress, liveMbps, liveLatencyMs, Snapshot.BytesTransferred);
+        }
         RaiseChanged();
     }
 
@@ -123,6 +150,7 @@ public sealed class ActiveRunSession : IDisposable
             Phase = "Cancelling",
             Detail = "Stopping after the current operation…"
         };
+        AppendEvent(Snapshot.Phase, Snapshot.Detail, Snapshot.Progress, Snapshot.LiveMbps, Snapshot.LiveLatencyMs, Snapshot.BytesTransferred);
         cancellation?.Cancel();
         RaiseChanged();
         return true;
@@ -141,6 +169,7 @@ public sealed class ActiveRunSession : IDisposable
             Report = report,
             ErrorMessage = null
         };
+        AppendEvent(Snapshot.Phase, Snapshot.Detail, Snapshot.Progress, Snapshot.LiveMbps, Snapshot.LiveLatencyMs, Snapshot.BytesTransferred);
         DisposeCancellation();
         RaiseChanged();
     }
@@ -154,6 +183,7 @@ public sealed class ActiveRunSession : IDisposable
             Detail = "The diagnostic was cancelled.",
             ErrorMessage = null
         };
+        AppendEvent(Snapshot.Phase, Snapshot.Detail, Snapshot.Progress, Snapshot.LiveMbps, Snapshot.LiveLatencyMs, Snapshot.BytesTransferred);
         DisposeCancellation();
         RaiseChanged();
     }
@@ -168,6 +198,7 @@ public sealed class ActiveRunSession : IDisposable
             Detail = "The diagnostic did not complete.",
             ErrorMessage = error.Message
         };
+        AppendEvent(Snapshot.Phase, error.Message, Snapshot.Progress, Snapshot.LiveMbps, Snapshot.LiveLatencyMs, Snapshot.BytesTransferred);
         DisposeCancellation();
         RaiseChanged();
     }
@@ -180,6 +211,7 @@ public sealed class ActiveRunSession : IDisposable
         }
 
         DisposeCancellation();
+        events.Clear();
         Snapshot = ActiveRunSnapshot.Empty;
         RaiseChanged();
     }
@@ -188,6 +220,28 @@ public sealed class ActiveRunSession : IDisposable
     {
         cancellation?.Cancel();
         DisposeCancellation();
+    }
+
+    private void AppendEvent(
+        string phase,
+        string detail,
+        double progress,
+        double? liveMbps = null,
+        double? liveLatencyMs = null,
+        long bytesTransferred = 0)
+    {
+        events.Add(new ActiveRunEvent(
+            DateTimeOffset.UtcNow,
+            phase,
+            detail,
+            progress,
+            liveMbps,
+            liveLatencyMs,
+            bytesTransferred));
+        if (events.Count > MaximumEvents)
+        {
+            events.RemoveRange(0, events.Count - MaximumEvents);
+        }
     }
 
     private void DisposeCancellation()
