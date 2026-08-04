@@ -166,6 +166,7 @@ export default function App() {
           };
         })
       });
+      if (controller.signal.aborted || controllerRef.current !== controller) return;
       setResult(nextResult);
       setHistory(saveRecentResult(nextResult));
       setRunState("complete");
@@ -182,7 +183,14 @@ export default function App() {
     }
   };
 
-  const cancelTest = () => controllerRef.current?.abort("cancelled-by-user");
+  const cancelTest = () => {
+    const controller = controllerRef.current;
+    if (!controller) return;
+    controller.abort("cancelled-by-user");
+    if (controllerRef.current === controller) controllerRef.current = null;
+    setRunState("idle");
+    setProgress(INITIAL_PROGRESS);
+  };
 
   const exportResult = () => {
     if (result) downloadResultFile(result);
