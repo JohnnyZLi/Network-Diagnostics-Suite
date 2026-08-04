@@ -28,13 +28,13 @@ public sealed class ReportAnnotationDialog : Window
         labelTextBox = new TextBox
         {
             Text = report.Label ?? string.Empty,
-            Watermark = "Before router restart",
+            PlaceholderText = "Before router restart",
             MaxLength = 80
         };
         tagsTextBox = new TextBox
         {
             Text = string.Join(", ", report.Tags),
-            Watermark = "Wi-Fi, VPN off, evening"
+            PlaceholderText = "Wi-Fi, VPN off, evening"
         };
 
         var saveButton = new Button { Content = "Save label", HorizontalAlignment = HorizontalAlignment.Right };
