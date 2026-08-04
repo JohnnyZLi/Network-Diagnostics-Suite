@@ -8,11 +8,10 @@ public sealed partial class MainWindow
 {
     private void RenderProfileSelection()
     {
-        var selectedIndex = ProfileSelector.SelectedIndex;
         var profileId = SelectedProfile();
         var method = SelectedMethod();
         var plan = NetworkDiagnosticsRunner.DescribePlan(profileId, method);
-        var profile = selectedIndex switch
+        var profile = selectedProfileIndex switch
         {
             1 => new ProfileCopy(
                 "What performance am I getting now?",
