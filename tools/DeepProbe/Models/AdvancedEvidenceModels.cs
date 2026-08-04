@@ -56,7 +56,10 @@ public sealed record NetworkChangeReport(
     NetworkStateSnapshot After,
     bool Changed,
     IReadOnlyList<string> Changes,
-    bool CaptivePortalSuspected);
+    bool CaptivePortalSuspected,
+    NetworkMetadataReport? PublicNetworkBefore = null,
+    NetworkMetadataReport? PublicNetworkAfter = null,
+    bool PublicNetworkChanged = false);
 
 public sealed record InterfaceCounterDelta(
     string InterfaceId,
@@ -74,7 +77,12 @@ public sealed record HostResourceReport(
     long ManagedMemoryBeforeBytes,
     long ManagedMemoryAfterBytes,
     IReadOnlyList<InterfaceCounterDelta> Interfaces,
-    bool PotentialClientBottleneck);
+    bool PotentialClientBottleneck,
+    long TcpSegmentsSent = 0,
+    long TcpSegmentsRetransmitted = 0,
+    double? TcpRetransmissionPercent = null,
+    long? SystemMemoryLoadBytes = null,
+    long? HighMemoryLoadThresholdBytes = null);
 
 public sealed record ReportAnnotations(
     string? Label,
