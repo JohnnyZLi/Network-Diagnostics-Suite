@@ -1,4 +1,3 @@
-using Avalonia.Controls;
 using NetworkDeepProbe.Models;
 using NetworkDiagnostics.Desktop.Services;
 
@@ -28,8 +27,6 @@ public sealed partial class MainWindow
         comparisonCandidateReport = candidate?.Report;
 
         HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
-        ReportsFolderText.Text = reportStore.ReportsDirectory;
-        SetHistoryPanelEyebrow("COMPARE REPORTS");
 
         var trend = ReportComparisonService.AnalyzeTrend(reports);
         comparisonWorkspace?.Render(reports, comparisonBaselineId, comparisonCandidateId, trend);
@@ -60,16 +57,6 @@ public sealed partial class MainWindow
             ? "Report comparison"
             : "Report comparison with cautions";
         HistoryFixtureDetail.Text = comparison.Summary;
-    }
-
-    private void SetHistoryPanelEyebrow(string text)
-    {
-        if (HistoryFixtureTitle.Parent is StackPanel titlePanel
-            && titlePanel.Parent is StackPanel summaryPanel
-            && summaryPanel.Children.FirstOrDefault() is TextBlock eyebrow)
-        {
-            eyebrow.Text = text;
-        }
     }
 
     private static StoredReport? FindStoredReport(
