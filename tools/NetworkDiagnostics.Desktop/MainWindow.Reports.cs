@@ -14,6 +14,7 @@ public sealed partial class MainWindow
     {
         currentReport = null;
         comparisonBaselineReport = null;
+        selectedHistoryReport = null;
         activeProfile = TestProfileId.ConnectionCheck;
         currentPresentation = ConnectionCheckFixtures.Get(FixtureSelector.SelectedIndex);
         RenderPresentation(currentPresentation);
@@ -35,6 +36,7 @@ public sealed partial class MainWindow
         try
         {
             var stored = await reportStore.ImportAsync(path);
+            selectedHistoryReport = stored;
             currentReport = stored.Report;
             comparisonBaselineReport = stored.Report;
             activeProfile = currentReport.Run.Profile;
@@ -166,6 +168,7 @@ public sealed partial class MainWindow
 
         foreach (var stored in reports.Take(12))
         {
+            var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
             var profile = new TextBlock
             {
                 Text = stored.ProfileName.ToUpperInvariant(),
@@ -176,16 +179,23 @@ public sealed partial class MainWindow
             profile.Classes.Add("eyebrow");
             var title = new TextBlock
             {
-                Text = DiagnosticReportPresenter.FromReport(stored.Report).Verdict,
+                Text = stored.Label ?? presentation.Verdict,
                 FontSize = 15,
                 FontWeight = Avalonia.Media.FontWeight.SemiBold,
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap
             };
-            var date = new TextBlock { Text = stored.DisplayDate, FontSize = 12 };
-            date.Classes.Add("muted");
+            var verdict = new TextBlock
+            {
+                Text = stored.Label is null ? stored.DisplayDate : $"{presentation.Verdict} · {stored.DisplayDate}",
+                FontSize = 12,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            };
+            verdict.Classes.Add("muted");
+            var contextParts = new List<string> { ReportComparisonService.ContextLabel(stored.Report) };
+            if (stored.Tags.Count > 0) contextParts.Add($"Tags: {string.Join(", ", stored.Tags)}");
             var context = new TextBlock
             {
-                Text = ReportComparisonService.ContextLabel(stored.Report),
+                Text = string.Join(Environment.NewLine, contextParts),
                 FontSize = 12,
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap
             };
@@ -193,7 +203,7 @@ public sealed partial class MainWindow
             var content = new StackPanel { Spacing = 4 };
             content.Children.Add(profile);
             content.Children.Add(title);
-            content.Children.Add(date);
+            content.Children.Add(verdict);
             content.Children.Add(context);
             var openButton = new Button
             {
@@ -211,9 +221,24 @@ public sealed partial class MainWindow
             };
             compareButton.Classes.Add("compact");
             compareButton.Click += CompareReportClicked;
+            var annotationButton = new Button
+            {
+                Content = stored.Label is null && stored.Tags.Count == 0 ? "Add label" : "Edit label",
+                Tag = stored,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
+            };
+            annotationButton.Classes.Add("compact");
+            annotationButton.Click += EditReportAnnotationsClicked;
+            var actions = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 8
+            };
+            actions.Children.Add(compareButton);
+            actions.Children.Add(annotationButton);
             var item = new StackPanel { Spacing = 6 };
             item.Children.Add(openButton);
-            item.Children.Add(compareButton);
+            item.Children.Add(actions);
             HistoryListPanel.Children.Add(item);
         }
 
@@ -225,6 +250,7 @@ public sealed partial class MainWindow
     private void SavedReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }) return;
+        selectedHistoryReport = stored;
         currentReport = stored.Report;
         comparisonBaselineReport = stored.Report;
         activeProfile = stored.Report.Run.Profile;
@@ -237,23 +263,49 @@ public sealed partial class MainWindow
     private void CompareReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not Button { Tag: StoredReport stored }) return;
+        selectedHistoryReport = stored;
         if (comparisonBaselineReport is null || comparisonBaselineReport.Run.Id == stored.Report.Run.Id)
         {
             comparisonBaselineReport = stored.Report;
             HistoryFixtureTitle.Text = "Comparison baseline selected";
-            HistoryFixtureDetail.Text = $"{stored.ProfileName} · {stored.DisplayDate}\n{ReportComparisonService.ContextLabel(stored.Report)}";
+            HistoryFixtureDetail.Text = $"{stored.Label ?? stored.ProfileName} · {stored.DisplayDate}\n{ReportComparisonService.ContextLabel(stored.Report)}";
             return;
         }
 
         var comparison = ReportComparisonService.Compare(comparisonBaselineReport, stored.Report);
         var warningText = comparison.Warnings.Count == 0
             ? "Equivalent test conditions"
-            : $"Comparison cautions: {string.Join(' ', comparison.Warnings)}";
+            : $"Comparison cautions: {string.Join(" ", comparison.Warnings)}";
         var metricText = string.Join(
             Environment.NewLine,
             comparison.Metrics.Take(8).Select(item => $"{item.Label}: {item.Baseline} → {item.Candidate} · {item.Change}"));
         HistoryFixtureTitle.Text = comparison.Comparable ? "Report comparison" : "Report comparison with cautions";
         HistoryFixtureDetail.Text = $"{warningText}\n{comparison.Summary}\n{metricText}";
+    }
+
+    private async void EditReportAnnotationsClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not Button { Tag: StoredReport stored }) return;
+        var input = await new ReportAnnotationDialog(stored).ShowDialog<ReportAnnotationInput?>(this);
+        if (input is null) return;
+
+        try
+        {
+            var updated = await reportStore.UpdateAnnotationsAsync(stored, input.Label, input.Tags);
+            selectedHistoryReport = updated;
+            if (currentReport?.Run.Id == updated.Report.Run.Id) currentReport = updated.Report;
+            if (comparisonBaselineReport?.Run.Id == updated.Report.Run.Id) comparisonBaselineReport = updated.Report;
+            await RefreshHistoryAsync();
+            HistoryFixtureTitle.Text = string.IsNullOrWhiteSpace(updated.Label) ? "Report annotations updated" : updated.Label;
+            HistoryFixtureDetail.Text = updated.Tags.Count == 0
+                ? "The label was saved inside the local report."
+                : $"Tags: {string.Join(", ", updated.Tags)}";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            HistoryFixtureTitle.Text = "Report annotations were not saved";
+            HistoryFixtureDetail.Text = error.Message;
+        }
     }
 
     private async Task PersistSettingsAsync()
