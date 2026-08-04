@@ -68,6 +68,7 @@ public sealed partial class MainWindow
         };
         workbenchShell.BackRequested += WorkbenchBackRequested;
         workbenchShell.ForwardRequested += WorkbenchForwardRequested;
+        workbenchShell.ActiveRunRequested += WorkbenchActiveRunRequested;
         workbenchShell.WorkspaceRequested += WorkbenchWorkspaceRequested;
         workbenchShell.DestinationRequested += WorkbenchDestinationRequested;
         workbenchShell.InspectorVisibilityChanged += WorkbenchInspectorVisibilityChanged;
@@ -99,6 +100,7 @@ public sealed partial class MainWindow
         settings = settings with { DefaultProfile = DesktopSettings.ContractId(SelectedProfile()) };
         await PersistSettingsAsync();
         await RefreshPreflightAsync();
+        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -110,6 +112,7 @@ public sealed partial class MainWindow
         await PersistSettingsAsync();
         RenderProfileSelection();
         await RefreshPreflightAsync();
+        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -132,6 +135,7 @@ public sealed partial class MainWindow
         if (ProfileSelector.SelectedIndex == index)
         {
             RenderProfileSelection();
+            SyncTestWorkspace();
             RefreshWorkbenchChrome();
             return;
         }
@@ -143,6 +147,7 @@ public sealed partial class MainWindow
         if (MethodSelector.SelectedIndex == index)
         {
             RenderMethodSelection();
+            SyncTestWorkspace();
             RefreshWorkbenchChrome();
             return;
         }
@@ -165,9 +170,20 @@ public sealed partial class MainWindow
                 case TestSetupDestination:
                     ShowArea(DesktopArea.Test);
                     ShowTestState(TestViewState.Setup);
+                    SyncTestWorkspace();
                     break;
 
-                case RunningTestDestination:
+                case RunningTestDestination runningDestination:
+                    var activeRun = activeRunSession.Snapshot;
+                    if (!activeRun.IsActive || activeRun.RunId != runningDestination.RunId)
+                    {
+                        AppDestination replacement = activeRun.ReportId is { } completedReportId
+                            ? new TestResultDestination(completedReportId)
+                            : new TestSetupDestination();
+                        navigationService.Navigate(replacement, replaceCurrent: true);
+                        return;
+                    }
+                    activeRunNavigationId = activeRun.RunId;
                     ShowArea(DesktopArea.Test);
                     ShowTestState(TestViewState.Running);
                     break;
@@ -225,7 +241,10 @@ public sealed partial class MainWindow
         if (selectedHistoryReport?.Report.Run.Id == reportId)
         {
             currentReport = selectedHistoryReport.Report;
-            activeProfile = selectedHistoryReport.Report.Run.Profile;
+            if (!activeRunSession.Snapshot.IsActive)
+            {
+                activeProfile = selectedHistoryReport.Report.Run.Profile;
+            }
             currentPresentation = DiagnosticReportPresenter.FromReport(selectedHistoryReport.Report);
             return true;
         }
@@ -239,7 +258,10 @@ public sealed partial class MainWindow
 
         selectedHistoryReport = stored;
         currentReport = stored.Report;
-        activeProfile = stored.Report.Run.Profile;
+        if (!activeRunSession.Snapshot.IsActive)
+        {
+            activeProfile = stored.Report.Run.Profile;
+        }
         currentPresentation = DiagnosticReportPresenter.FromReport(stored.Report);
         RenderPresentation(currentPresentation);
         return true;
@@ -275,6 +297,9 @@ public sealed partial class MainWindow
         PreserveCurrentNavigationState();
         navigationService.GoForward();
     }
+
+    private void WorkbenchActiveRunRequested(object? sender, EventArgs eventArgs) =>
+        ReturnToActiveRun();
 
     private void WorkbenchWorkspaceRequested(object? sender, WorkspaceRequestedEventArgs eventArgs) =>
         NavigateToWorkspace(eventArgs.Workspace);
@@ -398,7 +423,9 @@ public sealed partial class MainWindow
 
         if (state == TestViewState.Running && previousState != TestViewState.Running)
         {
-            activeRunNavigationId = Guid.NewGuid();
+            activeRunNavigationId = activeRunSession.Snapshot.IsActive
+                ? activeRunSession.Snapshot.RunId
+                : Guid.NewGuid();
         }
 
         if (!applyingNavigation && navigationService.Current is not null)
@@ -422,9 +449,10 @@ public sealed partial class MainWindow
         var interfaceLabel = CompactStatusValue(PreflightInterfaceText.Text);
         var endpointLabel = CompactStatusValue(PreflightEndpointText.Text);
         var networkLabel = CompactStatusValue(PreflightNetworkText.Text);
-        var running = runCancellation is not null;
+        var session = activeRunSession.Snapshot;
+        var running = session.IsActive;
         string activity = running
-            ? $"{CompactStatusValue(CurrentPhaseText.Text)} · {displayedRunProgress:0}%"
+            ? $"{CompactStatusValue(session.Detail)} · {session.Progress:0}%"
             : navigationService.Current?.Destination.Workspace switch
             {
                 WorkspaceKind.Reports => reportBrowserWorkspace is null
@@ -438,24 +466,27 @@ public sealed partial class MainWindow
         workbenchShell.SetStatus(interfaceLabel, endpointLabel, networkLabel, activity);
         workbenchShell.SetActiveRun(
             running,
-            $"{DiagnosticReportPresenter.ProfileName(activeProfile)} test",
-            CompactStatusValue(CurrentPhaseText.Text),
-            displayedRunProgress);
+            $"{DiagnosticReportPresenter.ProfileName(session.Profile)} test",
+            $"{session.Phase} · {session.Detail}",
+            session.Progress);
+        workbenchShell.SetInspectorBody(null);
 
         var destination = navigationService.Current?.Destination;
         switch (destination)
         {
             case TestSetupDestination:
+                SyncTestWorkspace();
                 workbenchShell.SetInspectorContent(
                     "Test configuration",
-                    "Common test choices stay in the workspace. Endpoint, interface, LAN, and advanced details remain contextual.",
+                    "Keep common choices in the setup workspace. Interface, privacy, preflight, endpoints, LAN isolation, and approvals remain contextual.",
                     $"{DiagnosticReportPresenter.ProfileName(SelectedProfile())} · {MethodName(SelectedMethod())}");
+                workbenchShell.SetInspectorBody(testConfigurationPanel);
                 break;
             case RunningTestDestination:
                 workbenchShell.SetInspectorContent(
                     "Active diagnostic",
-                    "The run continues when another workspace is opened. Return through the active-test item or navigation history.",
-                    CompactStatusValue(CurrentPhaseText.Text));
+                    "The run belongs to the application, not this page. You can inspect reports or settings and return through the active-test item.",
+                    CompactStatusValue(session.Detail));
                 break;
             case TestResultDestination:
                 workbenchShell.SetInspectorContent(
