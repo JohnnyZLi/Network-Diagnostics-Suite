@@ -7,8 +7,15 @@ namespace NetworkDiagnostics.Desktop.Services;
 public sealed record DesktopSettings(
     bool IncludeLocalIdentifiers = false,
     string DefaultProfile = "connection-check",
+    string DefaultTransferMethod = "compare",
     string? ReportDirectory = null,
     string? TestOrigin = null,
+    IReadOnlyList<string>? TestOrigins = null,
+    string? InterfaceId = null,
+    string? LanTarget = null,
+    int LanPort = 8765,
+    int LanDurationSeconds = 8,
+    int LanConnections = 4,
     long FullApprovedCapBytes = 0,
     long StressApprovedCapBytes = 0)
 {
@@ -20,10 +27,28 @@ public sealed record DesktopSettings(
         _ => TestProfileId.ConnectionCheck
     };
 
-    public Uri? ParsedTestOrigin => Uri.TryCreate(TestOrigin, UriKind.Absolute, out var uri)
-        && uri.Scheme is "http" or "https"
-            ? EnsureTrailingSlash(uri)
-            : null;
+    public TransferMethod SelectedTransferMethod => DefaultTransferMethod switch
+    {
+        "single" => TransferMethod.Single,
+        "aggregate" => TransferMethod.Aggregate,
+        _ => TransferMethod.Compare
+    };
+
+    public IReadOnlyList<Uri> ParsedTestOrigins
+    {
+        get
+        {
+            var values = (TestOrigins ?? [])
+                .Concat(string.IsNullOrWhiteSpace(TestOrigin) ? [] : [TestOrigin])
+                .Select(ParseOrigin)
+                .Where(uri => uri is not null)
+                .Cast<Uri>()
+                .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToArray();
+            return values.Length == 0 ? [new Uri("https://network.johnnyli.dev/")] : values;
+        }
+    }
 
     public bool HasDataApproval(TestProfileId profile, long currentCapBytes) => profile switch
     {
@@ -54,8 +79,27 @@ public sealed record DesktopSettings(
         _ => "connection-check"
     };
 
-    private static Uri EnsureTrailingSlash(Uri uri)
+    public static string ContractId(TransferMethod method) => method switch
     {
+        TransferMethod.Single => "single",
+        TransferMethod.Aggregate => "aggregate",
+        _ => "compare"
+    };
+
+    public static IReadOnlyList<string> ParseOriginLines(string? value)
+    {
+        return (value ?? string.Empty)
+            .Replace(";", "\n", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+    }
+
+    private static Uri? ParseOrigin(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https")) return null;
         var builder = new UriBuilder(uri);
         if (!builder.Path.EndsWith("/", StringComparison.Ordinal)) builder.Path += "/";
         return builder.Uri;

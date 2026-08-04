@@ -13,13 +13,14 @@ public sealed partial class MainWindow
     {
         if (runCancellation is not null) return;
         activeProfile = SelectedProfile();
-        if (!await ConfirmDataUseAsync(activeProfile)) return;
+        activeMethod = SelectedMethod();
+        if (!await ConfirmDataUseAsync(activeProfile, activeMethod)) return;
 
         var cancellation = new CancellationTokenSource();
         runCancellation = cancellation;
         currentReport = null;
         ResetRunningState();
-        RunningProfileText.Text = DiagnosticReportPresenter.ProfileName(activeProfile).ToUpperInvariant();
+        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(activeProfile).ToUpperInvariant()} / {MethodName(activeMethod).ToUpperInvariant()}";
         ShowTestState(TestViewState.Running);
         var progress = new Progress<NativeRunProgress>(RenderRunProgress);
 
@@ -27,8 +28,8 @@ public sealed partial class MainWindow
         {
             var report = await diagnosticRunService.RunAsync(
                 activeProfile,
-                settings.IncludeLocalIdentifiers,
-                settings.ParsedTestOrigin,
+                activeMethod,
+                settings,
                 progress,
                 cancellation.Token);
             currentReport = report;
@@ -152,9 +153,9 @@ public sealed partial class MainWindow
             : "Not included";
     }
 
-    private async Task<bool> ConfirmDataUseAsync(TestProfileId profile)
+    private async Task<bool> ConfirmDataUseAsync(TestProfileId profile, TransferMethod method)
     {
-        var plan = NetworkDiagnosticsRunner.DescribePlan(profile, TransferMethod.Compare);
+        var plan = NetworkDiagnosticsRunner.DescribePlan(profile, method);
         if (profile is not (TestProfileId.Standard or TestProfileId.Extended)
             || settings.HasDataApproval(profile, plan.TransferCapBytes))
         {

@@ -24,6 +24,17 @@ public sealed partial class MainWindow
         RenderProfileSelection();
         settings = settings with { DefaultProfile = DesktopSettings.ContractId(SelectedProfile()) };
         await PersistSettingsAsync();
+        await RefreshPreflightAsync();
+    }
+
+    private async void MethodSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    {
+        if (!initialized) return;
+        RenderMethodSelection();
+        settings = settings with { DefaultTransferMethod = DesktopSettings.ContractId(SelectedMethod()) };
+        await PersistSettingsAsync();
+        RenderProfileSelection();
+        await RefreshPreflightAsync();
     }
 
     private void ConnectionProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(0);
@@ -34,6 +45,12 @@ public sealed partial class MainWindow
 
     private void StressProfileClicked(object? sender, RoutedEventArgs eventArgs) => SelectProfile(3);
 
+    private void CompareMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(0);
+
+    private void SingleMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(1);
+
+    private void AggregateMethodClicked(object? sender, RoutedEventArgs eventArgs) => SelectMethod(2);
+
     private void SelectProfile(int index)
     {
         if (ProfileSelector.SelectedIndex == index)
@@ -42,6 +59,16 @@ public sealed partial class MainWindow
             return;
         }
         ProfileSelector.SelectedIndex = index;
+    }
+
+    private void SelectMethod(int index)
+    {
+        if (MethodSelector.SelectedIndex == index)
+        {
+            RenderMethodSelection();
+            return;
+        }
+        MethodSelector.SelectedIndex = index;
     }
 
     private void ShowArea(DesktopArea area)
@@ -73,11 +100,25 @@ public sealed partial class MainWindow
         _ => TestProfileId.ConnectionCheck
     };
 
+    private TransferMethod SelectedMethod() => MethodSelector.SelectedIndex switch
+    {
+        1 => TransferMethod.Single,
+        2 => TransferMethod.Aggregate,
+        _ => TransferMethod.Compare
+    };
+
     private static int ProfileIndex(TestProfileId profile) => profile switch
     {
         TestProfileId.Quick => 1,
         TestProfileId.Standard => 2,
         TestProfileId.Extended => 3,
+        _ => 0
+    };
+
+    private static int MethodIndex(TransferMethod method) => method switch
+    {
+        TransferMethod.Single => 1,
+        TransferMethod.Aggregate => 2,
         _ => 0
     };
 

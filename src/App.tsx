@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { formatLatency, formatRate } from "./core/format";
 import { clearRecentResults, loadRecentResults, MAX_RECENT_RESULTS, saveRecentResult } from "./core/result-history";
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
+import { fetchMetadata } from "./diagnostics/http";
+import { configuredMeasurementEndpoints, selectMeasurementEndpoint, type SelectedWebEndpoint } from "./diagnostics/endpoints";
 import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
@@ -12,6 +14,7 @@ import { RecentResultsPanel } from "./components/RecentResultsPanel";
 import { ResultDashboard } from "./components/ResultDashboard";
 import { TestControls } from "./components/TestControls";
 import { serializeBrowserReport } from "./report-serialization";
+import type { EdgeMetadata } from "./types/api";
 import type { DiagnosticResult, DownloadPathPreference, TestMode, TestProgress, TransferMode } from "./types/diagnostics";
 
 type RunState = "idle" | "running" | "complete" | "error";
@@ -72,13 +75,45 @@ export default function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sitesOpen, setSitesOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy summary");
+  const [preflightStatus, setPreflightStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [preflightSelection, setPreflightSelection] = useState<SelectedWebEndpoint | null>(null);
+  const [preflightMetadata, setPreflightMetadata] = useState<EdgeMetadata | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const preflightControllerRef = useRef<AbortController | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const siteSwitcherRef = useRef<HTMLDivElement | null>(null);
   const siteSwitcherControllerRef = useRef<ReturnType<typeof installSiteSwitcher> | null>(null);
   const mobileNavControllerRef = useRef<ReturnType<typeof installHeaderMenu> | null>(null);
 
-  useEffect(() => () => controllerRef.current?.abort("page-unmounted"), []);
+  const refreshPreflight = async () => {
+    preflightControllerRef.current?.abort("preflight-refreshed");
+    const controller = new AbortController();
+    preflightControllerRef.current = controller;
+    setPreflightStatus("loading");
+    try {
+      const selection = await selectMeasurementEndpoint(configuredMeasurementEndpoints(), controller.signal);
+      const metadata = await fetchMetadata(controller.signal, selection.endpoint);
+      if (controller.signal.aborted) return;
+      setPreflightSelection(selection);
+      setPreflightMetadata(metadata);
+      setPreflightStatus("ready");
+    } catch {
+      if (controller.signal.aborted) return;
+      setPreflightSelection(null);
+      setPreflightMetadata(null);
+      setPreflightStatus("error");
+    } finally {
+      if (preflightControllerRef.current === controller) preflightControllerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    void refreshPreflight();
+    return () => {
+      controllerRef.current?.abort("page-unmounted");
+      preflightControllerRef.current?.abort("page-unmounted");
+    };
+  }, []);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -119,6 +154,7 @@ export default function App() {
         transferMode,
         downloadPath,
         signal: controller.signal,
+        selectedEndpoint: preflightSelection ?? undefined,
         onProgress: (next) => setProgress((previous) => {
           if (next.phase !== previous.phase) return next;
           return {
@@ -248,11 +284,15 @@ export default function App() {
               transferMode={transferMode}
               downloadPath={downloadPath}
               running={runState === "running"}
+              preflightStatus={preflightStatus}
+              preflightSelection={preflightSelection}
+              preflightMetadata={preflightMetadata}
               onModeChange={setMode}
               onTransferModeChange={setTransferMode}
               onDownloadPathChange={setDownloadPath}
               onStart={startTest}
               onCancel={cancelTest}
+              onRefreshPreflight={() => void refreshPreflight()}
             />
           </section>
 

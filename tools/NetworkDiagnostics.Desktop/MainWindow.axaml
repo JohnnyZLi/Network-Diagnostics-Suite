@@ -270,6 +270,23 @@
                   </ComboBox>
                 </StackPanel>
 
+                <StackPanel Spacing="9">
+                  <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
+                  <Border Classes="panelInner" Padding="6">
+                    <Grid ColumnDefinitions="*,*,*">
+                      <Button Name="CompareMethodButton" Grid.Column="0" Classes="segment active" Content="Compare" Click="CompareMethodClicked" />
+                      <Button Name="SingleMethodButton" Grid.Column="1" Classes="segment" Content="Single" Click="SingleMethodClicked" />
+                      <Button Name="AggregateMethodButton" Grid.Column="2" Classes="segment" Content="Aggregate" Click="AggregateMethodClicked" />
+                    </Grid>
+                  </Border>
+                  <TextBlock Name="MethodExplanationText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+                  <ComboBox Name="MethodSelector" IsVisible="False" SelectionChanged="MethodSelectionChanged">
+                    <ComboBoxItem Content="Compare" />
+                    <ComboBoxItem Content="Single" />
+                    <ComboBoxItem Content="Aggregate" />
+                  </ComboBox>
+                </StackPanel>
+
                 <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />
 
                 <StackPanel Spacing="4">
@@ -292,6 +309,20 @@
 
                 <Border Classes="panelInner">
                   <TextBlock Name="ProfileAvailabilityText" Classes="muted" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
+                </Border>
+
+                <Border Classes="panelInner">
+                  <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Classes="eyebrow" Text="PRE-TEST PATH" />
+                      <Button Grid.Column="1" Classes="secondary" Padding="9,5" FontSize="11" Content="Refresh" Click="RefreshPreflightClicked" />
+                    </Grid>
+                    <TextBlock Name="PreflightStatusText" Classes="muted" FontSize="12" LineHeight="18" Text="Checking the path…" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><TextBlock Classes="muted" Text="Network" /><TextBlock Name="PreflightNetworkText" Grid.Column="1" TextAlignment="Right" TextWrapping="Wrap" /></Grid>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><TextBlock Classes="muted" Text="Endpoint" /><TextBlock Name="PreflightEndpointText" Grid.Column="1" TextAlignment="Right" TextWrapping="Wrap" /></Grid>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><TextBlock Classes="muted" Text="Interface" /><TextBlock Name="PreflightInterfaceText" Grid.Column="1" TextAlignment="Right" TextWrapping="Wrap" /></Grid>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><TextBlock Classes="muted" Text="HTTP/3" /><TextBlock Name="PreflightHttp3Text" Grid.Column="1" TextAlignment="Right" TextWrapping="Wrap" /></Grid>
+                  </StackPanel>
                 </Border>
 
                 <Button Name="RunButton" Classes="primary" Content="Run Connection Check" Click="RunClicked" />
@@ -467,10 +498,30 @@
               <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />
 
               <StackPanel Spacing="11">
-                <TextBlock Classes="eyebrow" Text="ADVANCED ENDPOINT" />
-                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Leave blank to use the default first-party measurement endpoint. Overrides must expose the same ping and transfer routes." TextWrapping="Wrap" />
-                <TextBox Name="TestOriginTextBox" PlaceholderText="https://network.johnnyli.dev/" />
-                <Button Classes="secondary" Content="Save endpoint setting" Click="SaveAdvancedSettingsClicked" />
+                <TextBlock Classes="eyebrow" Text="MEASUREMENT PATH" />
+                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="Enter up to eight compatible endpoint origins, one per line. The app probes every candidate and selects the lowest-latency available endpoint." TextWrapping="Wrap" />
+                <TextBox Name="TestOriginTextBox" AcceptsReturn="True" MinHeight="76" PlaceholderText="https://network.johnnyli.dev/" />
+                <TextBlock Classes="muted" FontSize="12" Text="Network interface" />
+                <ComboBox Name="InterfaceSelector" SelectionChanged="InterfaceSelectionChanged" />
+              </StackPanel>
+
+              <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />
+
+              <StackPanel Spacing="11">
+                <TextBlock Classes="eyebrow" Text="LAN ISOLATION" />
+                <TextBlock Classes="muted" FontSize="13" LineHeight="20" Text="For Full or Stress, optionally test another trusted machine running the built-in LAN server. Leave the target blank to skip the LAN phase." TextWrapping="Wrap" />
+                <TextBox Name="LanTargetTextBox" PlaceholderText="LAN server hostname or address" />
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                  <StackPanel Grid.Column="0" Spacing="5"><TextBlock Classes="muted" FontSize="11" Text="PORT" /><TextBox Name="LanPortTextBox" /></StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" FontSize="11" Text="SECONDS" /><TextBox Name="LanDurationTextBox" /></StackPanel>
+                  <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" FontSize="11" Text="CONNECTIONS" /><TextBox Name="LanConnectionsTextBox" /></StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <Button Name="StartLanServerButton" Grid.Column="0" Classes="secondary" Content="Start LAN server" Click="StartLanServerClicked" />
+                  <Button Name="StopLanServerButton" Grid.Column="1" Classes="secondary" Content="Stop server" Click="StopLanServerClicked" IsEnabled="False" />
+                </Grid>
+                <TextBlock Name="LanServerStatusText" Classes="muted" FontSize="12" LineHeight="18" Text="Server stopped." TextWrapping="Wrap" />
+                <Button Classes="secondary" Content="Save path and LAN settings" Click="SaveAdvancedSettingsClicked" />
               </StackPanel>
 
               <Border BorderBrush="#403724" BorderThickness="0,1,0,0" />

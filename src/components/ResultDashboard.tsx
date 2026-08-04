@@ -219,8 +219,13 @@ interface ResultDashboardProps {
 
 export function ResultDashboard({ result, onExport, onCopy, copyLabel }: ResultDashboardProps) {
   const grade = worstGrade(result.downloadLatency, result.uploadLatency);
-  const findings = buildFindings(result);
-  const recommendations = buildRecommendations(result);
+  const structuredFindings = result.findings ?? [];
+  const findings = structuredFindings.length > 0
+    ? structuredFindings.map((finding) => `${finding.title} — ${finding.summary}`)
+    : buildFindings(result);
+  const recommendations = structuredFindings.length > 0
+    ? [...new Set(structuredFindings.flatMap((finding) => finding.recommendations))].slice(0, 4)
+    : buildRecommendations(result);
   const delivery = result.download.delivery;
   const uploadDelivery = result.upload.uploadDelivery;
 

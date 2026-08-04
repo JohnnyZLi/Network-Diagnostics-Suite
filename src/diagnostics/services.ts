@@ -1,5 +1,6 @@
 import type { ServiceCheckResult } from "../types/diagnostics";
 import { createTimedSignal, TestCancelledError } from "./http";
+import { endpointUrl, PRIMARY_MEASUREMENT_ENDPOINT, type MeasurementEndpointDefinition } from "./endpoints";
 
 interface ServiceTarget {
   id: string;
@@ -54,11 +55,16 @@ export const SERVICE_TARGETS: ServiceTarget[] = [
   }
 ];
 
-async function checkService(target: ServiceTarget, signal: AbortSignal): Promise<ServiceCheckResult> {
+async function checkService(
+  target: ServiceTarget,
+  signal: AbortSignal,
+  endpoint: MeasurementEndpointDefinition
+): Promise<ServiceCheckResult> {
   const timed = createTimedSignal(signal, 4_000);
   const started = performance.now();
   try {
-    await fetch(`${target.url}${target.url.includes("?") ? "&" : "?"}n=${crypto.randomUUID()}`, {
+    const targetUrl = target.requestMode === "same-origin" ? endpointUrl(endpoint, target.url) : target.url;
+    await fetch(`${targetUrl}${targetUrl.includes("?") ? "&" : "?"}n=${crypto.randomUUID()}`, {
       mode: target.requestMode,
       cache: "no-store",
       credentials: "omit",
@@ -86,6 +92,9 @@ async function checkService(target: ServiceTarget, signal: AbortSignal): Promise
   }
 }
 
-export function runServiceBattery(signal: AbortSignal): Promise<ServiceCheckResult[]> {
-  return Promise.all(SERVICE_TARGETS.map((target) => checkService(target, signal)));
+export function runServiceBattery(
+  signal: AbortSignal,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
+): Promise<ServiceCheckResult[]> {
+  return Promise.all(SERVICE_TARGETS.map((target) => checkService(target, signal, endpoint)));
 }

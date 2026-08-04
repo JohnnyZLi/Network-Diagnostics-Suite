@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NetworkDeepProbe.Contracts;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
@@ -16,6 +17,30 @@ public sealed class DiagnosticClassifierTests
         Assert.Equal(20, rules.ApplicationLatency.MinimumSamplesForCriticalLoss);
         Assert.Equal(100, rules.LoadedLatency.CriticalIncreaseMs);
         Assert.Equal(70, rules.Throughput.SingleFlowShareWarningPercent);
+    }
+
+    [Fact]
+    public void SharedParityFixturesProduceTheExpectedFindingIds()
+    {
+        const string resourceName = "NetworkDiagnostics.Contracts.diagnostic-parity-fixtures.v1.json";
+        using var stream = typeof(DiagnosticRulesContract).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded fixture {resourceName} was not found.");
+        var fixture = JsonSerializer.Deserialize<ParityFixtureDocument>(stream, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new InvalidOperationException("Parity fixture could not be parsed.");
+
+        Assert.Equal("1.0", fixture.SchemaVersion);
+        foreach (var scenario in fixture.Scenarios)
+        {
+            var findings = DiagnosticClassifier.Classify(CreateReport(
+                downloadIncreaseMs: scenario.DownloadIncreaseMs,
+                uploadIncreaseMs: scenario.UploadIncreaseMs,
+                singleMbps: scenario.SingleMbps,
+                aggregateMbps: scenario.AggregateMbps,
+                sent: scenario.Sent,
+                received: scenario.Received));
+            var ids = findings.Select(finding => finding.Id).ToHashSet(StringComparer.Ordinal);
+            Assert.All(scenario.ExpectedFindingIds, expected => Assert.Contains(expected, ids));
+        }
     }
 
     [Fact]
@@ -169,6 +194,20 @@ public sealed class DiagnosticClassifierTests
             jitterMs,
             samples);
     }
+
+    private sealed record ParityFixtureDocument(string SchemaVersion, IReadOnlyList<ParityFixtureScenario> Scenarios);
+
+    private sealed record ParityFixtureScenario(
+        string Id,
+        int Sent,
+        int Received,
+        double IdleMedianMs,
+        double IdleJitterMs,
+        double DownloadIncreaseMs,
+        double UploadIncreaseMs,
+        double SingleMbps,
+        double AggregateMbps,
+        IReadOnlyList<string> ExpectedFindingIds);
 
     private static NativeThroughputSummary Throughput(double steadyMbps) => new(
         steadyMbps,

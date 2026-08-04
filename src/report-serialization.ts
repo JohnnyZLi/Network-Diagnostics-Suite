@@ -57,7 +57,7 @@ function nativeThroughput(throughput: ThroughputSummary) {
 
 function internetTransfer(result: DiagnosticResult): NativeInternetTransferReport {
   return {
-    origin: "https://network.johnnyli.dev/",
+    origin: result.measurement?.selectedEndpoint.origin ?? "https://network.johnnyli.dev/",
     idleLatency: nativeLatency(result.idleLatency),
     download: nativeThroughput(result.download),
     upload: nativeThroughput(result.upload),
@@ -129,7 +129,7 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
     internetTransfer: internetTransfer(result),
     deepDiagnostics: null,
     localLink: null,
-    measurement: {
+    measurement: result.measurement ?? {
       contractVersion: "1.0",
       engine: "network-diagnostics-web",
       engineVersion: "browser",
@@ -152,6 +152,7 @@ export function toSchemaTwoBrowserReport(result: DiagnosticResult): NativeCombin
       },
       endpointCandidates: [],
     },
+    findings: result.findings ?? [],
     browserEvidence: {
       edge: result.edge
         ? {

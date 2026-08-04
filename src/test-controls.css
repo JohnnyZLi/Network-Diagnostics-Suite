@@ -175,3 +175,28 @@
     min-height: 138px;
   }
 }
+
+.endpoint-preflight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 18px 0 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.endpoint-preflight > div { display: grid; gap: 4px; min-width: 0; }
+.endpoint-preflight strong { color: var(--ink); font-size: 13px; }
+.endpoint-preflight small { color: var(--muted); line-height: 1.45; }
+.endpoint-preflight button {
+  flex: 0 0 auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: transparent;
+  color: var(--muted-strong);
+  font: inherit;
+  font-size: 11px;
+}
+.endpoint-preflight button:disabled { opacity: .55; }

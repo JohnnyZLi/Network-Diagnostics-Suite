@@ -73,22 +73,64 @@ public sealed partial class MainWindow
         if (!initialized) return;
         settings = settings with { IncludeLocalIdentifiers = IncludeIdentifiersCheckBox.IsChecked == true };
         await PersistSettingsAsync();
+        await RefreshPreflightAsync();
     }
 
     private async void SaveAdvancedSettingsClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        var value = TestOriginTextBox.Text?.Trim();
-        if (!string.IsNullOrWhiteSpace(value)
-            && (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")))
+        var originValues = DesktopSettings.ParseOriginLines(TestOriginTextBox.Text);
+        if (originValues.Count > 8)
         {
-            SettingsStatusText.Text = "Endpoint override must be an absolute HTTP or HTTPS URL.";
+            SettingsStatusText.Text = "Configure no more than eight measurement endpoint candidates.";
             return;
         }
-        settings = settings with { TestOrigin = string.IsNullOrWhiteSpace(value) ? null : value };
+        foreach (var value in originValues)
+        {
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            {
+                SettingsStatusText.Text = $"Endpoint '{value}' must be an absolute HTTP or HTTPS URL.";
+                return;
+            }
+        }
+        if (!TryParseLanSettings(out var lanPort, out var lanDuration, out var lanConnections)) return;
+
+        settings = settings with
+        {
+            TestOrigin = null,
+            TestOrigins = originValues.Count == 0 ? null : originValues,
+            LanTarget = string.IsNullOrWhiteSpace(LanTargetTextBox.Text) ? null : LanTargetTextBox.Text.Trim(),
+            LanPort = lanPort,
+            LanDurationSeconds = lanDuration,
+            LanConnections = lanConnections
+        };
         await PersistSettingsAsync();
-        SettingsStatusText.Text = string.IsNullOrWhiteSpace(value)
-            ? "Using the default first-party endpoint."
-            : "Endpoint override saved.";
+        SettingsStatusText.Text = originValues.Count == 0
+            ? "Using the default first-party endpoint. LAN settings saved."
+            : $"Saved {originValues.Count} endpoint candidate{(originValues.Count == 1 ? string.Empty : "s")} and LAN settings.";
+        await RefreshPreflightAsync();
+    }
+
+    private bool TryParseLanSettings(out int port, out int duration, out int connections)
+    {
+        if (!int.TryParse(LanPortTextBox.Text, out port) || port is < 1024 or > 65535)
+        {
+            duration = 0;
+            connections = 0;
+            SettingsStatusText.Text = "LAN port must be between 1024 and 65535.";
+            return false;
+        }
+        if (!int.TryParse(LanDurationTextBox.Text, out duration) || duration is < 3 or > 30)
+        {
+            connections = 0;
+            SettingsStatusText.Text = "LAN duration must be between 3 and 30 seconds.";
+            return false;
+        }
+        if (!int.TryParse(LanConnectionsTextBox.Text, out connections) || connections is < 1 or > 16)
+        {
+            SettingsStatusText.Text = "LAN connections must be between 1 and 16.";
+            return false;
+        }
+        return true;
     }
 
     private async void ResetApprovalsClicked(object? sender, RoutedEventArgs eventArgs)

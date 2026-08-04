@@ -1,3 +1,5 @@
+import type { DiagnosticFinding, MeasurementContext } from "./diagnostics";
+
 export interface DeepLatencyStatistics {
   sent: number;
   received: number;
@@ -214,8 +216,8 @@ export interface NativeCombinedReport {
   internetTransfer?: NativeInternetTransferReport | null;
   deepDiagnostics?: DeepProbeReport | null;
   localLink?: DeepLanThroughput | null;
-  measurement?: Record<string, unknown> | null;
-  findings?: Array<Record<string, unknown>> | null;
+  measurement?: MeasurementContext | Record<string, unknown> | null;
+  findings?: DiagnosticFinding[] | Array<Record<string, unknown>> | null;
   browserEvidence?: Record<string, unknown> | null;
   [key: string]: unknown;
 }

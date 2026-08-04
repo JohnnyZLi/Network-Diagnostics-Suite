@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
+import type { EdgeMetadata } from "../types/api";
+import type { SelectedWebEndpoint } from "../diagnostics/endpoints";
 import type { DownloadPathPreference, TestMode, TransferMode } from "../types/diagnostics";
 
 interface TestControlsProps {
@@ -9,11 +11,15 @@ interface TestControlsProps {
   transferMode: TransferMode;
   downloadPath: DownloadPathPreference;
   running: boolean;
+  preflightStatus: "loading" | "ready" | "error";
+  preflightSelection: SelectedWebEndpoint | null;
+  preflightMetadata: EdgeMetadata | null;
   onModeChange: (mode: TestMode) => void;
   onTransferModeChange: (mode: TransferMode) => void;
   onDownloadPathChange: (path: DownloadPathPreference) => void;
   onStart: () => void;
   onCancel: () => void;
+  onRefreshPreflight: () => void;
 }
 
 type ConfirmedTestMode = Exclude<TestMode, "quick">;
@@ -77,11 +83,15 @@ export function TestControls({
   transferMode,
   downloadPath,
   running,
+  preflightStatus,
+  preflightSelection,
+  preflightMetadata,
   onModeChange,
   onTransferModeChange,
   onDownloadPathChange,
   onStart,
-  onCancel
+  onCancel,
+  onRefreshPreflight
 }: TestControlsProps) {
   const profileConfig = TEST_MODES[mode];
   const plan = buildDiagnosticTestPlan(profileConfig, transferMode);
@@ -200,6 +210,26 @@ export function TestControls({
             <div><dt>Saved reports</dt><dd>12 reports · this browser</dd></div>
           </dl>
         </div>
+      </div>
+
+
+      <div className="endpoint-preflight" aria-live="polite">
+        <div>
+          <span className="test-controls__summary-label">Measurement path</span>
+          {preflightStatus === "loading" && <strong>Checking endpoint and network…</strong>}
+          {preflightStatus === "error" && <strong>Preflight unavailable</strong>}
+          {preflightStatus === "ready" && (
+            <strong>{preflightMetadata?.network ?? preflightSelection?.endpoint.name ?? "Selected endpoint"}</strong>
+          )}
+          <small>
+            {preflightStatus === "ready"
+              ? `${preflightMetadata?.edge ?? "Edge unavailable"} · ${preflightSelection?.endpoint.provider ?? "Provider unavailable"} · ${preflightSelection?.medianLatencyMs?.toFixed(0) ?? "—"} ms preflight`
+              : preflightStatus === "error"
+                ? "The test will retry endpoint selection when it starts."
+                : "Selecting the lowest-latency available configured endpoint."}
+          </small>
+        </div>
+        <button type="button" disabled={running || preflightStatus === "loading"} onClick={onRefreshPreflight}>Refresh</button>
       </div>
 
       <details className="advanced-path">

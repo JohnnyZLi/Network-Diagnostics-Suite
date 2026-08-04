@@ -1,5 +1,6 @@
 import type { EdgeMetadata, UploadReceipt } from "../types/api";
 import type { DownloadStreamRejection } from "../types/diagnostics";
+import { endpointUrl, PRIMARY_MEASUREMENT_ENDPOINT, type MeasurementEndpointDefinition } from "./endpoints";
 
 export const STATIC_DOWNLOAD_STREAM_BYTES = 96 * 1024 * 1024;
 export const STATIC_DOWNLOAD_SEGMENT_COUNT = 4;
@@ -102,12 +103,16 @@ export async function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-export async function measurePing(signal: AbortSignal, timeoutMs = 1_500): Promise<number | null> {
+export async function measurePing(
+  signal: AbortSignal,
+  timeoutMs = 1_500,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
+): Promise<number | null> {
   throwIfAborted(signal);
   const timed = createTimedSignal(signal, timeoutMs);
   const started = performance.now();
   try {
-    const response = await fetch(`/api/ping?n=${crypto.randomUUID()}`, {
+    const response = await fetch(endpointUrl(endpoint, `/api/ping?n=${crypto.randomUUID()}`), {
       cache: "no-store",
       credentials: "omit",
       signal: timed.signal
@@ -124,10 +129,13 @@ export async function measurePing(signal: AbortSignal, timeoutMs = 1_500): Promi
   }
 }
 
-export async function fetchMetadata(signal: AbortSignal): Promise<EdgeMetadata | null> {
+export async function fetchMetadata(
+  signal: AbortSignal,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
+): Promise<EdgeMetadata | null> {
   const timed = createTimedSignal(signal, 3_000);
   try {
-    const response = await fetch("/api/meta", {
+    const response = await fetch(endpointUrl(endpoint, "/api/meta"), {
       cache: "no-store",
       credentials: "omit",
       signal: timed.signal
@@ -245,9 +253,10 @@ async function downloadWorkerChunk(
   size: number,
   signal: AbortSignal,
   onBytes: (delta: number) => void,
-  onObservation?: (observation: DownloadDeliveryObservation) => void
+  onObservation?: (observation: DownloadDeliveryObservation) => void,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
 ): Promise<void> {
-  const response = await fetch(`/api/download?bytes=${size}&n=${crypto.randomUUID()}`, {
+  const response = await fetch(endpointUrl(endpoint, `/api/download?bytes=${size}&n=${crypto.randomUUID()}`), {
     cache: "no-store",
     credentials: "omit",
     signal
@@ -261,11 +270,12 @@ export async function downloadLongStream(
   signal: AbortSignal,
   onBytes: (delta: number) => void,
   onObservation: (observation: DownloadDeliveryObservation) => void,
-  onRejection: (rejection: DownloadStreamRejection) => void
+  onRejection: (rejection: DownloadStreamRejection) => void,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
 ): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(STATIC_DOWNLOAD_STREAM, {
+    response = await fetch(endpointUrl(endpoint, STATIC_DOWNLOAD_STREAM), {
       cache: "no-store",
       credentials: "omit",
       signal
@@ -282,7 +292,7 @@ export async function downloadLongStream(
       contentRange: null,
       receivedBytes: null
     });
-    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation, endpoint);
     return;
   }
 
@@ -290,7 +300,7 @@ export async function downloadLongStream(
   if (rejection) {
     onRejection(rejection);
     await discardResponse(response);
-    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+    await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation, endpoint);
     return;
   }
 
@@ -306,7 +316,7 @@ export async function downloadLongStream(
         ...snapshot,
         receivedBytes: error.receivedBytes
       });
-      await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation);
+      await downloadWorkerChunk(WORKER_FALLBACK_BYTES, signal, onBytes, onObservation, endpoint);
       return;
     }
     throw error;
@@ -319,10 +329,20 @@ function r2Range(workerIndex: number, generation: number): { start: number; end:
   return { start, end: start + R2_DOWNLOAD_RANGE_BYTES - 1 };
 }
 
-export async function probeR2DownloadPath(signal: AbortSignal): Promise<R2DownloadProbe> {
+export async function probeR2DownloadPath(
+  signal: AbortSignal,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
+): Promise<R2DownloadProbe> {
+  if (!endpoint.r2Origin) {
+    return {
+      available: false,
+      reason: "This endpoint does not advertise a direct R2 measurement origin.",
+      warmup: { source: "r2", cacheStatus: null, ageSeconds: null, bytes: 0, cachedBytes: 0 }
+    };
+  }
   const timed = createTimedSignal(signal, 4_000);
   try {
-    const response = await fetch(`${R2_DOWNLOAD_ORIGIN}${R2_DOWNLOAD_OBJECT_PATH}`, {
+    const response = await fetch(`${endpoint.r2Origin}${R2_DOWNLOAD_OBJECT_PATH}`, {
       method: "HEAD",
       credentials: "omit",
       signal: timed.signal
@@ -364,12 +384,14 @@ export async function downloadR2Range(
   signal: AbortSignal,
   onBytes: (delta: number) => void,
   onObservation: (observation: DownloadDeliveryObservation) => void,
-  onRejection: (rejection: DownloadStreamRejection) => void
+  onRejection: (rejection: DownloadStreamRejection) => void,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
 ): Promise<boolean> {
   const range = r2Range(workerIndex, generation);
   let response: Response;
   try {
-    response = await fetch(`${R2_DOWNLOAD_ORIGIN}${R2_DOWNLOAD_OBJECT_PATH}`, {
+    if (!endpoint.r2Origin) return false;
+    response = await fetch(`${endpoint.r2Origin}${R2_DOWNLOAD_OBJECT_PATH}`, {
       credentials: "omit",
       headers: { Range: `bytes=${range.start}-${range.end}` },
       signal
@@ -436,9 +458,12 @@ export async function downloadR2Range(
   }
 }
 
-async function warmStaticDownloadPath(signal: AbortSignal): Promise<DownloadWarmupObservation | null> {
+async function warmStaticDownloadPath(
+  signal: AbortSignal,
+  endpoint: MeasurementEndpointDefinition
+): Promise<DownloadWarmupObservation | null> {
   try {
-    const response = await fetch(STATIC_DOWNLOAD_WARM, {
+    const response = await fetch(endpointUrl(endpoint, STATIC_DOWNLOAD_WARM), {
       method: "POST",
       cache: "no-store",
       credentials: "omit",
@@ -465,8 +490,12 @@ async function warmStaticDownloadPath(signal: AbortSignal): Promise<DownloadWarm
   }
 }
 
-export async function warmDownloadPath(signal: AbortSignal, concurrency: number): Promise<DownloadWarmupObservation> {
-  const staticWarmup = await warmStaticDownloadPath(signal);
+export async function warmDownloadPath(
+  signal: AbortSignal,
+  concurrency: number,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
+): Promise<DownloadWarmupObservation> {
+  const staticWarmup = await warmStaticDownloadPath(signal, endpoint);
   if (staticWarmup) return staticWarmup;
 
   const streamCount = Math.max(1, Math.min(4, concurrency));
@@ -477,7 +506,8 @@ export async function warmDownloadPath(signal: AbortSignal, concurrency: number)
       bytesPerStream,
       signal,
       () => undefined,
-      (observation) => observations.push(observation)
+      (observation) => observations.push(observation),
+      endpoint
     ))
   );
   const cacheStatus = observations.map((observation) => observation.cacheStatus).find((status) => status !== null) ?? null;
@@ -497,7 +527,8 @@ export async function warmDownloadPath(signal: AbortSignal, concurrency: number)
 export function uploadChunk(
   size: number,
   signal: AbortSignal,
-  onBytes: (delta: number) => void
+  onBytes: (delta: number) => void,
+  endpoint: MeasurementEndpointDefinition = PRIMARY_MEASUREMENT_ENDPOINT
 ): Promise<UploadReceipt> {
   return new Promise((resolve, reject) => {
     throwIfAborted(signal);
@@ -509,7 +540,7 @@ export function uploadChunk(
     const onAbort = () => xhr.abort();
     signal.addEventListener("abort", onAbort, { once: true });
 
-    xhr.open("POST", `/api/upload?n=${crypto.randomUUID()}`);
+    xhr.open("POST", endpointUrl(endpoint, `/api/upload?n=${crypto.randomUUID()}`));
     xhr.responseType = "json";
     // The Stress profile can keep ten 16 MiB uploads in flight. At an aggregate
     // rate near 80–100 Mbps, an individual request can legitimately take more
