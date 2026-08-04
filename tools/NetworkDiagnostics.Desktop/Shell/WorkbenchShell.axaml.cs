@@ -19,6 +19,8 @@ public sealed partial class WorkbenchShell : UserControl
 
     public event EventHandler? ForwardRequested;
 
+    public event EventHandler? ActiveRunRequested;
+
     public event EventHandler<WorkspaceRequestedEventArgs>? WorkspaceRequested;
 
     public event EventHandler<DestinationRequestedEventArgs>? DestinationRequested;
@@ -61,6 +63,8 @@ public sealed partial class WorkbenchShell : UserControl
         }
     }
 
+    public void SetInspectorBody(Control? content) => InspectorBodyHost.Content = content;
+
     public void SetStatus(
         string? interfaceLabel,
         string? endpointLabel,
@@ -96,6 +100,9 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ForwardClicked(object? sender, RoutedEventArgs eventArgs) =>
         ForwardRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ActiveRunClicked(object? sender, RoutedEventArgs eventArgs) =>
+        ActiveRunRequested?.Invoke(this, EventArgs.Empty);
 
     private void WorkspaceClicked(object? sender, RoutedEventArgs eventArgs)
     {
