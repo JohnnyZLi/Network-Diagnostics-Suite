@@ -12,7 +12,11 @@ public sealed partial class MainWindow
     {
         testSetupWorkspace = new TestSetupWorkspace();
         testConfigurationPanel = new TestConfigurationPanel();
+        runningTestWorkspace = new RunningTestWorkspace();
+        testResultWorkspace = new TestResultWorkspace();
         SetupView.Content = testSetupWorkspace;
+        RunningView.Content = runningTestWorkspace;
+        ResultsView.Content = testResultWorkspace;
 
         testSetupWorkspace.ProfileRequested += TestSetupProfileRequested;
         testSetupWorkspace.MethodRequested += TestSetupMethodRequested;
@@ -24,6 +28,13 @@ public sealed partial class MainWindow
         testConfigurationPanel.IdentifiersChanged += TestConfigurationIdentifiersChanged;
         testConfigurationPanel.RefreshRequested += TestConfigurationRefreshRequested;
         testConfigurationPanel.SettingsRequested += TestSetupSettingsRequested;
+
+        runningTestWorkspace.StopRequested += RunningWorkspaceStopRequested;
+        testResultWorkspace.RunAgainRequested += TestResultRunAgainRequested;
+        testResultWorkspace.QuickRequested += TestResultQuickRequested;
+        testResultWorkspace.ExportRequested += TestResultExportRequested;
+        testResultWorkspace.ReportsRequested += TestResultReportsRequested;
+        testResultWorkspace.CompareRequested += TestResultCompareRequested;
 
         activeRunSession.Changed += ActiveRunSessionChanged;
     }
@@ -42,6 +53,29 @@ public sealed partial class MainWindow
 
     private void TestSetupSettingsRequested(object? sender, EventArgs eventArgs) =>
         NavigateToDestination(new SettingsDestination("Measurement"));
+
+    private void RunningWorkspaceStopRequested(object? sender, EventArgs eventArgs) =>
+        StopClicked(sender, new RoutedEventArgs());
+
+    private void TestResultRunAgainRequested(object? sender, EventArgs eventArgs) =>
+        RunAgainClicked(sender, new RoutedEventArgs());
+
+    private void TestResultQuickRequested(object? sender, EventArgs eventArgs) =>
+        ChooseQuickClicked(sender, new RoutedEventArgs());
+
+    private void TestResultExportRequested(object? sender, EventArgs eventArgs) =>
+        ExportReportClicked(sender, new RoutedEventArgs());
+
+    private void TestResultReportsRequested(object? sender, EventArgs eventArgs) =>
+        NavigateToDestination(new ReportListDestination());
+
+    private void TestResultCompareRequested(object? sender, EventArgs eventArgs)
+    {
+        if (currentReport is not null)
+        {
+            NavigateToDestination(new ComparisonDestination(currentReport.Run.Id));
+        }
+    }
 
     private void TestConfigurationInterfaceRequested(object? sender, IndexRequestedEventArgs eventArgs)
     {
@@ -74,6 +108,7 @@ public sealed partial class MainWindow
     private void ActiveRunSessionChanged(object? sender, EventArgs eventArgs)
     {
         SyncTestWorkspace();
+        SyncRunResultWorkspaces();
         RefreshWorkbenchChrome();
     }
 
@@ -98,6 +133,7 @@ public sealed partial class MainWindow
         SetupView.IsVisible = false;
         RunningView.IsVisible = false;
         ResultsView.IsVisible = true;
+        SyncRunResultWorkspaces();
 
         var destination = new TestResultDestination(reportId);
         lastWorkspaceEntries[WorkspaceKind.Test] = new NavigationEntry(
@@ -153,5 +189,17 @@ public sealed partial class MainWindow
             settings.IncludeLocalIdentifiers,
             CompactStatusValue(PreflightEndpointText.Text),
             CompactStatusValue(PreflightNetworkText.Text)));
+
+        SyncRunResultWorkspaces();
+    }
+
+    private void SyncRunResultWorkspaces()
+    {
+        var snapshot = activeRunSession.Snapshot;
+        runningTestWorkspace?.Render(snapshot, activeRunSession.Events);
+        var section = navigationService.Current?.Destination is TestResultDestination result
+            ? result.Section
+            : "Overview";
+        testResultWorkspace?.Render(currentPresentation, currentReport, snapshot, section);
     }
 }
