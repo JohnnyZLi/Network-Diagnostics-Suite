@@ -1,4 +1,5 @@
 using NetworkDiagnostics.Desktop.Navigation;
+using Xunit;
 
 namespace NetworkDiagnostics.Desktop.Tests;
 
