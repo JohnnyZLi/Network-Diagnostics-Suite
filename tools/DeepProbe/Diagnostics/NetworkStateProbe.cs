@@ -65,7 +65,12 @@ internal static class NetworkStateProbe
         return new CapturedNetworkState(report, gateway, fingerprint);
     }
 
-    public static NetworkChangeReport Compare(CapturedNetworkState before, CapturedNetworkState after, bool captivePortal)
+    public static NetworkChangeReport Compare(
+        CapturedNetworkState before,
+        CapturedNetworkState after,
+        bool captivePortal,
+        NetworkMetadataReport? publicNetworkBefore = null,
+        NetworkMetadataReport? publicNetworkAfter = null)
     {
         var changes = new List<string>();
         if (!string.Equals(before.Report.InterfaceId, after.Report.InterfaceId, StringComparison.Ordinal)
@@ -86,11 +91,37 @@ internal static class NetworkStateProbe
         {
             changes.Add("The effective system proxy changed during the run.");
         }
+
+        var publicNetworkChanged = PublicNetworkChanged(publicNetworkBefore, publicNetworkAfter);
+        if (publicNetworkChanged)
+        {
+            if (publicNetworkBefore?.Asn != publicNetworkAfter?.Asn
+                || !string.Equals(publicNetworkBefore?.Network, publicNetworkAfter?.Network, StringComparison.OrdinalIgnoreCase))
+            {
+                changes.Add("The public network or ASN changed during the run.");
+            }
+            if (!string.Equals(publicNetworkBefore?.Edge, publicNetworkAfter?.Edge, StringComparison.OrdinalIgnoreCase))
+            {
+                changes.Add("The selected edge location changed during the run.");
+            }
+            if (!string.Equals(publicNetworkBefore?.IpVersion, publicNetworkAfter?.IpVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                changes.Add("The observed public IP version changed during the run.");
+            }
+        }
         if (!string.Equals(before.Fingerprint, after.Fingerprint, StringComparison.Ordinal) && changes.Count == 0)
         {
             changes.Add("The active network configuration changed during the run.");
         }
-        return new NetworkChangeReport(before.Report, after.Report, changes.Count > 0, changes, captivePortal);
+        return new NetworkChangeReport(
+            before.Report,
+            after.Report,
+            changes.Count > 0,
+            changes,
+            captivePortal,
+            publicNetworkBefore,
+            publicNetworkAfter,
+            publicNetworkChanged);
     }
 
     public static async Task<bool> CheckCaptivePortalAsync(Uri origin, CancellationToken cancellationToken)
@@ -174,6 +205,15 @@ internal static class NetworkStateProbe
         {
             return null;
         }
+    }
+
+    private static bool PublicNetworkChanged(NetworkMetadataReport? before, NetworkMetadataReport? after)
+    {
+        if (before is null || after is null) return false;
+        return before.Asn != after.Asn
+            || !string.Equals(before.Network, after.Network, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(before.Edge, after.Edge, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(before.IpVersion, after.IpVersion, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string InterfaceFingerprint(CapturedNetworkState state) =>
