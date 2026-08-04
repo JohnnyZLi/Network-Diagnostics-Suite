@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
@@ -11,6 +13,7 @@ public sealed partial class SettingsWorkspace : UserControl
     public SettingsWorkspace()
     {
         InitializeComponent();
+        SizeChanged += SettingsWorkspaceSizeChanged;
         ShowSection(currentSection);
     }
 
@@ -171,6 +174,75 @@ public sealed partial class SettingsWorkspace : UserControl
 
     private void PreviewClicked(object? sender, RoutedEventArgs eventArgs) =>
         PreviewRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(Math.Max(0, FixtureComboBox.SelectedIndex)));
+
+    private void SettingsWorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyResponsiveLayout(eventArgs.NewSize.Width);
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var wide = width >= 900;
+        SettingsContentContainer.Margin = wide
+            ? new Thickness(32, 28, 32, 40)
+            : new Thickness(22, 24, 22, 36);
+
+        ConfigureGrid(GeneralLayoutGrid, wide ? 2 : 1, wide ? 2 : 3);
+        Grid.SetColumn(GeneralInterfaceContainer, wide ? 1 : 0);
+        Grid.SetRow(GeneralInterfaceContainer, wide ? 0 : 1);
+        GeneralInterfaceContainer.BorderThickness = wide
+            ? new Thickness(1, 0, 0, 0)
+            : new Thickness(0, 1, 0, 0);
+        GeneralInterfaceContainer.Padding = wide
+            ? new Thickness(24, 0, 0, 0)
+            : new Thickness(0, 18, 0, 0);
+        Grid.SetRow(RefreshPreflightButton, wide ? 1 : 2);
+        Grid.SetColumn(RefreshPreflightButton, 0);
+        Grid.SetColumnSpan(RefreshPreflightButton, wide ? 2 : 1);
+
+        ConfigureGrid(PrivacyLayoutGrid, wide ? 2 : 1, wide ? 2 : 3);
+        Grid.SetColumn(PrivacyApprovalsContainer, wide ? 1 : 0);
+        Grid.SetRow(PrivacyApprovalsContainer, wide ? 0 : 1);
+        PrivacyApprovalsContainer.BorderThickness = wide
+            ? new Thickness(1, 0, 0, 0)
+            : new Thickness(0, 1, 0, 0);
+        PrivacyApprovalsContainer.Padding = wide
+            ? new Thickness(24, 0, 0, 0)
+            : new Thickness(0, 18, 0, 0);
+        Grid.SetRow(PrivacyStatusText, wide ? 1 : 2);
+        Grid.SetColumn(PrivacyStatusText, 0);
+        Grid.SetColumnSpan(PrivacyStatusText, wide ? 2 : 1);
+
+        ConfigureGrid(StorageLayoutGrid, wide ? 2 : 1, wide ? 1 : 2, secondColumnAuto: true);
+        Grid.SetColumn(StorageActionSection, wide ? 1 : 0);
+        Grid.SetRow(StorageActionSection, wide ? 0 : 1);
+        StorageActionSection.Width = wide ? 188 : double.NaN;
+        StorageActionSection.Margin = wide ? new Thickness(0) : new Thickness(0, 16, 0, 0);
+        StorageActionSection.VerticalAlignment = wide ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+
+        ConfigureGrid(DeveloperLayoutGrid, wide ? 2 : 1, wide ? 1 : 2, secondColumnAuto: true);
+        Grid.SetColumn(DeveloperActionSection, wide ? 1 : 0);
+        Grid.SetRow(DeveloperActionSection, wide ? 0 : 1);
+        DeveloperActionSection.Width = wide ? 200 : double.NaN;
+        DeveloperActionSection.Margin = wide ? new Thickness(0) : new Thickness(0, 16, 0, 0);
+        DeveloperActionSection.VerticalAlignment = wide ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+    }
+
+    private static void ConfigureGrid(Grid grid, int columns, int rows, bool secondColumnAuto = false)
+    {
+        grid.ColumnDefinitions.Clear();
+        for (var index = 0; index < columns; index++)
+        {
+            var width = secondColumnAuto && index == 1
+                ? GridLength.Auto
+                : new GridLength(1, GridUnitType.Star);
+            grid.ColumnDefinitions.Add(new ColumnDefinition(width));
+        }
+
+        grid.RowDefinitions.Clear();
+        for (var index = 0; index < rows; index++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        }
+    }
 
     private static string NormalizeSection(string? section) => section?.Trim() switch
     {
