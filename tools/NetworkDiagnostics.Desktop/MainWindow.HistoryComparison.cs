@@ -25,38 +25,10 @@ public sealed partial class MainWindow
 
         comparisonBaselineReport = baseline?.Report;
         comparisonCandidateReport = candidate?.Report;
-
-        HistoryCountText.Text = reports.Count == 1 ? "1 saved report" : $"{reports.Count} saved reports";
+        savedReportCount = reports.Count;
 
         var trend = ReportComparisonService.AnalyzeTrend(reports);
         comparisonWorkspace?.Render(reports, comparisonBaselineId, comparisonCandidateId, trend);
-
-        if (reports.Count == 0)
-        {
-            HistoryFixtureTitle.Text = "No reports to compare";
-            HistoryFixtureDetail.Text = "Completed diagnostics and imported schema 2.0 reports will appear here.";
-            return;
-        }
-
-        if (baseline is null)
-        {
-            HistoryFixtureTitle.Text = "Choose a comparison baseline";
-            HistoryFixtureDetail.Text = trend.Summary;
-            return;
-        }
-
-        if (candidate is null)
-        {
-            HistoryFixtureTitle.Text = "Choose the candidate report";
-            HistoryFixtureDetail.Text = $"Baseline: {HistorySelectionName(baseline)}\n\n{trend.Summary}";
-            return;
-        }
-
-        var comparison = ReportComparisonService.Compare(baseline.Report, candidate.Report);
-        HistoryFixtureTitle.Text = comparison.Comparable
-            ? "Report comparison"
-            : "Report comparison with cautions";
-        HistoryFixtureDetail.Text = comparison.Summary;
     }
 
     private static StoredReport? FindStoredReport(
@@ -64,7 +36,4 @@ public sealed partial class MainWindow
         Guid? reportId) => reportId is null
             ? null
             : reports.FirstOrDefault(item => item.Report.Run.Id == reportId.Value);
-
-    private static string HistorySelectionName(StoredReport stored) =>
-        $"{stored.Label ?? stored.ProfileName} · {stored.DisplayDate}\n{ReportComparisonService.ContextLabel(stored.Report)}";
 }
