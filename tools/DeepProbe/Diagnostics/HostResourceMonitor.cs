@@ -71,7 +71,7 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
         var tcpAfter = CaptureTcpCounters();
         var tcpSent = NonNegative(tcpAfter.SegmentsSent - tcpBefore.SegmentsSent);
         var tcpRetransmitted = NonNegative(tcpAfter.SegmentsResent - tcpBefore.SegmentsResent);
-        var retransmissionPercent = tcpSent == 0 ? null : tcpRetransmitted / (double)tcpSent * 100;
+        double? retransmissionPercent = tcpSent == 0 ? null : tcpRetransmitted / (double)tcpSent * 100;
         var memoryInfo = GC.GetGCMemoryInfo();
         var potentialBottleneck = cpuPercent >= 85
             || retransmissionPercent >= 1
