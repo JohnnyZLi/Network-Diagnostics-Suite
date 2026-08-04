@@ -29,7 +29,6 @@ public sealed partial class MainWindow : Window
     private DesktopSettings settings = new();
     private NetworkDiagnosticsReportV2? currentReport;
     private NetworkDiagnosticsReportV2? comparisonBaselineReport;
-    private StoredReport? selectedHistoryReport;
     private TestProfileId activeProfile = TestProfileId.ConnectionCheck;
     private TransferMethod activeMethod = TransferMethod.Compare;
     private IReadOnlyList<NetworkInterfaceChoice> interfaceChoices = [];
