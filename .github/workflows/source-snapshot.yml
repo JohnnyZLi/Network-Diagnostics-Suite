@@ -1,0 +1,40 @@
+name: Source snapshot
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/source-snapshot.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'contracts/**'
+      - 'package*.json'
+      - 'tsconfig*.json'
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: source-snapshot
+          path: |
+            .github
+            contracts
+            docs
+            src
+            tests
+            tools
+            worker
+            package.json
+            package-lock.json
+            tsconfig.json
+            tsconfig.app.json
+            tsconfig.node.json
+            vite.config.ts
+          retention-days: 1
+          if-no-files-found: error
