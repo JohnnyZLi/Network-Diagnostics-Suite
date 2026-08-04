@@ -339,7 +339,7 @@ public sealed partial class MainWindow
 
         if (!applyingNavigation && navigationService.Current is not null)
         {
-            var destination = state switch
+            AppDestination destination = state switch
             {
                 TestViewState.Running => new RunningTestDestination(activeRunNavigationId),
                 TestViewState.Results => new TestResultDestination(currentReport?.Run.Id ?? Guid.Empty),
@@ -359,11 +359,11 @@ public sealed partial class MainWindow
         var endpointLabel = CompactStatusValue(PreflightEndpointText.Text);
         var networkLabel = CompactStatusValue(PreflightNetworkText.Text);
         var running = currentTestState == TestViewState.Running && runCancellation is not null;
-        var activity = running
+        string activity = running
             ? $"{CompactStatusValue(CurrentPhaseText.Text)} · {displayedRunProgress:0}%"
             : navigationService.Current?.Destination.Workspace switch
             {
-                WorkspaceKind.Reports => HistoryCountText.Text,
+                WorkspaceKind.Reports => HistoryCountText.Text ?? "Reports",
                 WorkspaceKind.Comparisons => comparisonCandidateId is null ? "Choose reports" : "Comparison ready",
                 WorkspaceKind.Settings => "Settings",
                 _ => "Ready"
