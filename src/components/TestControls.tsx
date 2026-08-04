@@ -101,17 +101,17 @@ export function TestControls({
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
-  const [confirmationSubmitted, setConfirmationSubmitted] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
   const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
-  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
   const closeConfirmationDialog = () => {
     confirmationDialogRef.current?.close();
+    setConfirmationOpen(false);
   };
 
   const requestStart = () => {
@@ -123,18 +123,16 @@ export function TestControls({
     const dialog = confirmationDialogRef.current;
     if (dialog && !dialog.open) {
       setRememberChoice(true);
-      setConfirmationSubmitted(false);
-      confirmButtonRef.current?.removeAttribute("aria-label");
+      setConfirmationOpen(true);
       restoreRunButtonFocusRef.current = true;
-      dialog.showModal();
-      cancelButtonRef.current?.focus();
-      window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
+      window.requestAnimationFrame(() => {
+        if (!dialog.open) dialog.showModal();
+        window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
+      });
     }
   };
 
   const confirmStart = () => {
-    setConfirmationSubmitted(true);
-    confirmButtonRef.current?.setAttribute("aria-label", `Starting ${config.name.toLowerCase()} test`);
     if (rememberChoice && confirmationMode) {
       const nextRecord: ConfirmationRecord = {
         ...acknowledgedCaps,
@@ -146,6 +144,7 @@ export function TestControls({
 
     restoreRunButtonFocusRef.current = false;
     confirmationDialogRef.current?.close();
+    setConfirmationOpen(false);
     onStart();
   };
 
@@ -290,42 +289,43 @@ export function TestControls({
           if (event.target === event.currentTarget) closeConfirmationDialog();
         }}
         onClose={() => {
+          setConfirmationOpen(false);
           if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
           restoreRunButtonFocusRef.current = true;
         }}
       >
-        <div className="data-confirmation-dialog__content jl-dialog__surface">
-          <span className="eyebrow">Confirm data use</span>
-          <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
-          <p className="jl-dialog__message" id="data-confirmation-dialog-description">
-            This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
-          </p>
-          <label className="data-confirmation-dialog__remember">
-            <input
-              type="checkbox"
-              checked={rememberChoice}
-              onChange={(event) => setRememberChoice(event.target.checked)}
-            />
-            <span>Remember this choice for the {config.name} profile on this browser.</span>
-          </label>
-          <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
-            You’ll be asked again if this profile’s transfer cap increases.
-          </p>
-          <div className="data-confirmation-dialog__actions jl-dialog__actions jl-actions">
-            <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
-              Cancel
-            </button>
-            <button
-              ref={confirmButtonRef}
-              type="button"
-              className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary"
-              aria-label={confirmationSubmitted ? `Starting ${config.name.toLowerCase()} test` : undefined}
-              onClick={confirmStart}
-            >
-              Run {config.name.toLowerCase()} test
-            </button>
+        {confirmationOpen && (
+          <div className="data-confirmation-dialog__content jl-dialog__surface">
+            <span className="eyebrow">Confirm data use</span>
+            <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
+            <p className="jl-dialog__message" id="data-confirmation-dialog-description">
+              This test may transfer up to {formatBytes(transferCap)}. The selected {TRANSFER_MODES[transferMode].name.toLowerCase()} method determines which transfer stages run. Avoid running it on metered or cellular connections.
+            </p>
+            <label className="data-confirmation-dialog__remember">
+              <input
+                type="checkbox"
+                checked={rememberChoice}
+                onChange={(event) => setRememberChoice(event.target.checked)}
+              />
+              <span>Remember this choice for the {config.name} profile on this browser.</span>
+            </label>
+            <p className="data-confirmation-dialog__note" id="data-confirmation-dialog-note">
+              You’ll be asked again if this profile’s transfer cap increases.
+            </p>
+            <div className="data-confirmation-dialog__actions jl-dialog__actions jl-actions">
+              <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary"
+                onClick={confirmStart}
+              >
+                Run {config.name.toLowerCase()} test
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </dialog>
     </section>
   );
