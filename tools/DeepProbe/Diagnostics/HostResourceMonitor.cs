@@ -73,8 +73,7 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
         var tcpRetransmitted = NonNegative(tcpAfter.SegmentsResent - tcpBefore.SegmentsResent);
         double? retransmissionPercent = tcpSent == 0 ? null : tcpRetransmitted / (double)tcpSent * 100;
         var memoryInfo = GC.GetGCMemoryInfo();
-        var potentialBottleneck = cpuPercent >= 85
-            || retransmissionPercent >= 1
+        var potentialClientBottleneck = cpuPercent >= 85
             || deltas.Any(item =>
                 item.IncomingErrors > 0
                 || item.OutgoingErrors > 0
@@ -86,7 +85,7 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
             managedMemoryBefore,
             GC.GetTotalMemory(false),
             deltas,
-            potentialBottleneck,
+            potentialClientBottleneck,
             tcpSent,
             tcpRetransmitted,
             retransmissionPercent,
