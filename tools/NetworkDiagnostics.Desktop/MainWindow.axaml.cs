@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     private readonly ActiveRunSession activeRunSession = new();
     private readonly Dictionary<WorkspaceKind, NavigationEntry> lastWorkspaceEntries = new();
     private readonly ReportStore reportStore;
+    private CancellationTokenSource? runCancellation => activeRunSession.CancellationSource;
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
     private WorkbenchShell? workbenchShell;
