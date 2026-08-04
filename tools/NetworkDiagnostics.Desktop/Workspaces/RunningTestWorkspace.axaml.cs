@@ -59,7 +59,7 @@ public sealed partial class RunningTestWorkspace : UserControl
             {
                 Width = 8,
                 Height = 8,
-                CornerRadius = new CornerRadius(4),
+                CornerRadius = new Avalonia.CornerRadius(4),
                 Background = Brush.Parse(status switch
                 {
                     "Complete" => "#C77E68",
