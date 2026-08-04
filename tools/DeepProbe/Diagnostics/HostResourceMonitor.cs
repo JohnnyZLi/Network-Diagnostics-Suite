@@ -11,6 +11,7 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
     private readonly TimeSpan processorTimeAtStart;
     private readonly long managedMemoryBefore;
     private readonly IReadOnlyDictionary<string, InterfaceCounterSnapshot> interfaceBefore;
+    private readonly TcpCounterSnapshot tcpBefore;
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task sampleTask;
     private readonly bool includeLocalIdentifiers;
@@ -27,6 +28,7 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
         processorTimeAtStart = process.TotalProcessorTime;
         managedMemoryBefore = GC.GetTotalMemory(false);
         interfaceBefore = CaptureInterfaceCounters();
+        tcpBefore = CaptureTcpCounters();
         peakWorkingSet = process.WorkingSet64;
         sampleTask = Task.Run(SampleLoopAsync);
     }
@@ -66,18 +68,30 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
                 NonNegative(current.OutgoingDiscards - before.OutgoingDiscards)));
         }
 
-        var potentialBottleneck = cpuPercent >= 85 || deltas.Any(item =>
-            item.IncomingErrors > 0
-            || item.OutgoingErrors > 0
-            || item.IncomingDiscards > 0
-            || item.OutgoingDiscards > 0);
+        var tcpAfter = CaptureTcpCounters();
+        var tcpSent = NonNegative(tcpAfter.SegmentsSent - tcpBefore.SegmentsSent);
+        var tcpRetransmitted = NonNegative(tcpAfter.SegmentsResent - tcpBefore.SegmentsResent);
+        var retransmissionPercent = tcpSent == 0 ? null : tcpRetransmitted / (double)tcpSent * 100;
+        var memoryInfo = GC.GetGCMemoryInfo();
+        var potentialBottleneck = cpuPercent >= 85
+            || retransmissionPercent >= 1
+            || deltas.Any(item =>
+                item.IncomingErrors > 0
+                || item.OutgoingErrors > 0
+                || item.IncomingDiscards > 0
+                || item.OutgoingDiscards > 0);
         return new HostResourceReport(
             cpuPercent,
             peakWorkingSet,
             managedMemoryBefore,
             GC.GetTotalMemory(false),
             deltas,
-            potentialBottleneck);
+            potentialBottleneck,
+            tcpSent,
+            tcpRetransmitted,
+            retransmissionPercent,
+            memoryInfo.MemoryLoadBytes,
+            memoryInfo.HighMemoryLoadThresholdBytes);
     }
 
     public async ValueTask DisposeAsync()
@@ -175,6 +189,32 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
         return result;
     }
 
+    private static TcpCounterSnapshot CaptureTcpCounters()
+    {
+        try
+        {
+            var properties = IPGlobalProperties.GetIPGlobalProperties();
+            var ipv4 = properties.GetTcpIPv4Statistics();
+            long sent = ipv4.SegmentsSent;
+            long resent = ipv4.SegmentsResent;
+            try
+            {
+                var ipv6 = properties.GetTcpIPv6Statistics();
+                sent += ipv6.SegmentsSent;
+                resent += ipv6.SegmentsResent;
+            }
+            catch (Exception error) when (error is NetworkInformationException or PlatformNotSupportedException)
+            {
+                // IPv4 statistics remain useful when IPv6 counters are unavailable.
+            }
+            return new TcpCounterSnapshot(sent, resent);
+        }
+        catch (Exception error) when (error is NetworkInformationException or PlatformNotSupportedException)
+        {
+            return new TcpCounterSnapshot(0, 0);
+        }
+    }
+
     private static long NonNegative(long value) => Math.Max(0, value);
 
     private sealed record InterfaceCounterSnapshot(
@@ -186,4 +226,6 @@ internal sealed class HostResourceMonitor : IAsyncDisposable
         long OutgoingErrors,
         long IncomingDiscards,
         long OutgoingDiscards);
+
+    private sealed record TcpCounterSnapshot(long SegmentsSent, long SegmentsResent);
 }
