@@ -32,26 +32,38 @@ internal sealed class LoadedPathLatencyCollector : IAsyncDisposable
     public static async Task<LoadedPathLatencyCollector> CreateAsync(
         Uri origin,
         string? gatewayAddress,
+        bool includeLocalIdentifiers,
         CancellationToken cancellationToken)
     {
-        var endpointAddresses = await Dns.GetHostAddressesAsync(origin.Host, cancellationToken);
-        var endpoint = endpointAddresses.FirstOrDefault(item => item.AddressFamily == AddressFamily.InterNetwork)
-            ?? endpointAddresses.FirstOrDefault();
-        var targets = new List<LatencyTarget>();
-        if (IPAddress.TryParse(gatewayAddress, out var gateway))
+        try
         {
-            targets.Add(new LatencyTarget("gateway", "Default gateway", gateway));
-        }
-        if (endpoint is not null)
-        {
-            var firstPublicHop = await DiscoverFirstPublicHopAsync(endpoint, cancellationToken);
-            if (firstPublicHop is not null && !firstPublicHop.Equals(endpoint))
+            var endpointAddresses = await Dns.GetHostAddressesAsync(origin.Host, cancellationToken);
+            var endpoint = endpointAddresses.FirstOrDefault(item => item.AddressFamily == AddressFamily.InterNetwork)
+                ?? endpointAddresses.FirstOrDefault();
+            var targets = new List<LatencyTarget>();
+            if (IPAddress.TryParse(gatewayAddress, out var gateway))
             {
-                targets.Add(new LatencyTarget("first-public-hop", "First responsive public hop", firstPublicHop));
+                targets.Add(new LatencyTarget("gateway", "Default gateway", gateway, includeLocalIdentifiers));
             }
-            targets.Add(new LatencyTarget("endpoint", "Measurement endpoint", endpoint));
+            if (endpoint is not null)
+            {
+                var firstPublicHop = await DiscoverFirstPublicHopAsync(endpoint, cancellationToken);
+                if (firstPublicHop is not null && !firstPublicHop.Equals(endpoint))
+                {
+                    targets.Add(new LatencyTarget("first-public-hop", "First responsive public hop", firstPublicHop, true));
+                }
+                targets.Add(new LatencyTarget("endpoint", "Measurement endpoint", endpoint, true));
+            }
+            return new LoadedPathLatencyCollector(targets);
         }
-        return new LoadedPathLatencyCollector(targets);
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return new LoadedPathLatencyCollector([]);
+        }
     }
 
     public void Start()
@@ -86,7 +98,7 @@ internal sealed class LoadedPathLatencyCollector : IAsyncDisposable
         var reports = targets.Select(target => new LoadedPathTargetReport(
             target.Id,
             target.Label,
-            target.Address.ToString(),
+            target.ExposeAddress ? target.Address.ToString() : null,
             Statistics.Summarize(samples[target.Id]["idle"]),
             Statistics.Summarize(samples[target.Id]["download"]),
             Statistics.Summarize(samples[target.Id]["upload"]))).ToArray();
@@ -119,80 +131,7 @@ internal sealed class LoadedPathLatencyCollector : IAsyncDisposable
         cancellation.Dispose();
     }
 
-    private async Task CollectLoopAsync()
-    {
-        while (!cancellation.IsCancellationRequested)
-        {
-            var activePhase = Volatile.Read(ref phase);
-            var results = await Task.WhenAll(targets.Select(target => ProbeAsync(target, cancellation.Token)));
-            for (var index = 0; index < targets.Count; index++)
-            {
-                samples[targets[index].Id][activePhase].Add(results[index]);
-            }
-            await Task.Delay(120, cancellation.Token);
-        }
-    }
-
-    private static async Task<double?> ProbeAsync(LatencyTarget target, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var ping = new Ping();
-            var reply = await ping.SendPingAsync(target.Address, 1_000, Payload, new PingOptions(64, false))
-                .WaitAsync(cancellationToken);
-            return reply.Status == IPStatus.Success ? reply.RoundtripTime : null;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (PingException)
-        {
-            return null;
-        }
-    }
-
-    private static async Task<IPAddress?> DiscoverFirstPublicHopAsync(
-        IPAddress destination,
-        CancellationToken cancellationToken)
-    {
-        if (destination.AddressFamily != AddressFamily.InterNetwork) return null;
-        using var ping = new Ping();
-        for (var ttl = 2; ttl <= 8; ttl++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                var reply = await ping.SendPingAsync(destination, 1_000, Payload, new PingOptions(ttl, false))
-                    .WaitAsync(cancellationToken);
-                if (reply.Address is null) continue;
-                if (reply.Status == IPStatus.Success) return destination;
-                if (reply.Status == IPStatus.TtlExpired && !IsPrivate(reply.Address)) return reply.Address;
-            }
-            catch (PingException)
-            {
-                // Continue to the next time-to-live value.
-            }
-        }
-        return null;
-    }
-
-    private static bool IsPrivate(IPAddress address)
-    {
-        if (IPAddress.IsLoopback(address) || address.IsIPv6LinkLocal || address.IsIPv6SiteLocal) return true;
-        if (address.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            return (address.GetAddressBytes()[0] & 0xfe) == 0xfc;
-        }
-        var bytes = address.GetAddressBytes();
-        return bytes[0] == 10
-            || bytes[0] == 127
-            || (bytes[0] == 169 && bytes[1] == 254)
-            || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
-            || (bytes[0] == 192 && bytes[1] == 168);
-    }
-
-    private static (string? Boundary, string Summary) Interpret(IReadOnlyList<LoadedPathTargetReport> reports)
+    internal static (string? Boundary, string Summary) Interpret(IReadOnlyList<LoadedPathTargetReport> reports)
     {
         static double Increase(LoadedPathTargetReport report)
         {
@@ -223,5 +162,89 @@ internal sealed class LoadedPathLatencyCollector : IAsyncDisposable
         return (null, "No measured path boundary showed a clear loaded-latency increase.");
     }
 
-    private sealed record LatencyTarget(string Id, string Label, IPAddress Address);
+    private async Task CollectLoopAsync()
+    {
+        while (!cancellation.IsCancellationRequested)
+        {
+            try
+            {
+                var activePhase = Volatile.Read(ref phase);
+                var results = await Task.WhenAll(targets.Select(target => ProbeAsync(target, cancellation.Token)));
+                for (var index = 0; index < targets.Count; index++)
+                {
+                    samples[targets[index].Id][activePhase].Add(results[index]);
+                }
+                await Task.Delay(120, cancellation.Token);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
+
+    private static async Task<double?> ProbeAsync(LatencyTarget target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var ping = new Ping();
+            var reply = await ping.SendPingAsync(target.Address, 1_000, Payload, new PingOptions(64, false))
+                .WaitAsync(cancellationToken);
+            return reply.Status == IPStatus.Success ? reply.RoundtripTime : null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private static async Task<IPAddress?> DiscoverFirstPublicHopAsync(
+        IPAddress destination,
+        CancellationToken cancellationToken)
+    {
+        if (destination.AddressFamily != AddressFamily.InterNetwork) return null;
+        using var ping = new Ping();
+        for (var ttl = 2; ttl <= 8; ttl++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var reply = await ping.SendPingAsync(destination, 1_000, Payload, new PingOptions(ttl, false))
+                    .WaitAsync(cancellationToken);
+                if (reply.Address is null) continue;
+                if (reply.Status == IPStatus.Success) return destination;
+                if (reply.Status == IPStatus.TtlExpired && !IsPrivate(reply.Address)) return reply.Address;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // Continue to the next time-to-live value.
+            }
+        }
+        return null;
+    }
+
+    private static bool IsPrivate(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address) || address.IsIPv6LinkLocal || address.IsIPv6SiteLocal) return true;
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return (address.GetAddressBytes()[0] & 0xfe) == 0xfc;
+        }
+        var bytes = address.GetAddressBytes();
+        return bytes[0] == 10
+            || bytes[0] == 127
+            || (bytes[0] == 169 && bytes[1] == 254)
+            || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
+            || (bytes[0] == 192 && bytes[1] == 168);
+    }
+
+    private sealed record LatencyTarget(string Id, string Label, IPAddress Address, bool ExposeAddress);
 }
