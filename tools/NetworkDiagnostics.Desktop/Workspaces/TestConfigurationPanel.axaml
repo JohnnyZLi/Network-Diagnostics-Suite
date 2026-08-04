@@ -14,13 +14,24 @@
       <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
     <Style Selector="Button.secondary">
-      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="MinHeight" Value="36" />
       <Setter Property="Padding" Value="11,0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="#D2D6D6" />
       <Setter Property="BorderBrush" Value="#414748" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
@@ -45,16 +56,16 @@
 
     <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
 
-    <StackPanel Spacing="8">
+    <StackPanel Spacing="10">
       <TextBlock Classes="eyebrow" Text="PREFLIGHT" />
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-        <TextBlock Classes="muted" FontSize="11" Text="Endpoint" />
-        <TextBlock Name="EndpointText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
-      </Grid>
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-        <TextBlock Classes="muted" FontSize="11" Text="Network" />
-        <TextBlock Name="NetworkText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
-      </Grid>
+      <StackPanel Spacing="3">
+        <TextBlock Classes="muted" FontSize="10" Text="Endpoint" />
+        <TextBlock Name="EndpointText" FontSize="11" LineHeight="16" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="3">
+        <TextBlock Classes="muted" FontSize="10" Text="Network" />
+        <TextBlock Name="NetworkText" FontSize="11" LineHeight="16" TextWrapping="Wrap" />
+      </StackPanel>
       <Button Classes="secondary" Content="Refresh preflight" Click="RefreshClicked" HorizontalAlignment="Stretch" />
     </StackPanel>
 
@@ -65,7 +76,7 @@
       <TextBlock Classes="muted" FontSize="11" LineHeight="17"
                  Text="Endpoint candidates, LAN isolation, data approvals, and storage configuration remain in Settings."
                  TextWrapping="Wrap" />
-      <Button Classes="secondary" Content="Open test settings" Click="SettingsClicked" HorizontalAlignment="Stretch" />
+      <Button Classes="secondary" Content="Advanced settings" Click="SettingsClicked" HorizontalAlignment="Stretch" />
     </StackPanel>
   </StackPanel>
 </UserControl>
