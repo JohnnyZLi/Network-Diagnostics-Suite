@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkDiagnostics.Desktop.Workspaces.ComparisonWorkspace"
+             Background="#111415"
+             Foreground="#E9E6E0"
+             FontFamily="Inter">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="Foreground" Value="#C77E68" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.6" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#969B9C" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#171B1C" />
+      <Setter Property="BorderBrush" Value="#303536" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="11,6" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="#C96346" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#D4D7D6" />
+      <Setter Property="BorderBrush" Value="#3B4142" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover">
+      <Setter Property="Background" Value="#222728" />
+      <Setter Property="BorderBrush" Value="#565D5E" />
+    </Style>
+    <Style Selector="Button.pickerRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#E9E6E0" />
+      <Setter Property="BorderBrush" Value="#2B3031" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="12,11" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.pickerRow:pointerover">
+      <Setter Property="Background" Value="#1D2223" />
+    </Style>
+    <Style Selector="Button.pickerRow.selected">
+      <Setter Property="Background" Value="#2A241E" />
+      <Setter Property="BorderBrush" Value="#7D5548" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*" Margin="28,24,28,24" RowSpacing="16">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="eyebrow" Text="COMPARISON WORKSPACE" />
+        <TextBlock FontSize="27" FontWeight="SemiBold" Text="Compare two reports" />
+        <TextBlock Classes="muted"
+                   FontSize="12"
+                   Text="Choose an explicit baseline and candidate. Differences in test context remain visible as cautions." />
+      </StackPanel>
+      <Button Name="ClearButton"
+              Grid.Column="1"
+              Classes="ghost"
+              Content="Clear comparison"
+              VerticalAlignment="Center"
+              IsEnabled="False"
+              Click="ClearClicked" />
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="330,*" ColumnSpacing="14">
+      <Border Grid.Column="0" Classes="card" ClipToBounds="True">
+        <Grid RowDefinitions="Auto,*">
+          <Border Background="#15191A" BorderBrush="#303536" BorderThickness="0,0,0,1" Padding="14,12">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="eyebrow" Text="SAVED REPORTS" />
+              <TextBlock Name="PickerInstructionText"
+                         Classes="muted"
+                         FontSize="11"
+                         Text="Select a baseline first."
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Name="ReportPickerPanel" />
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+            <Border Grid.Column="0" Classes="card" Padding="17">
+              <StackPanel Spacing="7">
+                <TextBlock Classes="eyebrow" Text="BASELINE" />
+                <TextBlock Name="BaselineTitleText" FontSize="17" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
+                <TextBlock Name="BaselineMetaText" Classes="muted" FontSize="11" Text="Choose the report that represents the reference condition." TextWrapping="Wrap" />
+                <Button Name="OpenBaselineButton" Classes="ghost" Content="Open baseline" HorizontalAlignment="Left" IsEnabled="False" Click="OpenBaselineClicked" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card" Padding="17">
+              <StackPanel Spacing="7">
+                <TextBlock Classes="eyebrow" Text="CANDIDATE" />
+                <TextBlock Name="CandidateTitleText" FontSize="17" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
+                <TextBlock Name="CandidateMetaText" Classes="muted" FontSize="11" Text="Choose a second report to measure change." TextWrapping="Wrap" />
+                <Button Name="OpenCandidateButton" Classes="ghost" Content="Open candidate" HorizontalAlignment="Left" IsEnabled="False" Click="OpenCandidateClicked" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Border Name="CompatibilityBanner" Classes="card" Padding="15">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <Border Name="CompatibilityIndicator"
+                      Width="8"
+                      Height="8"
+                      CornerRadius="4"
+                      Background="#777D7E"
+                      VerticalAlignment="Top"
+                      Margin="0,4,0,0" />
+              <StackPanel Grid.Column="1" Spacing="3">
+                <TextBlock Name="CompatibilityTitleText" FontSize="13" FontWeight="SemiBold" Text="Waiting for two reports" />
+                <TextBlock Name="CompatibilityDetailText" Classes="muted" FontSize="11" LineHeight="17" Text="Compatibility checks compare profile, method, endpoint, interface, and transfer ceiling." TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Classes="card" Padding="17">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="eyebrow" Text="SUMMARY" />
+              <TextBlock Name="ComparisonSummaryText"
+                         FontSize="14"
+                         LineHeight="21"
+                         Text="Select two reports to calculate changes."
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card" ClipToBounds="True">
+            <Grid RowDefinitions="38,*">
+              <Border Background="#15191A" BorderBrush="#303536" BorderThickness="0,0,0,1" Padding="14,0">
+                <Grid ColumnDefinitions="*,130,130,190" ColumnSpacing="12">
+                  <TextBlock Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="METRIC" />
+                  <TextBlock Grid.Column="1" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="BASELINE" />
+                  <TextBlock Grid.Column="2" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="CANDIDATE" />
+                  <TextBlock Grid.Column="3" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="CHANGE" />
+                </Grid>
+              </Border>
+              <StackPanel Name="MetricRowsPanel" Grid.Row="1" />
+            </Grid>
+          </Border>
+
+          <Border Classes="card" Padding="17">
+            <StackPanel Spacing="7">
+              <TextBlock Classes="eyebrow" Text="LOCAL TREND" />
+              <TextBlock Name="TrendText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

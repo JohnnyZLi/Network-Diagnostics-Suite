@@ -6,6 +6,7 @@ using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
+using NetworkDiagnostics.Desktop.Workspaces;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -22,7 +23,10 @@ public sealed partial class MainWindow
         NavigateToDestination(new TestResultDestination(Guid.Empty));
     }
 
-    private async void ImportReportClicked(object? sender, RoutedEventArgs eventArgs)
+    private async void ImportReportClicked(object? sender, RoutedEventArgs eventArgs) =>
+        await ImportReportAsync();
+
+    private async Task ImportReportAsync()
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -55,17 +59,24 @@ public sealed partial class MainWindow
 
     private async void ExportReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (currentReport is null) return;
+        if (currentReport is not null)
+        {
+            await ExportReportAsync(currentReport);
+        }
+    }
+
+    private async Task ExportReportAsync(NetworkDiagnosticsReportV2 report)
+    {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export Network Diagnostics report",
-            SuggestedFileName = SuggestedExportName(currentReport),
+            SuggestedFileName = SuggestedExportName(report),
             DefaultExtension = "json",
             FileTypeChoices = [JsonReportFileType]
         });
         var path = file?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(path)) return;
-        await reportStore.ExportAsync(currentReport, path);
+        await reportStore.ExportAsync(report, path);
     }
 
     private void OpenReportsFolderClicked(object? sender, RoutedEventArgs eventArgs) => reportStore.OpenReportsFolder();
@@ -144,7 +155,7 @@ public sealed partial class MainWindow
         SettingsStatusText.Text = "Full and Stress data-use approvals were reset.";
     }
 
-    private async Task RefreshHistoryAsync()
+    private async Task RefreshHistoryAsync(NavigationViewState? viewState = null)
     {
         var reports = await reportStore.ListAsync();
         comparisonBaselineReport ??= currentReport;
@@ -153,104 +164,46 @@ public sealed partial class MainWindow
         ReportsFolderText.Text = reportStore.ReportsDirectory;
         SetHistoryPanelEyebrow("LOCAL REPORTS");
 
-        if (reports.Count == 0)
-        {
-            var empty = new TextBlock
-            {
-                Text = "No saved reports yet. Completed diagnostics and imported schema 2.0 reports will appear here.",
-                TextWrapping = Avalonia.Media.TextWrapping.Wrap
-            };
-            empty.Classes.Add("muted");
-            HistoryListPanel.Children.Add(empty);
-            HistoryFixtureTitle.Text = "No local trend yet";
-            HistoryFixtureDetail.Text = "Save two equivalent reports to compare changes over time.";
-            return;
-        }
-
-        foreach (var stored in reports.Take(12))
-        {
-            var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
-            var profile = new TextBlock
-            {
-                Text = stored.ProfileName.ToUpperInvariant(),
-                FontSize = 11,
-                FontWeight = Avalonia.Media.FontWeight.SemiBold,
-                LetterSpacing = 1.5
-            };
-            profile.Classes.Add("eyebrow");
-            var title = new TextBlock
-            {
-                Text = stored.Label ?? presentation.Verdict,
-                FontSize = 15,
-                FontWeight = Avalonia.Media.FontWeight.SemiBold,
-                TextWrapping = Avalonia.Media.TextWrapping.Wrap
-            };
-            var verdict = new TextBlock
-            {
-                Text = stored.Label is null ? stored.DisplayDate : $"{presentation.Verdict} · {stored.DisplayDate}",
-                FontSize = 12,
-                TextWrapping = Avalonia.Media.TextWrapping.Wrap
-            };
-            verdict.Classes.Add("muted");
-            var contextParts = new List<string> { ReportComparisonService.ContextLabel(stored.Report) };
-            if (stored.Tags.Count > 0) contextParts.Add($"Tags: {string.Join(", ", stored.Tags)}");
-            var context = new TextBlock
-            {
-                Text = string.Join(Environment.NewLine, contextParts),
-                FontSize = 12,
-                TextWrapping = Avalonia.Media.TextWrapping.Wrap
-            };
-            context.Classes.Add("muted");
-            var content = new StackPanel { Spacing = 4 };
-            content.Children.Add(profile);
-            content.Children.Add(title);
-            content.Children.Add(verdict);
-            content.Children.Add(context);
-            var openButton = new Button
-            {
-                Content = content,
-                Tag = stored,
-                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
-            };
-            openButton.Classes.Add("historyItem");
-            openButton.Click += SavedReportClicked;
-            var compareButton = new Button
-            {
-                Content = "Compare",
-                Tag = stored,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
-            };
-            compareButton.Classes.Add("compact");
-            compareButton.Click += CompareReportClicked;
-            var annotationButton = new Button
-            {
-                Content = stored.Label is null && stored.Tags.Count == 0 ? "Add label" : "Edit label",
-                Tag = stored,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
-            };
-            annotationButton.Classes.Add("compact");
-            annotationButton.Click += EditReportAnnotationsClicked;
-            var actions = new StackPanel
-            {
-                Orientation = Avalonia.Layout.Orientation.Horizontal,
-                Spacing = 8
-            };
-            actions.Children.Add(compareButton);
-            actions.Children.Add(annotationButton);
-            var item = new StackPanel { Spacing = 6 };
-            item.Children.Add(openButton);
-            item.Children.Add(actions);
-            HistoryListPanel.Children.Add(item);
-        }
+        ReportBrowserState? browserState = viewState is null
+            ? null
+            : new ReportBrowserState(
+                viewState.SearchQuery ?? string.Empty,
+                viewState.SortKey ?? "date-desc",
+                viewState.SortDescending,
+                viewState.SelectedReportId);
+        reportBrowserWorkspace?.Render(reports, browserState);
 
         var trend = ReportComparisonService.AnalyzeTrend(reports);
-        HistoryFixtureTitle.Text = trend.CompatibleRuns >= 2 ? "Compatible-run trend" : "Trend needs another equivalent run";
-        HistoryFixtureDetail.Text = trend.Summary;
+        HistoryFixtureTitle.Text = reports.Count == 0
+            ? "No local reports"
+            : trend.CompatibleRuns >= 2
+                ? "Compatible-run trend"
+                : "Trend needs another equivalent run";
+        HistoryFixtureDetail.Text = reports.Count == 0
+            ? "Completed diagnostics and imported schema 2.0 reports will appear here."
+            : trend.Summary;
+
+        var legacySummary = new TextBlock
+        {
+            Text = reports.Count == 0
+                ? "No saved reports yet."
+                : $"{reports.Count} reports are available in the redesigned report browser.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+        };
+        legacySummary.Classes.Add("muted");
+        HistoryListPanel.Children.Add(legacySummary);
     }
 
     private void SavedReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (sender is not Button { Tag: StoredReport stored }) return;
+        if (sender is Button { Tag: StoredReport stored })
+        {
+            OpenStoredReport(stored);
+        }
+    }
+
+    private void OpenStoredReport(StoredReport stored)
+    {
         selectedHistoryReport = stored;
         currentReport = stored.Report;
         comparisonBaselineReport = stored.Report;
@@ -262,7 +215,14 @@ public sealed partial class MainWindow
 
     private void CompareReportClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (sender is not Button { Tag: StoredReport stored }) return;
+        if (sender is Button { Tag: StoredReport stored })
+        {
+            CompareStoredReport(stored);
+        }
+    }
+
+    private void CompareStoredReport(StoredReport stored)
+    {
         selectedHistoryReport = stored;
         comparisonBaselineReport = stored.Report;
         NavigateToDestination(new ComparisonDestination(stored.Report.Run.Id));
@@ -270,7 +230,14 @@ public sealed partial class MainWindow
 
     private async void EditReportAnnotationsClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (sender is not Button { Tag: StoredReport stored }) return;
+        if (sender is Button { Tag: StoredReport stored })
+        {
+            await EditReportAnnotationsAsync(stored);
+        }
+    }
+
+    private async Task EditReportAnnotationsAsync(StoredReport stored)
+    {
         var input = await new ReportAnnotationDialog(stored).ShowDialog<ReportAnnotationInput?>(this);
         if (input is null) return;
 
@@ -280,11 +247,26 @@ public sealed partial class MainWindow
             selectedHistoryReport = updated;
             if (currentReport?.Run.Id == updated.Report.Run.Id) currentReport = updated.Report;
             if (comparisonBaselineReport?.Run.Id == updated.Report.Run.Id) comparisonBaselineReport = updated.Report;
-            await RefreshHistoryAsync();
-            HistoryFixtureTitle.Text = string.IsNullOrWhiteSpace(updated.Label) ? "Report annotations updated" : updated.Label;
-            HistoryFixtureDetail.Text = updated.Tags.Count == 0
-                ? "The label was saved inside the local report."
-                : $"Tags: {string.Join(", ", updated.Tags)}";
+            if (comparisonCandidateReport?.Run.Id == updated.Report.Run.Id) comparisonCandidateReport = updated.Report;
+            currentPresentation = currentReport?.Run.Id == updated.Report.Run.Id
+                ? DiagnosticReportPresenter.FromReport(updated.Report)
+                : currentPresentation;
+
+            switch (navigationService.Current?.Destination)
+            {
+                case ReportListDestination:
+                    await RefreshHistoryAsync(navigationService.Current.ViewState with
+                    {
+                        SelectedReportId = updated.Report.Run.Id
+                    });
+                    break;
+                case ReportDetailDestination:
+                    reportDetailWorkspace?.Render(updated, DiagnosticReportPresenter.FromReport(updated.Report));
+                    break;
+                case ComparisonDestination:
+                    await RefreshComparisonHistoryAsync();
+                    break;
+            }
             RefreshWorkbenchChrome();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)

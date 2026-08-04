@@ -8,6 +8,7 @@ using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 using NetworkDiagnostics.Desktop.Shell;
+using NetworkDiagnostics.Desktop.Workspaces;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -28,6 +29,9 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
     private WorkbenchShell? workbenchShell;
+    private ReportBrowserWorkspace? reportBrowserWorkspace;
+    private ReportDetailWorkspace? reportDetailWorkspace;
+    private ComparisonWorkspace? comparisonWorkspace;
     private bool initialized;
     private bool applyingNavigation;
     private TestViewState currentTestState = TestViewState.Setup;

@@ -8,6 +8,7 @@ using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 using NetworkDiagnostics.Desktop.Shell;
+using NetworkDiagnostics.Desktop.Workspaces;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -31,6 +32,35 @@ public sealed partial class MainWindow
 
         legacyRoot.Children.Remove(workspace);
         Grid.SetRow(workspace, 0);
+
+        if (workspace is Grid workspaceGrid)
+        {
+            reportBrowserWorkspace = new ReportBrowserWorkspace { IsVisible = false };
+            reportDetailWorkspace = new ReportDetailWorkspace { IsVisible = false };
+            comparisonWorkspace = new ComparisonWorkspace { IsVisible = false };
+
+            workspaceGrid.Children.Add(reportBrowserWorkspace);
+            workspaceGrid.Children.Add(reportDetailWorkspace);
+            workspaceGrid.Children.Add(comparisonWorkspace);
+
+            reportBrowserWorkspace.ImportRequested += ReportBrowserImportRequested;
+            reportBrowserWorkspace.OpenFolderRequested += ReportBrowserOpenFolderRequested;
+            reportBrowserWorkspace.OpenReportRequested += ReportBrowserOpenReportRequested;
+            reportBrowserWorkspace.CompareReportRequested += ReportBrowserCompareReportRequested;
+            reportBrowserWorkspace.EditReportRequested += ReportBrowserEditReportRequested;
+            reportBrowserWorkspace.StateChanged += ReportBrowserStateChanged;
+
+            reportDetailWorkspace.BackRequested += ReportDetailBackRequested;
+            reportDetailWorkspace.CompareRequested += ReportDetailCompareRequested;
+            reportDetailWorkspace.EditRequested += ReportDetailEditRequested;
+            reportDetailWorkspace.ExportRequested += ReportDetailExportRequested;
+
+            comparisonWorkspace.ClearRequested += ComparisonWorkspaceClearRequested;
+            comparisonWorkspace.BaselineRequested += ComparisonWorkspaceBaselineRequested;
+            comparisonWorkspace.CandidateRequested += ComparisonWorkspaceCandidateRequested;
+            comparisonWorkspace.OpenReportRequested += ComparisonWorkspaceOpenReportRequested;
+            comparisonWorkspace.EditReportRequested += ComparisonWorkspaceEditReportRequested;
+        }
 
         workbenchShell = new WorkbenchShell
         {
@@ -152,8 +182,8 @@ public sealed partial class MainWindow
                     break;
 
                 case ReportListDestination:
-                    await RefreshHistoryAsync();
-                    ShowArea(DesktopArea.History);
+                    await RefreshHistoryAsync(eventArgs.Current.ViewState);
+                    ShowWorkspaceSurface(reportBrowserWorkspace);
                     break;
 
                 case ReportDetailDestination detail:
@@ -162,15 +192,18 @@ public sealed partial class MainWindow
                         navigationService.Navigate(new ReportListDestination(), replaceCurrent: true);
                         return;
                     }
-                    ShowArea(DesktopArea.Test);
-                    ShowTestState(TestViewState.Results);
+                    if (selectedHistoryReport is not null)
+                    {
+                        reportDetailWorkspace?.Render(selectedHistoryReport, currentPresentation);
+                    }
+                    ShowWorkspaceSurface(reportDetailWorkspace);
                     break;
 
                 case ComparisonDestination comparison:
                     comparisonBaselineId = comparison.BaselineId;
                     comparisonCandidateId = comparison.CandidateId;
                     await RefreshComparisonHistoryAsync();
-                    ShowArea(DesktopArea.History);
+                    ShowWorkspaceSurface(comparisonWorkspace);
                     break;
 
                 case SettingsDestination:
@@ -189,8 +222,11 @@ public sealed partial class MainWindow
 
     private async Task<bool> LoadReportForNavigationAsync(Guid reportId)
     {
-        if (currentReport?.Run.Id == reportId)
+        if (selectedHistoryReport?.Report.Run.Id == reportId)
         {
+            currentReport = selectedHistoryReport.Report;
+            activeProfile = selectedHistoryReport.Report.Run.Profile;
+            currentPresentation = DiagnosticReportPresenter.FromReport(selectedHistoryReport.Report);
             return true;
         }
 
@@ -291,28 +327,40 @@ public sealed partial class MainWindow
         navigationService.UpdateCurrentState(CaptureCurrentViewState());
     }
 
-    private NavigationViewState CaptureCurrentViewState() => new(
-        SelectedReportId: selectedHistoryReport?.Report.Run.Id,
-        ResultSection: navigationService.Current?.Destination switch
+    private NavigationViewState CaptureCurrentViewState()
+    {
+        var inspectorOpen = workbenchShell?.InspectorOpen ?? true;
+        if (navigationService.Current?.Destination is ReportListDestination
+            && reportBrowserWorkspace is not null)
         {
-            TestResultDestination result => result.Section,
-            ReportDetailDestination detail => detail.Section,
-            _ => null
-        },
-        InspectorOpen: workbenchShell?.InspectorOpen ?? true);
+            var browserState = reportBrowserWorkspace.CaptureState();
+            return new NavigationViewState(
+                SearchQuery: browserState.SearchQuery,
+                SortKey: browserState.SortKey,
+                SortDescending: browserState.SortDescending,
+                SelectedReportId: browserState.SelectedReportId,
+                InspectorOpen: inspectorOpen);
+        }
+
+        return new NavigationViewState(
+            SelectedReportId: selectedHistoryReport?.Report.Run.Id,
+            ResultSection: navigationService.Current?.Destination switch
+            {
+                TestResultDestination result => result.Section,
+                ReportDetailDestination detail => detail.Section,
+                _ => null
+            },
+            InspectorOpen: inspectorOpen);
+    }
 
     private void RestoreViewState(NavigationViewState state)
     {
-        if (state.SelectedReportId is { } selectedId
-            && selectedHistoryReport?.Report.Run.Id != selectedId)
-        {
-            selectedHistoryReport = null;
-        }
         workbenchShell?.SetInspectorOpen(state.InspectorOpen);
     }
 
     private void ShowArea(DesktopArea area)
     {
+        HideRedesignedWorkspaces();
         TestArea.IsVisible = area == DesktopArea.Test;
         HistoryArea.IsVisible = area == DesktopArea.History;
         SettingsArea.IsVisible = area == DesktopArea.Settings;
@@ -322,6 +370,22 @@ public sealed partial class MainWindow
         SetActiveState(SettingsNavButton, area == DesktopArea.Settings);
 
         if (area == DesktopArea.Test) ShowTestState(currentTestState);
+    }
+
+    private void ShowWorkspaceSurface(Control? surface)
+    {
+        TestArea.IsVisible = false;
+        HistoryArea.IsVisible = false;
+        SettingsArea.IsVisible = false;
+        HideRedesignedWorkspaces();
+        if (surface is not null) surface.IsVisible = true;
+    }
+
+    private void HideRedesignedWorkspaces()
+    {
+        if (reportBrowserWorkspace is not null) reportBrowserWorkspace.IsVisible = false;
+        if (reportDetailWorkspace is not null) reportDetailWorkspace.IsVisible = false;
+        if (comparisonWorkspace is not null) comparisonWorkspace.IsVisible = false;
     }
 
     private void ShowTestState(TestViewState state)
@@ -363,7 +427,9 @@ public sealed partial class MainWindow
             ? $"{CompactStatusValue(CurrentPhaseText.Text)} · {displayedRunProgress:0}%"
             : navigationService.Current?.Destination.Workspace switch
             {
-                WorkspaceKind.Reports => HistoryCountText.Text ?? "Reports",
+                WorkspaceKind.Reports => reportBrowserWorkspace is null
+                    ? HistoryCountText.Text ?? "Reports"
+                    : $"{reportBrowserWorkspace.VisibleReportCount} reports",
                 WorkspaceKind.Comparisons => comparisonCandidateId is null ? "Choose reports" : "Comparison ready",
                 WorkspaceKind.Settings => "Settings",
                 _ => "Ready"
@@ -392,22 +458,29 @@ public sealed partial class MainWindow
                     CompactStatusValue(CurrentPhaseText.Text));
                 break;
             case TestResultDestination:
+                workbenchShell.SetInspectorContent(
+                    "Test result",
+                    "The active or preview result remains in the Test workspace. Saved reports open in the dedicated report-detail surface.",
+                    currentReport is null ? "Preview" : DiagnosticReportPresenter.ProfileName(currentReport.Run.Profile));
+                break;
             case ReportDetailDestination:
                 workbenchShell.SetInspectorContent(
-                    "Report evidence",
-                    "Metadata, configuration, export, and file actions will live here as the Reports vertical slice replaces the legacy result panel.",
-                    currentReport is null ? "Preview" : DiagnosticReportPresenter.ProfileName(currentReport.Run.Profile));
+                    "Saved report",
+                    selectedHistoryReport is null
+                        ? "The selected report is unavailable."
+                        : ReportComparisonService.ContextLabel(selectedHistoryReport.Report),
+                    selectedHistoryReport?.Label ?? currentPresentation.Label);
                 break;
             case ReportListDestination:
                 workbenchShell.SetInspectorContent(
                     "Report browser",
-                    "Search, sorting, selection, labels, export, deletion, and quick preview will share this persistent list context.",
-                    HistoryCountText.Text);
+                    "Search and sorting are preserved in navigation history. Select a row for report, annotation, and comparison actions.",
+                    reportBrowserWorkspace is null ? "Reports" : $"{reportBrowserWorkspace.VisibleReportCount} visible");
                 break;
             case ComparisonDestination:
                 workbenchShell.SetInspectorContent(
                     "Comparison context",
-                    "Baseline and candidate remain explicit. Compatibility warnings are evidence, not blockers.",
+                    "Baseline and candidate remain explicit. Context differences produce cautions instead of silently invalidating the comparison.",
                     comparisonCandidateId is null ? "Select two reports" : "Baseline and candidate selected");
                 break;
             case SettingsDestination settingsDestination:
