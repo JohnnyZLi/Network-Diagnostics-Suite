@@ -40,8 +40,8 @@ public sealed partial class MainWindow
 
         settingsWorkspace.Render(new SettingsWorkspaceModel(
             currentSection,
-            ProfileSelector.SelectedIndex,
-            MethodSelector.SelectedIndex,
+            selectedProfileIndex,
+            selectedMethodIndex,
             interfaceLabels,
             Math.Max(0, InterfaceSelector.SelectedIndex),
             settings.IncludeLocalIdentifiers,
