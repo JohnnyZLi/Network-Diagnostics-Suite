@@ -30,11 +30,9 @@ public sealed partial class MainWindow
         var cancellation = new CancellationTokenSource();
         preflightCancellation = cancellation;
 
-        preflightStatus = "Checking endpoint candidates, network metadata, and HTTP/3…";
         preflightNetwork = "Reading network…";
         preflightEndpoint = "Selecting endpoint…";
         preflightInterface = "Resolving interface…";
-        preflightHttp3 = "Testing protocol…";
         SyncPreflightPresentation();
         try
         {
@@ -53,13 +51,11 @@ public sealed partial class MainWindow
         catch (Exception error)
         {
             if (cancellation.IsCancellationRequested) return;
-            preflightStatus = "Pre-test path check unavailable. Running a diagnostic will retry.";
             preflightNetwork = "Not measured";
             preflightEndpoint = error.Message;
             preflightInterface = settings.InterfaceId is null
                 ? "Automatic system routing"
                 : "Selected interface unavailable";
-            preflightHttp3 = "Not measured";
             SyncPreflightPresentation();
         }
         finally
@@ -73,7 +69,6 @@ public sealed partial class MainWindow
     {
         var endpoint = measurement.SelectedEndpoint;
         var candidates = measurement.EndpointCandidates.Count;
-        preflightStatus = "Ready. This path information was measured before the test starts.";
         preflightEndpoint = $"{endpoint.Name} · {endpoint.Provider} · {endpoint.PreflightLatencyMs?.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) ?? "—"} ms · {candidates} candidate{(candidates == 1 ? string.Empty : "s")}";
         var network = measurement.Network;
         preflightNetwork = network is null
@@ -90,12 +85,6 @@ public sealed partial class MainWindow
         preflightInterface = measurement.SelectedInterface is null
             ? "Automatic system routing"
             : $"{measurement.SelectedInterface.Name} · {measurement.SelectedInterface.Type}{(measurement.SelectedInterface.LinkSpeedMbps is null ? string.Empty : $" · {measurement.SelectedInterface.LinkSpeedMbps:N0} Mbps")}";
-        preflightHttp3 = measurement.Http3 switch
-        {
-            { Supported: true } http3 => $"Available · {http3.NegotiatedProtocol} · {http3.DurationMs:0.0} ms",
-            { Attempted: true } http3 => $"Not available · {http3.Error ?? "exact-version request failed"}",
-            _ => "Not measured"
-        };
         SyncPreflightPresentation();
     }
 
