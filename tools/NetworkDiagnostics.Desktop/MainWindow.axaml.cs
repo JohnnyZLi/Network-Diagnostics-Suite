@@ -43,6 +43,10 @@ public sealed partial class MainWindow : Window
     private bool applyingNavigation;
     private int selectedProfileIndex;
     private int selectedMethodIndex;
+    private int selectedInterfaceIndex;
+    private int fixtureIndex;
+    private int savedReportCount;
+    private bool lanServerRunning;
     private TestViewState currentTestState = TestViewState.Setup;
     private ConnectionCheckPresentation currentPresentationValue = ConnectionCheckFixtures.All[0];
     private ConnectionCheckPresentation currentPresentation
@@ -61,6 +65,7 @@ public sealed partial class MainWindow : Window
     private TestProfileId activeProfile = TestProfileId.ConnectionCheck;
     private TransferMethod activeMethod = TransferMethod.Compare;
     private IReadOnlyList<NetworkInterfaceChoice> interfaceChoices = [];
+    private IReadOnlyList<string> interfaceLabels = ["Automatic system routing"];
     private double displayedRunProgress;
     private Guid activeRunNavigationId = Guid.NewGuid();
     private string profileQuestion = "Is the connection working normally?";
@@ -70,6 +75,18 @@ public sealed partial class MainWindow : Window
     private string transferCap = "—";
     private string confirmation = "Not required";
     private string profileAvailability = "Connection Check runs the real native engine and saves its report locally when complete.";
+    private string preflightStatus = "Checking the path…";
+    private string preflightNetwork = string.Empty;
+    private string preflightEndpoint = string.Empty;
+    private string preflightInterface = "Automatic system routing";
+    private string preflightHttp3 = string.Empty;
+    private string testOriginsText = string.Empty;
+    private string lanTargetText = string.Empty;
+    private string lanPortText = "8765";
+    private string lanDurationText = "8";
+    private string lanConnectionsText = "4";
+    private string lanServerStatus = "Server stopped.";
+    private string settingsStatus = string.Empty;
 
     public MainWindow()
     {
@@ -77,7 +94,6 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         InstallTestWorkspace();
         InstallWorkbenchShell();
-        FixtureSelector.SelectedIndex = 0;
         initialized = true;
         RenderProfileSelection();
         RenderMethodSelection();
@@ -97,13 +113,12 @@ public sealed partial class MainWindow : Window
         reportStore.Configure(settings.ReportDirectory);
         selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
         selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
-        IncludeIdentifiersCheckBox.IsChecked = settings.IncludeLocalIdentifiers;
-        TestOriginTextBox.Text = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
-        LanTargetTextBox.Text = settings.LanTarget ?? string.Empty;
-        LanPortTextBox.Text = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        LanDurationTextBox.Text = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        LanConnectionsTextBox.Text = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        PopulateInterfaceSelector();
+        testOriginsText = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
+        lanTargetText = settings.LanTarget ?? string.Empty;
+        lanPortText = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        lanDurationText = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        lanConnectionsText = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        PopulateInterfaceChoices();
         initialized = true;
         RenderProfileSelection();
         RenderMethodSelection();
@@ -123,25 +138,24 @@ public sealed partial class MainWindow : Window
         lanServerCancellation?.Cancel();
     }
 
-    private void PopulateInterfaceSelector()
+    private void PopulateInterfaceChoices()
     {
         interfaceChoices = diagnosticRunService.ListInterfaces();
-        InterfaceSelector.Items.Clear();
-        InterfaceSelector.Items.Add(new ComboBoxItem { Content = "Automatic system routing", Tag = null });
-        foreach (var choice in interfaceChoices)
-        {
-            var speed = choice.LinkSpeedMbps is null ? string.Empty : $" · {choice.LinkSpeedMbps:N0} Mbps";
-            InterfaceSelector.Items.Add(new ComboBoxItem
+        interfaceLabels = new[] { "Automatic system routing" }
+            .Concat(interfaceChoices.Select(choice =>
             {
-                Content = $"{choice.Name} · {choice.Type}{speed}",
-                Tag = choice.Id
-            });
-        }
-        var selectedIndex = interfaceChoices
+                var speed = choice.LinkSpeedMbps is null ? string.Empty : $" · {choice.LinkSpeedMbps:N0} Mbps";
+                return $"{choice.Name} · {choice.Type}{speed}";
+            }))
+            .ToArray();
+        selectedInterfaceIndex = interfaceChoices
             .Select((choice, index) => new { choice, index })
             .Where(item => string.Equals(item.choice.Id, settings.InterfaceId, StringComparison.Ordinal))
             .Select(item => item.index + 1)
             .FirstOrDefault();
-        InterfaceSelector.SelectedIndex = selectedIndex;
     }
+
+    private string? SelectedInterfaceId() => selectedInterfaceIndex <= 0
+        ? null
+        : interfaceChoices.ElementAtOrDefault(selectedInterfaceIndex - 1)?.Id;
 }
