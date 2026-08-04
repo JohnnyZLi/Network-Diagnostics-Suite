@@ -1,4 +1,5 @@
 using NetworkDiagnostics.Desktop.Navigation;
+using NetworkDiagnostics.Desktop.Services;
 using NetworkDiagnostics.Desktop.Workspaces;
 
 namespace NetworkDiagnostics.Desktop;
