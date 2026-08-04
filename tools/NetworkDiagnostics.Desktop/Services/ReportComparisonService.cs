@@ -40,8 +40,12 @@ public static class ReportComparisonService
         AddMetric(metrics, "upload-loaded", "Upload added latency", baseline.InternetTransfer?.UploadLatency.IncreaseMs, candidate.InternetTransfer?.UploadLatency.IncreaseMs, "ms", lowerIsBetter: true);
         AddMetric(metrics, "gateway", "Gateway latency", baseline.DeepDiagnostics?.GatewayPing?.Statistics.MedianMs, candidate.DeepDiagnostics?.GatewayPing?.Statistics.MedianMs, "ms", lowerIsBetter: true);
         AddMetric(metrics, "dns", "Fastest DNS", FastestDns(baseline), FastestDns(candidate), "ms", lowerIsBetter: true);
+        AddMetric(metrics, "dual-dns", "Dual-stack DNS", baseline.DualStack?.DnsResolutionMs, candidate.DualStack?.DnsResolutionMs, "ms", lowerIsBetter: true);
+        AddMetric(metrics, "ipv4-http", "IPv4 endpoint response", baseline.DualStack?.Ipv4.HttpResponseMs, candidate.DualStack?.Ipv4.HttpResponseMs, "ms", lowerIsBetter: true);
+        AddMetric(metrics, "ipv6-http", "IPv6 endpoint response", baseline.DualStack?.Ipv6.HttpResponseMs, candidate.DualStack?.Ipv6.HttpResponseMs, "ms", lowerIsBetter: true);
         AddMetric(metrics, "wifi", "Wi-Fi signal", baseline.DeepDiagnostics?.Wifi?.SignalPercent, candidate.DeepDiagnostics?.Wifi?.SignalPercent, "%");
         AddMetric(metrics, "process-cpu", "Diagnostic process CPU", baseline.HostResources?.ProcessCpuPercent, candidate.HostResources?.ProcessCpuPercent, "%", lowerIsBetter: true);
+        AddMetric(metrics, "tcp-retransmission", "TCP retransmission share", baseline.HostResources?.TcpRetransmissionPercent, candidate.HostResources?.TcpRetransmissionPercent, "%", lowerIsBetter: true);
 
         var significant = metrics
             .Where(item => item.NumericChange is { } change && Math.Abs(change) >= SignificantThreshold(item.Id))
@@ -160,9 +164,9 @@ public static class ReportComparisonService
     private static double SignificantThreshold(string id) => id switch
     {
         "download" or "upload" => 10,
-        "idle-latency" or "gateway" or "dns" => 5,
-        "download-loaded" or "upload-loaded" => 15,
-        "request-loss" => 1,
+        "idle-latency" or "gateway" or "dns" or "dual-dns" => 5,
+        "download-loaded" or "upload-loaded" or "ipv4-http" or "ipv6-http" => 15,
+        "request-loss" or "tcp-retransmission" => 1,
         "wifi" => 10,
         "process-cpu" => 20,
         _ => double.MaxValue
