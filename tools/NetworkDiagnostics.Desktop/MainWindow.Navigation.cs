@@ -358,7 +358,7 @@ public sealed partial class MainWindow
         var interfaceLabel = CompactStatusValue(PreflightInterfaceText.Text);
         var endpointLabel = CompactStatusValue(PreflightEndpointText.Text);
         var networkLabel = CompactStatusValue(PreflightNetworkText.Text);
-        var running = currentTestState == TestViewState.Running && runCancellation is not null;
+        var running = runCancellation is not null;
         string activity = running
             ? $"{CompactStatusValue(CurrentPhaseText.Text)} · {displayedRunProgress:0}%"
             : navigationService.Current?.Destination.Workspace switch
