@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { formatBytes } from "../core/format";
 import { TEST_MODES } from "../diagnostics/config";
 import { buildDiagnosticTestPlan } from "../diagnostics/flow-plan";
@@ -109,6 +109,19 @@ export function TestControls({
   const runButtonRef = useRef<HTMLButtonElement | null>(null);
   const restoreRunButtonFocusRef = useRef(true);
 
+  useLayoutEffect(() => {
+    if (!confirmationOpen) return;
+    const dialog = confirmationDialogRef.current;
+    if (!dialog) return;
+
+    if (!dialog.open) dialog.showModal();
+    cancelButtonRef.current?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [confirmationOpen]);
+
   const closeConfirmationDialog = () => {
     confirmationDialogRef.current?.close();
     setConfirmationOpen(false);
@@ -120,16 +133,9 @@ export function TestControls({
       return;
     }
 
-    const dialog = confirmationDialogRef.current;
-    if (dialog && !dialog.open) {
-      setRememberChoice(true);
-      setConfirmationOpen(true);
-      restoreRunButtonFocusRef.current = true;
-      window.setTimeout(() => {
-        if (!dialog.open) dialog.showModal();
-        cancelButtonRef.current?.focus();
-      }, 0);
-    }
+    setRememberChoice(true);
+    restoreRunButtonFocusRef.current = true;
+    window.setTimeout(() => setConfirmationOpen(true), 0);
   };
 
   const confirmStart = () => {
@@ -279,22 +285,22 @@ export function TestControls({
         </button>
       )}
 
-      <dialog
-        className={`data-confirmation-dialog data-confirmation-dialog--${mode} jl-dialog`}
-        id="data-confirmation-dialog"
-        ref={confirmationDialogRef}
-        aria-labelledby="data-confirmation-dialog-title"
-        aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closeConfirmationDialog();
-        }}
-        onClose={() => {
-          setConfirmationOpen(false);
-          if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
-          restoreRunButtonFocusRef.current = true;
-        }}
-      >
-        {confirmationOpen && (
+      {confirmationOpen && (
+        <dialog
+          className={`data-confirmation-dialog data-confirmation-dialog--${mode} jl-dialog`}
+          id="data-confirmation-dialog"
+          ref={confirmationDialogRef}
+          aria-labelledby="data-confirmation-dialog-title"
+          aria-describedby="data-confirmation-dialog-description data-confirmation-dialog-note"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeConfirmationDialog();
+          }}
+          onClose={() => {
+            setConfirmationOpen(false);
+            if (restoreRunButtonFocusRef.current) runButtonRef.current?.focus();
+            restoreRunButtonFocusRef.current = true;
+          }}
+        >
           <div className="data-confirmation-dialog__content jl-dialog__surface">
             <span className="eyebrow">Confirm data use</span>
             <h2 className="jl-dialog__title" id="data-confirmation-dialog-title">Run the {config.name} test?</h2>
@@ -325,8 +331,8 @@ export function TestControls({
               </button>
             </div>
           </div>
-        )}
-      </dialog>
+        </dialog>
+      )}
     </section>
   );
 }
