@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { formatLatency, formatRate } from "./core/format";
 import { clearRecentResults, loadRecentResults, MAX_RECENT_RESULTS, saveRecentResult } from "./core/result-history";
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
@@ -143,10 +144,12 @@ export default function App() {
     controllerRef.current?.abort("new-test");
     const controller = new AbortController();
     controllerRef.current = controller;
-    setRunState("running");
-    setResult(null);
-    setErrorMessage(null);
-    setProgress(INITIAL_PROGRESS);
+    flushSync(() => {
+      setRunState("running");
+      setResult(null);
+      setErrorMessage(null);
+      setProgress(INITIAL_PROGRESS);
+    });
 
     try {
       const nextResult = await runDiagnosticTest({
