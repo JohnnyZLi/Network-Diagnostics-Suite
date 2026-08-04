@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Workspaces;
 
@@ -30,10 +29,6 @@ public sealed partial class MainWindow
     {
         if (settingsWorkspace is null) return;
 
-        var interfaceLabels = InterfaceSelector.Items
-            .OfType<ComboBoxItem>()
-            .Select(item => item.Content?.ToString() ?? "Interface")
-            .ToArray();
         var currentSection = section
             ?? (navigationService.Current?.Destination as SettingsDestination)?.Section
             ?? "General";
@@ -43,19 +38,19 @@ public sealed partial class MainWindow
             selectedProfileIndex,
             selectedMethodIndex,
             interfaceLabels,
-            Math.Max(0, InterfaceSelector.SelectedIndex),
+            selectedInterfaceIndex,
             settings.IncludeLocalIdentifiers,
-            TestOriginTextBox.Text ?? string.Empty,
-            LanTargetTextBox.Text ?? string.Empty,
-            LanPortTextBox.Text ?? settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            LanDurationTextBox.Text ?? settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            LanConnectionsTextBox.Text ?? settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            LanServerStatusText.Text ?? "Server stopped.",
-            StopLanServerButton.IsEnabled,
+            testOriginsText,
+            lanTargetText,
+            lanPortText,
+            lanDurationText,
+            lanConnectionsText,
+            lanServerStatus,
+            lanServerRunning,
             reportStore.ReportsDirectory,
             ApprovalSummary(),
-            SettingsStatusText.Text ?? string.Empty,
-            Math.Max(0, FixtureSelector.SelectedIndex)));
+            settingsStatus,
+            fixtureIndex));
     }
 
     private void SettingsSectionRequested(object? sender, SettingsSectionRequestedEventArgs eventArgs) =>
@@ -67,18 +62,11 @@ public sealed partial class MainWindow
     private void SettingsMethodRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs) =>
         SelectMethod(eventArgs.Index);
 
-    private void SettingsInterfaceRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs)
-    {
-        if (InterfaceSelector.SelectedIndex != eventArgs.Index)
-        {
-            InterfaceSelector.SelectedIndex = eventArgs.Index;
-        }
-        SyncSettingsWorkspace();
-    }
+    private async void SettingsInterfaceRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs) =>
+        await SelectInterfaceAsync(eventArgs.Index);
 
     private async void SettingsIdentifiersChanged(object? sender, SettingsBooleanChangedEventArgs eventArgs)
     {
-        IncludeIdentifiersCheckBox.IsChecked = eventArgs.Value;
         await SaveIdentifiersSettingAsync(eventArgs.Value);
         SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
@@ -100,18 +88,14 @@ public sealed partial class MainWindow
         RefreshWorkbenchChrome();
     }
 
-    private void SettingsStartLanServerRequested(object? sender, EventArgs eventArgs)
+    private async void SettingsStartLanServerRequested(object? sender, EventArgs eventArgs)
     {
         CopyMeasurementSettingsFromWorkspace();
-        StartLanServerClicked(sender, new RoutedEventArgs());
-        SyncSettingsWorkspace("Measurement");
+        await StartLanServerAsync();
     }
 
-    private void SettingsStopLanServerRequested(object? sender, EventArgs eventArgs)
-    {
-        StopLanServerClicked(sender, new RoutedEventArgs());
-        SyncSettingsWorkspace("Measurement");
-    }
+    private void SettingsStopLanServerRequested(object? sender, EventArgs eventArgs) =>
+        StopLanServer();
 
     private async void SettingsResetApprovalsRequested(object? sender, EventArgs eventArgs)
     {
@@ -125,18 +109,18 @@ public sealed partial class MainWindow
 
     private void SettingsPreviewRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs)
     {
-        FixtureSelector.SelectedIndex = eventArgs.Index;
-        PreviewFixtureClicked(sender, new RoutedEventArgs());
+        fixtureIndex = Math.Clamp(eventArgs.Index, 0, ConnectionCheckFixtures.All.Count - 1);
+        PreviewFixture();
     }
 
     private void CopyMeasurementSettingsFromWorkspace()
     {
         if (settingsWorkspace is null) return;
-        TestOriginTextBox.Text = settingsWorkspace.Origins;
-        LanTargetTextBox.Text = settingsWorkspace.LanTarget;
-        LanPortTextBox.Text = settingsWorkspace.LanPort;
-        LanDurationTextBox.Text = settingsWorkspace.LanDuration;
-        LanConnectionsTextBox.Text = settingsWorkspace.LanConnections;
+        testOriginsText = settingsWorkspace.Origins;
+        lanTargetText = settingsWorkspace.LanTarget;
+        lanPortText = settingsWorkspace.LanPort;
+        lanDurationText = settingsWorkspace.LanDuration;
+        lanConnectionsText = settingsWorkspace.LanConnections;
     }
 
     private string ApprovalSummary()
