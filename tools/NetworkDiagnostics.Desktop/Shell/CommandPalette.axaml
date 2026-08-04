@@ -38,15 +38,13 @@
 
   <Grid>
     <Border Width="640"
-            MaxWidth="90%"
             Margin="0,76,0,0"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Background="#171B1C"
             BorderBrush="#414748"
             BorderThickness="1"
-            CornerRadius="12"
-            BoxShadow="0 18 48 0 #A0000000">
+            CornerRadius="12">
       <Grid RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Margin="16,14,16,10" Spacing="4">
           <TextBlock Classes="eyebrow" Text="COMMANDS" />
