@@ -13,22 +13,24 @@ public sealed partial class MainWindow
     private async void RunClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (activeRunSession.Snapshot.IsActive) return;
-        activeProfile = SelectedProfile();
-        activeMethod = SelectedMethod();
-        if (!await ConfirmDataUseAsync(activeProfile, activeMethod)) return;
+        var runProfile = SelectedProfile();
+        var runMethod = SelectedMethod();
+        if (!await ConfirmDataUseAsync(runProfile, runMethod)) return;
 
-        activeRunNavigationId = activeRunSession.Start(activeProfile, activeMethod);
+        activeProfile = runProfile;
+        activeMethod = runMethod;
+        activeRunNavigationId = activeRunSession.Start(runProfile, runMethod);
         currentReport = null;
         ResetRunningState();
-        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(activeProfile).ToUpperInvariant()} / {MethodName(activeMethod).ToUpperInvariant()}";
+        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(runProfile).ToUpperInvariant()} / {MethodName(runMethod).ToUpperInvariant()}";
         ShowTestState(TestViewState.Running);
         var progress = new Progress<NativeRunProgress>(RenderRunProgress);
 
         try
         {
             var report = await diagnosticRunService.RunAsync(
-                activeProfile,
-                activeMethod,
+                runProfile,
+                runMethod,
                 settings,
                 progress,
                 activeRunSession.CancellationToken);
@@ -44,14 +46,14 @@ public sealed partial class MainWindow
         catch (OperationCanceledException)
         {
             activeRunSession.MarkCancelled();
-            currentPresentation = DiagnosticReportPresenter.FromCancellation(activeProfile);
+            currentPresentation = DiagnosticReportPresenter.FromCancellation(runProfile);
             RenderPresentation(currentPresentation);
             PresentRunOutcome(Guid.Empty);
         }
         catch (Exception error)
         {
             activeRunSession.Fail(error);
-            currentPresentation = DiagnosticReportPresenter.FromFailure(activeProfile, error);
+            currentPresentation = DiagnosticReportPresenter.FromFailure(runProfile, error);
             RenderPresentation(currentPresentation);
             PresentRunOutcome(Guid.Empty);
         }
@@ -92,7 +94,7 @@ public sealed partial class MainWindow
             progress.LiveLatencyMs,
             progress.BytesTransferred);
 
-        var deepProfile = activeProfile is TestProfileId.Standard or TestProfileId.Extended;
+        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
         if (progress.Phase == "diagnostics")
         {
             if (displayedRunProgress < 20)
@@ -155,7 +157,7 @@ public sealed partial class MainWindow
         LatencyPhaseStatus.Text = "Waiting";
         DownloadPhaseStatus.Text = "Waiting";
         UploadPhaseStatus.Text = "Waiting";
-        DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
+        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
             ? "Waiting"
             : "Not included";
         SyncTestWorkspace();
@@ -170,7 +172,7 @@ public sealed partial class MainWindow
         LatencyPhaseStatus.Text = "Complete";
         DownloadPhaseStatus.Text = "Complete";
         UploadPhaseStatus.Text = "Complete";
-        DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
+        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
             ? "Complete"
             : "Not included";
         SyncTestWorkspace();
@@ -198,7 +200,7 @@ public sealed partial class MainWindow
 
     private double OverallProgress(NativeRunProgress progress)
     {
-        var deepProfile = activeProfile is TestProfileId.Standard or TestProfileId.Extended;
+        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
         return progress.Phase switch
         {
             "idle" => 8 + progress.Fraction * 17,
