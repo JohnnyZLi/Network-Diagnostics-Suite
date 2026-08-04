@@ -84,7 +84,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="184,*">
+  <Grid Name="SettingsRootGrid" ColumnDefinitions="184,*">
     <Border Grid.Column="0"
             Background="#15191A"
             BorderBrush="#303536"
@@ -107,7 +107,7 @@
     </Border>
 
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <Grid Margin="34,28,34,40" MaxWidth="900" HorizontalAlignment="Center">
+      <Grid Name="SettingsContentContainer" Margin="32,28,32,40" MaxWidth="1040" HorizontalAlignment="Stretch">
         <StackPanel Spacing="20">
           <StackPanel Spacing="6">
             <TextBlock Name="SectionEyebrowText" Classes="eyebrow" Text="GENERAL" />
@@ -116,8 +116,8 @@
           </StackPanel>
 
           <Border Name="GeneralPanel" Classes="panel">
-            <StackPanel Spacing="18">
-              <StackPanel Spacing="7">
+            <Grid Name="GeneralLayoutGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18">
+              <StackPanel Name="GeneralDefaultsSection" Grid.Column="0" Spacing="7">
                 <TextBlock Classes="eyebrow" Text="DEFAULT TEST" />
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
                   <StackPanel Grid.Column="0" Spacing="5">
@@ -141,16 +141,26 @@
                 <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="These selections become the starting point for a new diagnostic. They do not alter a test already in progress." TextWrapping="Wrap" />
               </StackPanel>
 
-              <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+              <Border Name="GeneralInterfaceContainer"
+                      Grid.Column="1"
+                      BorderBrush="#303536"
+                      BorderThickness="1,0,0,0"
+                      Padding="24,0,0,0">
+                <StackPanel Spacing="7">
+                  <TextBlock Classes="eyebrow" Text="NETWORK INTERFACE" />
+                  <ComboBox Name="InterfaceComboBox" SelectionChanged="InterfaceSelectionChanged" />
+                  <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="Automatic follows the system route. Choose a specific adapter when reproducing Wi-Fi, Ethernet, VPN, or interface-specific behavior." TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
 
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="NETWORK INTERFACE" />
-                <ComboBox Name="InterfaceComboBox" SelectionChanged="InterfaceSelectionChanged" />
-                <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="Automatic follows the system route. Choose a specific adapter when reproducing Wi-Fi, Ethernet, VPN, or interface-specific behavior." TextWrapping="Wrap" />
-              </StackPanel>
-
-              <Button Classes="secondary" Content="Refresh connection preflight" Click="RefreshPreflightClicked" HorizontalAlignment="Left" />
-            </StackPanel>
+              <Button Name="RefreshPreflightButton"
+                      Grid.Row="1"
+                      Grid.ColumnSpan="2"
+                      Classes="secondary"
+                      Content="Refresh connection preflight"
+                      Click="RefreshPreflightClicked"
+                      HorizontalAlignment="Left" />
+            </Grid>
           </Border>
 
           <Border Name="MeasurementPanel" Classes="panel" IsVisible="False">
@@ -197,28 +207,38 @@
           </Border>
 
           <Border Name="PrivacyPanel" Classes="panel" IsVisible="False">
-            <StackPanel Spacing="18">
-              <StackPanel Spacing="8">
+            <Grid Name="PrivacyLayoutGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="16">
+              <StackPanel Name="PrivacyReportSection" Grid.Column="0" Spacing="8">
                 <TextBlock Classes="eyebrow" Text="REPORT PRIVACY" />
                 <CheckBox Name="IdentifiersCheckBox" Content="Include local addresses and Wi-Fi network name" Click="IdentifiersClicked" />
                 <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Off by default. Diagnostic measurements remain available while supported local identifiers are omitted from saved reports." TextWrapping="Wrap" />
               </StackPanel>
 
-              <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+              <Border Name="PrivacyApprovalsContainer"
+                      Grid.Column="1"
+                      BorderBrush="#303536"
+                      BorderThickness="1,0,0,0"
+                      Padding="24,0,0,0">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="eyebrow" Text="DATA APPROVALS" />
+                  <TextBlock Name="ApprovalSummaryText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Full and Stress remember approval only for the current transfer ceiling. A higher ceiling automatically asks again." TextWrapping="Wrap" />
+                  <Button Classes="secondary" Content="Reset remembered approvals" Click="ResetApprovalsClicked" HorizontalAlignment="Left" />
+                </StackPanel>
+              </Border>
 
-              <StackPanel Spacing="8">
-                <TextBlock Classes="eyebrow" Text="DATA APPROVALS" />
-                <TextBlock Name="ApprovalSummaryText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Full and Stress remember approval only for the current transfer ceiling. A higher ceiling automatically asks again." TextWrapping="Wrap" />
-                <Button Classes="secondary" Content="Reset remembered approvals" Click="ResetApprovalsClicked" HorizontalAlignment="Left" />
-              </StackPanel>
-              <TextBlock Name="PrivacyStatusText" Classes="muted" FontSize="11" TextWrapping="Wrap" />
-            </StackPanel>
+              <TextBlock Name="PrivacyStatusText"
+                         Grid.Row="1"
+                         Grid.ColumnSpan="2"
+                         Classes="muted"
+                         FontSize="11"
+                         TextWrapping="Wrap" />
+            </Grid>
           </Border>
 
           <Border Name="StoragePanel" Classes="panel" IsVisible="False">
-            <StackPanel Spacing="16">
-              <StackPanel Spacing="7">
+            <Grid Name="StorageLayoutGrid" ColumnDefinitions="*,Auto" ColumnSpacing="24">
+              <StackPanel Name="StorageDetailsSection" Grid.Column="0" Spacing="7">
                 <TextBlock Classes="eyebrow" Text="SAVED REPORTS" />
                 <TextBlock FontSize="15" FontWeight="SemiBold" Text="Local report directory" />
                 <Border Background="#111415" BorderBrush="#303536" BorderThickness="1" CornerRadius="8" Padding="12">
@@ -226,13 +246,17 @@
                 </Border>
                 <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Completed and imported reports remain local and use the shared schema 2.0 JSON format." TextWrapping="Wrap" />
               </StackPanel>
-              <Button Classes="secondary" Content="Open reports folder" Click="OpenReportsFolderClicked" HorizontalAlignment="Left" />
-            </StackPanel>
+
+              <StackPanel Name="StorageActionSection" Grid.Column="1" Width="188" Spacing="9" VerticalAlignment="Bottom">
+                <Button Classes="secondary" Content="Open reports folder" Click="OpenReportsFolderClicked" HorizontalAlignment="Stretch" />
+                <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="Nothing leaves this directory unless you explicitly export or copy it." TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
           </Border>
 
           <Border Name="DeveloperPanel" Classes="panel" IsVisible="False">
-            <StackPanel Spacing="16">
-              <StackPanel Spacing="7">
+            <Grid Name="DeveloperLayoutGrid" ColumnDefinitions="*,Auto" ColumnSpacing="24">
+              <StackPanel Name="DeveloperPreviewSection" Grid.Column="0" Spacing="7">
                 <TextBlock Classes="eyebrow" Text="RESULT PREVIEWS" />
                 <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Preview terminal result states without running the measurement engine. This is intended for UI and presentation validation." TextWrapping="Wrap" />
                 <ComboBox Name="FixtureComboBox">
@@ -243,8 +267,12 @@
                   <ComboBoxItem Content="Failed with partial evidence" />
                 </ComboBox>
               </StackPanel>
-              <Button Classes="secondary" Content="Preview selected result" Click="PreviewClicked" HorizontalAlignment="Left" />
-            </StackPanel>
+
+              <StackPanel Name="DeveloperActionSection" Grid.Column="1" Width="200" Spacing="9" VerticalAlignment="Bottom">
+                <Button Classes="secondary" Content="Preview selected result" Click="PreviewClicked" HorizontalAlignment="Stretch" />
+                <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="Opens the Test result surface without network activity or saving a report." TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
           </Border>
         </StackPanel>
       </Grid>

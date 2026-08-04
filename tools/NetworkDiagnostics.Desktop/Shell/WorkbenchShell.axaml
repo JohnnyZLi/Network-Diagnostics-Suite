@@ -21,8 +21,8 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="CornerRadius" Value="7" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#B9BDBD" />
-      <Setter Property="BorderBrush" Value="#303536" />
+      <Setter Property="Foreground" Value="#C0C4C4" />
+      <Setter Property="BorderBrush" Value="#3A4041" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="FontSize" Value="17" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -31,10 +31,13 @@
     <Style Selector="Button.shellIcon:pointerover">
       <Setter Property="Background" Value="#202526" />
       <Setter Property="Foreground" Value="#F0EDE7" />
-      <Setter Property="BorderBrush" Value="#464C4D" />
+      <Setter Property="BorderBrush" Value="#596061" />
     </Style>
     <Style Selector="Button.shellIcon:disabled">
-      <Setter Property="Opacity" Value="0.35" />
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Background" Value="#141819" />
+      <Setter Property="Foreground" Value="#596061" />
+      <Setter Property="BorderBrush" Value="#282E2F" />
     </Style>
     <Style Selector="Button.shellNav">
       <Setter Property="Height" Value="38" />
@@ -67,10 +70,10 @@
       <Setter Property="BorderBrush" Value="#8D5948" />
     </Style>
     <Style Selector="Button.breadcrumb">
-      <Setter Property="Padding" Value="4,2" />
+      <Setter Property="Padding" Value="5,3" />
       <Setter Property="MinHeight" Value="24" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#A9ADAD" />
+      <Setter Property="Foreground" Value="#C2C6C6" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="5" />
       <Setter Property="FontSize" Value="12" />
@@ -78,6 +81,12 @@
     <Style Selector="Button.breadcrumb:pointerover">
       <Setter Property="Background" Value="#252A2B" />
       <Setter Property="Foreground" Value="#F0EDE7" />
+    </Style>
+    <Style Selector="Button.breadcrumb:disabled">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Background" Value="#1A1F20" />
+      <Setter Property="Foreground" Value="#F0EDE7" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.commandTrigger">
       <Setter Property="MinHeight" Value="30" />
@@ -98,8 +107,8 @@
 
   <Grid RowDefinitions="52,*,30">
     <Border Grid.Row="0"
-            Background="#171B1C"
-            BorderBrush="#303536"
+            Background="#181C1D"
+            BorderBrush="#343A3B"
             BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,*,Auto" Margin="10,0">
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -120,7 +129,7 @@
                       HorizontalScrollBarVisibility="Hidden"
                       VerticalScrollBarVisibility="Disabled"
                       VerticalAlignment="Center">
-          <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="3" />
+          <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="4" />
         </ScrollViewer>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

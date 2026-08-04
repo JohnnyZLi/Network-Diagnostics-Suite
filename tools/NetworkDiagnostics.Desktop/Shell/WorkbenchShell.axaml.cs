@@ -7,6 +7,7 @@ namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell : UserControl
 {
+    private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
     private bool inspectorRequested = true;
 
     public WorkbenchShell()
@@ -62,8 +63,9 @@ public sealed partial class WorkbenchShell : UserControl
         string detail,
         string? selection = null)
     {
-        InspectorTitleText.Text = title;
-        InspectorDetailText.Text = detail;
+        var resolved = ResolveInspectorCopy(title, detail);
+        InspectorTitleText.Text = resolved.Title;
+        InspectorDetailText.Text = resolved.Detail;
         if (!string.IsNullOrWhiteSpace(selection))
         {
             InspectorSelectionText.Text = selection;
@@ -185,7 +187,7 @@ public sealed partial class WorkbenchShell : UserControl
                 {
                     Text = "/",
                     FontSize = 11,
-                    Foreground = Avalonia.Media.Brush.Parse("#666C6D"),
+                    Foreground = Avalonia.Media.Brush.Parse("#858B8C"),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 });
             }
@@ -221,6 +223,33 @@ public sealed partial class WorkbenchShell : UserControl
         {
             button.Classes.Remove("selected");
         }
+    }
+
+    private static (string Title, string Detail) ResolveInspectorCopy(string title, string detail)
+    {
+        if (!string.Equals(detail, GenericSettingsDetail, StringComparison.Ordinal))
+        {
+            return (title, detail);
+        }
+
+        return title switch
+        {
+            "Measurement" => (
+                "Measurement path",
+                "Manage endpoint selection and optional trusted-LAN isolation. Saved changes apply to future diagnostics, not a run already in progress."),
+            "Privacy & data" => (
+                "Privacy controls",
+                "Choose whether saved reports include supported local identifiers and clear remembered approvals when you want higher-data profiles to ask again."),
+            "Storage" => (
+                "Local report storage",
+                "Reports remain in the local application directory until you explicitly export them. Open the folder to inspect or back up the JSON files."),
+            "Developer" => (
+                "Presentation previews",
+                "Preview terminal result states without network activity, changing measurement settings, or saving a diagnostic report."),
+            _ => (
+                "Application defaults",
+                "Set the starting profile, transfer method, and interface for new diagnostics. Existing and active tests keep their own configuration.")
+        };
     }
 
     private static string SelectionLabel(AppDestination destination) => destination switch
