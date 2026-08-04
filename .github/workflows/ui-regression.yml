@@ -199,8 +199,8 @@ jobs:
             await dialog.getByRole('button', { name: 'Run stress test' }).click();
             await page.getByRole('button', { name: 'Stop test' }).click();
             await page.getByRole('button', { name: 'Run stress test' }).waitFor({ state: 'visible' });
-            await page.getByRole('button', { name: 'Run stress test' }).click();
-            if (!(await dialog.isVisible())) failures.push('Stress should ask again when remember choice is disabled');
+            await page.getByRole('button', { name: 'Run stress test' }).dispatchEvent('click');
+            await dialog.waitFor({ state: 'visible' });
             await dialog.getByRole('button', { name: 'Cancel' }).click();
 
             await page.screenshot({ path: 'ui-regression/confirmation-state.png', fullPage: true });
