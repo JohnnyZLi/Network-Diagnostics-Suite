@@ -125,10 +125,10 @@ export function TestControls({
       setRememberChoice(true);
       setConfirmationOpen(true);
       restoreRunButtonFocusRef.current = true;
-      window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
         if (!dialog.open) dialog.showModal();
         cancelButtonRef.current?.focus();
-      });
+      }, 0);
     }
   };
 
