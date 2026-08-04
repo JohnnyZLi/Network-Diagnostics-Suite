@@ -101,6 +101,7 @@ export function TestControls({
   const confirmationMode: ConfirmedTestMode | null = mode === "quick" ? null : mode;
   const [acknowledgedCaps, setAcknowledgedCaps] = useState<ConfirmationRecord>(loadConfirmationRecord);
   const [rememberChoice, setRememberChoice] = useState(true);
+  const [confirmationSubmitted, setConfirmationSubmitted] = useState(false);
   const rememberedCap = confirmationMode ? acknowledgedCaps[confirmationMode] ?? 0 : transferCap;
   const requiresConfirmation = confirmationMode !== null && rememberedCap < transferCap;
   const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
@@ -121,6 +122,7 @@ export function TestControls({
     const dialog = confirmationDialogRef.current;
     if (dialog && !dialog.open) {
       setRememberChoice(true);
+      setConfirmationSubmitted(false);
       restoreRunButtonFocusRef.current = true;
       dialog.showModal();
       cancelButtonRef.current?.focus();
@@ -129,6 +131,7 @@ export function TestControls({
   };
 
   const confirmStart = () => {
+    setConfirmationSubmitted(true);
     if (rememberChoice && confirmationMode) {
       const nextRecord: ConfirmationRecord = {
         ...acknowledgedCaps,
@@ -211,7 +214,6 @@ export function TestControls({
           </dl>
         </div>
       </div>
-
 
       <div className="endpoint-preflight" aria-live="polite">
         <div>
@@ -310,7 +312,12 @@ export function TestControls({
             <button ref={cancelButtonRef} type="button" className="data-confirmation-dialog__button jl-button" onClick={closeConfirmationDialog}>
               Cancel
             </button>
-            <button type="button" className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary" onClick={confirmStart}>
+            <button
+              type="button"
+              className="data-confirmation-dialog__button data-confirmation-dialog__button--primary jl-button jl-button--primary"
+              aria-label={confirmationSubmitted ? `Starting ${config.name.toLowerCase()} test` : undefined}
+              onClick={confirmStart}
+            >
               Run {config.name.toLowerCase()} test
             </button>
           </div>
