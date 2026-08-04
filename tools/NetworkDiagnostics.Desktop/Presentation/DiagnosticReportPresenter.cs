@@ -206,8 +206,58 @@ public static class DiagnosticReportPresenter
             }
             evidence.Add($"Capabilities: {string.Join(", ", measurement.Capabilities)}");
         }
+        if (report.DualStack is { } dualStack)
+        {
+            evidence.Add($"Address-family probe: {dualStack.Status} · preferred {dualStack.PreferredFamily}");
+            evidence.Add($"IPv4: {FamilyEvidence(dualStack.Ipv4)}");
+            evidence.Add($"IPv6: {FamilyEvidence(dualStack.Ipv6)}");
+            if (dualStack.Nat64Suspected) evidence.Add("NAT64/DNS64: suspected from the resolved IPv6 prefix");
+        }
+        if (report.LoadLocalization is { } localization)
+        {
+            evidence.Add($"Loaded path localization: {localization.Status} · {localization.LikelyBoundary ?? "no clear boundary"}");
+            evidence.Add($"Loaded path summary: {localization.Summary}");
+            foreach (var target in localization.Targets)
+            {
+                evidence.Add($"{target.Label}: idle {Milliseconds(target.Idle.MedianMs)} · download {Milliseconds(target.Download.MedianMs)} · upload {Milliseconds(target.Upload.MedianMs)}");
+            }
+        }
+        if (report.NetworkChange is { } networkChange)
+        {
+            evidence.Add($"Network state: {(networkChange.Changed ? "changed during run" : "stable during run")}");
+            evidence.Add($"Captive portal: {(networkChange.CaptivePortalSuspected ? "suspected" : "not detected")}");
+            if (networkChange.Before.Proxy is { } proxy) evidence.Add($"System proxy: {proxy}");
+            if (networkChange.Before.TunnelInterfaces.Count > 0)
+            {
+                evidence.Add($"Tunnel interfaces: {string.Join(", ", networkChange.Before.TunnelInterfaces)}");
+            }
+            foreach (var change in networkChange.Changes) evidence.Add($"Network change: {change}");
+        }
+        if (report.HostResources is { } resources)
+        {
+            evidence.Add($"Diagnostic process CPU: {Percent(resources.ProcessCpuPercent)}");
+            evidence.Add($"Peak working set: {FormatBytes(resources.PeakWorkingSetBytes)}");
+            foreach (var item in resources.Interfaces.Where(HasCounterIssue))
+            {
+                evidence.Add($"{item.Name} counters: errors {item.IncomingErrors + item.OutgoingErrors} · discards {item.IncomingDiscards + item.OutgoingDiscards}");
+            }
+        }
         evidence.Add($"Findings: {findings.Count}");
         return evidence;
+    }
+
+    private static bool HasCounterIssue(InterfaceCounterDelta item) =>
+        item.IncomingErrors > 0
+        || item.OutgoingErrors > 0
+        || item.IncomingDiscards > 0
+        || item.OutgoingDiscards > 0;
+
+    private static string FamilyEvidence(AddressFamilyProbeReport family)
+    {
+        if (!family.AddressAvailable) return "address unavailable";
+        var tcp = family.TcpReachable ? $"TCP {Milliseconds(family.TcpConnectMs)}" : "TCP unreachable";
+        var ping = family.PingAvailable ? $"ICMP {Milliseconds(family.PingMedianMs)}" : "ICMP unavailable";
+        return $"{tcp} · {ping}";
     }
 
     private static string NextHealthyAction(TestProfileId profile) => profile switch
