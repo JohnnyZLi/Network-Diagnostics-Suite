@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkDiagnostics.Desktop.Shell.CommandPalette"
+             IsVisible="False"
+             Background="#B8000000"
+             Foreground="#E9E6E0"
+             FontFamily="Inter">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#969B9B" />
+    </Style>
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="Foreground" Value="#C77E68" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.5" />
+    </Style>
+    <Style Selector="Button.command">
+      <Setter Property="MinHeight" Value="54" />
+      <Setter Property="Padding" Value="12,9" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#E9E6E0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.command:pointerover">
+      <Setter Property="Background" Value="#252A2B" />
+    </Style>
+    <Style Selector="Button.command.selected">
+      <Setter Property="Background" Value="#29231C" />
+    </Style>
+    <Style Selector="Button.command:disabled">
+      <Setter Property="Opacity" Value="0.42" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <Border Width="640"
+            MaxWidth="90%"
+            Margin="0,76,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Background="#171B1C"
+            BorderBrush="#414748"
+            BorderThickness="1"
+            CornerRadius="12"
+            BoxShadow="0 18 48 0 #A0000000">
+      <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <StackPanel Grid.Row="0" Margin="16,14,16,10" Spacing="4">
+          <TextBlock Classes="eyebrow" Text="COMMANDS" />
+          <TextBlock Classes="muted" FontSize="11" Text="Navigate or run an application action" />
+        </StackPanel>
+
+        <Border Grid.Row="1" BorderBrush="#303536" BorderThickness="0,1,0,1" Padding="14,12">
+          <TextBox Name="SearchBox"
+                   MinHeight="42"
+                   Padding="12,9"
+                   Background="#111415"
+                   Foreground="#E9E6E0"
+                   BorderBrush="#414748"
+                   PlaceholderText="Type a command or workspace…"
+                   TextChanged="SearchChanged"
+                   KeyDown="SearchKeyDown" />
+        </Border>
+
+        <ScrollViewer Grid.Row="2" MaxHeight="430" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Name="ResultsPanel" Margin="8" Spacing="2" />
+        </ScrollViewer>
+
+        <Border Grid.Row="3" BorderBrush="#303536" BorderThickness="0,1,0,0" Padding="14,10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <TextBlock Name="ResultCountText" Classes="muted" FontSize="10" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Classes="muted" FontSize="10" Text="↑↓ Select · Enter Run · Esc Close" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
