@@ -55,25 +55,36 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
         var dualStackTask = DualStackProbe.RunAsync(origin, cancellationToken);
         var captivePortalTask = NetworkStateProbe.CheckCaptivePortalAsync(origin, cancellationToken);
         LoadedPathLatencyCollector? localization = null;
-        if (enableLoadLocalization)
+        try
         {
-            localization = await LoadedPathLatencyCollector.CreateAsync(
-                origin,
-                before.GatewayAddress,
-                includeLocalIdentifiers,
-                cancellationToken);
-            localization.Start();
-        }
+            if (enableLoadLocalization)
+            {
+                localization = await LoadedPathLatencyCollector.CreateAsync(
+                    origin,
+                    before.GatewayAddress,
+                    includeLocalIdentifiers,
+                    cancellationToken);
+                localization.Start();
+            }
 
-        return new AdvancedEvidenceSession(
-            origin,
-            interfaceId,
-            includeLocalIdentifiers,
-            before,
-            localization,
-            hostMonitor,
-            dualStackTask,
-            captivePortalTask);
+            return new AdvancedEvidenceSession(
+                origin,
+                interfaceId,
+                includeLocalIdentifiers,
+                before,
+                localization,
+                hostMonitor,
+                dualStackTask,
+                captivePortalTask);
+        }
+        catch
+        {
+            if (localization is not null) await localization.DisposeAsync();
+            await hostMonitor.DisposeAsync();
+            await ObserveAsync(dualStackTask);
+            await ObserveAsync(captivePortalTask);
+            throw;
+        }
     }
 
     public void SetPhase(string phase)
@@ -118,5 +129,17 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
         return localization is null
             ? null
             : await localization.StopAsync(CancellationToken.None);
+    }
+
+    private static async Task ObserveAsync(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch
+        {
+            // The original startup failure remains the exception returned to the caller.
+        }
     }
 }
