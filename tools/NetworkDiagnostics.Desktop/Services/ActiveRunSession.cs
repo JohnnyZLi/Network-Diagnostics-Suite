@@ -59,6 +59,8 @@ public sealed class ActiveRunSession : IDisposable
 
     public CancellationToken CancellationToken => cancellation?.Token ?? CancellationToken.None;
 
+    internal CancellationTokenSource? CancellationSource => cancellation;
+
     public Guid Start(TestProfileId profile, TransferMethod method)
     {
         if (Snapshot.IsActive)
