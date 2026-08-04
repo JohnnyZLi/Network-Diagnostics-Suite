@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkDiagnostics.Desktop.Shell.WorkbenchShell"
+             Background="#111415"
+             Foreground="#E9E6E0"
+             FontFamily="Inter">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.shellMuted">
+      <Setter Property="Foreground" Value="#959A9B" />
+    </Style>
+    <Style Selector="TextBlock.shellEyebrow">
+      <Setter Property="Foreground" Value="#C77E68" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.6" />
+    </Style>
+    <Style Selector="Button.shellIcon">
+      <Setter Property="Width" Value="30" />
+      <Setter Property="Height" Value="30" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#B9BDBD" />
+      <Setter Property="BorderBrush" Value="#303536" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.shellIcon:pointerover">
+      <Setter Property="Background" Value="#202526" />
+      <Setter Property="Foreground" Value="#F0EDE7" />
+      <Setter Property="BorderBrush" Value="#464C4D" />
+    </Style>
+    <Style Selector="Button.shellIcon:disabled">
+      <Setter Property="Opacity" Value="0.35" />
+    </Style>
+    <Style Selector="Button.shellNav">
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#B5B9B9" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.shellNav:pointerover">
+      <Setter Property="Background" Value="#1D2223" />
+      <Setter Property="Foreground" Value="#F0EDE7" />
+    </Style>
+    <Style Selector="Button.shellNav.selected">
+      <Setter Property="Background" Value="#29231C" />
+      <Setter Property="Foreground" Value="#F4F0EA" />
+    </Style>
+    <Style Selector="Button.breadcrumb">
+      <Setter Property="Padding" Value="4,2" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#A9ADAD" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Button.breadcrumb:pointerover">
+      <Setter Property="Background" Value="#252A2B" />
+      <Setter Property="Foreground" Value="#F0EDE7" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="52,*,30">
+    <Border Grid.Row="0"
+            Background="#171B1C"
+            BorderBrush="#303536"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto" Margin="10,0">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button Name="BackButton"
+                  Classes="shellIcon"
+                  Content="‹"
+                  ToolTip.Tip="Back"
+                  Click="BackClicked" />
+          <Button Name="ForwardButton"
+                  Classes="shellIcon"
+                  Content="›"
+                  ToolTip.Tip="Forward"
+                  Click="ForwardClicked" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Column="1"
+                      Margin="14,0"
+                      HorizontalScrollBarVisibility="Hidden"
+                      VerticalScrollBarVisibility="Disabled"
+                      VerticalAlignment="Center">
+          <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="3" />
+        </ScrollViewer>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Name="InspectorToggleButton"
+                  Classes="shellIcon"
+                  Width="78"
+                  FontSize="12"
+                  Content="Inspector"
+                  ToolTip.Tip="Show or hide inspector"
+                  Click="InspectorClicked" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Name="ShellGrid" Grid.Row="1" ColumnDefinitions="220,*,300">
+      <Border Name="SidebarBorder"
+              Grid.Column="0"
+              Background="#15191A"
+              BorderBrush="#303536"
+              BorderThickness="0,0,1,0"
+              Padding="10,12">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <StackPanel Grid.Row="0" Margin="6,2,6,14" Spacing="2">
+            <TextBlock Name="ProductNameText" FontSize="14" FontWeight="SemiBold" Text="Network Diagnostics" />
+            <TextBlock Name="ProductModeText" Classes="shellMuted" FontSize="11" Text="Desktop workbench" />
+          </StackPanel>
+
+          <StackPanel Grid.Row="1" Spacing="3">
+            <Button Name="TestWorkspaceButton" Classes="shellNav selected" Tag="Test" Click="WorkspaceClicked">
+              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold" Text="T" HorizontalAlignment="Center" />
+                <TextBlock Name="TestWorkspaceLabel" Grid.Column="1" Text="Test" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Name="ReportsWorkspaceButton" Classes="shellNav" Tag="Reports" Click="WorkspaceClicked">
+              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold" Text="R" HorizontalAlignment="Center" />
+                <TextBlock Name="ReportsWorkspaceLabel" Grid.Column="1" Text="Reports" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Name="ComparisonsWorkspaceButton" Classes="shellNav" Tag="Comparisons" Click="WorkspaceClicked">
+              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold" Text="C" HorizontalAlignment="Center" />
+                <TextBlock Name="ComparisonsWorkspaceLabel" Grid.Column="1" Text="Comparisons" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Name="SettingsWorkspaceButton" Classes="shellNav" Tag="Settings" Click="WorkspaceClicked">
+              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold" Text="S" HorizontalAlignment="Center" />
+                <TextBlock Name="SettingsWorkspaceLabel" Grid.Column="1" Text="Settings" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </StackPanel>
+
+          <StackPanel Grid.Row="2" Margin="0,18,0,0">
+            <Border Name="ActiveRunPanel"
+                    IsVisible="False"
+                    Background="#1C2021"
+                    BorderBrush="#3C4142"
+                    BorderThickness="1"
+                    CornerRadius="9"
+                    Padding="10">
+              <StackPanel Spacing="6">
+                <TextBlock Classes="shellEyebrow" Text="ACTIVE TEST" />
+                <TextBlock Name="ActiveRunTitleText" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Name="ActiveRunDetailText" Classes="shellMuted" FontSize="11" TextWrapping="Wrap" />
+                <ProgressBar Name="ActiveRunProgress" Minimum="0" Maximum="100" Height="4" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <Border Grid.Row="3"
+                  Margin="0,10,0,0"
+                  BorderBrush="#303536"
+                  BorderThickness="0,1,0,0"
+                  Padding="6,10,6,0">
+            <TextBlock Name="CommandHintText" Classes="shellMuted" FontSize="10" Text="⌘K / Ctrl+K · Commands" />
+          </Border>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Background="#111415">
+        <ContentControl Name="WorkspaceHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      </Border>
+
+      <Border Name="InspectorBorder"
+              Grid.Column="2"
+              Background="#15191A"
+              BorderBrush="#303536"
+              BorderThickness="1,0,0,0"
+              Padding="18,18">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="shellEyebrow" Text="INSPECTOR" />
+            <TextBlock Name="InspectorTitleText" FontSize="16" FontWeight="SemiBold" Text="Test configuration" TextWrapping="Wrap" />
+            <TextBlock Name="InspectorDetailText" Classes="shellMuted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+          </StackPanel>
+          <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+          <StackPanel Spacing="9">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <TextBlock Classes="shellMuted" FontSize="11" Text="Workspace" />
+              <TextBlock Name="InspectorWorkspaceText" Grid.Column="1" FontSize="11" TextAlignment="Right" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <TextBlock Classes="shellMuted" FontSize="11" Text="Selection" />
+              <TextBlock Name="InspectorSelectionText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Background="#15191A"
+            BorderBrush="#303536"
+            BorderThickness="0,1,0,0"
+            Padding="10,0">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="16">
+        <TextBlock Name="StatusInterfaceText" Grid.Column="0" Classes="shellMuted" FontSize="10" VerticalAlignment="Center" Text="Interface · Automatic" />
+        <TextBlock Name="StatusEndpointText" Grid.Column="1" Classes="shellMuted" FontSize="10" VerticalAlignment="Center" Text="Endpoint · Checking" />
+        <TextBlock Name="StatusNetworkText" Grid.Column="2" Classes="shellMuted" FontSize="10" VerticalAlignment="Center" Text="Network · Unknown" />
+        <TextBlock Name="StatusActivityText" Grid.Column="4" Classes="shellMuted" FontSize="10" VerticalAlignment="Center" Text="Ready" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

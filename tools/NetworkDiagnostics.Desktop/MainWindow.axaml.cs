@@ -4,8 +4,10 @@ using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Models;
+using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
+using NetworkDiagnostics.Desktop.Shell;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -19,11 +21,15 @@ public sealed partial class MainWindow : Window
 
     private readonly DiagnosticRunService diagnosticRunService = new();
     private readonly DesktopSettingsStore settingsStore = new();
+    private readonly NavigationService navigationService = new();
+    private readonly Dictionary<WorkspaceKind, NavigationEntry> lastWorkspaceEntries = new();
     private readonly ReportStore reportStore;
     private CancellationTokenSource? runCancellation;
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
+    private WorkbenchShell? workbenchShell;
     private bool initialized;
+    private bool applyingNavigation;
     private TestViewState currentTestState = TestViewState.Setup;
     private ConnectionCheckPresentation currentPresentation = ConnectionCheckFixtures.All[0];
     private DesktopSettings settings = new();
@@ -34,11 +40,13 @@ public sealed partial class MainWindow : Window
     private TransferMethod activeMethod = TransferMethod.Compare;
     private IReadOnlyList<NetworkInterfaceChoice> interfaceChoices = [];
     private double displayedRunProgress;
+    private Guid activeRunNavigationId = Guid.NewGuid();
 
     public MainWindow()
     {
         reportStore = new ReportStore(settingsStore.RootDirectory);
         InitializeComponent();
+        InstallWorkbenchShell();
         ProfileSelector.SelectedIndex = 0;
         MethodSelector.SelectedIndex = 0;
         FixtureSelector.SelectedIndex = 0;
@@ -48,6 +56,7 @@ public sealed partial class MainWindow : Window
         RenderPresentation(currentPresentation);
         ShowArea(DesktopArea.Test);
         ShowTestState(TestViewState.Setup);
+        InitializeNavigation();
         Opened += WindowOpened;
         Closed += WindowClosed;
     }
@@ -72,6 +81,7 @@ public sealed partial class MainWindow : Window
         RenderMethodSelection();
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
+        RefreshWorkbenchChrome();
     }
 
     private void WindowClosed(object? sender, EventArgs eventArgs)

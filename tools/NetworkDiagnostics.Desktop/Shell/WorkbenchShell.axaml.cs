@@ -1,0 +1,224 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using NetworkDiagnostics.Desktop.Navigation;
+
+namespace NetworkDiagnostics.Desktop.Shell;
+
+public sealed partial class WorkbenchShell : UserControl
+{
+    private bool inspectorRequested = true;
+
+    public WorkbenchShell()
+    {
+        InitializeComponent();
+        SizeChanged += ShellSizeChanged;
+    }
+
+    public event EventHandler? BackRequested;
+
+    public event EventHandler? ForwardRequested;
+
+    public event EventHandler<WorkspaceRequestedEventArgs>? WorkspaceRequested;
+
+    public event EventHandler<DestinationRequestedEventArgs>? DestinationRequested;
+
+    public event EventHandler? InspectorVisibilityChanged;
+
+    public object? WorkspaceContent
+    {
+        get => WorkspaceHost.Content;
+        set => WorkspaceHost.Content = value;
+    }
+
+    public bool InspectorOpen => InspectorBorder.IsVisible;
+
+    public void SetNavigation(
+        NavigationEntry entry,
+        bool canGoBack,
+        bool canGoForward)
+    {
+        BackButton.IsEnabled = canGoBack;
+        ForwardButton.IsEnabled = canGoForward;
+        RenderBreadcrumbs(entry.Destination.Breadcrumbs);
+        SelectWorkspace(entry.Destination.Workspace);
+        SetInspectorOpen(entry.ViewState.InspectorOpen);
+
+        InspectorWorkspaceText.Text = entry.Destination.Workspace.ToString();
+        InspectorSelectionText.Text = SelectionLabel(entry.Destination);
+    }
+
+    public void SetInspectorContent(
+        string title,
+        string detail,
+        string? selection = null)
+    {
+        InspectorTitleText.Text = title;
+        InspectorDetailText.Text = detail;
+        if (!string.IsNullOrWhiteSpace(selection))
+        {
+            InspectorSelectionText.Text = selection;
+        }
+    }
+
+    public void SetStatus(
+        string? interfaceLabel,
+        string? endpointLabel,
+        string? networkLabel,
+        string activityLabel)
+    {
+        StatusInterfaceText.Text = $"Interface · {Fallback(interfaceLabel, "Automatic")}";
+        StatusEndpointText.Text = $"Endpoint · {Fallback(endpointLabel, "Checking")}";
+        StatusNetworkText.Text = $"Network · {Fallback(networkLabel, "Unknown")}";
+        StatusActivityText.Text = activityLabel;
+    }
+
+    public void SetActiveRun(
+        bool visible,
+        string title,
+        string detail,
+        double progress)
+    {
+        ActiveRunPanel.IsVisible = visible;
+        ActiveRunTitleText.Text = title;
+        ActiveRunDetailText.Text = detail;
+        ActiveRunProgress.Value = Math.Clamp(progress, 0, 100);
+    }
+
+    public void SetInspectorOpen(bool open)
+    {
+        inspectorRequested = open;
+        ApplyResponsiveLayout(Bounds.Width);
+    }
+
+    private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
+        BackRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ForwardClicked(object? sender, RoutedEventArgs eventArgs) =>
+        ForwardRequested?.Invoke(this, EventArgs.Empty);
+
+    private void WorkspaceClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not Button { Tag: string workspaceName }
+            || !Enum.TryParse<WorkspaceKind>(workspaceName, out var workspace))
+        {
+            return;
+        }
+
+        WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(workspace));
+    }
+
+    private void BreadcrumbClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is Button { Tag: AppDestination destination })
+        {
+            DestinationRequested?.Invoke(this, new DestinationRequestedEventArgs(destination));
+        }
+    }
+
+    private void InspectorClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        inspectorRequested = !InspectorBorder.IsVisible;
+        ApplyResponsiveLayout(Bounds.Width);
+        InspectorVisibilityChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ShellSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyResponsiveLayout(eventArgs.NewSize.Width);
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var compactSidebar = width < 1120;
+        var showInspector = inspectorRequested && width >= 760;
+
+        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 64 : 220);
+        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 300 : 0);
+
+        ProductNameText.IsVisible = !compactSidebar;
+        ProductModeText.IsVisible = !compactSidebar;
+        TestWorkspaceLabel.IsVisible = !compactSidebar;
+        ReportsWorkspaceLabel.IsVisible = !compactSidebar;
+        ComparisonsWorkspaceLabel.IsVisible = !compactSidebar;
+        SettingsWorkspaceLabel.IsVisible = !compactSidebar;
+        CommandHintText.IsVisible = !compactSidebar;
+        ActiveRunTitleText.IsVisible = !compactSidebar;
+        ActiveRunDetailText.IsVisible = !compactSidebar;
+
+        InspectorBorder.IsVisible = showInspector;
+        InspectorToggleButton.Content = showInspector ? "Hide info" : "Inspector";
+    }
+
+    private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
+    {
+        BreadcrumbPanel.Children.Clear();
+
+        for (var index = 0; index < breadcrumbs.Count; index++)
+        {
+            if (index > 0)
+            {
+                BreadcrumbPanel.Children.Add(new TextBlock
+                {
+                    Text = "/",
+                    FontSize = 11,
+                    Foreground = Avalonia.Media.Brush.Parse("#666C6D"),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                });
+            }
+
+            var segment = breadcrumbs[index];
+            var button = new Button
+            {
+                Content = segment.Label,
+                Tag = segment.Destination,
+                IsEnabled = segment.Destination is not null
+            };
+            button.Classes.Add("breadcrumb");
+            button.Click += BreadcrumbClicked;
+            BreadcrumbPanel.Children.Add(button);
+        }
+    }
+
+    private void SelectWorkspace(WorkspaceKind workspace)
+    {
+        SetSelected(TestWorkspaceButton, workspace == WorkspaceKind.Test);
+        SetSelected(ReportsWorkspaceButton, workspace == WorkspaceKind.Reports);
+        SetSelected(ComparisonsWorkspaceButton, workspace == WorkspaceKind.Comparisons);
+        SetSelected(SettingsWorkspaceButton, workspace == WorkspaceKind.Settings);
+    }
+
+    private static void SetSelected(Button button, bool selected)
+    {
+        if (selected)
+        {
+            if (!button.Classes.Contains("selected")) button.Classes.Add("selected");
+        }
+        else
+        {
+            button.Classes.Remove("selected");
+        }
+    }
+
+    private static string SelectionLabel(AppDestination destination) => destination switch
+    {
+        RunningTestDestination running => running.RunId.ToString("N")[..8],
+        TestResultDestination result => result.Section,
+        ReportDetailDestination detail => detail.Section,
+        ComparisonDestination comparison when comparison.BaselineId is not null && comparison.CandidateId is not null => "Two reports",
+        ComparisonDestination comparison when comparison.BaselineId is not null => "Baseline selected",
+        SettingsDestination settings => settings.Section,
+        _ => "None"
+    };
+
+    private static string Fallback(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+}
+
+public sealed class WorkspaceRequestedEventArgs(WorkspaceKind workspace) : EventArgs
+{
+    public WorkspaceKind Workspace { get; } = workspace;
+}
+
+public sealed class DestinationRequestedEventArgs(AppDestination destination) : EventArgs
+{
+    public AppDestination Destination { get; } = destination;
+}

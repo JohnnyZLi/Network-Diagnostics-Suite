@@ -9,6 +9,7 @@ on:
       - "tools/DeepProbe/**"
       - "tools/NetworkDiagnostics.Core/**"
       - "tools/NetworkDiagnostics.Desktop/**"
+      - "tools/NetworkDiagnostics.Desktop.Tests/**"
       - "Directory.Build.*"
       - "global.json"
       - "NuGet.config"
@@ -20,6 +21,7 @@ on:
       - "tools/DeepProbe/**"
       - "tools/NetworkDiagnostics.Core/**"
       - "tools/NetworkDiagnostics.Desktop/**"
+      - "tools/NetworkDiagnostics.Desktop.Tests/**"
       - "Directory.Build.*"
       - "global.json"
       - "NuGet.config"
@@ -73,6 +75,8 @@ jobs:
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
         with:
           dotnet-version: 10.0.x
+      - name: Test desktop navigation
+        run: dotnet test tools/NetworkDiagnostics.Desktop.Tests/NetworkDiagnostics.Desktop.Tests.csproj --configuration Release
       - name: Publish desktop application
         run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/desktop-${{ matrix.rid }}/publish
       - name: Smoke-test desktop bootstrap

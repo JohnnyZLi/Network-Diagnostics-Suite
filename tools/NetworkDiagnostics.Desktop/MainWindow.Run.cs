@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Models;
+using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 
 namespace NetworkDiagnostics.Desktop;
@@ -57,22 +58,23 @@ public sealed partial class MainWindow
             cancellation.Dispose();
             if (ReferenceEquals(runCancellation, cancellation)) runCancellation = null;
             RenderProfileSelection();
+            RefreshWorkbenchChrome();
         }
     }
 
-    private void StopClicked(object? sender, RoutedEventArgs eventArgs) => runCancellation?.Cancel();
-
-    private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs)
+    private void StopClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        ShowArea(DesktopArea.Test);
-        ShowTestState(TestViewState.Setup);
+        runCancellation?.Cancel();
+        RefreshWorkbenchChrome();
     }
+
+    private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs) =>
+        NavigateToDestination(new TestSetupDestination());
 
     private void ChooseQuickClicked(object? sender, RoutedEventArgs eventArgs)
     {
         ProfileSelector.SelectedIndex = 1;
-        ShowArea(DesktopArea.Test);
-        ShowTestState(TestViewState.Setup);
+        NavigateToDestination(new TestSetupDestination());
     }
 
     private void RenderRunProgress(NativeRunProgress progress)
@@ -95,6 +97,7 @@ public sealed partial class MainWindow
                 displayedRunProgress = Math.Min(96, displayedRunProgress + 2.5);
                 RunProgress.Value = displayedRunProgress;
             }
+            RefreshWorkbenchChrome();
             return;
         }
 
@@ -123,6 +126,8 @@ public sealed partial class MainWindow
                 DeepPhaseStatus.Text = deepProfile ? "Waiting" : "Not included";
                 break;
         }
+
+        RefreshWorkbenchChrome();
     }
 
     private void ResetRunningState()
@@ -138,6 +143,7 @@ public sealed partial class MainWindow
         DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
             ? "Waiting"
             : "Not included";
+        RefreshWorkbenchChrome();
     }
 
     private void CompleteRunningState()
@@ -151,6 +157,7 @@ public sealed partial class MainWindow
         DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
             ? "Complete"
             : "Not included";
+        RefreshWorkbenchChrome();
     }
 
     private async Task<bool> ConfirmDataUseAsync(TestProfileId profile, TransferMethod method)
