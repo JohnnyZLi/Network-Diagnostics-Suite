@@ -185,6 +185,112 @@ export interface NativeInternetTransferReport {
   dataUsedBytes: number;
 }
 
+export interface NativeLoadedPathTarget {
+  id: string;
+  label: string;
+  address?: string | null;
+  idle: DeepLatencyStatistics;
+  download: DeepLatencyStatistics;
+  upload: DeepLatencyStatistics;
+}
+
+export interface NativeLoadedPathLocalization {
+  status: string;
+  targets: NativeLoadedPathTarget[];
+  likelyBoundary?: "local-network" | "access-link" | "upstream-path" | string | null;
+  summary: string;
+}
+
+export interface NativeAddressFamilyProbe {
+  family: "IPv4" | "IPv6" | string;
+  addressAvailable: boolean;
+  address?: string | null;
+  pingAvailable: boolean;
+  pingMedianMs?: number | null;
+  tcpReachable: boolean;
+  tcpConnectMs?: number | null;
+  error?: string | null;
+  tlsReachable: boolean;
+  tlsHandshakeMs?: number | null;
+  tlsProtocol?: string | null;
+  applicationProtocol?: string | null;
+  httpReachable: boolean;
+  httpResponseMs?: number | null;
+  httpStatusCode?: number | null;
+}
+
+export interface NativeDualStackReport {
+  ipv4: NativeAddressFamilyProbe;
+  ipv6: NativeAddressFamilyProbe;
+  preferredFamily: "IPv4" | "IPv6" | "none" | string;
+  nat64Suspected: boolean;
+  status: string;
+  dnsResolutionMs?: number | null;
+  ipv4AddressCount: number;
+  ipv6AddressCount: number;
+  parallelConnectWinner?: "IPv4" | "IPv6" | string | null;
+  parallelConnectDifferenceMs?: number | null;
+}
+
+export interface NativeNetworkMetadata {
+  edge?: string | null;
+  network?: string | null;
+  asn?: number | null;
+  protocol?: string | null;
+  tlsVersion?: string | null;
+  ipVersion?: string | null;
+}
+
+export interface NativeNetworkStateSnapshot {
+  interfaceId?: string | null;
+  interfaceName?: string | null;
+  gateway?: string | null;
+  addressFamilies: string[];
+  proxy?: string | null;
+  tunnelInterfaces: string[];
+}
+
+export interface NativeNetworkChangeReport {
+  before: NativeNetworkStateSnapshot;
+  after: NativeNetworkStateSnapshot;
+  changed: boolean;
+  changes: string[];
+  captivePortalSuspected: boolean;
+  publicNetworkBefore?: NativeNetworkMetadata | null;
+  publicNetworkAfter?: NativeNetworkMetadata | null;
+  publicNetworkChanged: boolean;
+}
+
+export interface NativeInterfaceCounterDelta {
+  interfaceId: string;
+  name: string;
+  bytesReceived: number;
+  bytesSent: number;
+  incomingErrors: number;
+  outgoingErrors: number;
+  incomingDiscards: number;
+  outgoingDiscards: number;
+}
+
+export interface NativeHostResourceReport {
+  processCpuPercent: number;
+  peakWorkingSetBytes: number;
+  managedMemoryBeforeBytes: number;
+  managedMemoryAfterBytes: number;
+  interfaces: NativeInterfaceCounterDelta[];
+  potentialClientBottleneck: boolean;
+  tcpSegmentsSent: number;
+  tcpSegmentsRetransmitted: number;
+  tcpRetransmissionPercent?: number | null;
+  systemMemoryLoadBytes?: number | null;
+  highMemoryLoadThresholdBytes?: number | null;
+}
+
+export interface NativeReportAnnotations {
+  label?: string | null;
+  tags: string[];
+}
+
 export interface NativeCombinedReport {
   schemaVersion: "2.0";
   generatedAt: string;
@@ -219,5 +325,10 @@ export interface NativeCombinedReport {
   measurement?: MeasurementContext | Record<string, unknown> | null;
   findings?: DiagnosticFinding[] | Array<Record<string, unknown>> | null;
   browserEvidence?: Record<string, unknown> | null;
+  loadLocalization?: NativeLoadedPathLocalization | null;
+  dualStack?: NativeDualStackReport | null;
+  networkChange?: NativeNetworkChangeReport | null;
+  hostResources?: NativeHostResourceReport | null;
+  annotations?: NativeReportAnnotations | null;
   [key: string]: unknown;
 }

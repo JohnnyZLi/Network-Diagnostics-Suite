@@ -28,6 +28,8 @@ public sealed partial class MainWindow : Window
     private ConnectionCheckPresentation currentPresentation = ConnectionCheckFixtures.All[0];
     private DesktopSettings settings = new();
     private NetworkDiagnosticsReportV2? currentReport;
+    private NetworkDiagnosticsReportV2? comparisonBaselineReport;
+    private StoredReport? selectedHistoryReport { get; set; }
     private TestProfileId activeProfile = TestProfileId.ConnectionCheck;
     private TransferMethod activeMethod = TransferMethod.Compare;
     private IReadOnlyList<NetworkInterfaceChoice> interfaceChoices = [];

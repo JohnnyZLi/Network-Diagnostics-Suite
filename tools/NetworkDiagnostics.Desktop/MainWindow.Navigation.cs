@@ -12,7 +12,7 @@ public sealed partial class MainWindow
 
     private async void HistoryNavClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        await RefreshHistoryAsync();
+        await RefreshComparisonHistoryAsync();
         ShowArea(DesktopArea.History);
     }
 

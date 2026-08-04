@@ -191,6 +191,11 @@ public static class DiagnosticReportPresenter
             $"Platform: {report.Run.Platform} · {report.Run.Architecture}",
             $"Transfer ceiling: {FormatBytes(report.TransferPlan.TransferCapBytes)}"
         };
+        if (report.Annotations is { } annotations)
+        {
+            if (!string.IsNullOrWhiteSpace(annotations.Label)) evidence.Add($"Report label: {annotations.Label}");
+            if (annotations.Tags.Count > 0) evidence.Add($"Report tags: {string.Join(", ", annotations.Tags)}");
+        }
         if (report.InternetTransfer is { } internet)
         {
             evidence.Add($"Measured payload: {FormatBytes(internet.DataUsedBytes)}");
@@ -206,8 +211,107 @@ public static class DiagnosticReportPresenter
             }
             evidence.Add($"Capabilities: {string.Join(", ", measurement.Capabilities)}");
         }
+        if (report.DualStack is { } dualStack)
+        {
+            evidence.Add($"Address-family probe: {dualStack.Status} · preferred {dualStack.PreferredFamily}");
+            evidence.Add($"Dual-stack DNS: {Milliseconds(dualStack.DnsResolutionMs)} · {dualStack.Ipv4AddressCount} IPv4 · {dualStack.Ipv6AddressCount} IPv6 addresses");
+            if (dualStack.ParallelConnectWinner is { } winner)
+            {
+                evidence.Add($"Parallel family winner: {winner} · difference {Milliseconds(dualStack.ParallelConnectDifferenceMs)}");
+            }
+            evidence.Add($"IPv4: {FamilyEvidence(dualStack.Ipv4)}");
+            evidence.Add($"IPv6: {FamilyEvidence(dualStack.Ipv6)}");
+            if (dualStack.Nat64Suspected) evidence.Add("NAT64/DNS64: suspected from the resolved IPv6 prefix");
+        }
+        if (report.LoadLocalization is { } localization)
+        {
+            evidence.Add($"Loaded path localization: {localization.Status} · {localization.LikelyBoundary ?? "no clear boundary"}");
+            evidence.Add($"Loaded path summary: {localization.Summary}");
+            foreach (var target in localization.Targets)
+            {
+                evidence.Add($"{target.Label}: idle {Milliseconds(target.Idle.MedianMs)} · download {Milliseconds(target.Download.MedianMs)} · upload {Milliseconds(target.Upload.MedianMs)}");
+            }
+        }
+        if (report.NetworkChange is { } networkChange)
+        {
+            evidence.Add($"Network state: {(networkChange.Changed ? "changed during run" : "stable during run")}");
+            evidence.Add($"Captive portal: {(networkChange.CaptivePortalSuspected ? "suspected" : "not detected")}");
+            if (networkChange.Before.Proxy is { } proxy) evidence.Add($"System proxy: {proxy}");
+            if (networkChange.Before.TunnelInterfaces.Count > 0)
+            {
+                evidence.Add($"Tunnel interfaces: {string.Join(", ", networkChange.Before.TunnelInterfaces)}");
+            }
+            if (networkChange.PublicNetworkBefore is { } before)
+            {
+                evidence.Add($"Public path before: {PublicNetworkEvidence(before)}");
+            }
+            if (networkChange.PublicNetworkAfter is { } after)
+            {
+                evidence.Add($"Public path after: {PublicNetworkEvidence(after)}");
+            }
+            foreach (var change in networkChange.Changes) evidence.Add($"Network change: {change}");
+        }
+        if (report.HostResources is { } resources)
+        {
+            evidence.Add($"Diagnostic process CPU: {Percent(resources.ProcessCpuPercent)}");
+            evidence.Add($"Peak working set: {FormatBytes(resources.PeakWorkingSetBytes)}");
+            if (resources.TcpRetransmissionPercent is { } retransmission)
+            {
+                evidence.Add($"TCP retransmissions: {resources.TcpSegmentsRetransmitted} of {resources.TcpSegmentsSent} sent segments · {Percent(retransmission)}");
+            }
+            var memoryPressure = MemoryPressurePercent(resources);
+            if (memoryPressure is not null) evidence.Add($"Runtime-reported memory pressure: {Percent(memoryPressure.Value)} of high-load threshold");
+            foreach (var item in resources.Interfaces.Where(HasCounterIssue))
+            {
+                evidence.Add($"{item.Name} counters: errors {item.IncomingErrors + item.OutgoingErrors} · discards {item.IncomingDiscards + item.OutgoingDiscards}");
+            }
+        }
         evidence.Add($"Findings: {findings.Count}");
         return evidence;
+    }
+
+    private static bool HasCounterIssue(InterfaceCounterDelta item) =>
+        item.IncomingErrors > 0
+        || item.OutgoingErrors > 0
+        || item.IncomingDiscards > 0
+        || item.OutgoingDiscards > 0;
+
+    private static string FamilyEvidence(AddressFamilyProbeReport family)
+    {
+        if (!family.AddressAvailable) return "address unavailable";
+        var ping = family.PingAvailable ? $"ICMP {Milliseconds(family.PingMedianMs)}" : "ICMP unavailable";
+        var tcp = family.TcpReachable ? $"TCP {Milliseconds(family.TcpConnectMs)}" : "TCP unreachable";
+        var tls = family.TlsReachable
+            ? $"TLS {Milliseconds(family.TlsHandshakeMs)} · {family.TlsProtocol ?? "protocol unknown"}"
+            : "TLS unavailable";
+        var http = family.HttpReachable
+            ? $"HTTP {family.HttpStatusCode?.ToString(CultureInfo.InvariantCulture) ?? "response"} · {Milliseconds(family.HttpResponseMs)}"
+            : "HTTP unavailable";
+        return $"{ping} · {tcp} · {tls} · {http}";
+    }
+
+    private static string PublicNetworkEvidence(NetworkMetadataReport metadata)
+    {
+        var parts = new[]
+        {
+            metadata.Network,
+            metadata.Asn is null ? null : $"AS{metadata.Asn.Value}",
+            metadata.Edge,
+            metadata.IpVersion,
+            metadata.Protocol
+        }.Where(item => !string.IsNullOrWhiteSpace(item));
+        return string.Join(" · ", parts);
+    }
+
+    private static double? MemoryPressurePercent(HostResourceReport resources)
+    {
+        if (resources.SystemMemoryLoadBytes is not { } load
+            || resources.HighMemoryLoadThresholdBytes is not { } threshold
+            || threshold <= 0)
+        {
+            return null;
+        }
+        return load / (double)threshold * 100;
     }
 
     private static string NextHealthyAction(TestProfileId profile) => profile switch
