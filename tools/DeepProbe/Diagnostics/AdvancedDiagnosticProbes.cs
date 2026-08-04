@@ -133,6 +133,10 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
     {
         await hostMonitor.DisposeAsync();
         if (localization is not null) await localization.DisposeAsync();
+        if (transferEvidenceTask is not null) await ObserveAsync(transferEvidenceTask);
+        await ObserveAsync(dualStackTask);
+        await ObserveAsync(captivePortalTask);
+        await ObserveAsync(publicNetworkBeforeTask);
     }
 
     private Task<LoadedPathLocalizationReport?> EnsureTransferEvidenceTask()
@@ -158,7 +162,7 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
         }
         catch
         {
-            // The original startup failure remains the exception returned to the caller.
+            // Disposal observes background completion without replacing the caller's primary error.
         }
     }
 }
