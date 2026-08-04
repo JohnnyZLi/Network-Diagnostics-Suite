@@ -42,6 +42,7 @@ public sealed partial class MainWindow
             workspaceGrid.Children.Add(reportBrowserWorkspace);
             workspaceGrid.Children.Add(reportDetailWorkspace);
             workspaceGrid.Children.Add(comparisonWorkspace);
+            InstallSettingsWorkspace(workspaceGrid);
 
             reportBrowserWorkspace.ImportRequested += ReportBrowserImportRequested;
             reportBrowserWorkspace.OpenFolderRequested += ReportBrowserOpenFolderRequested;
@@ -49,6 +50,7 @@ public sealed partial class MainWindow
             reportBrowserWorkspace.CompareReportRequested += ReportBrowserCompareReportRequested;
             reportBrowserWorkspace.EditReportRequested += ReportBrowserEditReportRequested;
             reportBrowserWorkspace.StateChanged += ReportBrowserStateChanged;
+            reportBrowserWorkspace.StateChanged += ReportBrowserPersistenceStateChanged;
 
             reportDetailWorkspace.BackRequested += ReportDetailBackRequested;
             reportDetailWorkspace.CompareRequested += ReportDetailCompareRequested;
@@ -69,6 +71,8 @@ public sealed partial class MainWindow
         workbenchShell.BackRequested += WorkbenchBackRequested;
         workbenchShell.ForwardRequested += WorkbenchForwardRequested;
         workbenchShell.ActiveRunRequested += WorkbenchActiveRunRequested;
+        workbenchShell.CommandPaletteRequested += WorkbenchCommandPaletteRequested;
+        workbenchShell.CommandInvoked += WorkbenchCommandInvoked;
         workbenchShell.WorkspaceRequested += WorkbenchWorkspaceRequested;
         workbenchShell.DestinationRequested += WorkbenchDestinationRequested;
         workbenchShell.InspectorVisibilityChanged += WorkbenchInspectorVisibilityChanged;
@@ -101,6 +105,7 @@ public sealed partial class MainWindow
         await PersistSettingsAsync();
         await RefreshPreflightAsync();
         SyncTestWorkspace();
+        SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -113,6 +118,7 @@ public sealed partial class MainWindow
         RenderProfileSelection();
         await RefreshPreflightAsync();
         SyncTestWorkspace();
+        SyncSettingsWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -136,6 +142,7 @@ public sealed partial class MainWindow
         {
             RenderProfileSelection();
             SyncTestWorkspace();
+            SyncSettingsWorkspace();
             RefreshWorkbenchChrome();
             return;
         }
@@ -148,6 +155,7 @@ public sealed partial class MainWindow
         {
             RenderMethodSelection();
             SyncTestWorkspace();
+            SyncSettingsWorkspace();
             RefreshWorkbenchChrome();
             return;
         }
@@ -222,8 +230,9 @@ public sealed partial class MainWindow
                     ShowWorkspaceSurface(comparisonWorkspace);
                     break;
 
-                case SettingsDestination:
-                    ShowArea(DesktopArea.Settings);
+                case SettingsDestination settingsDestination:
+                    SyncSettingsWorkspace(settingsDestination.Section);
+                    ShowWorkspaceSurface(settingsWorkspace);
                     break;
             }
 
@@ -234,6 +243,8 @@ public sealed partial class MainWindow
         {
             applyingNavigation = false;
         }
+
+        await PersistWorkbenchStateAsync();
     }
 
     private async Task<bool> LoadReportForNavigationAsync(Guid reportId)
@@ -307,11 +318,31 @@ public sealed partial class MainWindow
     private void WorkbenchDestinationRequested(object? sender, DestinationRequestedEventArgs eventArgs) =>
         NavigateToDestination(eventArgs.Destination);
 
-    private void WorkbenchInspectorVisibilityChanged(object? sender, EventArgs eventArgs) =>
+    private async void WorkbenchInspectorVisibilityChanged(object? sender, EventArgs eventArgs)
+    {
         PreserveCurrentNavigationState();
+        await PersistWorkbenchStateAsync();
+    }
 
     private void WorkbenchKeyDown(object? sender, KeyEventArgs eventArgs)
     {
+        var commandPalette = eventArgs.Key == Key.K
+            && (eventArgs.KeyModifiers.HasFlag(KeyModifiers.Meta)
+                || eventArgs.KeyModifiers.HasFlag(KeyModifiers.Control));
+        if (commandPalette)
+        {
+            WorkbenchCommandPaletteRequested(sender, EventArgs.Empty);
+            eventArgs.Handled = true;
+            return;
+        }
+
+        if (eventArgs.Key == Key.Escape && workbenchShell?.CommandPaletteOpen == true)
+        {
+            workbenchShell.CloseCommandPalette();
+            eventArgs.Handled = true;
+            return;
+        }
+
         var back = eventArgs.Key == Key.Left && eventArgs.KeyModifiers.HasFlag(KeyModifiers.Alt)
             || eventArgs.Key == Key.OemOpenBrackets && eventArgs.KeyModifiers.HasFlag(KeyModifiers.Meta)
             || eventArgs.Key == Key.BrowserBack;
@@ -373,6 +404,7 @@ public sealed partial class MainWindow
             {
                 TestResultDestination result => result.Section,
                 ReportDetailDestination detail => detail.Section,
+                SettingsDestination settingsDestination => settingsDestination.Section,
                 _ => null
             },
             InspectorOpen: inspectorOpen);
@@ -411,6 +443,7 @@ public sealed partial class MainWindow
         if (reportBrowserWorkspace is not null) reportBrowserWorkspace.IsVisible = false;
         if (reportDetailWorkspace is not null) reportDetailWorkspace.IsVisible = false;
         if (comparisonWorkspace is not null) comparisonWorkspace.IsVisible = false;
+        if (settingsWorkspace is not null) settingsWorkspace.IsVisible = false;
     }
 
     private void ShowTestState(TestViewState state)
@@ -515,6 +548,7 @@ public sealed partial class MainWindow
                     comparisonCandidateId is null ? "Select two reports" : "Baseline and candidate selected");
                 break;
             case SettingsDestination settingsDestination:
+                SyncSettingsWorkspace(settingsDestination.Section);
                 workbenchShell.SetInspectorContent(
                     settingsDestination.Section,
                     "Settings are organized by purpose and participate in the same back and forward history as every other workspace.",

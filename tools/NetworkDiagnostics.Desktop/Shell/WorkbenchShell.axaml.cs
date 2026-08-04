@@ -13,6 +13,7 @@ public sealed partial class WorkbenchShell : UserControl
     {
         InitializeComponent();
         SizeChanged += ShellSizeChanged;
+        CommandPaletteControl.CommandInvoked += CommandPaletteInvoked;
     }
 
     public event EventHandler? BackRequested;
@@ -20,6 +21,10 @@ public sealed partial class WorkbenchShell : UserControl
     public event EventHandler? ForwardRequested;
 
     public event EventHandler? ActiveRunRequested;
+
+    public event EventHandler? CommandPaletteRequested;
+
+    public event EventHandler<CommandInvokedEventArgs>? CommandInvoked;
 
     public event EventHandler<WorkspaceRequestedEventArgs>? WorkspaceRequested;
 
@@ -34,6 +39,8 @@ public sealed partial class WorkbenchShell : UserControl
     }
 
     public bool InspectorOpen => InspectorBorder.IsVisible;
+
+    public bool CommandPaletteOpen => CommandPaletteControl.IsOpen;
 
     public void SetNavigation(
         NavigationEntry entry,
@@ -95,6 +102,11 @@ public sealed partial class WorkbenchShell : UserControl
         ApplyResponsiveLayout(Bounds.Width);
     }
 
+    public void OpenCommandPalette(IReadOnlyList<WorkbenchCommand> commands) =>
+        CommandPaletteControl.Open(commands);
+
+    public void CloseCommandPalette() => CommandPaletteControl.Close();
+
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
 
@@ -103,6 +115,12 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ActiveRunClicked(object? sender, RoutedEventArgs eventArgs) =>
         ActiveRunRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CommandsClicked(object? sender, RoutedEventArgs eventArgs) =>
+        CommandPaletteRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CommandPaletteInvoked(object? sender, CommandInvokedEventArgs eventArgs) =>
+        CommandInvoked?.Invoke(this, eventArgs);
 
     private void WorkspaceClicked(object? sender, RoutedEventArgs eventArgs)
     {

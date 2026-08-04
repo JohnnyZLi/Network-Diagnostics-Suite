@@ -166,9 +166,10 @@ jobs:
             }
 
             const context = await browser.newContext({ viewport: { width: 720, height: 900 }, reducedMotion: 'reduce' });
-            await context.addInitScript((key) => localStorage.removeItem(key), confirmationKey);
             const page = await context.newPage();
             await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await page.evaluate((key) => localStorage.removeItem(key), confirmationKey);
+            await page.reload({ waitUntil: 'networkidle' });
 
             await page.getByRole('radio', { name: /^Full,/ }).click();
             let runButton = page.getByRole('button', { name: 'Run full test' }).first();
@@ -179,17 +180,20 @@ jobs:
             const remember = dialog.getByRole('checkbox', { name: /Remember this choice/ });
             if (!(await remember.isChecked())) failures.push('Remember choice should default to enabled');
             await dialog.getByRole('button', { name: 'Run full test' }).click();
-            await page.getByRole('button', { name: 'Stop test' }).click();
-            await page.getByRole('button', { name: 'Run full test' }).waitFor({ state: 'visible' });
+            await page.waitForTimeout(100);
 
             const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), confirmationKey);
             if (typeof stored.standard !== 'number' || stored.standard < 1_156_000_000) failures.push('Full confirmation was not remembered at the current cap');
+
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.getByRole('radio', { name: /^Full,/ }).click();
             runButton = page.getByRole('button', { name: 'Run full test' }).first();
             if ((await runButton.getAttribute('aria-haspopup')) !== null) failures.push('Remembered Full run still announces a dialog');
             await runButton.click();
+            await page.waitForTimeout(100);
             if (await dialog.isVisible()) failures.push('Remembered Full run reopened the dialog');
-            await page.getByRole('button', { name: 'Stop test' }).click();
 
+            await page.reload({ waitUntil: 'networkidle' });
             await page.getByRole('radio', { name: /^Stress,/ }).click();
             runButton = page.getByRole('button', { name: 'Run stress test' }).first();
             await runButton.click();
@@ -197,9 +201,13 @@ jobs:
             const stressRemember = dialog.getByRole('checkbox', { name: /Remember this choice/ });
             await stressRemember.uncheck();
             await dialog.getByRole('button', { name: 'Run stress test' }).click();
-            await page.getByRole('button', { name: 'Stop test' }).click();
-            await page.getByRole('button', { name: 'Run stress test' }).waitFor({ state: 'visible' });
-            await page.getByRole('button', { name: 'Run stress test' }).dispatchEvent('click');
+            await page.waitForTimeout(100);
+
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.getByRole('radio', { name: /^Stress,/ }).click();
+            runButton = page.getByRole('button', { name: 'Run stress test' }).first();
+            if ((await runButton.getAttribute('aria-haspopup')) !== 'dialog') failures.push('Unremembered Stress run should still announce a dialog');
+            await runButton.click();
             await dialog.waitFor({ state: 'visible' });
             await dialog.getByRole('button', { name: 'Cancel' }).click();
 

@@ -81,16 +81,23 @@ public sealed partial class MainWindow
 
     private void OpenReportsFolderClicked(object? sender, RoutedEventArgs eventArgs) => reportStore.OpenReportsFolder();
 
-    private async void IncludeIdentifiersChanged(object? sender, RoutedEventArgs eventArgs)
+    private async void IncludeIdentifiersChanged(object? sender, RoutedEventArgs eventArgs) =>
+        await SaveIdentifiersSettingAsync(IncludeIdentifiersCheckBox.IsChecked == true);
+
+    private async Task SaveIdentifiersSettingAsync(bool includeIdentifiers)
     {
         if (!initialized) return;
-        settings = settings with { IncludeLocalIdentifiers = IncludeIdentifiersCheckBox.IsChecked == true };
+        settings = settings with { IncludeLocalIdentifiers = includeIdentifiers };
+        IncludeIdentifiersCheckBox.IsChecked = includeIdentifiers;
         await PersistSettingsAsync();
         await RefreshPreflightAsync();
         RefreshWorkbenchChrome();
     }
 
-    private async void SaveAdvancedSettingsClicked(object? sender, RoutedEventArgs eventArgs)
+    private async void SaveAdvancedSettingsClicked(object? sender, RoutedEventArgs eventArgs) =>
+        await SaveAdvancedSettingsAsync();
+
+    private async Task SaveAdvancedSettingsAsync()
     {
         var originValues = DesktopSettings.ParseOriginLines(TestOriginTextBox.Text);
         if (originValues.Count > 8)
@@ -148,7 +155,10 @@ public sealed partial class MainWindow
         return true;
     }
 
-    private async void ResetApprovalsClicked(object? sender, RoutedEventArgs eventArgs)
+    private async void ResetApprovalsClicked(object? sender, RoutedEventArgs eventArgs) =>
+        await ResetApprovalsAsync();
+
+    private async Task ResetApprovalsAsync()
     {
         settings = settings.ResetDataApprovals();
         await PersistSettingsAsync();
