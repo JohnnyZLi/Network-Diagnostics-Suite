@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkDiagnostics.Desktop.Workspaces.TestConfigurationPanel"
+             Foreground="#E9E6E0"
+             FontFamily="Inter">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#969B9B" />
+    </Style>
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="Foreground" Value="#C77E68" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="11,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#D2D6D6" />
+      <Setter Property="BorderBrush" Value="#414748" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="15">
+    <StackPanel Spacing="7">
+      <TextBlock Classes="eyebrow" Text="INTERFACE" />
+      <ComboBox Name="InterfaceComboBox" SelectionChanged="InterfaceSelectionChanged" />
+      <TextBlock Classes="muted" FontSize="11" LineHeight="17"
+                 Text="Automatic follows the system route. Select an interface when reproducing Wi-Fi, Ethernet, VPN, or adapter-specific behavior."
+                 TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+
+    <StackPanel Spacing="8">
+      <TextBlock Classes="eyebrow" Text="REPORT PRIVACY" />
+      <CheckBox Name="IdentifiersCheckBox" Content="Include local identifiers" Click="IdentifiersClicked" />
+      <TextBlock Classes="muted" FontSize="11" LineHeight="17"
+                 Text="Disabled reports omit local identifiers where supported while retaining diagnostic measurements."
+                 TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+
+    <StackPanel Spacing="8">
+      <TextBlock Classes="eyebrow" Text="PREFLIGHT" />
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <TextBlock Classes="muted" FontSize="11" Text="Endpoint" />
+        <TextBlock Name="EndpointText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
+      </Grid>
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <TextBlock Classes="muted" FontSize="11" Text="Network" />
+        <TextBlock Name="NetworkText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
+      </Grid>
+      <Button Classes="secondary" Content="Refresh preflight" Click="RefreshClicked" HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+
+    <StackPanel Spacing="8">
+      <TextBlock Classes="eyebrow" Text="ADVANCED" />
+      <TextBlock Classes="muted" FontSize="11" LineHeight="17"
+                 Text="Endpoint candidates, LAN isolation, data approvals, and storage configuration remain in Settings."
+                 TextWrapping="Wrap" />
+      <Button Classes="secondary" Content="Open test settings" Click="SettingsClicked" HorizontalAlignment="Stretch" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

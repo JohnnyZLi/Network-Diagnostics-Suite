@@ -52,6 +52,19 @@
       <Setter Property="Background" Value="#29231C" />
       <Setter Property="Foreground" Value="#F4F0EA" />
     </Style>
+    <Style Selector="Button.activeRun">
+      <Setter Property="Background" Value="#1C2021" />
+      <Setter Property="Foreground" Value="#E9E6E0" />
+      <Setter Property="BorderBrush" Value="#3C4142" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.activeRun:pointerover">
+      <Setter Property="Background" Value="#252A2B" />
+      <Setter Property="BorderBrush" Value="#8D5948" />
+    </Style>
     <Style Selector="Button.breadcrumb">
       <Setter Property="Padding" Value="4,2" />
       <Setter Property="MinHeight" Value="24" />
@@ -147,20 +160,18 @@
           </StackPanel>
 
           <StackPanel Grid.Row="2" Margin="0,18,0,0">
-            <Border Name="ActiveRunPanel"
+            <Button Name="ActiveRunPanel"
+                    Classes="activeRun"
                     IsVisible="False"
-                    Background="#1C2021"
-                    BorderBrush="#3C4142"
-                    BorderThickness="1"
-                    CornerRadius="9"
-                    Padding="10">
+                    ToolTip.Tip="Return to active diagnostic"
+                    Click="ActiveRunClicked">
               <StackPanel Spacing="6">
                 <TextBlock Classes="shellEyebrow" Text="ACTIVE TEST" />
                 <TextBlock Name="ActiveRunTitleText" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <TextBlock Name="ActiveRunDetailText" Classes="shellMuted" FontSize="11" TextWrapping="Wrap" />
                 <ProgressBar Name="ActiveRunProgress" Minimum="0" Maximum="100" Height="4" />
               </StackPanel>
-            </Border>
+            </Button>
           </StackPanel>
 
           <Border Grid.Row="3"
@@ -181,26 +192,28 @@
               Grid.Column="2"
               Background="#15191A"
               BorderBrush="#303536"
-              BorderThickness="1,0,0,0"
-              Padding="18,18">
-        <StackPanel Spacing="16">
-          <StackPanel Spacing="5">
-            <TextBlock Classes="shellEyebrow" Text="INSPECTOR" />
-            <TextBlock Name="InspectorTitleText" FontSize="16" FontWeight="SemiBold" Text="Test configuration" TextWrapping="Wrap" />
-            <TextBlock Name="InspectorDetailText" Classes="shellMuted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+              BorderThickness="1,0,0,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="18" Spacing="16">
+            <StackPanel Spacing="5">
+              <TextBlock Classes="shellEyebrow" Text="INSPECTOR" />
+              <TextBlock Name="InspectorTitleText" FontSize="16" FontWeight="SemiBold" Text="Test configuration" TextWrapping="Wrap" />
+              <TextBlock Name="InspectorDetailText" Classes="shellMuted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+            </StackPanel>
+            <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+            <StackPanel Spacing="9">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <TextBlock Classes="shellMuted" FontSize="11" Text="Workspace" />
+                <TextBlock Name="InspectorWorkspaceText" Grid.Column="1" FontSize="11" TextAlignment="Right" />
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <TextBlock Classes="shellMuted" FontSize="11" Text="Selection" />
+                <TextBlock Name="InspectorSelectionText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
+              </Grid>
+            </StackPanel>
+            <ContentControl Name="InspectorBodyHost" HorizontalContentAlignment="Stretch" />
           </StackPanel>
-          <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
-          <StackPanel Spacing="9">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-              <TextBlock Classes="shellMuted" FontSize="11" Text="Workspace" />
-              <TextBlock Name="InspectorWorkspaceText" Grid.Column="1" FontSize="11" TextAlignment="Right" />
-            </Grid>
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-              <TextBlock Classes="shellMuted" FontSize="11" Text="Selection" />
-              <TextBlock Name="InspectorSelectionText" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
-            </Grid>
-          </StackPanel>
-        </StackPanel>
+        </ScrollViewer>
       </Border>
     </Grid>
 

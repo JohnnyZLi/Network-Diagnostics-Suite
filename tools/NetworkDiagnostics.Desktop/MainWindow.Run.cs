@@ -12,59 +12,62 @@ public sealed partial class MainWindow
 {
     private async void RunClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (runCancellation is not null) return;
-        activeProfile = SelectedProfile();
-        activeMethod = SelectedMethod();
-        if (!await ConfirmDataUseAsync(activeProfile, activeMethod)) return;
+        if (activeRunSession.Snapshot.IsActive) return;
+        var runProfile = SelectedProfile();
+        var runMethod = SelectedMethod();
+        if (!await ConfirmDataUseAsync(runProfile, runMethod)) return;
 
-        var cancellation = new CancellationTokenSource();
-        runCancellation = cancellation;
+        activeProfile = runProfile;
+        activeMethod = runMethod;
+        activeRunNavigationId = activeRunSession.Start(runProfile, runMethod);
         currentReport = null;
         ResetRunningState();
-        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(activeProfile).ToUpperInvariant()} / {MethodName(activeMethod).ToUpperInvariant()}";
+        RunningProfileText.Text = $"{DiagnosticReportPresenter.ProfileName(runProfile).ToUpperInvariant()} / {MethodName(runMethod).ToUpperInvariant()}";
         ShowTestState(TestViewState.Running);
         var progress = new Progress<NativeRunProgress>(RenderRunProgress);
 
         try
         {
             var report = await diagnosticRunService.RunAsync(
-                activeProfile,
-                activeMethod,
+                runProfile,
+                runMethod,
                 settings,
                 progress,
-                cancellation.Token);
+                activeRunSession.CancellationToken);
             currentReport = report;
-            await reportStore.SaveAsync(report, cancellation.Token);
+            await reportStore.SaveAsync(report, activeRunSession.CancellationToken);
             currentPresentation = DiagnosticReportPresenter.FromReport(report);
+            activeRunSession.Complete(report);
             CompleteRunningState();
             RenderPresentation(currentPresentation);
             await RefreshHistoryAsync();
-            ShowTestState(TestViewState.Results);
+            PresentRunOutcome(report.Run.Id);
         }
         catch (OperationCanceledException)
         {
-            currentPresentation = DiagnosticReportPresenter.FromCancellation(activeProfile);
+            activeRunSession.MarkCancelled();
+            currentPresentation = DiagnosticReportPresenter.FromCancellation(runProfile);
             RenderPresentation(currentPresentation);
-            ShowTestState(TestViewState.Results);
+            PresentRunOutcome(Guid.Empty);
         }
         catch (Exception error)
         {
-            currentPresentation = DiagnosticReportPresenter.FromFailure(activeProfile, error);
+            activeRunSession.Fail(error);
+            currentPresentation = DiagnosticReportPresenter.FromFailure(runProfile, error);
             RenderPresentation(currentPresentation);
-            ShowTestState(TestViewState.Results);
+            PresentRunOutcome(Guid.Empty);
         }
         finally
         {
-            cancellation.Dispose();
-            if (ReferenceEquals(runCancellation, cancellation)) runCancellation = null;
             RenderProfileSelection();
+            SyncTestWorkspace();
             RefreshWorkbenchChrome();
         }
     }
 
     private void StopClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        runCancellation?.Cancel();
+        activeRunSession.RequestCancel();
         RefreshWorkbenchChrome();
     }
 
@@ -83,8 +86,15 @@ public sealed partial class MainWindow
         LiveMeasurementText.Text = LiveProgressText(progress);
         displayedRunProgress = Math.Max(displayedRunProgress, OverallProgress(progress));
         RunProgress.Value = displayedRunProgress;
+        activeRunSession.UpdateProgress(
+            progress.Phase,
+            LiveMeasurementText.Text ?? progress.Message,
+            displayedRunProgress,
+            progress.LiveMbps,
+            progress.LiveLatencyMs,
+            progress.BytesTransferred);
 
-        var deepProfile = activeProfile is TestProfileId.Standard or TestProfileId.Extended;
+        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
         if (progress.Phase == "diagnostics")
         {
             if (displayedRunProgress < 20)
@@ -96,6 +106,13 @@ public sealed partial class MainWindow
                 DeepPhaseStatus.Text = "In progress";
                 displayedRunProgress = Math.Min(96, displayedRunProgress + 2.5);
                 RunProgress.Value = displayedRunProgress;
+                activeRunSession.UpdateProgress(
+                    progress.Phase,
+                    LiveMeasurementText.Text ?? progress.Message,
+                    displayedRunProgress,
+                    progress.LiveMbps,
+                    progress.LiveLatencyMs,
+                    progress.BytesTransferred);
             }
             RefreshWorkbenchChrome();
             return;
@@ -140,9 +157,10 @@ public sealed partial class MainWindow
         LatencyPhaseStatus.Text = "Waiting";
         DownloadPhaseStatus.Text = "Waiting";
         UploadPhaseStatus.Text = "Waiting";
-        DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
+        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
             ? "Waiting"
             : "Not included";
+        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -154,9 +172,10 @@ public sealed partial class MainWindow
         LatencyPhaseStatus.Text = "Complete";
         DownloadPhaseStatus.Text = "Complete";
         UploadPhaseStatus.Text = "Complete";
-        DeepPhaseStatus.Text = activeProfile is TestProfileId.Standard or TestProfileId.Extended
+        DeepPhaseStatus.Text = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended
             ? "Complete"
             : "Not included";
+        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
@@ -181,7 +200,7 @@ public sealed partial class MainWindow
 
     private double OverallProgress(NativeRunProgress progress)
     {
-        var deepProfile = activeProfile is TestProfileId.Standard or TestProfileId.Extended;
+        var deepProfile = activeRunSession.Snapshot.Profile is TestProfileId.Standard or TestProfileId.Extended;
         return progress.Phase switch
         {
             "idle" => 8 + progress.Fraction * 17,

@@ -1,0 +1,157 @@
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using NetworkDiagnostics.Desktop.Navigation;
+using NetworkDiagnostics.Desktop.Presentation;
+using NetworkDiagnostics.Desktop.Workspaces;
+
+namespace NetworkDiagnostics.Desktop;
+
+public sealed partial class MainWindow
+{
+    private void InstallTestWorkspace()
+    {
+        testSetupWorkspace = new TestSetupWorkspace();
+        testConfigurationPanel = new TestConfigurationPanel();
+        SetupView.Content = testSetupWorkspace;
+
+        testSetupWorkspace.ProfileRequested += TestSetupProfileRequested;
+        testSetupWorkspace.MethodRequested += TestSetupMethodRequested;
+        testSetupWorkspace.RunRequested += TestSetupRunRequested;
+        testSetupWorkspace.ActiveRunRequested += TestSetupActiveRunRequested;
+        testSetupWorkspace.SettingsRequested += TestSetupSettingsRequested;
+
+        testConfigurationPanel.InterfaceRequested += TestConfigurationInterfaceRequested;
+        testConfigurationPanel.IdentifiersChanged += TestConfigurationIdentifiersChanged;
+        testConfigurationPanel.RefreshRequested += TestConfigurationRefreshRequested;
+        testConfigurationPanel.SettingsRequested += TestSetupSettingsRequested;
+
+        activeRunSession.Changed += ActiveRunSessionChanged;
+    }
+
+    private void TestSetupProfileRequested(object? sender, IndexRequestedEventArgs eventArgs) =>
+        SelectProfile(eventArgs.Index);
+
+    private void TestSetupMethodRequested(object? sender, IndexRequestedEventArgs eventArgs) =>
+        SelectMethod(eventArgs.Index);
+
+    private void TestSetupRunRequested(object? sender, EventArgs eventArgs) =>
+        RunClicked(sender, new RoutedEventArgs());
+
+    private void TestSetupActiveRunRequested(object? sender, EventArgs eventArgs) =>
+        ReturnToActiveRun();
+
+    private void TestSetupSettingsRequested(object? sender, EventArgs eventArgs) =>
+        NavigateToDestination(new SettingsDestination("Measurement"));
+
+    private void TestConfigurationInterfaceRequested(object? sender, IndexRequestedEventArgs eventArgs)
+    {
+        if (InterfaceSelector.SelectedIndex != eventArgs.Index)
+        {
+            InterfaceSelector.SelectedIndex = eventArgs.Index;
+        }
+        SyncTestWorkspace();
+    }
+
+    private async void TestConfigurationIdentifiersChanged(object? sender, EventArgs eventArgs)
+    {
+        if (testConfigurationPanel is null) return;
+        var includeIdentifiers = testConfigurationPanel.IncludeIdentifiers;
+        IncludeIdentifiersCheckBox.IsChecked = includeIdentifiers;
+        settings = settings with { IncludeLocalIdentifiers = includeIdentifiers };
+        await PersistSettingsAsync();
+        await RefreshPreflightAsync();
+        SyncTestWorkspace();
+        RefreshWorkbenchChrome();
+    }
+
+    private async void TestConfigurationRefreshRequested(object? sender, EventArgs eventArgs)
+    {
+        await RefreshPreflightAsync();
+        SyncTestWorkspace();
+        RefreshWorkbenchChrome();
+    }
+
+    private void ActiveRunSessionChanged(object? sender, EventArgs eventArgs)
+    {
+        SyncTestWorkspace();
+        RefreshWorkbenchChrome();
+    }
+
+    private void ReturnToActiveRun()
+    {
+        var snapshot = activeRunSession.Snapshot;
+        if (snapshot.IsActive)
+        {
+            NavigateToDestination(new RunningTestDestination(snapshot.RunId));
+            return;
+        }
+
+        if (snapshot.ReportId is { } reportId)
+        {
+            NavigateToDestination(new TestResultDestination(reportId));
+        }
+    }
+
+    private void PresentRunOutcome(Guid reportId)
+    {
+        currentTestState = Models.TestViewState.Results;
+        SetupView.IsVisible = false;
+        RunningView.IsVisible = false;
+        ResultsView.IsVisible = true;
+
+        var destination = new TestResultDestination(reportId);
+        lastWorkspaceEntries[WorkspaceKind.Test] = new NavigationEntry(
+            destination,
+            new NavigationViewState(InspectorOpen: workbenchShell?.InspectorOpen ?? true));
+
+        if (navigationService.Current?.Destination is RunningTestDestination)
+        {
+            NavigateToDestination(destination);
+        }
+        else
+        {
+            RefreshWorkbenchChrome();
+        }
+    }
+
+    private void SyncTestWorkspace()
+    {
+        if (testSetupWorkspace is null || testConfigurationPanel is null)
+        {
+            return;
+        }
+
+        var snapshot = activeRunSession.Snapshot;
+        var profileName = DiagnosticReportPresenter.ProfileName(snapshot.IsActive ? snapshot.Profile : SelectedProfile());
+        var methodName = MethodName(snapshot.IsActive ? snapshot.Method : SelectedMethod());
+        var interfaceLabels = InterfaceSelector.Items
+            .OfType<ComboBoxItem>()
+            .Select(item => item.Content?.ToString() ?? "Interface")
+            .ToArray();
+
+        testSetupWorkspace.Render(new TestSetupWorkspaceModel(
+            ProfileSelector.SelectedIndex,
+            MethodSelector.SelectedIndex,
+            ProfileQuestionText.Text ?? "What is happening on this connection?",
+            ProfilePurposeText.Text ?? "Choose a profile to see what evidence it collects.",
+            MethodExplanationText.Text ?? string.Empty,
+            EstimatedTimeText.Text ?? "—",
+            TransferCapText.Text ?? "—",
+            ConfirmationText.Text ?? "—",
+            ProfileAvailabilityText.Text ?? string.Empty,
+            CompactStatusValue(PreflightInterfaceText.Text),
+            CompactStatusValue(PreflightEndpointText.Text),
+            CompactStatusValue(PreflightNetworkText.Text),
+            snapshot.IsActive,
+            $"{profileName} · {methodName}",
+            snapshot.Detail,
+            snapshot.Progress));
+
+        testConfigurationPanel.Render(new TestConfigurationModel(
+            interfaceLabels,
+            InterfaceSelector.SelectedIndex,
+            settings.IncludeLocalIdentifiers,
+            CompactStatusValue(PreflightEndpointText.Text),
+            CompactStatusValue(PreflightNetworkText.Text)));
+    }
+}
