@@ -5,7 +5,7 @@ on:
     branches:
       - agent/desktop-app-rebuild
     paths:
-      - '.automation/source.patch'
+      - '.automation/apply'
 
 permissions:
   contents: write
@@ -22,7 +22,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git apply --index .automation/source.patch
-          git rm .automation/source.patch
+          cat .automation/parts/* | base64 --decode > /tmp/source.patch
+          git apply --index /tmp/source.patch
+          git rm -r .automation/parts .automation/apply
           git commit -m "Apply validated implementation tranche"
           git push origin HEAD:agent/desktop-app-rebuild
