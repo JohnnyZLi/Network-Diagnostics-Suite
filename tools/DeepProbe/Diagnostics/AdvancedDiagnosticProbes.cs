@@ -132,8 +132,8 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await hostMonitor.DisposeAsync();
-        if (localization is not null) await localization.DisposeAsync();
         if (transferEvidenceTask is not null) await ObserveAsync(transferEvidenceTask);
+        if (localization is not null) await localization.DisposeAsync();
         await ObserveAsync(dualStackTask);
         await ObserveAsync(captivePortalTask);
         await ObserveAsync(publicNetworkBeforeTask);
