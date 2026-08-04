@@ -49,7 +49,7 @@ internal sealed class AdvancedEvidenceSession : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(origin);
         var before = NetworkStateProbe.Capture(origin, interfaceId, includeLocalIdentifiers);
-        var hostMonitor = HostResourceMonitor.Start();
+        var hostMonitor = HostResourceMonitor.Start(includeLocalIdentifiers);
         var dualStackTask = DualStackProbe.RunAsync(origin, cancellationToken);
         var captivePortalTask = NetworkStateProbe.CheckCaptivePortalAsync(origin, cancellationToken);
         LoadedPathLatencyCollector? localization = null;
