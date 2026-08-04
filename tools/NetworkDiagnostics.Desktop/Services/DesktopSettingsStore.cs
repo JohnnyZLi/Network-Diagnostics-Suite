@@ -17,7 +17,8 @@ public sealed record DesktopSettings(
     int LanDurationSeconds = 8,
     int LanConnections = 4,
     long FullApprovedCapBytes = 0,
-    long StressApprovedCapBytes = 0)
+    long StressApprovedCapBytes = 0,
+    DesktopWorkbenchState? Workbench = null)
 {
     public TestProfileId SelectedProfile => DefaultProfile switch
     {
