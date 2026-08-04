@@ -23,12 +23,14 @@ public sealed partial class MainWindow : Window
     private readonly DiagnosticRunService diagnosticRunService = new();
     private readonly DesktopSettingsStore settingsStore = new();
     private readonly NavigationService navigationService = new();
+    private readonly ActiveRunSession activeRunSession = new();
     private readonly Dictionary<WorkspaceKind, NavigationEntry> lastWorkspaceEntries = new();
     private readonly ReportStore reportStore;
-    private CancellationTokenSource? runCancellation;
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
     private WorkbenchShell? workbenchShell;
+    private TestSetupWorkspace? testSetupWorkspace;
+    private TestConfigurationPanel? testConfigurationPanel;
     private ReportBrowserWorkspace? reportBrowserWorkspace;
     private ReportDetailWorkspace? reportDetailWorkspace;
     private ComparisonWorkspace? comparisonWorkspace;
@@ -50,6 +52,7 @@ public sealed partial class MainWindow : Window
     {
         reportStore = new ReportStore(settingsStore.RootDirectory);
         InitializeComponent();
+        InstallTestWorkspace();
         InstallWorkbenchShell();
         ProfileSelector.SelectedIndex = 0;
         MethodSelector.SelectedIndex = 0;
@@ -58,6 +61,7 @@ public sealed partial class MainWindow : Window
         RenderProfileSelection();
         RenderMethodSelection();
         RenderPresentation(currentPresentation);
+        SyncTestWorkspace();
         ShowArea(DesktopArea.Test);
         ShowTestState(TestViewState.Setup);
         InitializeNavigation();
@@ -85,12 +89,13 @@ public sealed partial class MainWindow : Window
         RenderMethodSelection();
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
+        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
     private void WindowClosed(object? sender, EventArgs eventArgs)
     {
-        runCancellation?.Cancel();
+        activeRunSession.Dispose();
         preflightCancellation?.Cancel();
         lanServerCancellation?.Cancel();
     }
