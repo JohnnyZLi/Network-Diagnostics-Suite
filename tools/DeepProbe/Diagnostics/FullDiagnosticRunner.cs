@@ -147,9 +147,13 @@ internal static class FullDiagnosticRunner
         yield return "network-metadata";
         yield return "http3-probe";
         yield return "dual-stack-probe";
+        yield return "dual-stack-tls-http";
         yield return "network-change-detection";
+        yield return "public-network-change-detection";
         yield return "captive-portal-detection";
         yield return "host-resource-evidence";
+        yield return "tcp-retransmission-evidence";
+        yield return "memory-pressure-evidence";
         yield return "http-latency";
         yield return "download-throughput";
         yield return "upload-throughput";
@@ -182,8 +186,8 @@ internal static class FullDiagnosticRunner
                 "measurement-quality",
                 "warning",
                 "high",
-                "The active network changed during the measurement",
-                "The result combines evidence collected across a changing interface, route, gateway, address-family, or proxy state and should not be treated as a stable baseline.",
+                "The network or public measurement path changed during the run",
+                "The result combines evidence collected across a changing interface, route, gateway, address family, proxy, public network, or endpoint edge and should not be treated as a stable baseline.",
                 change.Changes.Select((item, index) => new DiagnosticEvidence(
                     $"networkChange.changes[{index}]",
                     "Network change",
@@ -207,33 +211,37 @@ internal static class FullDiagnosticRunner
         if (report.DualStack is { } dualStack)
         {
             var brokenIpv6 = dualStack.Ipv6.AddressAvailable
-                && !dualStack.Ipv6.TcpReachable
-                && dualStack.Ipv4.TcpReachable;
+                && !FamilyUsable(dualStack.Ipv6)
+                && FamilyUsable(dualStack.Ipv4);
             var brokenIpv4 = dualStack.Ipv4.AddressAvailable
-                && !dualStack.Ipv4.TcpReachable
-                && dualStack.Ipv6.TcpReachable;
+                && !FamilyUsable(dualStack.Ipv4)
+                && FamilyUsable(dualStack.Ipv6);
             if (brokenIpv6 || brokenIpv4)
             {
                 var family = brokenIpv6 ? "IPv6" : "IPv4";
+                var evidence = brokenIpv6 ? dualStack.Ipv6 : dualStack.Ipv4;
                 findings.Add(new DiagnosticFinding(
                     $"{family.ToLowerInvariant()}-path-broken",
                     "protocol",
                     "warning",
                     "high",
-                    $"{family} was advertised but could not establish the test connection",
-                    $"DNS returned a {family} address, but the direct TCP probe failed while the other address family remained reachable.",
-                    [new DiagnosticEvidence(
-                        brokenIpv6 ? "dualStack.ipv6.tcpReachable" : "dualStack.ipv4.tcpReachable",
-                        family,
-                        "Unreachable",
-                        brokenIpv6 ? dualStack.Ipv6.Error : dualStack.Ipv4.Error)],
+                    $"{family} was advertised but could not complete the endpoint request",
+                    $"DNS returned a {family} address, but the family-specific TCP, TLS, or HTTP probe failed while the other address family completed.",
+                    [
+                        new DiagnosticEvidence($"dualStack.{family.ToLowerInvariant()}.tcpReachable", $"{family} TCP", evidence.TcpReachable ? "Reachable" : "Unreachable"),
+                        new DiagnosticEvidence($"dualStack.{family.ToLowerInvariant()}.tlsReachable", $"{family} TLS", evidence.TlsReachable ? "Reachable" : "Unreachable"),
+                        new DiagnosticEvidence($"dualStack.{family.ToLowerInvariant()}.httpReachable", $"{family} HTTP", evidence.HttpReachable ? "Reachable" : "Unreachable", evidence.Error)
+                    ],
                     ["Compare another network and review router, VPN, firewall, and ISP address-family configuration before disabling the protocol globally."],
                     "Repeat Full on another network or with the VPN disabled."));
             }
-            if (dualStack.Ipv4.TcpReachable
-                && dualStack.Ipv6.TcpReachable
-                && dualStack.Ipv4.TcpConnectMs is { } ipv4Ms
-                && dualStack.Ipv6.TcpConnectMs is { } ipv6Ms
+
+            var ipv4Response = FamilyResponseMs(dualStack.Ipv4);
+            var ipv6Response = FamilyResponseMs(dualStack.Ipv6);
+            if (FamilyUsable(dualStack.Ipv4)
+                && FamilyUsable(dualStack.Ipv6)
+                && ipv4Response is { } ipv4Ms
+                && ipv6Response is { } ipv6Ms
                 && ipv6Ms - ipv4Ms > 100)
             {
                 findings.Add(new DiagnosticFinding(
@@ -241,11 +249,11 @@ internal static class FullDiagnosticRunner
                     "protocol",
                     "info",
                     "medium",
-                    "IPv6 connected materially slower than IPv4",
-                    "Both address families worked, but the IPv6 TCP connection took more than 100 milliseconds longer on this endpoint and route.",
+                    "IPv6 completed materially slower than IPv4",
+                    "Both address families worked, but the IPv6 family-specific request took more than 100 milliseconds longer on this endpoint and route.",
                     [
-                        new DiagnosticEvidence("dualStack.ipv4.tcpConnectMs", "IPv4 connect", Milliseconds(ipv4Ms)),
-                        new DiagnosticEvidence("dualStack.ipv6.tcpConnectMs", "IPv6 connect", Milliseconds(ipv6Ms))
+                        new DiagnosticEvidence("dualStack.ipv4.responseMs", "IPv4 response", Milliseconds(ipv4Ms)),
+                        new DiagnosticEvidence("dualStack.ipv6.responseMs", "IPv6 response", Milliseconds(ipv6Ms))
                     ],
                     ["Repeat the same test before changing settings; endpoint routing and transient congestion can affect one sample."],
                     "Compare another Full report on the same network."));
@@ -276,25 +284,77 @@ internal static class FullDiagnosticRunner
                     ? "Run LAN isolation and repeat Full over Ethernet."
                     : "Repeat Full with another endpoint candidate."));
         }
-        if (report.HostResources is { PotentialClientBottleneck: true } resources)
+        if (report.HostResources is { } resources)
         {
-            var counterIssues = resources.Interfaces
-                .Where(item => item.IncomingErrors + item.OutgoingErrors + item.IncomingDiscards + item.OutgoingDiscards > 0)
-                .ToArray();
-            findings.Add(new DiagnosticFinding(
-                "client-resource-bottleneck",
-                "client",
-                "warning",
-                "medium",
-                "The client may have limited the measurement",
-                "The diagnostic process used a high share of available CPU or interface error/discard counters increased during the run.",
-                [
-                    new DiagnosticEvidence("hostResources.processCpuPercent", "Diagnostic process CPU", Percent(resources.ProcessCpuPercent)),
-                    new DiagnosticEvidence("hostResources.interfaceCounterIssues", "Interfaces with errors or discards", counterIssues.Length.ToString(CultureInfo.InvariantCulture))
-                ],
-                ["Close other heavy workloads, disable power saving for the adapter, and repeat the same profile before treating the throughput result as a network ceiling."],
-                "Repeat the same profile with the client otherwise idle."));
+            if (resources.PotentialClientBottleneck)
+            {
+                var counterIssues = resources.Interfaces
+                    .Where(item => item.IncomingErrors + item.OutgoingErrors + item.IncomingDiscards + item.OutgoingDiscards > 0)
+                    .ToArray();
+                findings.Add(new DiagnosticFinding(
+                    "client-resource-bottleneck",
+                    "client",
+                    "warning",
+                    "medium",
+                    "The client may have limited the measurement",
+                    "The diagnostic process used a high share of available CPU or interface error/discard counters increased during the run.",
+                    [
+                        new DiagnosticEvidence("hostResources.processCpuPercent", "Diagnostic process CPU", Percent(resources.ProcessCpuPercent)),
+                        new DiagnosticEvidence("hostResources.interfaceCounterIssues", "Interfaces with errors or discards", counterIssues.Length.ToString(CultureInfo.InvariantCulture))
+                    ],
+                    ["Close other heavy workloads, disable power saving for the adapter, and repeat the same profile before treating the throughput result as a network ceiling."],
+                    "Repeat the same profile with the client otherwise idle."));
+            }
+
+            if (resources.TcpSegmentsSent >= 100 && resources.TcpRetransmissionPercent is >= 1)
+            {
+                findings.Add(new DiagnosticFinding(
+                    "tcp-retransmissions-observed",
+                    "reliability",
+                    "warning",
+                    "medium",
+                    "TCP retransmissions increased during the run",
+                    "Operating-system TCP counters recorded retransmitted segments while the diagnostic was active. These counters include other applications, so they indicate path or host pressure but do not identify one flow by themselves.",
+                    [
+                        new DiagnosticEvidence("hostResources.tcpSegmentsSent", "TCP segments sent", resources.TcpSegmentsSent.ToString(CultureInfo.InvariantCulture)),
+                        new DiagnosticEvidence("hostResources.tcpSegmentsRetransmitted", "TCP segments retransmitted", resources.TcpSegmentsRetransmitted.ToString(CultureInfo.InvariantCulture)),
+                        new DiagnosticEvidence("hostResources.tcpRetransmissionPercent", "Observed retransmission share", Percent(resources.TcpRetransmissionPercent.Value))
+                    ],
+                    ["Repeat the same profile with background traffic minimized and compare Ethernet with Wi-Fi before attributing retransmissions to the ISP."],
+                    "Repeat Full with the client otherwise idle."));
+            }
+
+            if (MemoryPressurePercent(resources) is >= 90 is var pressureHigh && pressureHigh)
+            {
+                findings.Add(new DiagnosticFinding(
+                    "host-memory-pressure",
+                    "client",
+                    "warning",
+                    "medium",
+                    "High memory pressure was observed during the run",
+                    "The runtime-reported system memory load was near its high-memory threshold, which can make application scheduling and throughput less representative.",
+                    [new DiagnosticEvidence("hostResources.memoryPressurePercent", "Memory pressure", Percent(MemoryPressurePercent(resources)!.Value))],
+                    ["Close memory-heavy applications and repeat the same profile before treating this result as the connection ceiling."],
+                    "Repeat the same profile after reducing memory pressure."));
+            }
         }
+    }
+
+    private static bool FamilyUsable(AddressFamilyProbeReport family) =>
+        family.HttpReachable || (family.TcpReachable && family.TlsReachable);
+
+    private static double? FamilyResponseMs(AddressFamilyProbeReport family) =>
+        family.HttpResponseMs ?? family.TlsHandshakeMs ?? family.TcpConnectMs;
+
+    private static double? MemoryPressurePercent(HostResourceReport resources)
+    {
+        if (resources.SystemMemoryLoadBytes is not { } load
+            || resources.HighMemoryLoadThresholdBytes is not { } threshold
+            || threshold <= 0)
+        {
+            return null;
+        }
+        return load / (double)threshold * 100;
     }
 
     private static string SafeError(Exception error)
