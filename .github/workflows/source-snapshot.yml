@@ -30,7 +30,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             cat .automation/gz/* | base64 --decode | gzip -dc > /tmp/source.patch
             git apply --index /tmp/source.patch
-            git rm -r .automation/parts .automation/gz .automation/apply
+            git rm -r .automation/gz .automation/apply
             git commit -m "Apply validated implementation tranche"
             git push origin HEAD:agent/desktop-app-rebuild
           fi
