@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -7,21 +8,31 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestSetupWorkspace
 {
+    private const int MinimumTimelineSlots = 24;
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualLayoutSizeChanged;
+        LayoutUpdated += RenderedLayoutUpdated;
         ApplyRenderedVisualLayout(Bounds.Width);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         SizeChanged -= VisualLayoutSizeChanged;
+        LayoutUpdated -= RenderedLayoutUpdated;
         base.OnDetachedFromVisualTree(eventArgs);
     }
 
     private void VisualLayoutSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyRenderedVisualLayout(eventArgs.NewSize.Width);
+
+    private void RenderedLayoutUpdated(object? sender, EventArgs eventArgs)
+    {
+        NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
+        NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
+    }
 
     private void ApplyRenderedVisualLayout(double width)
     {
@@ -46,5 +57,55 @@ public sealed partial class TestSetupWorkspace
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.1, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.8, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+    }
+
+    private static void NormalizeSparseTimeline(Grid grid, bool colorByLatency)
+    {
+        var bars = grid.Children.OfType<Border>().ToArray();
+        if (bars.Length == 0 || grid.ColumnDefinitions.Count != bars.Length) return;
+        if (IsIntentionalEmptyTimeline(bars)) return;
+
+        if (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
+        {
+            while (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            }
+
+            var offset = MinimumTimelineSlots - bars.Length;
+            for (var index = 0; index < bars.Length; index++)
+            {
+                Grid.SetColumn(bars[index], offset + index);
+            }
+        }
+
+        if (!colorByLatency) return;
+        foreach (var bar in bars)
+        {
+            AlignBarToneWithLatency(bar);
+        }
+    }
+
+    private static bool IsIntentionalEmptyTimeline(IReadOnlyList<Border> bars) =>
+        bars.Count == 1
+        && bars[0].Classes.Contains("timelineInactive")
+        && ToolTip.GetTip(bars[0]) is null
+        && bars[0].CornerRadius.TopLeft >= 4;
+
+    private static void AlignBarToneWithLatency(Border bar)
+    {
+        var tooltip = ToolTip.GetTip(bar)?.ToString();
+        if (string.IsNullOrWhiteSpace(tooltip)) return;
+        var token = tooltip.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var latency)) return;
+
+        RemoveScoreClasses(bar);
+        bar.Classes.Add(latency switch
+        {
+            <= 50 => "scoreExcellent",
+            <= 100 => "scoreGood",
+            <= 180 => "scoreFair",
+            _ => "scoreDegraded"
+        });
     }
 }
