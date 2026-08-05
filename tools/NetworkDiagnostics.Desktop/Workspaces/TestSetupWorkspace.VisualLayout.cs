@@ -10,6 +10,7 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 public sealed partial class TestSetupWorkspace
 {
     private const int MinimumTimelineSlots = 48;
+    private const string SparseTimelineHintName = "SparseTimelineHint";
     private Button? sevenDaysButton;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
@@ -125,8 +126,17 @@ public sealed partial class TestSetupWorkspace
     private static void NormalizeSparseTimeline(Grid grid, bool colorByLatency)
     {
         var bars = grid.Children.OfType<Border>().ToArray();
-        if (bars.Length == 0 || grid.ColumnDefinitions.Count != bars.Length) return;
-        if (IsIntentionalEmptyTimeline(bars)) return;
+        if (bars.Length == 0 || grid.ColumnDefinitions.Count != bars.Length)
+        {
+            RemoveSparseTimelineHint(grid);
+            return;
+        }
+
+        if (IsIntentionalEmptyTimeline(bars))
+        {
+            RemoveSparseTimelineHint(grid);
+            return;
+        }
 
         if (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
         {
@@ -142,11 +152,51 @@ public sealed partial class TestSetupWorkspace
             }
         }
 
+        UpdateSparseTimelineHint(grid, bars.Length, colorByLatency);
+
         if (!colorByLatency) return;
         foreach (var bar in bars)
         {
             AlignBarGeometryAndTone(bar);
         }
+    }
+
+    private static void UpdateSparseTimelineHint(Grid grid, int sampleCount, bool colorByLatency)
+    {
+        var existing = grid.Children
+            .OfType<TextBlock>()
+            .FirstOrDefault(item => item.Name == SparseTimelineHintName);
+        var shouldShow = colorByLatency && sampleCount is > 0 and < 4;
+        if (!shouldShow)
+        {
+            if (existing is not null) grid.Children.Remove(existing);
+            return;
+        }
+
+        var hint = existing ?? new TextBlock
+        {
+            Name = SparseTimelineHintName,
+            FontSize = 9,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            IsHitTestVisible = false,
+            Opacity = 0.82
+        };
+        hint.Classes.Add("muted");
+        hint.Text = sampleCount == 1
+            ? "Collecting history · 1 sample"
+            : $"Collecting history · {sampleCount} samples";
+        Grid.SetColumn(hint, 0);
+        Grid.SetColumnSpan(hint, Math.Max(1, grid.ColumnDefinitions.Count));
+        if (existing is null) grid.Children.Add(hint);
+    }
+
+    private static void RemoveSparseTimelineHint(Grid grid)
+    {
+        var existing = grid.Children
+            .OfType<TextBlock>()
+            .FirstOrDefault(item => item.Name == SparseTimelineHintName);
+        if (existing is not null) grid.Children.Remove(existing);
     }
 
     private static bool IsIntentionalEmptyTimeline(IReadOnlyList<Border> bars) =>
