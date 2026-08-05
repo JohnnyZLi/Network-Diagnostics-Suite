@@ -33,6 +33,7 @@ public sealed partial class MainWindow
         Dispatcher.UIThread.Post(() =>
         {
             SyncTestWorkspace();
+            UpdateTrayPresentation();
             RefreshWorkbenchChrome();
         });
     }
@@ -65,6 +66,7 @@ public sealed partial class MainWindow
         settings = settings with { MonitoringEnabled = !settings.MonitoringEnabled };
         await PersistSettingsAsync();
         await monitoringService.UpdateOptionsAsync(settings.ToMonitorOptions());
+        UpdateTrayPresentation();
         SyncTestWorkspace();
     }
 
@@ -116,5 +118,6 @@ public sealed partial class MainWindow
     {
         if (currentReport is null) return;
         await monitoringService.RecordDiagnosticAsync(currentReport);
+        UpdateTrayPresentation();
     }
 }
