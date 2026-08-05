@@ -24,4 +24,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <ProjectReference Include="../NetworkDiagnostics.Core/NetworkDiagnostics.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Styles/ComponentPolish.axaml" />
+  </ItemGroup>
 </Project>
