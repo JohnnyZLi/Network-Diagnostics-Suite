@@ -159,7 +159,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             Tag = stored,
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
-        open.Classes.Add("pickerRow");
+        open.Classes.Add("dataRow");
         if (isBaseline || isCandidate) open.Classes.Add("selected");
         open.Click += OpenReportClicked;
 
@@ -169,7 +169,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             Tag = stored,
             IsEnabled = !isBaseline
         };
-        baselineButton.Classes.Add("ghost");
+        baselineButton.Classes.Add("secondary");
         baselineButton.Click += SetBaselineClicked;
 
         var canSelectCandidate = baseline is not null && !isBaseline && !isCandidate;
@@ -179,7 +179,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             Tag = stored,
             IsEnabled = canSelectCandidate
         };
-        candidateButton.Classes.Add(canSelectCandidate ? "action" : "ghost");
+        candidateButton.Classes.Add(canSelectCandidate ? "primary" : "secondary");
         candidateButton.Click += SetCandidateClicked;
 
         var editButton = new Button
@@ -205,12 +205,9 @@ public sealed partial class ComparisonWorkspace : UserControl
         var stack = new StackPanel();
         stack.Children.Add(open);
         stack.Children.Add(actions);
-        return new Border
-        {
-            BorderBrush = Brush.Parse("#2B3031"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-            Child = stack
-        };
+        var row = new Border { Child = stack };
+        row.Classes.Add("divider");
+        return row;
     }
 
     private void RenderSelectionCards()
@@ -251,7 +248,7 @@ public sealed partial class ComparisonWorkspace : UserControl
         MetricRowsPanel.Children.Clear();
         if (baseline is null || candidate is null)
         {
-            CompatibilityIndicator.Background = Brush.Parse("#777D7E");
+            SetIndicatorClass("indicatorNeutral");
             CompatibilityTitleText.Text = "Waiting for two reports";
             CompatibilityDetailText.Text = "Compatibility checks compare profile, method, endpoint, interface, and transfer ceiling.";
             ComparisonSummaryText.Text = baseline is null
@@ -262,7 +259,7 @@ public sealed partial class ComparisonWorkspace : UserControl
         }
 
         var comparison = ReportComparisonService.Compare(baseline.Report, candidate.Report);
-        CompatibilityIndicator.Background = Brush.Parse(comparison.Comparable ? "#72A17B" : "#C77E68");
+        SetIndicatorClass(comparison.Comparable ? "indicatorSuccess" : "indicatorAccent");
         CompatibilityTitleText.Text = comparison.Comparable
             ? "Equivalent test context"
             : "Comparison includes cautions";
@@ -281,6 +278,14 @@ public sealed partial class ComparisonWorkspace : UserControl
         {
             MetricRowsPanel.Children.Add(BuildMetricRow(metric));
         }
+    }
+
+    private void SetIndicatorClass(string className)
+    {
+        CompatibilityIndicator.Classes.Remove("indicatorNeutral");
+        CompatibilityIndicator.Classes.Remove("indicatorAccent");
+        CompatibilityIndicator.Classes.Remove("indicatorSuccess");
+        CompatibilityIndicator.Classes.Add(className);
     }
 
     private static Border BuildMetricRow(ReportMetricDelta metric)
@@ -304,21 +309,22 @@ public sealed partial class ComparisonWorkspace : UserControl
         Grid.SetColumn(candidateText, 2);
         grid.Children.Add(candidateText);
         var change = MetricText(metric.Change);
-        change.Foreground = Brush.Parse(metric.Change.Contains("improved", StringComparison.OrdinalIgnoreCase)
-            ? "#79A982"
+        change.Classes.Remove("secondary");
+        change.Classes.Add(metric.Change.Contains("improved", StringComparison.OrdinalIgnoreCase)
+            ? "deltaPositive"
             : metric.Change.Contains("worsened", StringComparison.OrdinalIgnoreCase)
-                ? "#D1846D"
-                : "#B7BCBC");
+                ? "deltaNegative"
+                : "deltaNeutral");
         Grid.SetColumn(change, 3);
         grid.Children.Add(change);
 
-        return new Border
+        var row = new Border
         {
-            BorderBrush = Brush.Parse("#2B3031"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
             Padding = new Avalonia.Thickness(14, 11),
             Child = grid
         };
+        row.Classes.Add("divider");
+        return row;
     }
 
     private void AddEmptyMetricRow(string text)
@@ -334,12 +340,16 @@ public sealed partial class ComparisonWorkspace : UserControl
         MetricRowsPanel.Children.Add(label);
     }
 
-    private static TextBlock MetricText(string text) => new()
+    private static TextBlock MetricText(string text)
     {
-        Text = text,
-        FontSize = 11,
-        Foreground = Brush.Parse("#B7BCBC"),
-        VerticalAlignment = VerticalAlignment.Center,
-        TextWrapping = TextWrapping.Wrap
-    };
+        var value = new TextBlock
+        {
+            Text = text,
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap
+        };
+        value.Classes.Add("secondary");
+        return value;
+    }
 }
