@@ -1,19 +1,20 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
+using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
+    private Button? settingsUtilityButton;
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
-        ReportsWorkspaceButton.IsVisible = false;
-        ComparisonsWorkspaceButton.IsVisible = false;
-        TestWorkspaceLabel.Text = "Control center";
-        SettingsWorkspaceLabel.Text = "Settings";
+        EnsureSettingsUtility();
+        HidePrimaryPageNavigation();
         LayoutUpdated += VisualPolishLayoutUpdated;
     }
 
@@ -25,10 +26,35 @@ public sealed partial class WorkbenchShell
 
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
+        HidePrimaryPageNavigation();
+        if (settingsUtilityButton is not null)
+        {
+            settingsUtilityButton.Content = Bounds.Width < 960 ? "⚙" : "Settings";
+        }
+        SimplifyContextLabel();
+    }
+
+    private void EnsureSettingsUtility()
+    {
+        if (settingsUtilityButton is not null) return;
+        settingsUtilityButton = new Button
+        {
+            Content = "Settings",
+            MinWidth = 34
+        };
+        settingsUtilityButton.Classes.Add("toolbar");
+        settingsUtilityButton.Click += (_, _) =>
+            WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
+        ToolbarActions.Children.Insert(0, settingsUtilityButton);
+    }
+
+    private void HidePrimaryPageNavigation()
+    {
+        WorkspaceNavigation.IsVisible = false;
+        TestWorkspaceButton.IsVisible = false;
         ReportsWorkspaceButton.IsVisible = false;
         ComparisonsWorkspaceButton.IsVisible = false;
-        TestWorkspaceLabel.Text = Bounds.Width < 960 ? "Home" : "Control center";
-        SimplifyContextLabel();
+        SettingsWorkspaceButton.IsVisible = false;
     }
 
     private void SimplifyContextLabel()
