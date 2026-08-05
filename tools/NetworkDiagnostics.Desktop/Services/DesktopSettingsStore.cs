@@ -8,7 +8,7 @@ namespace NetworkDiagnostics.Desktop.Services;
 public sealed record DesktopSettings(
     bool IncludeLocalIdentifiers = false,
     string Appearance = "dark",
-    string DefaultProfile = "connection-check",
+    string DefaultProfile = "quick",
     string DefaultTransferMethod = "compare",
     string? ReportDirectory = null,
     string? TestOrigin = null,
@@ -36,10 +36,10 @@ public sealed record DesktopSettings(
 {
     public TestProfileId SelectedProfile => DefaultProfile switch
     {
-        "quick" => TestProfileId.Quick,
+        "connection-check" => TestProfileId.ConnectionCheck,
         "standard" => TestProfileId.Standard,
         "extended" => TestProfileId.Extended,
-        _ => TestProfileId.ConnectionCheck
+        _ => TestProfileId.Quick
     };
 
     public TransferMethod SelectedTransferMethod => DefaultTransferMethod switch
