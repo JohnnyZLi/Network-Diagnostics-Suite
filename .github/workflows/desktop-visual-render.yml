@@ -102,9 +102,9 @@ jobs:
           capture overview-dark-wide
 
           # Selecting a profile must update the plan and Run label without starting a test.
-          xdotool mousemove 1120 688 click 1
+          run_command 'select full diagnostic'
           capture diagnostic-selector-full
-          xdotool mousemove 1038 688 click 1
+          run_command 'select quick diagnostic'
 
           run_command 'customize diagnostic'
           capture deeper-diagnostics-overlay
