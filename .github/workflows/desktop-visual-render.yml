@@ -16,7 +16,7 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       DISPLAY: ':99'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
@@ -76,6 +76,19 @@ jobs:
             scrot "desktop-visual/screenshots/${name}.png"
           }
 
+          wait_for_window() {
+            for attempt in {1..40}; do
+              if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
+                wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+                sleep 1
+                return
+              fi
+              sleep 0.5
+            done
+            cat /tmp/desktop-app.log
+            exit 1
+          }
+
           run_command() {
             local query="$1"
             xdotool key --clearmodifiers ctrl+k
@@ -87,6 +100,10 @@ jobs:
           }
 
           capture overview-dark-wide
+
+          xdotool mousemove 900 680 click 1
+          capture overview-diagnostics-expanded
+          xdotool mousemove 900 680 click 1
 
           xdotool key --clearmodifiers ctrl+k
           sleep 0.35
@@ -104,12 +121,43 @@ jobs:
             capture "settings-${section}"
           done
 
+          # The Developer preview button is stable at the maximized 1600x1000 audit viewport.
+          xdotool mousemove 700 350 click 1
+          capture result-healthy-overview
+          xdotool mousemove 255 224 click 1
+          capture result-healthy-evidence
+
+          run_command 'open network overview'
+          run_command 'run selected diagnostic'
+          capture running-diagnostic
+          xdotool key Escape || true
+
           run_command 'open network overview'
           wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
           wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,1100,800
           capture overview-1100x800
           wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,900,700
           capture overview-900x700
+
+          # Restart from a clean Overview destination in Light mode.
+          kill "$(cat /tmp/desktop-app.pid)" || true
+          sleep 1
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path.home() / '.local' / 'share' / 'JohnnyLi' / 'NetworkDiagnostics' / 'settings.json'
+          data = json.loads(path.read_text()) if path.exists() else {}
+          data['appearance'] = 'light'
+          data['workbench'] = None
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(data, indent=2))
+          PY
+          desktop-visual/publish/NetworkDiagnosticsDesktop >> /tmp/desktop-app.log 2>&1 &
+          echo $! > /tmp/desktop-app.pid
+          wait_for_window
+          run_command 'open network overview'
+          capture overview-light-wide
 
       - name: Upload rendered desktop states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
