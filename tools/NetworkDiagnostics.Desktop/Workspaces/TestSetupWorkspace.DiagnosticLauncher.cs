@@ -13,6 +13,8 @@ public sealed partial class TestSetupWorkspace
 
     public event EventHandler? DiagnosticLauncherRequested;
 
+    public event EventHandler<IndexRequestedEventArgs>? DiagnosticRunRequested;
+
     public Control? DiagnosticLauncherContent => diagnosticLauncherContent;
 
     private void InstallDiagnosticLauncher()
@@ -33,13 +35,13 @@ public sealed partial class TestSetupWorkspace
 
         var title = new TextBlock
         {
-            Text = "Choose a diagnostic profile",
+            Text = "Customize a diagnostic",
             FontSize = 20,
             FontWeight = FontWeight.SemiBold
         };
         var description = new TextBlock
         {
-            Text = "Select the depth of evidence, transfer method, and run plan without moving the Home layout.",
+            Text = "Choose a profile, transfer method, interface, and run plan without moving the Home layout.",
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap
         };
@@ -64,11 +66,11 @@ public sealed partial class TestSetupWorkspace
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
         };
 
-        launcherHost.Child = CreateDiagnosticLauncherButton();
+        launcherHost.Child = CreateDiagnosticLauncherSurface();
         diagnosticLauncherInstalled = true;
     }
 
-    private Button CreateDiagnosticLauncherButton()
+    private Control CreateDiagnosticLauncherSurface()
     {
         var title = new TextBlock
         {
@@ -78,7 +80,7 @@ public sealed partial class TestSetupWorkspace
         };
         var description = new TextBlock
         {
-            Text = "Path, service, scaling, and local-network tests.",
+            Text = "Start with saved defaults, or open the full configuration.",
             FontSize = 10,
             TextWrapping = TextWrapping.Wrap
         };
@@ -92,57 +94,59 @@ public sealed partial class TestSetupWorkspace
         copy.Children.Add(title);
         copy.Children.Add(description);
 
-        var action = new TextBlock
-        {
-            Text = "CHOOSE DIAGNOSTIC",
-            FontSize = 10,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 0.8,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        action.Classes.Add("eyebrow");
-        var arrow = new TextBlock
-        {
-            Text = "›",
-            FontSize = 24,
-            LineHeight = 24,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        var actionRow = new StackPanel
+        var actions = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Spacing = 10,
+            Spacing = 7,
             VerticalAlignment = VerticalAlignment.Center
         };
-        actionRow.Children.Add(action);
-        actionRow.Children.Add(arrow);
+        actions.Children.Add(CreateLauncherAction("Quick", "primary", QuickLauncherClicked, 78));
+        actions.Children.Add(CreateLauncherAction("Full", "secondary", FullLauncherClicked, 74));
+        actions.Children.Add(CreateLauncherAction("Stress", "secondary", StressLauncherClicked, 82));
+        actions.Children.Add(CreateLauncherAction("More…", "ghost", MoreLauncherClicked, 78));
 
         var layout = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            ColumnSpacing = 18
+            ColumnSpacing = 18,
+            MinHeight = 82,
+            Margin = new Thickness(18, 0)
         };
         layout.Children.Add(copy);
-        Grid.SetColumn(actionRow, 1);
-        layout.Children.Add(actionRow);
+        Grid.SetColumn(actions, 1);
+        layout.Children.Add(actions);
+        return layout;
+    }
 
+    private static Button CreateLauncherAction(
+        string label,
+        string styleClass,
+        EventHandler<RoutedEventArgs> clickHandler,
+        double minWidth)
+    {
         var button = new Button
         {
-            MinHeight = 82,
-            Padding = new Thickness(18, 13),
-            Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(14),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Content = layout
+            Content = label,
+            MinWidth = minWidth,
+            MinHeight = 36,
+            Padding = new Thickness(13, 7),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
         };
-        button.Classes.Add("ghost");
-        button.Click += DiagnosticLauncherClicked;
+        button.Classes.Add(styleClass);
+        button.Click += clickHandler;
         return button;
     }
 
-    private void DiagnosticLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
+    private void QuickLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
+        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(1));
+
+    private void FullLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
+        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(2));
+
+    private void StressLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
+        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(3));
+
+    private void MoreLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
         DiagnosticLauncherRequested?.Invoke(this, EventArgs.Empty);
 }
