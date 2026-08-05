@@ -13,5 +13,6 @@ public sealed class MainWindowBootstrapTests
 
         var shell = Assert.IsType<WorkbenchShell>(window.Content);
         Assert.NotNull(shell.WorkspaceContent);
+        Assert.False(shell.InspectorOpen);
     }
 }
