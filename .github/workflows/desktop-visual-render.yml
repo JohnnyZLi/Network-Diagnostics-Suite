@@ -132,10 +132,8 @@ jobs:
           capture settings-interface-dropdown
           xdotool key Escape
 
-          # Open the Developer preview and capture the actual result workspaces.
-          run_command 'settings developer'
-          xdotool mousemove 840 444 click 1
-          sleep 1.2
+          # Capture the actual result workspace through a deterministic developer command.
+          run_command 'preview healthy result'
           capture result-healthy-overview
           xdotool mousemove 180 215 click 1
           capture result-healthy-evidence
