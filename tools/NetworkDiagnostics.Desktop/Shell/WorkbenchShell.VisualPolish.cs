@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
@@ -19,6 +21,7 @@ public sealed partial class WorkbenchShell
         ResolveHeaderContainers();
         EnsureSettingsUtility();
         HidePrimaryPageNavigation();
+        PolishHeaderUtilities();
         LayoutUpdated += VisualPolishLayoutUpdated;
     }
 
@@ -37,6 +40,7 @@ public sealed partial class WorkbenchShell
         {
             settingsUtilityButton.Content = Bounds.Width < 960 ? "⚙" : "Settings";
         }
+        PolishHeaderUtilities();
         SimplifyContextLabel();
     }
 
@@ -52,12 +56,38 @@ public sealed partial class WorkbenchShell
         settingsUtilityButton = new Button
         {
             Content = "Settings",
-            MinWidth = 34
+            MinWidth = 58
         };
         settingsUtilityButton.Classes.Add("utilityKey");
         settingsUtilityButton.Click += (_, _) =>
             WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
         toolbarActions.Children.Insert(0, settingsUtilityButton);
+    }
+
+    private void PolishHeaderUtilities()
+    {
+        if (settingsUtilityButton is not null)
+        {
+            PolishUtilityButton(settingsUtilityButton, Bounds.Width < 960 ? 34 : 58);
+        }
+
+        PolishUtilityButton(CommandToolbarButton, Bounds.Width < 960 ? 42 : 84);
+
+        InspectorToggleButton.Width = double.NaN;
+        PolishUtilityButton(InspectorToggleButton, 46);
+    }
+
+    private static void PolishUtilityButton(Button button, double minimumWidth)
+    {
+        button.Height = 30;
+        button.MinHeight = 30;
+        button.MinWidth = minimumWidth;
+        button.Padding = new Thickness(11, 0);
+        button.CornerRadius = new CornerRadius(9);
+        button.FontSize = 9;
+        button.FontWeight = FontWeight.Medium;
+        button.HorizontalContentAlignment = HorizontalAlignment.Center;
+        button.VerticalContentAlignment = VerticalAlignment.Center;
     }
 
     private void HidePrimaryPageNavigation()
@@ -105,7 +135,7 @@ public sealed partial class WorkbenchShell
         {
             Text = selected,
             FontSize = 9,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center
         };
         label.Classes.Add("shellMuted");
         BreadcrumbPanel.Children.Add(label);
