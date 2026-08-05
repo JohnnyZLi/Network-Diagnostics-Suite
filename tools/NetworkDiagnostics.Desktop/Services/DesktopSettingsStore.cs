@@ -166,10 +166,7 @@ public sealed class DesktopSettingsStore
                 ? loaded with
                 {
                     Appearance = "dark",
-                    VisualGeneration = CurrentVisualGeneration,
-                    Workbench = loaded.Workbench is null
-                        ? null
-                        : loaded.Workbench with { InspectorOpen = false }
+                    VisualGeneration = CurrentVisualGeneration
                 }
                 : loaded;
         }
