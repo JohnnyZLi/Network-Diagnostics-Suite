@@ -34,6 +34,7 @@ public sealed partial class TestSetupWorkspace
     private void RenderedLayoutUpdated(object? sender, EventArgs eventArgs)
     {
         EnsureSevenDayButton();
+        PolishSpeedActions();
         NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
         NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
         SyncSevenDaySelection();
@@ -62,6 +63,25 @@ public sealed partial class TestSetupWorkspace
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.1, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.8, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+    }
+
+    private void PolishSpeedActions()
+    {
+        foreach (var button in this.GetVisualDescendants().OfType<Button>())
+        {
+            switch (button.Content?.ToString())
+            {
+                case "Run content test":
+                case "Run peak test":
+                    if (!button.Classes.Contains("speedAction")) button.Classes.Add("speedAction");
+                    button.MinWidth = 126;
+                    break;
+                case "Speed settings":
+                    button.Classes.Remove("ghost");
+                    if (!button.Classes.Contains("linkAction")) button.Classes.Add("linkAction");
+                    break;
+            }
+        }
     }
 
     private void EnsureSevenDayButton()
