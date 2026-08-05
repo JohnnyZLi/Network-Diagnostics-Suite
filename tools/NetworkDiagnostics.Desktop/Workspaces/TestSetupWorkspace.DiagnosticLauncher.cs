@@ -3,11 +3,13 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestSetupWorkspace
 {
+    private readonly Dictionary<Button, TextBlock> diagnosticSelectionBadges = new();
     private Control? diagnosticLauncherContent;
     private bool diagnosticLauncherInstalled;
 
@@ -16,6 +18,43 @@ public sealed partial class TestSetupWorkspace
     public event EventHandler<IndexRequestedEventArgs>? DiagnosticRunRequested;
 
     public Control? DiagnosticLauncherContent => diagnosticLauncherContent;
+
+    public void PrepareDiagnosticLauncherLayout()
+    {
+        InstallDiagnosticLauncher();
+
+        ConfigureDiagnosticLayout(900);
+        ProfileGrid.ColumnSpacing = 10;
+        ProfileGrid.RowSpacing = 10;
+        ProfileGrid.Margin = new Thickness(0, 2, 0, 0);
+
+        DiagnosticDetailsGrid.ColumnDefinitions.Clear();
+        DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.08, GridUnitType.Star)));
+        DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.92, GridUnitType.Star)));
+        DiagnosticDetailsGrid.RowDefinitions.Clear();
+        DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        DiagnosticDetailsGrid.ColumnSpacing = 26;
+        DiagnosticDetailsGrid.RowSpacing = 20;
+
+        SetGridPosition(SelectedQuestionPanel, 0, 0);
+        SetGridPosition(RunPlanPanel, 0, 1);
+        SetGridPosition(MethodPanel, 1, 0);
+        SetGridPosition(RunActionPanel, 1, 1);
+
+        foreach (var button in ProfileButtons())
+        {
+            button.MinHeight = 74;
+            button.Padding = new Thickness(14, 11);
+            button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        }
+
+        RunActionPanel.MinWidth = 0;
+        RunActionPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        RunButton.MinWidth = 0;
+        RunButton.HorizontalAlignment = HorizontalAlignment.Stretch;
+        RefreshDiagnosticProfileVisuals();
+    }
 
     private void InstallDiagnosticLauncher()
     {
@@ -33,30 +72,21 @@ public sealed partial class TestSetupWorkspace
             diagnosticBorder.Padding = new Thickness(0);
         }
 
-        var title = new TextBlock
-        {
-            Text = "Customize a diagnostic",
-            FontSize = 20,
-            FontWeight = FontWeight.SemiBold
-        };
         var description = new TextBlock
         {
-            Text = "Choose a profile, transfer method, interface, and run plan without moving the Home layout.",
+            Text = "Choose a profile, transfer method, and run plan. Interface and endpoint details are reviewed before the test starts.",
             FontSize = 11,
+            LineHeight = 17,
             TextWrapping = TextWrapping.Wrap
         };
         description.Classes.Add("secondary");
 
-        var intro = new StackPanel { Spacing = 4 };
-        intro.Children.Add(title);
-        intro.Children.Add(description);
-
         var overlayBody = new StackPanel
         {
-            Margin = new Thickness(24, 20, 24, 28),
-            Spacing = 18
+            Margin = new Thickness(22, 18, 22, 24),
+            Spacing = 14
         };
-        overlayBody.Children.Add(intro);
+        overlayBody.Children.Add(description);
         overlayBody.Children.Add(diagnosticContent);
 
         diagnosticLauncherContent = new ScrollViewer
@@ -65,6 +95,12 @@ public sealed partial class TestSetupWorkspace
             VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
         };
+
+        EnsureDiagnosticSelectionBadges();
+        foreach (var button in ProfileButtons())
+        {
+            button.Click += DiagnosticProfileVisualStateChanged;
+        }
 
         launcherHost.Child = CreateDiagnosticLauncherSurface();
         diagnosticLauncherInstalled = true;
@@ -136,6 +172,56 @@ public sealed partial class TestSetupWorkspace
         button.Classes.Add(styleClass);
         button.Click += clickHandler;
         return button;
+    }
+
+    private IReadOnlyList<Button> ProfileButtons() =>
+    [
+        ConnectionProfileButton,
+        QuickProfileButton,
+        FullProfileButton,
+        StressProfileButton
+    ];
+
+    private void EnsureDiagnosticSelectionBadges()
+    {
+        foreach (var button in ProfileButtons())
+        {
+            if (diagnosticSelectionBadges.ContainsKey(button)
+                || button.Content is not StackPanel content)
+            {
+                continue;
+            }
+
+            var badge = new TextBlock
+            {
+                Text = "SELECTED",
+                FontSize = 8,
+                FontWeight = FontWeight.SemiBold,
+                LetterSpacing = 1.1,
+                IsVisible = false
+            };
+            badge.Classes.Add("eyebrow");
+            content.Children.Insert(0, badge);
+            diagnosticSelectionBadges[button] = badge;
+        }
+    }
+
+    private void DiagnosticProfileVisualStateChanged(object? sender, RoutedEventArgs eventArgs) =>
+        Dispatcher.UIThread.Post(RefreshDiagnosticProfileVisuals);
+
+    private void RefreshDiagnosticProfileVisuals()
+    {
+        EnsureDiagnosticSelectionBadges();
+        foreach (var button in ProfileButtons())
+        {
+            var selected = button.Classes.Contains("selected");
+            button.BorderThickness = selected ? new Thickness(2) : new Thickness(1);
+            button.Opacity = selected ? 1 : 0.88;
+            if (diagnosticSelectionBadges.TryGetValue(button, out var badge))
+            {
+                badge.IsVisible = selected;
+            }
+        }
     }
 
     private void QuickLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
