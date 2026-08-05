@@ -11,6 +11,7 @@ public sealed partial class MainWindow
     private void WireControlCenterEvents()
     {
         if (testSetupWorkspace is null) return;
+        testSetupWorkspace.DiagnosticLauncherRequested += ControlCenterDiagnosticLauncherRequested;
         testSetupWorkspace.RecentReportRequested += ControlCenterReportRequested;
         testSetupWorkspace.RecentReportEditRequested += ControlCenterReportEditRequested;
         testSetupWorkspace.InlineBaselineRequested += ControlCenterBaselineRequested;
@@ -35,6 +36,16 @@ public sealed partial class MainWindow
             comparisonBaselineId,
             comparisonCandidateId,
             ReportComparisonService.AnalyzeTrend(controlCenterReports)));
+    }
+
+    private void ControlCenterDiagnosticLauncherRequested(object? sender, EventArgs eventArgs)
+    {
+        var content = testSetupWorkspace?.DiagnosticLauncherContent;
+        if (workbenchShell is null || content is null) return;
+
+        ShowControlCenterUnderlay();
+        workbenchShell.SelectControlCenter();
+        workbenchShell.OpenOverlay("Deeper diagnostics", content, 1180);
     }
 
     private void ControlCenterReportRequested(object? sender, StoredReportEventArgs eventArgs) =>
