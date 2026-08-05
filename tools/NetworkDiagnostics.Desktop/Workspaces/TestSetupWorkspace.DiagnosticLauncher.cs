@@ -11,11 +11,16 @@ public sealed partial class TestSetupWorkspace
 {
     private readonly Dictionary<Button, TextBlock> diagnosticSelectionBadges = new();
     private Control? diagnosticLauncherContent;
+    private Button? quickLauncherButton;
+    private Button? fullLauncherButton;
+    private Button? stressLauncherButton;
+    private Button? moreLauncherButton;
+    private Button? launcherRunButton;
+    private TextBlock? launcherSummaryText;
     private bool diagnosticLauncherInstalled;
+    private int pendingLauncherProfileIndex = 1;
 
     public event EventHandler? DiagnosticLauncherRequested;
-
-    public event EventHandler<IndexRequestedEventArgs>? DiagnosticRunRequested;
 
     public Control? DiagnosticLauncherContent => diagnosticLauncherContent;
 
@@ -103,7 +108,9 @@ public sealed partial class TestSetupWorkspace
         }
 
         launcherHost.Child = CreateDiagnosticLauncherSurface();
+        LayoutUpdated += DiagnosticLauncherLayoutUpdated;
         diagnosticLauncherInstalled = true;
+        SyncDiagnosticLauncherState();
     }
 
     private Control CreateDiagnosticLauncherSurface()
@@ -114,13 +121,13 @@ public sealed partial class TestSetupWorkspace
             FontSize = 14,
             FontWeight = FontWeight.SemiBold
         };
-        var description = new TextBlock
+        launcherSummaryText = new TextBlock
         {
-            Text = "Start with saved defaults, or open the full configuration.",
+            Text = "Quick selected",
             FontSize = 10,
             TextWrapping = TextWrapping.Wrap
         };
-        description.Classes.Add("muted");
+        launcherSummaryText.Classes.Add("muted");
 
         var copy = new StackPanel
         {
@@ -128,30 +135,56 @@ public sealed partial class TestSetupWorkspace
             VerticalAlignment = VerticalAlignment.Center
         };
         copy.Children.Add(title);
-        copy.Children.Add(description);
+        copy.Children.Add(launcherSummaryText);
 
-        var actions = new StackPanel
+        quickLauncherButton = CreateLauncherSelector("Quick", 1, 78);
+        fullLauncherButton = CreateLauncherSelector("Full", 2, 74);
+        stressLauncherButton = CreateLauncherSelector("Stress", 3, 82);
+        moreLauncherButton = CreateLauncherAction("More…", "ghost", MoreLauncherClicked, 76);
+
+        var selectors = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 7,
             VerticalAlignment = VerticalAlignment.Center
         };
-        actions.Children.Add(CreateLauncherAction("Quick", "primary", QuickLauncherClicked, 78));
-        actions.Children.Add(CreateLauncherAction("Full", "secondary", FullLauncherClicked, 74));
-        actions.Children.Add(CreateLauncherAction("Stress", "secondary", StressLauncherClicked, 82));
-        actions.Children.Add(CreateLauncherAction("More…", "ghost", MoreLauncherClicked, 78));
+        selectors.Children.Add(quickLauncherButton);
+        selectors.Children.Add(fullLauncherButton);
+        selectors.Children.Add(stressLauncherButton);
+        selectors.Children.Add(moreLauncherButton);
+
+        launcherRunButton = CreateLauncherAction("Run Quick", "primary", LauncherRunClicked, 118);
 
         var layout = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            ColumnSpacing = 18,
+            ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
+            ColumnSpacing = 14,
             MinHeight = 82,
             Margin = new Thickness(18, 0)
         };
         layout.Children.Add(copy);
-        Grid.SetColumn(actions, 1);
-        layout.Children.Add(actions);
+        Grid.SetColumn(selectors, 1);
+        layout.Children.Add(selectors);
+        Grid.SetColumn(launcherRunButton, 2);
+        layout.Children.Add(launcherRunButton);
         return layout;
+    }
+
+    private Button CreateLauncherSelector(string label, int profileIndex, double minWidth)
+    {
+        var button = new Button
+        {
+            Content = label,
+            Tag = profileIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            MinWidth = minWidth,
+            MinHeight = 36,
+            Padding = new Thickness(13, 7),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        button.Classes.Add("profileChoice");
+        button.Click += LauncherProfileClicked;
+        return button;
     }
 
     private static Button CreateLauncherAction(
@@ -207,7 +240,11 @@ public sealed partial class TestSetupWorkspace
     }
 
     private void DiagnosticProfileVisualStateChanged(object? sender, RoutedEventArgs eventArgs) =>
-        Dispatcher.UIThread.Post(RefreshDiagnosticProfileVisuals);
+        Dispatcher.UIThread.Post(() =>
+        {
+            RefreshDiagnosticProfileVisuals();
+            SyncDiagnosticLauncherState();
+        });
 
     private void RefreshDiagnosticProfileVisuals()
     {
@@ -224,14 +261,95 @@ public sealed partial class TestSetupWorkspace
         }
     }
 
-    private void QuickLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
-        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(1));
+    private void DiagnosticLauncherLayoutUpdated(object? sender, EventArgs eventArgs) =>
+        SyncDiagnosticLauncherState();
 
-    private void FullLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
-        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(2));
+    private void SyncDiagnosticLauncherState()
+    {
+        if (quickLauncherButton is null
+            || fullLauncherButton is null
+            || stressLauncherButton is null
+            || moreLauncherButton is null
+            || launcherRunButton is null
+            || launcherSummaryText is null)
+        {
+            return;
+        }
 
-    private void StressLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
-        DiagnosticRunRequested?.Invoke(this, new IndexRequestedEventArgs(3));
+        var selectedProfileIndex = SelectedProfileIndex();
+        if (selectedProfileIndex is >= 1 and <= 3)
+        {
+            pendingLauncherProfileIndex = selectedProfileIndex;
+        }
+
+        SetSelected(quickLauncherButton, selectedProfileIndex == 1);
+        SetSelected(fullLauncherButton, selectedProfileIndex == 2);
+        SetSelected(stressLauncherButton, selectedProfileIndex == 3);
+
+        moreLauncherButton.Classes.Remove("secondary");
+        moreLauncherButton.Classes.Remove("ghost");
+        moreLauncherButton.Classes.Add(selectedProfileIndex == 0 ? "secondary" : "ghost");
+
+        var profileName = ProfileName(selectedProfileIndex);
+        var summary = $"{profileName} · {EstimatedTimeText.Text} · {TransferCapText.Text}";
+        if (!string.IsNullOrWhiteSpace(ConfirmationText.Text)
+            && !ConfirmationText.Text.Equals("No", StringComparison.OrdinalIgnoreCase)
+            && !ConfirmationText.Text.Equals("Not required", StringComparison.OrdinalIgnoreCase))
+        {
+            summary += $" · confirmation {ConfirmationText.Text.ToLowerInvariant()}";
+        }
+
+        if (launcherSummaryText.Text != summary)
+        {
+            launcherSummaryText.Text = summary;
+        }
+
+        launcherRunButton.Content = RunButton.IsEnabled
+            ? $"Run {profileName}"
+            : "Diagnostic running";
+        launcherRunButton.IsEnabled = RunButton.IsEnabled;
+        quickLauncherButton.IsEnabled = RunButton.IsEnabled;
+        fullLauncherButton.IsEnabled = RunButton.IsEnabled;
+        stressLauncherButton.IsEnabled = RunButton.IsEnabled;
+        moreLauncherButton.IsEnabled = RunButton.IsEnabled;
+    }
+
+    private int SelectedProfileIndex()
+    {
+        if (QuickProfileButton.Classes.Contains("selected")) return 1;
+        if (FullProfileButton.Classes.Contains("selected")) return 2;
+        if (StressProfileButton.Classes.Contains("selected")) return 3;
+        if (ConnectionProfileButton.Classes.Contains("selected")) return 0;
+        return pendingLauncherProfileIndex;
+    }
+
+    private static string ProfileName(int profileIndex) => profileIndex switch
+    {
+        0 => "Connection Check",
+        2 => "Full",
+        3 => "Stress",
+        _ => "Quick"
+    };
+
+    private void LauncherProfileClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not Button { Tag: string value }
+            || !int.TryParse(value, out var profileIndex))
+        {
+            return;
+        }
+
+        pendingLauncherProfileIndex = profileIndex;
+        SetSelected(quickLauncherButton!, profileIndex == 1);
+        SetSelected(fullLauncherButton!, profileIndex == 2);
+        SetSelected(stressLauncherButton!, profileIndex == 3);
+        launcherRunButton!.Content = $"Run {ProfileName(profileIndex)}";
+        launcherSummaryText!.Text = $"{ProfileName(profileIndex)} selected · loading saved configuration…";
+        ProfileRequested?.Invoke(this, new IndexRequestedEventArgs(profileIndex));
+    }
+
+    private void LauncherRunClicked(object? sender, RoutedEventArgs eventArgs) =>
+        RunRequested?.Invoke(this, EventArgs.Empty);
 
     private void MoreLauncherClicked(object? sender, RoutedEventArgs eventArgs) =>
         DiagnosticLauncherRequested?.Invoke(this, EventArgs.Empty);
