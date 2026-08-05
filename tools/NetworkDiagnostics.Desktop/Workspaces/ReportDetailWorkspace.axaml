@@ -1,74 +1,53 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Workspaces.ReportDetailWorkspace"
-             Background="#111415"
-             Foreground="#E9E6E0"
+             Background="{DynamicResource AppCanvasBrush}"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
-    <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
-      <Setter Property="FontSize" Value="10" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.6" />
-    </Style>
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9C" />
-    </Style>
-    <Style Selector="Border.card">
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="BorderBrush" Value="#303536" />
+    <Style Selector="Border.metricCard">
+      <Setter Property="Width" Value="200" />
+      <Setter Property="Height" Value="104" />
+      <Setter Property="Margin" Value="0,0,10,10" />
+      <Setter Property="Padding" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="CornerRadius" Value="9" />
     </Style>
-    <Style Selector="Button.action">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="13,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="#C96346" />
-      <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.ghost">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="12,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#D4D7D6" />
-      <Setter Property="BorderBrush" Value="#3B4142" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
-    <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Background" Value="#222728" />
-      <Setter Property="BorderBrush" Value="#565D5E" />
+    <Style Selector="Border.metricCard.unmeasured">
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="58,*">
-    <Border Grid.Row="0" Background="#15191A" BorderBrush="#303536" BorderThickness="0,0,0,1" Padding="18,0">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+  <Grid RowDefinitions="52,*">
+    <Border Grid.Row="0"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Button Classes="ghost" Content="← Reports" VerticalAlignment="Center" Click="BackClicked" />
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Name="ToolbarTitleText" FontSize="13" FontWeight="SemiBold" Text="Report" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+          <TextBlock Name="ToolbarTitleText" FontSize="12" FontWeight="SemiBold" Text="Report" />
           <TextBlock Name="ToolbarMetaText" Classes="muted" FontSize="10" />
         </StackPanel>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
           <Button Classes="ghost" Content="Edit label" Click="EditClicked" />
           <Button Classes="ghost" Content="Export" Click="ExportClicked" />
-          <Button Classes="action" Content="Compare" Click="CompareClicked" />
+          <Button Classes="primary" Content="Compare" Click="CompareClicked" />
         </StackPanel>
       </Grid>
     </Border>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="34,30,34,40" Spacing="18">
-        <Grid ColumnDefinitions="*,280" ColumnSpacing="22">
+        <Grid ColumnDefinitions="*,300" ColumnSpacing="22">
           <StackPanel Grid.Column="0" Spacing="8">
             <TextBlock Name="OutcomeLabelText" Classes="eyebrow" />
             <TextBlock Name="VerdictText" FontSize="30" FontWeight="SemiBold" LineHeight="36" TextWrapping="Wrap" />
-            <TextBlock Name="SummaryText" Classes="muted" FontSize="15" LineHeight="23" MaxWidth="780" TextWrapping="Wrap" />
+            <TextBlock Name="SummaryText" Classes="secondary" FontSize="15" LineHeight="23" MaxWidth="780" TextWrapping="Wrap" />
           </StackPanel>
-          <Border Grid.Column="1" Classes="card" Padding="16">
+          <Border Grid.Column="1" Classes="accentSurface" Padding="17">
             <StackPanel Spacing="7">
               <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
               <TextBlock Name="NextActionText" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
@@ -78,19 +57,19 @@
 
         <StackPanel Spacing="9">
           <TextBlock Classes="eyebrow" Text="MEASUREMENTS" />
-          <WrapPanel Name="MetricsPanel" ItemWidth="210" ItemHeight="112" />
+          <WrapPanel Name="MetricsPanel" ItemWidth="210" ItemHeight="114" />
         </StackPanel>
 
         <Grid ColumnDefinitions="1.15*,0.85*" ColumnSpacing="14">
-          <Border Grid.Column="0" Classes="card" Padding="18">
+          <Border Grid.Column="0" Classes="surface" Padding="18">
             <StackPanel Spacing="13">
               <TextBlock Classes="eyebrow" Text="FINDINGS" />
-              <StackPanel Name="FindingsPanel" Spacing="12" />
+              <StackPanel Name="FindingsPanel" />
             </StackPanel>
           </Border>
 
-          <StackPanel Grid.Column="1" Spacing="14">
-            <Border Classes="card" Padding="18">
+          <Border Grid.Column="1" Classes="surface" Padding="18">
+            <StackPanel Spacing="16">
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="REPORT CONTEXT" />
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="18" RowSpacing="8">
@@ -104,15 +83,15 @@
                   <TextBlock Name="ContextText" Grid.Row="3" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
                 </Grid>
               </StackPanel>
-            </Border>
 
-            <Border Classes="card" Padding="18">
+              <Border Classes="divider" />
+
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
                 <StackPanel Name="EvidencePanel" Spacing="8" />
               </StackPanel>
-            </Border>
-          </StackPanel>
+            </StackPanel>
+          </Border>
         </Grid>
       </StackPanel>
     </ScrollViewer>
