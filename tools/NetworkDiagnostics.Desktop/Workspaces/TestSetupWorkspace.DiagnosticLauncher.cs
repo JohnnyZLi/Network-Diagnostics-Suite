@@ -285,10 +285,7 @@ public sealed partial class TestSetupWorkspace
         SetSelected(quickLauncherButton, selectedProfileIndex == 1);
         SetSelected(fullLauncherButton, selectedProfileIndex == 2);
         SetSelected(stressLauncherButton, selectedProfileIndex == 3);
-
-        moreLauncherButton.Classes.Remove("secondary");
-        moreLauncherButton.Classes.Remove("ghost");
-        moreLauncherButton.Classes.Add(selectedProfileIndex == 0 ? "secondary" : "ghost");
+        ApplyMoreButtonStyle(selectedProfileIndex == 0);
 
         var profileName = ProfileName(selectedProfileIndex);
         var summary = $"{profileName} · {EstimatedTimeText.Text} · {TransferCapText.Text}";
@@ -304,14 +301,39 @@ public sealed partial class TestSetupWorkspace
             launcherSummaryText.Text = summary;
         }
 
-        launcherRunButton.Content = RunButton.IsEnabled
-            ? $"Run {profileName}"
-            : "Diagnostic running";
-        launcherRunButton.IsEnabled = RunButton.IsEnabled;
-        quickLauncherButton.IsEnabled = RunButton.IsEnabled;
-        fullLauncherButton.IsEnabled = RunButton.IsEnabled;
-        stressLauncherButton.IsEnabled = RunButton.IsEnabled;
-        moreLauncherButton.IsEnabled = RunButton.IsEnabled;
+        var controlsEnabled = RunButton.IsEnabled;
+        var runLabel = controlsEnabled ? $"Run {profileName}" : "Diagnostic running";
+        if (!Equals(launcherRunButton.Content, runLabel))
+        {
+            launcherRunButton.Content = runLabel;
+        }
+
+        SetEnabled(launcherRunButton, controlsEnabled);
+        SetEnabled(quickLauncherButton, controlsEnabled);
+        SetEnabled(fullLauncherButton, controlsEnabled);
+        SetEnabled(stressLauncherButton, controlsEnabled);
+        SetEnabled(moreLauncherButton, controlsEnabled);
+    }
+
+    private void ApplyMoreButtonStyle(bool customProfileSelected)
+    {
+        if (moreLauncherButton is null) return;
+
+        var wantedClass = customProfileSelected ? "secondary" : "ghost";
+        var unwantedClass = customProfileSelected ? "ghost" : "secondary";
+        moreLauncherButton.Classes.Remove(unwantedClass);
+        if (!moreLauncherButton.Classes.Contains(wantedClass))
+        {
+            moreLauncherButton.Classes.Add(wantedClass);
+        }
+    }
+
+    private static void SetEnabled(Control control, bool enabled)
+    {
+        if (control.IsEnabled != enabled)
+        {
+            control.IsEnabled = enabled;
+        }
     }
 
     private int SelectedProfileIndex()
@@ -340,11 +362,21 @@ public sealed partial class TestSetupWorkspace
         }
 
         pendingLauncherProfileIndex = profileIndex;
+        SetSelected(ConnectionProfileButton, false);
+        SetSelected(QuickProfileButton, profileIndex == 1);
+        SetSelected(FullProfileButton, profileIndex == 2);
+        SetSelected(StressProfileButton, profileIndex == 3);
         SetSelected(quickLauncherButton!, profileIndex == 1);
         SetSelected(fullLauncherButton!, profileIndex == 2);
         SetSelected(stressLauncherButton!, profileIndex == 3);
-        launcherRunButton!.Content = $"Run {ProfileName(profileIndex)}";
-        launcherSummaryText!.Text = $"{ProfileName(profileIndex)} selected · loading saved configuration…";
+        ApplyMoreButtonStyle(false);
+
+        var profileName = ProfileName(profileIndex);
+        if (!Equals(launcherRunButton!.Content, $"Run {profileName}"))
+        {
+            launcherRunButton.Content = $"Run {profileName}";
+        }
+        launcherSummaryText!.Text = $"{profileName} selected · loading saved configuration…";
         ProfileRequested?.Invoke(this, new IndexRequestedEventArgs(profileIndex));
     }
 
