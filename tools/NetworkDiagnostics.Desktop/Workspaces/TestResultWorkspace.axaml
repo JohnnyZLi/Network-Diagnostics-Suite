@@ -41,10 +41,9 @@
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" Margin="26,18,0,0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="4">
+    <Grid Grid.Row="1" Margin="26,18,0,0" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="4">
       <Button Name="OverviewButton" Grid.Column="0" Classes="tab selected" Content="Overview" Tag="Overview" Click="SectionClicked" />
       <Button Name="EvidenceButton" Grid.Column="1" Classes="tab" Content="Evidence" Tag="Evidence" Click="SectionClicked" />
-      <Button Name="QuickButton" Grid.Column="3" Classes="secondary" Content="Run Quick next" Click="QuickClicked" IsVisible="False" />
     </Grid>
 
     <Grid Grid.Row="2" Margin="0,16,0,0">
@@ -57,14 +56,23 @@
                     BorderThickness="1"
                     CornerRadius="15"
                     Padding="22">
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
-                <TextBlock Name="NextActionText"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           LineHeight="26"
-                           TextWrapping="Wrap" />
-              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+                <StackPanel Grid.Column="0" Spacing="7">
+                  <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
+                  <TextBlock Name="NextActionText"
+                             FontSize="20"
+                             FontWeight="SemiBold"
+                             LineHeight="26"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Button Name="QuickButton"
+                        Grid.Column="1"
+                        Classes="secondary"
+                        Content="Run Quick"
+                        Click="QuickClicked"
+                        IsVisible="False"
+                        VerticalAlignment="Center" />
+              </Grid>
             </Border>
 
             <Border Grid.Column="1"
