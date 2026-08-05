@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Presentation;
@@ -93,7 +94,7 @@ public sealed partial class TestResultWorkspace : UserControl
             {
                 Text = finding.Title,
                 FontSize = 15,
-                FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap
             };
             var summary = new TextBlock
@@ -173,7 +174,7 @@ public sealed partial class TestResultWorkspace : UserControl
         {
             Text = value,
             FontSize = 11,
-            TextAlignment = Avalonia.Media.TextAlignment.Right,
+            TextAlignment = TextAlignment.Right,
             TextWrapping = TextWrapping.Wrap
         };
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
