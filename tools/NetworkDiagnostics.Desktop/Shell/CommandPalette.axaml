@@ -6,15 +6,6 @@
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
-    </Style>
-    <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
-      <Setter Property="FontSize" Value="9" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.5" />
-    </Style>
     <Style Selector="TextBox.commandSearch">
       <Setter Property="MinHeight" Value="42" />
       <Setter Property="Padding" Value="12,8" />
@@ -25,7 +16,7 @@
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="CaretBrush" Value="{DynamicResource AppTextBrush}" />
       <Setter Property="SelectionBrush" Value="{DynamicResource AppAccentBorderBrush}" />
-      <Setter Property="SelectionForegroundBrush" Value="White" />
+      <Setter Property="SelectionForegroundBrush" Value="{DynamicResource AppOnAccentBrush}" />
     </Style>
     <Style Selector="TextBox.commandSearch:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
@@ -59,7 +50,14 @@
   </UserControl.Styles>
 
   <Grid>
-    <Border Width="620" Margin="0,72,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{DynamicResource AppRaisedBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}" BorderThickness="1" CornerRadius="12">
+    <Border Width="620"
+            Margin="0,72,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Background="{DynamicResource AppRaisedBrush}"
+            BorderBrush="{DynamicResource AppBorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="12">
       <Grid RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Margin="16,14,16,10" Spacing="4">
           <TextBlock Classes="eyebrow" Text="COMMAND PALETTE" />
@@ -67,20 +65,44 @@
         </StackPanel>
 
         <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,1" Padding="14,12">
-          <TextBox Name="SearchBox" Classes="commandSearch" PlaceholderText="Search commands and workspaces…" TextChanged="SearchChanged" KeyDown="SearchKeyDown">
+          <TextBox Name="SearchBox"
+                   Classes="commandSearch"
+                   PlaceholderText="Search commands and workspaces…"
+                   TextChanged="SearchChanged"
+                   KeyDown="SearchKeyDown">
             <TextBox.Resources>
-              <SolidColorBrush x:Key="TextControlBackground">#0D1011</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#0D1011</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBackgroundFocused">#0D1011</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForeground">#F1EEE8</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForegroundPointerOver">#F1EEE8</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForegroundFocused">#F1EEE8</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForeground">#7F898A</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#8E9798</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#8E9798</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrush">#41494A</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#5A6364</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrushFocused">#D58A72</SolidColorBrush>
+              <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                  <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="TextControlBackground">#F0EDE7</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#F0EDE7</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused">#FFFFFF</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForeground">#211F1C</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForegroundPointerOver">#211F1C</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForegroundFocused">#211F1C</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForeground">#858985</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#6F746F</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#6F746F</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrush">#B8B0A5</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#9C9387</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused">#A94F35</SolidColorBrush>
+                  </ResourceDictionary>
+                  <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="TextControlBackground">#0D1011</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#0D1011</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused">#0D1011</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForeground">#F1EEE8</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForegroundPointerOver">#F1EEE8</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlForegroundFocused">#F1EEE8</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForeground">#7F898A</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#8E9798</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#8E9798</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrush">#41494A</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#5A6364</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused">#D58A72</SolidColorBrush>
+                  </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+              </ResourceDictionary>
             </TextBox.Resources>
           </TextBox>
         </Border>
