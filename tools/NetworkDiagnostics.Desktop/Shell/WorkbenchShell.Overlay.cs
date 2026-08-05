@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
@@ -102,6 +103,8 @@ public sealed partial class WorkbenchShell
         inspectorRequested = false;
         ApplyResponsiveLayout(Bounds.Width);
     }
+
+    public void SelectControlCenter() => SelectWorkspace(WorkspaceKind.Test);
 
     public void CloseOverlay()
     {
