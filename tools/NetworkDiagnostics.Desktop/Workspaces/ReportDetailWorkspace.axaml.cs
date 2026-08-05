@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Media;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 
@@ -14,6 +13,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public ReportDetailWorkspace()
     {
         InitializeComponent();
+        SizeChanged += WorkspaceSizeChanged;
     }
 
     public event EventHandler? BackRequested;
@@ -37,35 +37,49 @@ public sealed partial class ReportDetailWorkspace : UserControl
         ProfileText.Text = stored.ProfileName;
         MethodText.Text = stored.Report.Run.TransferMethod.ToString();
         ContextText.Text = ReportComparisonService.ContextLabel(stored.Report);
+        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
 
-        MetricsPanel.Children.Clear();
-        foreach (var metric in presentation.Metrics)
-        {
-            MetricsPanel.Children.Add(BuildMetric(metric));
-        }
+        RenderHealthGroups(presentation);
+        RenderFindings(presentation.Findings);
+        RenderEvidence(presentation.TechnicalEvidence);
+    }
 
+    private void RenderHealthGroups(ConnectionCheckPresentation presentation)
+    {
+        var groups = HealthGroupPresenter.Build(presentation)
+            .ToDictionary(group => group.Kind);
+        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Responsiveness]);
+        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Reliability]);
+        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Throughput]);
+        ApplyHealthGroupLayout(Bounds.Width);
+    }
+
+    private void RenderFindings(IReadOnlyList<FindingPresentation> findings)
+    {
         FindingsPanel.Children.Clear();
-        if (presentation.Findings.Count == 0)
+        if (findings.Count == 0)
         {
             var empty = new TextBlock
             {
-                Text = "No diagnostic findings were generated for this report.",
+                Text = "No material findings were generated for this report.",
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap
             };
             empty.Classes.Add("muted");
             FindingsPanel.Children.Add(empty);
-        }
-        else
-        {
-            foreach (var finding in presentation.Findings)
-            {
-                FindingsPanel.Children.Add(BuildFinding(finding));
-            }
+            return;
         }
 
+        foreach (var finding in findings)
+        {
+            FindingsPanel.Children.Add(BuildFinding(finding));
+        }
+    }
+
+    private void RenderEvidence(IReadOnlyList<string> evidence)
+    {
         EvidencePanel.Children.Clear();
-        foreach (var item in presentation.TechnicalEvidence)
+        foreach (var item in evidence)
         {
             var row = new Grid
             {
@@ -94,6 +108,15 @@ public sealed partial class ReportDetailWorkspace : UserControl
         }
     }
 
+    private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyHealthGroupLayout(eventArgs.NewSize.Width);
+
+    private void ApplyHealthGroupLayout(double width) =>
+        HealthGroupCardFactory.ApplyResponsiveLayout(
+            HealthGroupGrid,
+            [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
+            width);
+
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
 
@@ -121,45 +144,6 @@ public sealed partial class ReportDetailWorkspace : UserControl
         }
     }
 
-    private static Border BuildMetric(MetricPresentation metric)
-    {
-        var label = new TextBlock
-        {
-            Text = metric.Label.ToUpperInvariant(),
-            FontSize = 9,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 1.2
-        };
-        label.Classes.Add("muted");
-
-        var value = new TextBlock
-        {
-            Text = metric.Value,
-            FontSize = 21,
-            FontWeight = FontWeight.SemiBold,
-            Opacity = metric.WasMeasured ? 1 : 0.62
-        };
-
-        var detail = new TextBlock
-        {
-            Text = metric.Detail,
-            FontSize = 10,
-            LineHeight = 15,
-            TextWrapping = TextWrapping.Wrap
-        };
-        detail.Classes.Add("muted");
-
-        var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(label);
-        stack.Children.Add(value);
-        stack.Children.Add(detail);
-
-        var card = new Border { Child = stack };
-        card.Classes.Add("metricCard");
-        if (!metric.WasMeasured) card.Classes.Add("unmeasured");
-        return card;
-    }
-
     private static Border BuildFinding(FindingPresentation finding)
     {
         var label = new TextBlock
@@ -172,7 +156,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
         {
             Text = finding.Title,
             FontSize = 14,
-            FontWeight = FontWeight.SemiBold,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -192,7 +176,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
         var row = new Border
         {
-            Padding = new Avalonia.Thickness(0, 3, 0, 12),
+            Padding = new Avalonia.Thickness(0, 5, 0, 14),
             Margin = new Avalonia.Thickness(0, 0, 0, 12),
             Child = stack
         };
