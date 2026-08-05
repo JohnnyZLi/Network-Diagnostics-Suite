@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 
@@ -156,7 +157,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
         {
             Text = finding.Title,
             FontSize = 14,
-            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
         };
 
