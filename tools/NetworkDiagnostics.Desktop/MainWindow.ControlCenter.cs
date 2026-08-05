@@ -45,7 +45,7 @@ public sealed partial class MainWindow
 
         ShowControlCenterUnderlay();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Deeper diagnostics", content, 1180);
+        workbenchShell.OpenOverlay("Deeper diagnostics", content, 1180, 620);
     }
 
     private void ControlCenterReportRequested(object? sender, StoredReportEventArgs eventArgs) =>
