@@ -1,7 +1,28 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.App"
-             RequestedThemeVariant="Light">
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <SolidColorBrush x:Key="AppCanvasBrush">#101314</SolidColorBrush>
+      <SolidColorBrush x:Key="AppSidebarBrush">#131718</SolidColorBrush>
+      <SolidColorBrush x:Key="AppRaisedBrush">#181D1E</SolidColorBrush>
+      <SolidColorBrush x:Key="AppHoverBrush">#202627</SolidColorBrush>
+      <SolidColorBrush x:Key="AppInsetBrush">#0D1011</SolidColorBrush>
+      <SolidColorBrush x:Key="AppSelectedBrush">#2B211C</SolidColorBrush>
+      <SolidColorBrush x:Key="AppBorderBrush">#293031</SolidColorBrush>
+      <SolidColorBrush x:Key="AppBorderStrongBrush">#41494A</SolidColorBrush>
+      <SolidColorBrush x:Key="AppTextBrush">#F1EEE8</SolidColorBrush>
+      <SolidColorBrush x:Key="AppTextSecondaryBrush">#B7BDBC</SolidColorBrush>
+      <SolidColorBrush x:Key="AppTextMutedBrush">#7F898A</SolidColorBrush>
+      <SolidColorBrush x:Key="AppAccentBrush">#C96A4C</SolidColorBrush>
+      <SolidColorBrush x:Key="AppAccentHoverBrush">#D47758</SolidColorBrush>
+      <SolidColorBrush x:Key="AppAccentSoftBrush">#2D211C</SolidColorBrush>
+      <SolidColorBrush x:Key="AppAccentBorderBrush">#8E5947</SolidColorBrush>
+      <SolidColorBrush x:Key="AppFocusBrush">#D58A72</SolidColorBrush>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
   </Application.Styles>
