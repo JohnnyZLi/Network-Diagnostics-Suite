@@ -16,10 +16,10 @@
       <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
     <Style Selector="Button.shellIcon">
-      <Setter Property="Width" Value="30" />
-      <Setter Property="Height" Value="30" />
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="15" />
+      <Setter Property="CornerRadius" Value="16" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -33,16 +33,16 @@
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
     <Style Selector="Button.shellIcon:disabled">
-      <Setter Property="Opacity" Value="0.32" />
+      <Setter Property="Opacity" Value="0.28" />
     </Style>
     <Style Selector="Button.shellNav">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="14,7" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="15,7" />
+      <Setter Property="CornerRadius" Value="18" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="11" />
     </Style>
     <Style Selector="Button.shellNav:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
@@ -60,24 +60,18 @@
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="CornerRadius" Value="17" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.activeRun:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
-    </Style>
     <Style Selector="Button.breadcrumb">
-      <Setter Property="Padding" Value="4,2" />
-      <Setter Property="MinHeight" Value="22" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinHeight" Value="16" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="5" />
-      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontSize" Value="9" />
     </Style>
     <Style Selector="Button.breadcrumb:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
     <Style Selector="Button.breadcrumb:disabled">
@@ -85,14 +79,14 @@
       <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
     </Style>
     <Style Selector="Button.toolbarPill">
-      <Setter Property="Height" Value="30" />
-      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="11,0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="FontSize" Value="10" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="FontSize" Value="9" />
     </Style>
     <Style Selector="Button.toolbarPill:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
@@ -100,21 +94,32 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="58,*,24">
+  <Grid RowDefinitions="64,*">
     <Border Grid.Row="0"
             Background="{DynamicResource AppSidebarBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,*,Auto" Margin="14,0" ColumnSpacing="14">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+      <Grid ColumnDefinitions="Auto,*,Auto" Margin="16,0" ColumnSpacing="18">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal" Spacing="2">
             <Button Name="BackButton" Classes="shellIcon" Content="‹" ToolTip.Tip="Back" Click="BackClicked" />
             <Button Name="ForwardButton" Classes="shellIcon" Content="›" ToolTip.Tip="Forward" Click="ForwardClicked" />
           </StackPanel>
-          <StackPanel Name="ProductStack" Spacing="0" MinWidth="148">
-            <TextBlock FontSize="13" FontWeight="SemiBold" Text="Network Diagnostics" />
+          <Border Width="30"
+                  Height="30"
+                  CornerRadius="15"
+                  Background="{DynamicResource AppAccentBrush}">
+            <Border Width="12"
+                    Height="12"
+                    CornerRadius="6"
+                    Background="{DynamicResource AppCanvasBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Name="ProductStack" Spacing="0" MinWidth="152">
+            <TextBlock FontSize="12" FontWeight="SemiBold" Text="Network Diagnostics" />
             <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-              <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="2" />
+              <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="4" />
             </ScrollViewer>
           </StackPanel>
         </StackPanel>
@@ -123,12 +128,12 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Spacing="3">
+                    Spacing="2">
           <Button Name="TestWorkspaceButton" Classes="shellNav selected" Tag="Test" Click="WorkspaceClicked">
             <TextBlock Name="TestWorkspaceLabel" Text="Overview" />
           </Button>
           <Button Name="ReportsWorkspaceButton" Classes="shellNav" Tag="Reports" Click="WorkspaceClicked">
-            <TextBlock Name="ReportsWorkspaceLabel" Text="Reports" />
+            <TextBlock Name="ReportsWorkspaceLabel" Text="History" />
           </Button>
           <Button Name="ComparisonsWorkspaceButton" Classes="shellNav" Tag="Comparisons" Click="WorkspaceClicked">
             <TextBlock Name="ComparisonsWorkspaceLabel" Text="Compare" />
@@ -138,12 +143,12 @@
           </Button>
         </StackPanel>
 
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
           <Button Name="ActiveRunPanel" Classes="activeRun" IsVisible="False" ToolTip.Tip="Return to active diagnostic" Click="ActiveRunClicked">
-            <Grid ColumnDefinitions="Auto,88" ColumnSpacing="9">
+            <Grid ColumnDefinitions="Auto,72" ColumnSpacing="9">
               <StackPanel Spacing="1" VerticalAlignment="Center">
-                <TextBlock Name="ActiveRunTitleText" FontSize="10" FontWeight="SemiBold" />
-                <TextBlock Name="ActiveRunDetailText" Classes="shellMuted" FontSize="9" />
+                <TextBlock Name="ActiveRunTitleText" FontSize="9" FontWeight="SemiBold" />
+                <TextBlock Name="ActiveRunDetailText" Classes="shellMuted" FontSize="8" />
               </StackPanel>
               <ProgressBar Name="ActiveRunProgress" Grid.Column="1" Minimum="0" Maximum="100" Height="4" VerticalAlignment="Center" />
             </Grid>
@@ -154,36 +159,42 @@
       </Grid>
     </Border>
 
-    <Grid Name="ShellGrid" Grid.Row="1" ColumnDefinitions="*,0">
-      <Border Grid.Column="0" Background="{DynamicResource AppCanvasBrush}">
+    <Grid Name="ShellGrid" Grid.Row="1">
+      <Border Background="{DynamicResource AppCanvasBrush}">
         <ContentControl Name="WorkspaceHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
       </Border>
 
       <Border Name="InspectorBorder"
-              Grid.Column="1"
-              Background="{DynamicResource AppSidebarBrush}"
-              BorderBrush="{DynamicResource AppBorderBrush}"
-              BorderThickness="1,0,0,0"
-              IsVisible="False">
+              Width="360"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Stretch"
+              Margin="0,12,12,12"
+              Background="{DynamicResource AppRaisedBrush}"
+              BorderBrush="{DynamicResource AppBorderStrongBrush}"
+              BorderThickness="1"
+              CornerRadius="14"
+              BoxShadow="0 12 36 0 #66000000"
+              IsVisible="False"
+              ZIndex="20">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Margin="20,22" Spacing="18">
+          <StackPanel Margin="20" Spacing="18">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="5">
-                <TextBlock Classes="shellEyebrow" Text="DETAILS" />
-                <TextBlock Name="InspectorTitleText" FontSize="16" FontWeight="SemiBold" Text="Context" TextWrapping="Wrap" />
+                <TextBlock Classes="shellEyebrow" Text="CONTEXT" />
+                <TextBlock Name="InspectorTitleText" FontSize="16" FontWeight="SemiBold" Text="Details" TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1" Classes="shellIcon" Content="×" Click="InspectorClicked" />
             </Grid>
             <TextBlock Name="InspectorDetailText" Classes="shellMuted" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
-            <Border Background="{DynamicResource AppRaisedBrush}" CornerRadius="9" Padding="12,10">
+            <Border Background="{DynamicResource AppInsetBrush}" CornerRadius="9" Padding="12,10">
               <StackPanel Spacing="7">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                  <TextBlock Classes="shellMuted" FontSize="10" Text="Workspace" />
-                  <TextBlock Name="InspectorWorkspaceText" Grid.Column="1" FontSize="10" TextAlignment="Right" />
+                  <TextBlock Classes="shellMuted" FontSize="9" Text="Workspace" />
+                  <TextBlock Name="InspectorWorkspaceText" Grid.Column="1" FontSize="9" TextAlignment="Right" />
                 </Grid>
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                  <TextBlock Classes="shellMuted" FontSize="10" Text="Selection" />
-                  <TextBlock Name="InspectorSelectionText" Grid.Column="1" FontSize="10" TextAlignment="Right" TextWrapping="Wrap" />
+                  <TextBlock Classes="shellMuted" FontSize="9" Text="Selection" />
+                  <TextBlock Name="InspectorSelectionText" Grid.Column="1" FontSize="9" TextAlignment="Right" TextWrapping="Wrap" />
                 </Grid>
               </StackPanel>
             </Border>
@@ -191,21 +202,15 @@
           </StackPanel>
         </ScrollViewer>
       </Border>
+
+      <Grid IsVisible="False">
+        <TextBlock Name="StatusInterfaceText" />
+        <TextBlock Name="StatusEndpointText" />
+        <TextBlock Name="StatusNetworkText" />
+        <TextBlock Name="StatusActivityText" />
+      </Grid>
     </Grid>
 
-    <Border Grid.Row="2"
-            Background="{DynamicResource AppSidebarBrush}"
-            BorderBrush="{DynamicResource AppBorderBrush}"
-            BorderThickness="0,1,0,0"
-            Padding="14,0">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="14">
-        <TextBlock Name="StatusInterfaceText" Grid.Column="0" Classes="shellMuted" FontSize="9" VerticalAlignment="Center" Text="Interface · Automatic" />
-        <TextBlock Name="StatusEndpointText" Grid.Column="1" Classes="shellMuted" FontSize="9" VerticalAlignment="Center" Text="Endpoint · Checking" />
-        <TextBlock Name="StatusNetworkText" Grid.Column="2" Classes="shellMuted" FontSize="9" VerticalAlignment="Center" Text="Network · Unknown" />
-        <TextBlock Name="StatusActivityText" Grid.Column="4" Classes="shellMuted" FontSize="9" VerticalAlignment="Center" Text="Ready" />
-      </Grid>
-    </Border>
-
-    <local:CommandPalette Name="CommandPaletteControl" Grid.RowSpan="3" />
+    <local:CommandPalette Name="CommandPaletteControl" Grid.RowSpan="2" />
   </Grid>
 </UserControl>
