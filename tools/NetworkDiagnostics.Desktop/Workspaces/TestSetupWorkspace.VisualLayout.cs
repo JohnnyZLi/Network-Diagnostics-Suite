@@ -33,6 +33,7 @@ public sealed partial class TestSetupWorkspace
 
     private void RenderedLayoutUpdated(object? sender, EventArgs eventArgs)
     {
+        EnsureSevenDayButton();
         NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
         NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
         SyncSevenDaySelection();
