@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Media;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Presentation;
@@ -16,6 +15,7 @@ public sealed partial class TestResultWorkspace : UserControl
     public TestResultWorkspace()
     {
         InitializeComponent();
+        SizeChanged += WorkspaceSizeChanged;
     }
 
     public event EventHandler? RunAgainRequested;
@@ -40,6 +40,7 @@ public sealed partial class TestResultWorkspace : UserControl
         NextActionText.Text = presentation.NextAction;
         ContextText.Text = ContextLabel(report, session);
         InterpretationText.Text = Interpretation(presentation, report, session);
+        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
 
         var profile = report?.Run.Profile ?? session.Profile;
         QuickButton.IsVisible = profile == TestProfileId.ConnectionCheck
@@ -47,58 +48,39 @@ public sealed partial class TestResultWorkspace : UserControl
         ExportButton.IsVisible = report is not null;
         CompareButton.IsVisible = report is not null;
 
-        RenderMetrics(presentation.Metrics);
+        RenderHealthGroups(presentation);
         RenderFindings(presentation.Findings);
         RenderEvidence(presentation.TechnicalEvidence);
         RenderRunDetails(report, session);
         ApplySection();
     }
 
-    private void RenderMetrics(IReadOnlyList<MetricPresentation> metrics)
+    private void RenderHealthGroups(ConnectionCheckPresentation presentation)
     {
-        MetricGrid.Children.Clear();
-        var visibleCount = Math.Min(4, metrics.Count);
-        for (var index = 0; index < visibleCount; index++)
-        {
-            var metric = metrics[index];
-            var label = new TextBlock
-            {
-                Text = metric.Label.ToUpperInvariant()
-            };
-            label.Classes.Add("eyebrow");
-
-            var value = new TextBlock
-            {
-                Text = metric.Value,
-                FontSize = 23,
-                FontWeight = FontWeight.SemiBold,
-                Opacity = metric.WasMeasured ? 1 : 0.62
-            };
-            var detail = new TextBlock
-            {
-                Text = metric.Detail,
-                FontSize = 10,
-                LineHeight = 15,
-                TextWrapping = TextWrapping.Wrap
-            };
-            detail.Classes.Add("muted");
-
-            var content = new StackPanel { Spacing = 5 };
-            content.Children.Add(label);
-            content.Children.Add(value);
-            content.Children.Add(detail);
-
-            var cell = new Border { Child = content };
-            cell.Classes.Add("metricCell");
-            if (index == visibleCount - 1) cell.Classes.Add("last");
-            Grid.SetColumn(cell, index);
-            MetricGrid.Children.Add(cell);
-        }
+        var groups = HealthGroupPresenter.Build(presentation)
+            .ToDictionary(group => group.Kind);
+        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Responsiveness]);
+        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Reliability]);
+        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Throughput]);
+        ApplyHealthGroupLayout(Bounds.Width);
     }
 
     private void RenderFindings(IReadOnlyList<FindingPresentation> findings)
     {
         FindingsPanel.Children.Clear();
+        if (findings.Count == 0)
+        {
+            var empty = new TextBlock
+            {
+                Text = "No material findings were generated for this result.",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap
+            };
+            empty.Classes.Add("muted");
+            FindingsPanel.Children.Add(empty);
+            return;
+        }
+
         foreach (var finding in findings)
         {
             var label = new TextBlock
@@ -111,7 +93,7 @@ public sealed partial class TestResultWorkspace : UserControl
             {
                 Text = finding.Title,
                 FontSize = 15,
-                FontWeight = FontWeight.SemiBold,
+                FontWeight = Avalonia.Media.FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap
             };
             var summary = new TextBlock
@@ -130,7 +112,7 @@ public sealed partial class TestResultWorkspace : UserControl
 
             var row = new Border
             {
-                Padding = new Avalonia.Thickness(0, 4, 0, 13),
+                Padding = new Avalonia.Thickness(0, 5, 0, 14),
                 Margin = new Avalonia.Thickness(0, 0, 0, 12),
                 Child = content
             };
@@ -191,7 +173,7 @@ public sealed partial class TestResultWorkspace : UserControl
         {
             Text = value,
             FontSize = 11,
-            TextAlignment = TextAlignment.Right,
+            TextAlignment = Avalonia.Media.TextAlignment.Right,
             TextWrapping = TextWrapping.Wrap
         };
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
@@ -217,6 +199,15 @@ public sealed partial class TestResultWorkspace : UserControl
         SetSelected(OverviewButton, !evidence);
         SetSelected(EvidenceButton, evidence);
     }
+
+    private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyHealthGroupLayout(eventArgs.NewSize.Width);
+
+    private void ApplyHealthGroupLayout(double width) =>
+        HealthGroupCardFactory.ApplyResponsiveLayout(
+            HealthGroupGrid,
+            [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
+            width);
 
     private static void SetSelected(Button button, bool selected)
     {
@@ -273,7 +264,7 @@ public sealed partial class TestResultWorkspace : UserControl
         }
         return report is null
             ? "This preview uses the same result hierarchy as a completed diagnostic, but it is not attached to a saved report."
-            : "The overview prioritizes the verdict and actionable findings. Evidence retains the technical context needed to verify or challenge that interpretation.";
+            : "The overview prioritizes the verdict and actionable findings. Technical details retain the evidence needed to verify or challenge that interpretation.";
     }
 
     private static string StatusLabel(NetworkDiagnosticsReportV2? report, ActiveRunSnapshot session) => report is not null
