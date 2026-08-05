@@ -47,7 +47,7 @@
       </StackPanel>
     </Grid>
 
-    <Border Grid.Row="1" Classes="filterBar">
+    <Border Name="FilterBar" Grid.Row="1" Classes="filterBar">
       <Grid ColumnDefinitions="*,178,Auto" ColumnSpacing="10">
         <TextBox Name="SearchBox"
                  Classes="appInput"
@@ -84,7 +84,7 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="3">
           <TextBlock FontSize="13" FontWeight="SemiBold" Text="Select a report to reveal its actions" />
-          <TextBlock Classes="muted" FontSize="10" Text="The history list stays full width; report context appears here only when needed." />
+          <TextBlock Classes="muted" FontSize="10" Text="Report context appears inline without reducing the width of the history table." />
         </StackPanel>
         <TextBlock Grid.Column="1"
                    Classes="muted"
@@ -154,7 +154,8 @@
       </Grid>
     </Border>
 
-    <Border Grid.Row="3"
+    <Border Name="ReportTableBorder"
+            Grid.Row="3"
             Background="{DynamicResource AppRaisedBrush}"
             CornerRadius="14"
             ClipToBounds="True">
@@ -175,6 +176,65 @@
                       HorizontalScrollBarVisibility="Disabled">
           <StackPanel Name="ReportListPanel" />
         </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <Border Name="EmptyStateBorder"
+            Grid.Row="1"
+            Grid.RowSpan="3"
+            Background="{DynamicResource AppRaisedBrush}"
+            CornerRadius="16"
+            IsVisible="False">
+      <Grid Margin="42" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
+        <StackPanel Spacing="18" HorizontalAlignment="Center">
+          <Grid Width="88" Height="88" HorizontalAlignment="Center">
+            <Border Width="88"
+                    Height="88"
+                    CornerRadius="44"
+                    Background="{DynamicResource AppSelectedBrush}" />
+            <Border Width="58"
+                    Height="58"
+                    CornerRadius="29"
+                    Background="{DynamicResource AppInsetBrush}"
+                    BorderBrush="{DynamicResource AppAccentBorderBrush}"
+                    BorderThickness="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+              <TextBlock Text="↗"
+                         FontSize="25"
+                         Foreground="{DynamicResource AppAccentBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+          </Grid>
+          <StackPanel Spacing="7" HorizontalAlignment="Center">
+            <TextBlock FontSize="24"
+                       FontWeight="SemiBold"
+                       Text="Build a diagnostic history"
+                       TextAlignment="Center" />
+            <TextBlock Classes="secondary"
+                       FontSize="12"
+                       LineHeight="19"
+                       Text="Completed tests are saved locally so you can revisit evidence and compare network conditions over time."
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="520" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Width="360" HorizontalAlignment="Center">
+            <Button Grid.Column="0"
+                    Classes="secondary"
+                    Content="Open data folder"
+                    Click="OpenFolderClicked" />
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    Content="Import report"
+                    Click="ImportClicked" />
+          </Grid>
+          <TextBlock Classes="muted"
+                     FontSize="10"
+                     Text="Run a diagnostic from Overview to create the first local report."
+                     TextAlignment="Center" />
+        </StackPanel>
       </Grid>
     </Border>
   </Grid>
