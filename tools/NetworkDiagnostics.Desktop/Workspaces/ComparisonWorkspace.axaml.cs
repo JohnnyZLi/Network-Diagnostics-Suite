@@ -43,6 +43,11 @@ public sealed partial class ComparisonWorkspace : UserControl
             ? reports.FirstOrDefault(item => item.Report.Run.Id == candidateValue)
             : null;
 
+        var libraryEmpty = reports.Count == 0;
+        EmptyLibraryPanel.IsVisible = libraryEmpty;
+        SelectionGrid.IsVisible = !libraryEmpty;
+        ComparisonBody.IsVisible = !libraryEmpty;
+        ClearButton.IsVisible = !libraryEmpty;
         ClearButton.IsEnabled = baseline is not null || candidate is not null;
         PickerInstructionText.Text = baseline is null
             ? "Select a baseline first."
@@ -110,20 +115,6 @@ public sealed partial class ComparisonWorkspace : UserControl
     private void RenderPicker()
     {
         ReportPickerPanel.Children.Clear();
-        if (reports.Count == 0)
-        {
-            var empty = new TextBlock
-            {
-                Margin = new Avalonia.Thickness(16, 20),
-                Text = "No saved reports are available. Complete or import a diagnostic first.",
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap
-            };
-            empty.Classes.Add("muted");
-            ReportPickerPanel.Children.Add(empty);
-            return;
-        }
-
         foreach (var stored in reports)
         {
             ReportPickerPanel.Children.Add(BuildPickerRow(stored));
