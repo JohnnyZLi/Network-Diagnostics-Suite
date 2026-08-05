@@ -5,17 +5,23 @@
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
+    <Style Selector="Border.dashboardPanel">
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+    </Style>
     <Style Selector="TextBlock.componentLabel">
       <Setter Property="FontSize" Value="10" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.componentScore">
-      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontSize" Value="18" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Border.telemetryMetric">
-      <Setter Property="Padding" Value="0,0,14,0" />
-      <Setter Property="Margin" Value="0,0,14,0" />
+      <Setter Property="Padding" Value="0,0,16,0" />
+      <Setter Property="Margin" Value="0,0,16,0" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,1,0" />
     </Style>
@@ -25,18 +31,20 @@
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.profileChoice">
-      <Setter Property="MinHeight" Value="66" />
-      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="MinHeight" Value="58" />
+      <Setter Property="Padding" Value="13,10" />
       <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="CornerRadius" Value="10" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.profileChoice:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
     </Style>
     <Style Selector="Button.profileChoice.selected">
       <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
@@ -64,73 +72,130 @@
 
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid Name="OverviewGrid"
-          Margin="28,24,28,38"
-          MaxWidth="1280"
+          Margin="24,22,24,36"
+          MaxWidth="1360"
           HorizontalAlignment="Center"
-          ColumnDefinitions="340,*"
-          RowDefinitions="Auto"
-          ColumnSpacing="22"
-          RowSpacing="22">
-      <StackPanel Name="ScoreColumn" Grid.Column="0" Spacing="14">
-        <StackPanel Spacing="3" Margin="2,0,0,2">
-          <TextBlock Classes="eyebrow" Text="THIS DEVICE" />
-          <TextBlock Name="DeviceNameText" FontSize="17" FontWeight="SemiBold" />
-        </StackPanel>
+          ColumnDefinitions="320,*"
+          RowDefinitions="Auto,Auto"
+          ColumnSpacing="20"
+          RowSpacing="12">
+      <StackPanel Name="DeviceHeader" Grid.Row="0" Grid.Column="0" Spacing="2" Margin="2,0,0,0" VerticalAlignment="Bottom">
+        <TextBlock Classes="eyebrow" Text="THIS DEVICE" />
+        <TextBlock Name="DeviceNameText" FontSize="18" FontWeight="SemiBold" />
+      </StackPanel>
 
-        <Border Classes="monitorPanel" Padding="20,18,20,20">
+      <Grid Name="TelemetryHeader" Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="2,0,2,0" VerticalAlignment="Bottom">
+        <StackPanel Spacing="2" VerticalAlignment="Bottom">
+          <TextBlock Classes="eyebrow" Text="NETWORK EXPERIENCE" />
+          <TextBlock FontSize="22" FontWeight="SemiBold" Text="Live connection health" />
+        </StackPanel>
+        <Border Grid.Column="1"
+                Background="{DynamicResource AppInsetBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="4"
+                VerticalAlignment="Bottom">
+          <StackPanel Orientation="Horizontal" Spacing="1">
+            <Button Name="OneMinuteButton" Classes="range" Tag="1m" Content="1 min" Click="WindowClicked" />
+            <Button Name="FiveMinutesButton" Classes="range selected" Tag="5m" Content="5 min" Click="WindowClicked" />
+            <Button Name="OneHourButton" Classes="range" Tag="1h" Content="1 hour" Click="WindowClicked" />
+            <Button Name="TwentyFourHoursButton" Classes="range" Tag="24h" Content="24 hours" Click="WindowClicked" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <StackPanel Name="ScoreColumn" Grid.Row="1" Grid.Column="0" Spacing="12">
+        <Border Classes="dashboardPanel" Padding="18">
           <StackPanel Spacing="15">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <StackPanel Spacing="2">
-                <TextBlock Name="InterfaceNameText" FontSize="11" FontWeight="SemiBold" />
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Name="InterfaceNameText" FontSize="12" FontWeight="SemiBold" />
                 <TextBlock Name="LastUpdatedText" Classes="muted" FontSize="10" />
               </StackPanel>
               <Button Name="MonitoringToggleButton"
                       Grid.Column="1"
                       Classes="secondary"
-                      MinHeight="30"
-                      Padding="10,5"
-                      Content="Pause"
+                      MinHeight="32"
+                      Padding="11,6"
+                      Content="Pause monitoring"
                       Click="MonitoringToggleClicked" />
             </Grid>
 
-            <Grid Height="222" HorizontalAlignment="Center" VerticalAlignment="Center">
-              <Border Name="ScoreGlow"
-                      Width="220"
-                      Height="220"
-                      CornerRadius="110"
-                      Opacity="0.16"
+            <Grid Height="230" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Border Name="ScoreAura"
+                      Width="228"
+                      Height="228"
+                      CornerRadius="114"
+                      Opacity="0.22"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center" />
-              <Border Background="{DynamicResource AppInsetBrush}"
-                      Width="188"
-                      Height="188"
-                      CornerRadius="94"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"
+              <Border Width="210"
+                      Height="210"
+                      CornerRadius="105"
+                      Background="{DynamicResource AppRaisedBrush}"
                       BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                      BorderThickness="1">
-                <Border Name="ScoreOrbCore"
-                        Width="164"
-                        Height="164"
-                        CornerRadius="82"
+                      BorderThickness="1"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+                <Border Name="ScoreRing"
+                        Width="194"
+                        Height="194"
+                        CornerRadius="97"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center">
-                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0">
-                    <TextBlock Text="NETWORK SCORE" FontSize="9" FontWeight="SemiBold" TextAlignment="Center" Opacity="0.82" />
-                    <TextBlock Name="OverallScoreText" FontSize="52" FontWeight="SemiBold" LineHeight="56" TextAlignment="Center" />
-                    <TextBlock Name="OverallStatusText" FontSize="12" FontWeight="SemiBold" TextAlignment="Center" />
-                  </StackPanel>
+                  <Border Width="186"
+                          Height="186"
+                          CornerRadius="93"
+                          Background="{DynamicResource AppInsetBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                    <Border Name="ScoreOrbCore"
+                            Width="174"
+                            Height="174"
+                            CornerRadius="87"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                      <Grid RowDefinitions="Auto,Auto,Auto"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            MinWidth="132">
+                        <TextBlock Grid.Row="0"
+                                   Text="NETWORK SCORE"
+                                   FontSize="9"
+                                   FontWeight="SemiBold"
+                                   LetterSpacing="0.8"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Stretch"
+                                   Opacity="0.86" />
+                        <TextBlock Name="OverallScoreText"
+                                   Grid.Row="1"
+                                   FontSize="58"
+                                   FontWeight="SemiBold"
+                                   LineHeight="62"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Stretch" />
+                        <TextBlock Name="OverallStatusText"
+                                   Grid.Row="2"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Stretch" />
+                      </Grid>
+                    </Border>
+                  </Border>
                 </Border>
               </Border>
             </Grid>
 
             <TextBlock Name="OverallSummaryText"
-                       FontSize="13"
-                       LineHeight="19"
+                       Margin="8,0"
+                       FontSize="12"
+                       LineHeight="18"
                        TextAlignment="Center"
                        TextWrapping="Wrap" />
 
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="4,0">
               <StackPanel Grid.Column="0" Spacing="2" HorizontalAlignment="Center">
                 <TextBlock Name="ResponsivenessScoreText" Classes="componentScore" TextAlignment="Center" />
                 <TextBlock Classes="componentLabel" Text="Responsiveness" TextAlignment="Center" />
@@ -144,93 +209,77 @@
                 <TextBlock Classes="componentLabel" Text="Speed" TextAlignment="Center" />
               </StackPanel>
             </Grid>
-          </StackPanel>
-        </Border>
 
-        <Border Classes="monitorPanel" Padding="16">
-          <StackPanel Spacing="11">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="eyebrow" Text="ALERTS" />
-                <TextBlock Name="AlertSummaryText" FontSize="12" FontWeight="SemiBold" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3">
-                <Button Name="MarkAlertsReadButton" Classes="ghost" MinHeight="28" Padding="8,4" Content="Mark read" Click="MarkAlertsReadClicked" />
-                <Button Name="ClearAlertsButton" Classes="ghost" MinHeight="28" Padding="8,4" Content="Clear" Click="ClearAlertsClicked" />
-              </StackPanel>
-            </Grid>
-            <StackPanel Name="AlertsPanel" Spacing="9" />
+            <Border Classes="divider" Margin="0,2,0,0" />
+
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="eyebrow" Text="ALERTS" />
+                  <TextBlock Name="AlertSummaryText" FontSize="12" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3">
+                  <Button Name="MarkAlertsReadButton" Classes="ghost" MinHeight="28" Padding="8,4" Content="Mark read" Click="MarkAlertsReadClicked" />
+                  <Button Name="ClearAlertsButton" Classes="ghost" MinHeight="28" Padding="8,4" Content="Clear" Click="ClearAlertsClicked" />
+                </StackPanel>
+              </Grid>
+              <StackPanel Name="AlertsPanel" Spacing="9" />
+            </StackPanel>
           </StackPanel>
         </Border>
       </StackPanel>
 
-      <StackPanel Name="TelemetryColumn" Grid.Column="1" Spacing="12">
-        <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,2">
-          <StackPanel Spacing="3">
-            <TextBlock Classes="eyebrow" Text="NETWORK EXPERIENCE" />
-            <TextBlock FontSize="21" FontWeight="SemiBold" Text="Live connection health" />
-          </StackPanel>
-          <Border Grid.Column="1" Background="{DynamicResource AppInsetBrush}" CornerRadius="9" Padding="4" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="1">
-              <Button Name="OneMinuteButton" Classes="range" Tag="1m" Content="1 min" Click="WindowClicked" />
-              <Button Name="FiveMinutesButton" Classes="range selected" Tag="5m" Content="5 min" Click="WindowClicked" />
-              <Button Name="OneHourButton" Classes="range" Tag="1h" Content="1 hour" Click="WindowClicked" />
-              <Button Name="TwentyFourHoursButton" Classes="range" Tag="24h" Content="24 hours" Click="WindowClicked" />
-            </StackPanel>
-          </Border>
-        </Grid>
-
-        <Border Classes="monitorPanel" Padding="18">
+      <StackPanel Name="TelemetryColumn" Grid.Row="1" Grid.Column="1" Spacing="12">
+        <Border Classes="dashboardPanel" Padding="18,16">
           <StackPanel Spacing="13">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
               <StackPanel Spacing="3">
-                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Responsiveness" />
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="Responsiveness" />
                 <TextBlock Name="ResponsivenessSummaryText" Classes="secondary" FontSize="11" TextWrapping="Wrap" />
               </StackPanel>
               <Border Name="ResponsivenessBadge" Grid.Column="1" CornerRadius="15" Padding="11,5" VerticalAlignment="Top">
                 <TextBlock Name="ResponsivenessStatusText" FontSize="10" FontWeight="SemiBold" />
               </Border>
             </Grid>
-            <Grid Height="62">
+            <Grid Height="70" ClipToBounds="True">
               <Border VerticalAlignment="Bottom" Height="1" Background="{DynamicResource AppBorderBrush}" />
-              <StackPanel Name="ResponsivenessTimelinePanel"
-                          Orientation="Horizontal"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Bottom"
-                          Spacing="2" />
+              <Grid Name="ResponsivenessTimelineGrid"
+                    ColumnSpacing="2"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
             </Grid>
-            <Grid Name="ResponsivenessMetricsGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" />
+            <Grid Name="ResponsivenessMetricsGrid" />
           </StackPanel>
         </Border>
 
-        <Border Classes="monitorPanel" Padding="18">
+        <Border Classes="dashboardPanel" Padding="18,16">
           <StackPanel Spacing="13">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
               <StackPanel Spacing="3">
-                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Reliability" />
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="Reliability" />
                 <TextBlock Name="ReliabilitySummaryText" Classes="secondary" FontSize="11" TextWrapping="Wrap" />
               </StackPanel>
               <Border Name="ReliabilityBadge" Grid.Column="1" CornerRadius="15" Padding="11,5" VerticalAlignment="Top">
                 <TextBlock Name="ReliabilityStatusText" FontSize="10" FontWeight="SemiBold" />
               </Border>
             </Grid>
-            <Grid Name="ReliabilityTimelineGrid" Height="16" ColumnSpacing="1" />
-            <Grid Name="ReliabilityMetricsGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" />
+            <Grid Name="ReliabilityTimelineGrid" Height="17" ColumnSpacing="2" ClipToBounds="True" />
+            <Grid Name="ReliabilityMetricsGrid" />
           </StackPanel>
         </Border>
 
-        <Border Classes="monitorPanel" Padding="18">
-          <StackPanel Spacing="13">
+        <Border Classes="dashboardPanel" Padding="18,16">
+          <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
               <StackPanel Spacing="3">
-                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Speed" />
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="Speed" />
                 <TextBlock Name="SpeedSummaryText" Classes="secondary" FontSize="11" TextWrapping="Wrap" />
               </StackPanel>
               <Border Name="SpeedBadge" Grid.Column="1" CornerRadius="15" Padding="11,5" VerticalAlignment="Top">
                 <TextBlock Name="SpeedStatusText" FontSize="10" FontWeight="SemiBold" />
               </Border>
             </Grid>
-            <Grid Name="SpeedMetricsGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" />
+            <Grid Name="SpeedMetricsGrid" />
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Button Classes="secondary" Content="Run content test" Click="ContentSpeedClicked" />
               <Button Classes="primary" Content="Run peak test" Click="PeakSpeedClicked" />
@@ -251,93 +300,105 @@
           </Grid>
         </Border>
 
-        <Expander Name="DiagnosticExpander" HorizontalAlignment="Stretch">
-          <Expander.Header>
-            <Grid ColumnDefinitions="*,Auto" Margin="2,7">
-              <StackPanel Spacing="2">
-                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Run a deeper diagnostic" />
-                <TextBlock Classes="muted" FontSize="10" Text="Use explicit profiles for path, service, scaling, and local-network evidence." />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Classes="eyebrow" Text="ADVANCED" VerticalAlignment="Center" />
-            </Grid>
-          </Expander.Header>
-          <Border Classes="monitorPanel" Padding="18" Margin="0,8,0,0">
-            <StackPanel Spacing="15">
-              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="9" RowSpacing="9">
-                <Button Name="ConnectionProfileButton" Grid.Row="0" Grid.Column="0" Classes="profileChoice selected" Tag="0" Click="ProfileClicked">
-                  <StackPanel Spacing="3">
-                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="Connection Check" />
-                    <TextBlock Classes="muted" FontSize="10" Text="Low-data reachability and transfer health" TextWrapping="Wrap" />
-                  </StackPanel>
-                </Button>
-                <Button Name="QuickProfileButton" Grid.Row="0" Grid.Column="1" Classes="profileChoice" Tag="1" Click="ProfileClicked">
-                  <StackPanel Spacing="3">
-                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="Quick" />
-                    <TextBlock Classes="muted" FontSize="10" Text="Headline throughput and loaded response" TextWrapping="Wrap" />
-                  </StackPanel>
-                </Button>
-                <Button Name="FullProfileButton" Grid.Row="1" Grid.Column="0" Classes="profileChoice" Tag="2" Click="ProfileClicked">
-                  <StackPanel Spacing="3">
-                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="Full" />
-                    <TextBlock Classes="muted" FontSize="10" Text="Local, path, service, and transfer evidence" TextWrapping="Wrap" />
-                  </StackPanel>
-                </Button>
-                <Button Name="StressProfileButton" Grid.Row="1" Grid.Column="1" Classes="profileChoice" Tag="3" Click="ProfileClicked">
-                  <StackPanel Spacing="3">
-                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="Stress" />
-                    <TextBlock Classes="muted" FontSize="10" Text="Sustained load, scaling, and stability" TextWrapping="Wrap" />
-                  </StackPanel>
-                </Button>
-              </Grid>
-
-              <Border Classes="surfaceSubtle" Padding="13">
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="eyebrow" Text="SELECTED QUESTION" />
-                  <TextBlock Name="QuestionText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-                  <TextBlock Name="PurposeText" Classes="secondary" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
+        <Border Classes="dashboardPanel" Padding="0">
+          <Expander Name="DiagnosticExpander"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch">
+            <Expander.Header>
+              <Grid ColumnDefinitions="*,Auto" Margin="18,13">
+                <StackPanel Spacing="2">
+                  <TextBlock FontSize="14" FontWeight="SemiBold" Text="Run a deeper diagnostic" />
+                  <TextBlock Classes="muted" FontSize="10" Text="Explicit profiles for path, service, scaling, and local-network evidence." />
                 </StackPanel>
-              </Border>
+                <TextBlock Grid.Column="1" Classes="eyebrow" Text="ADVANCED" VerticalAlignment="Center" />
+              </Grid>
+            </Expander.Header>
+            <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="18,16,18,18">
+              <StackPanel Spacing="16">
+                <Grid Name="ProfileGrid"
+                      ColumnDefinitions="*,*,*,*"
+                      RowDefinitions="Auto"
+                      ColumnSpacing="9"
+                      RowSpacing="9">
+                  <Button Name="ConnectionProfileButton" Grid.Row="0" Grid.Column="0" Classes="profileChoice selected" Tag="0" Click="ProfileClicked">
+                    <StackPanel Spacing="3">
+                      <TextBlock FontSize="12" FontWeight="SemiBold" Text="Connection Check" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Low-data reachability and transfer health" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                  <Button Name="QuickProfileButton" Grid.Row="0" Grid.Column="1" Classes="profileChoice" Tag="1" Click="ProfileClicked">
+                    <StackPanel Spacing="3">
+                      <TextBlock FontSize="12" FontWeight="SemiBold" Text="Quick" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Headline throughput and loaded response" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                  <Button Name="FullProfileButton" Grid.Row="0" Grid.Column="2" Classes="profileChoice" Tag="2" Click="ProfileClicked">
+                    <StackPanel Spacing="3">
+                      <TextBlock FontSize="12" FontWeight="SemiBold" Text="Full" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Local, path, service, and transfer evidence" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                  <Button Name="StressProfileButton" Grid.Row="0" Grid.Column="3" Classes="profileChoice" Tag="3" Click="ProfileClicked">
+                    <StackPanel Spacing="3">
+                      <TextBlock FontSize="12" FontWeight="SemiBold" Text="Stress" />
+                      <TextBlock Classes="muted" FontSize="10" Text="Sustained load, scaling, and stability" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
 
-              <Grid ColumnDefinitions="0.8*,1.2*" ColumnSpacing="16">
-                <StackPanel Spacing="8">
-                  <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
-                  <Border Background="{DynamicResource AppInsetBrush}" CornerRadius="8" Padding="4">
-                    <Grid ColumnDefinitions="*,*,*">
-                      <Button Name="CompareMethodButton" Grid.Column="0" Classes="methodChoice selected" Tag="0" Content="Compare" Click="MethodClicked" />
-                      <Button Name="SingleMethodButton" Grid.Column="1" Classes="methodChoice" Tag="1" Content="Single" Click="MethodClicked" />
-                      <Button Name="AggregateMethodButton" Grid.Column="2" Classes="methodChoice" Tag="2" Content="Aggregate" Click="MethodClicked" />
+                <Border Classes="divider" />
+
+                <Grid Name="DiagnosticDetailsGrid"
+                      ColumnDefinitions="1.2*,0.9*,0.72*,Auto"
+                      RowDefinitions="Auto"
+                      ColumnSpacing="20"
+                      RowSpacing="14">
+                  <StackPanel Name="SelectedQuestionPanel" Grid.Row="0" Grid.Column="0" Spacing="4">
+                    <TextBlock Classes="eyebrow" Text="SELECTED QUESTION" />
+                    <TextBlock Name="QuestionText" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Name="PurposeText" Classes="secondary" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
+                  </StackPanel>
+
+                  <StackPanel Name="MethodPanel" Grid.Row="0" Grid.Column="1" Spacing="7">
+                    <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
+                    <Border Background="{DynamicResource AppInsetBrush}" CornerRadius="8" Padding="4">
+                      <Grid ColumnDefinitions="*,*,*">
+                        <Button Name="CompareMethodButton" Grid.Column="0" Classes="methodChoice selected" Tag="0" Content="Compare" Click="MethodClicked" />
+                        <Button Name="SingleMethodButton" Grid.Column="1" Classes="methodChoice" Tag="1" Content="Single" Click="MethodClicked" />
+                        <Button Name="AggregateMethodButton" Grid.Column="2" Classes="methodChoice" Tag="2" Content="Aggregate" Click="MethodClicked" />
+                      </Grid>
+                    </Border>
+                    <TextBlock Name="MethodDetailText" Classes="muted" FontSize="9" LineHeight="14" TextWrapping="Wrap" />
+                  </StackPanel>
+
+                  <StackPanel Name="RunPlanPanel" Grid.Row="0" Grid.Column="2" Spacing="7">
+                    <TextBlock Classes="eyebrow" Text="RUN PLAN" />
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
+                      <TextBlock Classes="muted" FontSize="10" Text="Time" />
+                      <TextBlock Name="EstimatedTimeText" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="1" Classes="muted" FontSize="10" Text="Transfer" />
+                      <TextBlock Name="TransferCapText" Grid.Row="1" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="2" Classes="muted" FontSize="10" Text="Confirm" />
+                      <TextBlock Name="ConfirmationText" Grid.Row="2" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
                     </Grid>
-                  </Border>
-                  <TextBlock Name="MethodDetailText" Classes="muted" FontSize="10" LineHeight="16" TextWrapping="Wrap" />
-                </StackPanel>
+                    <TextBlock Name="AvailabilityText" Classes="muted" FontSize="9" LineHeight="14" TextWrapping="Wrap" />
+                  </StackPanel>
 
-                <StackPanel Grid.Column="1" Spacing="8">
-                  <TextBlock Classes="eyebrow" Text="RUN PLAN" />
-                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                    <TextBlock Classes="muted" FontSize="10" Text="Estimated time" />
-                    <TextBlock Name="EstimatedTimeText" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
-                    <TextBlock Grid.Row="1" Classes="muted" FontSize="10" Text="Transfer cap" />
-                    <TextBlock Name="TransferCapText" Grid.Row="1" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
-                    <TextBlock Grid.Row="2" Classes="muted" FontSize="10" Text="Confirmation" />
-                    <TextBlock Name="ConfirmationText" Grid.Row="2" Grid.Column="1" FontSize="10" FontWeight="SemiBold" />
-                  </Grid>
-                  <TextBlock Name="AvailabilityText" Classes="muted" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
-                </StackPanel>
-              </Grid>
-
-              <Border Classes="divider" />
-
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
-                <StackPanel Spacing="4">
-                  <TextBlock Name="InterfaceText" Classes="secondary" FontSize="10" TextWrapping="Wrap" />
-                  <TextBlock Name="EndpointText" Classes="secondary" FontSize="10" TextWrapping="Wrap" />
-                  <TextBlock Name="NetworkText" Classes="secondary" FontSize="10" TextWrapping="Wrap" />
-                </StackPanel>
-                <Button Name="RunButton" Grid.Column="1" Classes="primary" MinWidth="145" Content="Run diagnostic" Click="RunClicked" VerticalAlignment="Center" />
-              </Grid>
-            </StackPanel>
-          </Border>
-        </Expander>
+                  <StackPanel Name="RunActionPanel" Grid.Row="0" Grid.Column="3" Spacing="8" MinWidth="166">
+                    <Button Name="RunButton" Classes="primary" MinWidth="166" Content="Run diagnostic" Click="RunClicked" />
+                    <StackPanel Spacing="3">
+                      <TextBlock Name="InterfaceText" Classes="secondary" FontSize="9" TextWrapping="Wrap" />
+                      <TextBlock Name="EndpointText" Classes="secondary" FontSize="9" TextWrapping="Wrap" />
+                      <TextBlock Name="NetworkText" Classes="secondary" FontSize="9" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </Expander>
+        </Border>
       </StackPanel>
     </Grid>
   </ScrollViewer>
