@@ -105,16 +105,22 @@ jobs:
           capture overview-diagnostics-expanded
           xdotool mousemove 900 680 click 1
 
+          xdotool key --clearmodifiers End
+          capture control-center-recent-diagnostics
+          xdotool key --clearmodifiers Home
+
+          run_command 'open comparisons'
+          xdotool key --clearmodifiers End
+          capture control-center-inline-compare
+          xdotool key --clearmodifiers Home
+
           xdotool key --clearmodifiers ctrl+k
           sleep 0.35
           capture command-palette
           xdotool key Escape
 
           run_command 'open reports'
-          capture history-empty
-
-          run_command 'open comparisons'
-          capture compare-empty
+          capture diagnostics-library-empty
 
           for section in general monitoring diagnostics privacy storage developer; do
             run_command "settings ${section}"
@@ -139,7 +145,7 @@ jobs:
           wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,900,700
           capture overview-900x700
 
-          # Restart from a clean Overview destination in Light mode.
+          # Restart from a clean control-center destination in Light mode.
           kill "$(cat /tmp/desktop-app.pid)" || true
           sleep 1
           python - <<'PY'
