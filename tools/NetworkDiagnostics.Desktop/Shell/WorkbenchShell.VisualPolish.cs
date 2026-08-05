@@ -9,6 +9,10 @@ public sealed partial class WorkbenchShell
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
+        ReportsWorkspaceButton.IsVisible = false;
+        ComparisonsWorkspaceButton.IsVisible = false;
+        TestWorkspaceLabel.Text = "Control center";
+        SettingsWorkspaceLabel.Text = "Settings";
         LayoutUpdated += VisualPolishLayoutUpdated;
     }
 
@@ -20,6 +24,9 @@ public sealed partial class WorkbenchShell
 
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
+        ReportsWorkspaceButton.IsVisible = false;
+        ComparisonsWorkspaceButton.IsVisible = false;
+        TestWorkspaceLabel.Text = Bounds.Width < 960 ? "Home" : "Control center";
         SimplifyContextLabel();
     }
 
@@ -41,9 +48,9 @@ public sealed partial class WorkbenchShell
 
         selected = selected switch
         {
-            "Test" or "Overview" => "Live monitor",
-            "Reports" => "History",
-            "Comparisons" => "Compare",
+            "Test" or "Overview" => "Live control center",
+            "Reports" => "Diagnostics library",
+            "Comparisons" => "Comparison",
             _ => selected
         };
 
