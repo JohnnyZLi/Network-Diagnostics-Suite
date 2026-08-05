@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -10,6 +11,7 @@ public sealed partial class SettingsWorkspace
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualSettingsSizeChanged;
+        ApplyFieldSizing();
         ApplySettingsCardLayout(Bounds.Width);
     }
 
@@ -21,6 +23,18 @@ public sealed partial class SettingsWorkspace
 
     private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplySettingsCardLayout(eventArgs.NewSize.Width);
+
+    private void ApplyFieldSizing()
+    {
+        SettingsContentContainer.MaxWidth = 1160;
+
+        ExpectedDownloadTextBox.Width = 220;
+        ExpectedDownloadTextBox.HorizontalAlignment = HorizontalAlignment.Left;
+        ExpectedUploadTextBox.Width = 220;
+        ExpectedUploadTextBox.HorizontalAlignment = HorizontalAlignment.Left;
+        AlertThresholdTextBox.Width = 220;
+        AlertThresholdTextBox.HorizontalAlignment = HorizontalAlignment.Left;
+    }
 
     private void ApplySettingsCardLayout(double width)
     {
