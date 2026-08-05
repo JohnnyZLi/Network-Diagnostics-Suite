@@ -49,7 +49,7 @@
               Click="ClearClicked" />
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,220,*" ColumnSpacing="12">
+    <Grid Name="SelectionGrid" Grid.Row="1" ColumnDefinitions="*,220,*" ColumnSpacing="12">
       <Border Grid.Column="0" Classes="conditionCard">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <StackPanel Spacing="5">
@@ -112,7 +112,7 @@
       </Border>
     </Grid>
 
-    <Grid Grid.Row="2" ColumnDefinitions="360,*" ColumnSpacing="18">
+    <Grid Name="ComparisonBody" Grid.Row="2" ColumnDefinitions="360,*" ColumnSpacing="18">
       <Border Grid.Column="0"
               Background="{DynamicResource AppRaisedBrush}"
               CornerRadius="14"
@@ -178,5 +178,77 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
+
+    <Border Name="EmptyLibraryPanel"
+            Grid.Row="1"
+            Grid.RowSpan="2"
+            Background="{DynamicResource AppRaisedBrush}"
+            CornerRadius="16"
+            IsVisible="False">
+      <Grid Margin="44" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="720">
+        <StackPanel Spacing="22" HorizontalAlignment="Center">
+          <Grid Width="96" Height="76" HorizontalAlignment="Center">
+            <Border Width="56"
+                    Height="56"
+                    CornerRadius="28"
+                    Background="{DynamicResource AppSelectedBrush}"
+                    BorderBrush="{DynamicResource AppAccentBorderBrush}"
+                    BorderThickness="1"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top" />
+            <Border Width="56"
+                    Height="56"
+                    CornerRadius="28"
+                    Background="{DynamicResource AppInsetBrush}"
+                    BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                    BorderThickness="1"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom" />
+            <TextBlock Text="↔"
+                       FontSize="24"
+                       Foreground="{DynamicResource AppAccentBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <StackPanel Spacing="7" HorizontalAlignment="Center">
+            <TextBlock FontSize="24"
+                       FontWeight="SemiBold"
+                       Text="Compare two real conditions"
+                       TextAlignment="Center" />
+            <TextBlock Classes="secondary"
+                       FontSize="12"
+                       LineHeight="19"
+                       Text="Save or import at least two diagnostics. The comparison workspace will verify their context before calculating latency, loss, and throughput changes."
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="620" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" Width="660">
+            <Border Grid.Column="0" Background="{DynamicResource AppInsetBrush}" CornerRadius="10" Padding="15">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="eyebrow" Text="1 · CAPTURE" />
+                <TextBlock FontSize="11" Text="Run a diagnostic in the reference condition." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="{DynamicResource AppInsetBrush}" CornerRadius="10" Padding="15">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="eyebrow" Text="2 · CHANGE" />
+                <TextBlock FontSize="11" Text="Repeat the same profile after the network changes." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Background="{DynamicResource AppInsetBrush}" CornerRadius="10" Padding="15">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="eyebrow" Text="3 · COMPARE" />
+                <TextBlock FontSize="11" Text="Choose a baseline and candidate from local history." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
+          <TextBlock Classes="muted"
+                     FontSize="10"
+                     Text="Diagnostics remain local unless you explicitly export them."
+                     TextAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>
