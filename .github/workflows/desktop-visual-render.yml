@@ -103,7 +103,7 @@ jobs:
 
           xdotool mousemove 900 680 click 1
           capture deeper-diagnostics-overlay
-          xdotool mousemove 1355 58 click 1
+          xdotool mousemove 70 500 click 1
 
           xdotool key --clearmodifiers End
           capture control-center-recent-diagnostics
