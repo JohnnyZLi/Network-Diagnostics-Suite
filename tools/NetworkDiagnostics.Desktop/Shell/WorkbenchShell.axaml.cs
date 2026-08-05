@@ -194,13 +194,14 @@ public sealed partial class WorkbenchShell : UserControl
         {
             if (index > 0)
             {
-                BreadcrumbPanel.Children.Add(new TextBlock
+                var separator = new TextBlock
                 {
                     Text = "/",
                     FontSize = 11,
-                    Foreground = Avalonia.Media.Brush.Parse("#5F6869"),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                });
+                };
+                separator.Classes.Add("shellMuted");
+                BreadcrumbPanel.Children.Add(separator);
             }
 
             var segment = breadcrumbs[index];
