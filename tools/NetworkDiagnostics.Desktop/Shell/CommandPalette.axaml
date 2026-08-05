@@ -2,106 +2,97 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Shell.CommandPalette"
              IsVisible="False"
-             Background="#B8000000"
-             Foreground="#E9E6E0"
+             Background="#99000000"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9B" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
-      <Setter Property="FontSize" Value="10" />
+      <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+      <Setter Property="FontSize" Value="9" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.5" />
     </Style>
     <Style Selector="TextBox.commandSearch">
       <Setter Property="MinHeight" Value="42" />
-      <Setter Property="Padding" Value="12,9" />
-      <Setter Property="Background" Value="#111415" />
-      <Setter Property="Foreground" Value="#E9E6E0" />
-      <Setter Property="BorderBrush" Value="#414748" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="CaretBrush" Value="#F0EDE7" />
-      <Setter Property="SelectionBrush" Value="#754737" />
-      <Setter Property="SelectionForegroundBrush" Value="#FFFFFF" />
+      <Setter Property="CaretBrush" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="SelectionBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+      <Setter Property="SelectionForegroundBrush" Value="White" />
     </Style>
     <Style Selector="TextBox.commandSearch:pointerover">
-      <Setter Property="Background" Value="#141819" />
-      <Setter Property="BorderBrush" Value="#596061" />
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppTextMutedBrush}" />
     </Style>
     <Style Selector="TextBox.commandSearch:focus">
-      <Setter Property="Background" Value="#111415" />
-      <Setter Property="BorderBrush" Value="#C77E68" />
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
     </Style>
     <Style Selector="Button.command">
-      <Setter Property="MinHeight" Value="54" />
-      <Setter Property="Padding" Value="12,9" />
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="Padding" Value="12,8" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#E9E6E0" />
-      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.command:pointerover">
-      <Setter Property="Background" Value="#252A2B" />
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
     </Style>
     <Style Selector="Button.command.selected">
-      <Setter Property="Background" Value="#29231C" />
+      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
     </Style>
     <Style Selector="Button.command:disabled">
-      <Setter Property="Opacity" Value="0.42" />
+      <Setter Property="Opacity" Value="0.4" />
     </Style>
   </UserControl.Styles>
 
   <Grid>
-    <Border Width="640"
-            Margin="0,76,0,0"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            Background="#171B1C"
-            BorderBrush="#414748"
-            BorderThickness="1"
-            CornerRadius="12">
+    <Border Width="620" Margin="0,72,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{DynamicResource AppRaisedBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}" BorderThickness="1" CornerRadius="12">
       <Grid RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Margin="16,14,16,10" Spacing="4">
-          <TextBlock Classes="eyebrow" Text="COMMANDS" />
-          <TextBlock Classes="muted" FontSize="11" Text="Navigate or run an application action" />
+          <TextBlock Classes="eyebrow" Text="COMMAND PALETTE" />
+          <TextBlock Classes="muted" FontSize="10" Text="Navigate, inspect, or run an application action" />
         </StackPanel>
 
-        <Border Grid.Row="1" BorderBrush="#303536" BorderThickness="0,1,0,1" Padding="14,12">
-          <TextBox Name="SearchBox"
-                   Classes="commandSearch"
-                   PlaceholderText="Type a command or workspace…"
-                   TextChanged="SearchChanged"
-                   KeyDown="SearchKeyDown">
+        <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,1" Padding="14,12">
+          <TextBox Name="SearchBox" Classes="commandSearch" PlaceholderText="Search commands and workspaces…" TextChanged="SearchChanged" KeyDown="SearchKeyDown">
             <TextBox.Resources>
-              <SolidColorBrush x:Key="TextControlBackground">#111415</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#141819</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBackgroundFocused">#111415</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForeground">#E9E6E0</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForegroundPointerOver">#F0EDE7</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlForegroundFocused">#F0EDE7</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForeground">#777D7E</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#8F9596</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#8F9596</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrush">#414748</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#596061</SolidColorBrush>
-              <SolidColorBrush x:Key="TextControlBorderBrushFocused">#C77E68</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBackground">#0D1011</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#0D1011</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBackgroundFocused">#0D1011</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForeground">#F1EEE8</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForegroundPointerOver">#F1EEE8</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlForegroundFocused">#F1EEE8</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForeground">#7F898A</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver">#8E9798</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused">#8E9798</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrush">#41494A</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#5A6364</SolidColorBrush>
+              <SolidColorBrush x:Key="TextControlBorderBrushFocused">#D58A72</SolidColorBrush>
             </TextBox.Resources>
           </TextBox>
         </Border>
 
-        <ScrollViewer Grid.Row="2" MaxHeight="430" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="2" MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Name="ResultsPanel" Margin="8" Spacing="2" />
         </ScrollViewer>
 
-        <Border Grid.Row="3" BorderBrush="#303536" BorderThickness="0,1,0,0" Padding="14,10">
+        <Border Grid.Row="3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0" Padding="14,10">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-            <TextBlock Name="ResultCountText" Classes="muted" FontSize="10" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1" Classes="muted" FontSize="10" Text="↑↓ Select · Enter Run · Esc Close" VerticalAlignment="Center" />
+            <TextBlock Name="ResultCountText" Classes="muted" FontSize="9" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Classes="muted" FontSize="9" Text="↑↓ Select   Enter Run   Esc Close" VerticalAlignment="Center" />
           </Grid>
         </Border>
       </Grid>
