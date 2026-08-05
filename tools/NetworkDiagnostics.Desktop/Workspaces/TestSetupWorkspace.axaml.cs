@@ -109,10 +109,11 @@ public sealed partial class TestSetupWorkspace : UserControl
         ResponsivenessScoreText.Text = ScoreText(experience.Responsiveness.Score);
         ReliabilityScoreText.Text = ScoreText(experience.Reliability.Score);
         SpeedScoreText.Text = ScoreText(experience.Speed.Score);
-        MonitoringToggleButton.Content = experience.MonitoringEnabled ? "Pause" : "Start";
+        MonitoringToggleButton.Content = experience.MonitoringEnabled ? "Pause monitoring" : "Resume monitoring";
 
-        ApplyScoreClass(ScoreOrbCore, experience.Band, soft: false);
-        ApplyScoreClass(ScoreGlow, experience.Band, soft: true);
+        ApplyScoreClass(ScoreRing, experience.Band, soft: false);
+        ApplyScoreClass(ScoreAura, experience.Band, soft: true);
+        ApplyScoreClass(ScoreOrbCore, experience.Band, soft: true);
         RenderComponent(
             experience.Responsiveness,
             ResponsivenessBadge,
@@ -137,7 +138,8 @@ public sealed partial class TestSetupWorkspace : UserControl
         SelectWindow(experience.Window);
     }
 
-    private static string ScoreText(int? score) => score?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "—";
+    private static string ScoreText(int? score) =>
+        score?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "—";
 
     private static void RenderComponent(
         ExperienceComponentPresentation component,
@@ -150,72 +152,117 @@ public sealed partial class TestSetupWorkspace : UserControl
         summary.Text = component.Summary;
         ApplyScoreClass(badge, component.Band, soft: true);
         metricsGrid.Children.Clear();
+        metricsGrid.ColumnDefinitions.Clear();
 
         var metrics = component.Metrics.Take(4).ToArray();
+        if (metrics.Length == 0)
+        {
+            metricsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            var empty = new TextBlock
+            {
+                Text = "Waiting for measurements",
+                FontSize = 10,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            empty.Classes.Add("muted");
+            metricsGrid.Children.Add(empty);
+            return;
+        }
+
         for (var index = 0; index < metrics.Length; index++)
         {
+            metricsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             var metric = metrics[index];
             var label = new TextBlock
             {
                 Text = metric.Label,
                 FontSize = 9,
-                TextWrapping = TextWrapping.Wrap
+                Height = 15,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             label.Classes.Add("muted");
+            ToolTip.SetTip(label, metric.Label);
+
             var value = new TextBlock
             {
                 Text = metric.Value,
-                FontSize = 14,
+                FontSize = 15,
                 FontWeight = FontWeight.SemiBold,
-                TextWrapping = TextWrapping.Wrap
+                LineHeight = 18,
+                VerticalAlignment = VerticalAlignment.Top,
+                TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
-            var stack = new StackPanel { Spacing = 3 };
-            stack.Children.Add(label);
-            stack.Children.Add(value);
-            var cell = new Border { Child = stack };
+            ToolTip.SetTip(value, metric.Value);
+
+            var content = new Grid
+            {
+                RowDefinitions = new RowDefinitions("15,Auto"),
+                RowSpacing = 2
+            };
+            content.Children.Add(label);
+            Grid.SetRow(value, 1);
+            content.Children.Add(value);
+
+            var cell = new Border
+            {
+                Child = content,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
             cell.Classes.Add("telemetryMetric");
             if (index == metrics.Length - 1) cell.Classes.Add("last");
             Grid.SetColumn(cell, index);
             metricsGrid.Children.Add(cell);
         }
-
-        if (metrics.Length == 0)
-        {
-            var empty = new TextBlock
-            {
-                Text = "Waiting for measurements",
-                FontSize = 10
-            };
-            empty.Classes.Add("muted");
-            metricsGrid.Children.Add(empty);
-        }
     }
 
     private void RenderResponsivenessTimeline(IReadOnlyList<MonitorSample> samples)
     {
-        ResponsivenessTimelinePanel.Children.Clear();
-        if (samples.Count == 0)
+        ResponsivenessTimelineGrid.Children.Clear();
+        ResponsivenessTimelineGrid.ColumnDefinitions.Clear();
+        var timeline = CompressTimeline(samples, 96);
+        if (timeline.Count == 0)
         {
-            var empty = new Border { Width = 240, Height = 4, CornerRadius = new CornerRadius(2) };
+            ResponsivenessTimelineGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            var empty = new Border
+            {
+                Height = 4,
+                CornerRadius = new CornerRadius(2),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
             empty.Classes.Add("timelineInactive");
-            ResponsivenessTimelinePanel.Children.Add(empty);
+            ResponsivenessTimelineGrid.Children.Add(empty);
             return;
         }
 
-        foreach (var sample in samples)
+        var measuredLatencies = timeline
+            .Where(sample => sample.LatencyMs is not null)
+            .Select(sample => sample.LatencyMs!.Value)
+            .OrderBy(value => value)
+            .ToArray();
+        var chartCeiling = measuredLatencies.Length == 0
+            ? 80d
+            : Math.Max(80d, Percentile(measuredLatencies, 0.95) * 1.15);
+
+        for (var index = 0; index < timeline.Count; index++)
         {
-            var latency = sample.LatencyMs ?? 0;
+            ResponsivenessTimelineGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            var sample = timeline[index];
             var height = sample.State switch
             {
-                MonitorSampleState.Unresponsive => 56,
+                MonitorSampleState.Unresponsive => 66,
                 MonitorSampleState.Inactive => 5,
-                _ => Math.Clamp(7 + latency / 4, 7, 54)
+                _ => Math.Clamp(8 + ((sample.LatencyMs ?? 0) / chartCeiling * 54), 8, 64)
             };
             var bar = new Border
             {
-                Width = samples.Count > 50 ? 4 : 6,
                 Height = height,
+                MinWidth = 2,
                 CornerRadius = new CornerRadius(2),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Bottom
             };
             ToolTip.SetTip(
@@ -224,7 +271,8 @@ public sealed partial class TestSetupWorkspace : UserControl
                     ? $"Unreachable · {sample.Timestamp.ToLocalTime():h:mm:ss tt}"
                     : $"{sample.LatencyMs:0.#} ms · {sample.Timestamp.ToLocalTime():h:mm:ss tt}");
             ApplySampleClass(bar, sample);
-            ResponsivenessTimelinePanel.Children.Add(bar);
+            Grid.SetColumn(bar, index);
+            ResponsivenessTimelineGrid.Children.Add(bar);
         }
     }
 
@@ -232,20 +280,30 @@ public sealed partial class TestSetupWorkspace : UserControl
     {
         ReliabilityTimelineGrid.Children.Clear();
         ReliabilityTimelineGrid.ColumnDefinitions.Clear();
-        if (samples.Count == 0)
+        var timeline = CompressTimeline(samples, 120);
+        if (timeline.Count == 0)
         {
             ReliabilityTimelineGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            var empty = new Border { CornerRadius = new CornerRadius(4) };
+            var empty = new Border
+            {
+                CornerRadius = new CornerRadius(4),
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             empty.Classes.Add("timelineInactive");
             ReliabilityTimelineGrid.Children.Add(empty);
             return;
         }
 
-        for (var index = 0; index < samples.Count; index++)
+        for (var index = 0; index < timeline.Count; index++)
         {
             ReliabilityTimelineGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            var segment = new Border { CornerRadius = new CornerRadius(2) };
-            ApplySampleClass(segment, samples[index]);
+            var segment = new Border
+            {
+                MinWidth = 2,
+                CornerRadius = new CornerRadius(2),
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            ApplySampleClass(segment, timeline[index]);
             Grid.SetColumn(segment, index);
             ReliabilityTimelineGrid.Children.Add(segment);
         }
@@ -315,6 +373,55 @@ public sealed partial class TestSetupWorkspace : UserControl
             row.Children.Add(content);
             AlertsPanel.Children.Add(row);
         }
+    }
+
+    private static IReadOnlyList<MonitorSample> CompressTimeline(
+        IReadOnlyList<MonitorSample> samples,
+        int maximumSamples)
+    {
+        if (samples.Count <= maximumSamples) return samples;
+
+        var compressed = new List<MonitorSample>(maximumSamples);
+        var bucketWidth = samples.Count / (double)maximumSamples;
+        for (var bucket = 0; bucket < maximumSamples; bucket++)
+        {
+            var start = (int)Math.Floor(bucket * bucketWidth);
+            var end = Math.Min(samples.Count, (int)Math.Ceiling((bucket + 1) * bucketWidth));
+            if (start >= end) continue;
+
+            var representative = samples[start];
+            for (var index = start + 1; index < end; index++)
+            {
+                var candidate = samples[index];
+                if (StateSeverity(candidate.State) > StateSeverity(representative.State)
+                    || (candidate.State == representative.State
+                        && (candidate.LatencyMs ?? 0) > (representative.LatencyMs ?? 0)))
+                {
+                    representative = candidate;
+                }
+            }
+            compressed.Add(representative);
+        }
+        return compressed;
+    }
+
+    private static int StateSeverity(MonitorSampleState state) => state switch
+    {
+        MonitorSampleState.Unresponsive => 4,
+        MonitorSampleState.Laggy => 3,
+        MonitorSampleState.Responsive => 2,
+        _ => 1
+    };
+
+    private static double Percentile(IReadOnlyList<double> sortedValues, double percentile)
+    {
+        if (sortedValues.Count == 0) return 0;
+        var position = Math.Clamp(percentile, 0, 1) * (sortedValues.Count - 1);
+        var lower = (int)Math.Floor(position);
+        var upper = (int)Math.Ceiling(position);
+        if (lower == upper) return sortedValues[lower];
+        var fraction = position - lower;
+        return sortedValues[lower] + ((sortedValues[upper] - sortedValues[lower]) * fraction);
     }
 
     private static void ApplySampleClass(Border border, MonitorSample sample)
@@ -393,28 +500,123 @@ public sealed partial class TestSetupWorkspace : UserControl
 
     private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
     {
-        var stacked = eventArgs.NewSize.Width < 980;
-        OverviewGrid.ColumnDefinitions[0].Width = stacked ? GridLength.Star : new GridLength(340);
-        OverviewGrid.ColumnDefinitions[1].Width = stacked ? new GridLength(0) : GridLength.Star;
+        ConfigureOverviewLayout(eventArgs.NewSize.Width);
+        ConfigureDiagnosticLayout(eventArgs.NewSize.Width);
+    }
+
+    private void ConfigureOverviewLayout(double width)
+    {
+        var stacked = width < 960;
+        OverviewGrid.ColumnDefinitions.Clear();
         OverviewGrid.RowDefinitions.Clear();
-        OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
         if (stacked)
         {
-            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(ScoreColumn, 0);
-            Grid.SetRow(ScoreColumn, 0);
-            Grid.SetColumn(TelemetryColumn, 0);
-            Grid.SetRow(TelemetryColumn, 1);
-            TelemetryColumn.Margin = new Thickness(0, 8, 0, 0);
+            OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            for (var index = 0; index < 4; index++)
+            {
+                OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            }
+            OverviewGrid.ColumnSpacing = 0;
+            OverviewGrid.RowSpacing = 12;
+            SetGridPosition(DeviceHeader, 0, 0);
+            SetGridPosition(ScoreColumn, 1, 0);
+            SetGridPosition(TelemetryHeader, 2, 0);
+            SetGridPosition(TelemetryColumn, 3, 0);
+            TelemetryHeader.Margin = new Thickness(2, 10, 2, 0);
         }
         else
         {
-            Grid.SetColumn(ScoreColumn, 0);
-            Grid.SetRow(ScoreColumn, 0);
-            Grid.SetColumn(TelemetryColumn, 1);
-            Grid.SetRow(TelemetryColumn, 0);
-            TelemetryColumn.Margin = new Thickness(0);
+            OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(320)));
+            OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            OverviewGrid.ColumnSpacing = 20;
+            OverviewGrid.RowSpacing = 12;
+            SetGridPosition(DeviceHeader, 0, 0);
+            SetGridPosition(TelemetryHeader, 0, 1);
+            SetGridPosition(ScoreColumn, 1, 0);
+            SetGridPosition(TelemetryColumn, 1, 1);
+            TelemetryHeader.Margin = new Thickness(2, 0, 2, 0);
         }
+    }
+
+    private void ConfigureDiagnosticLayout(double width)
+    {
+        var wide = width >= 1180;
+        var medium = width >= 760;
+
+        ProfileGrid.ColumnDefinitions.Clear();
+        ProfileGrid.RowDefinitions.Clear();
+        if (wide)
+        {
+            for (var index = 0; index < 4; index++)
+            {
+                ProfileGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            }
+            ProfileGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetGridPosition(ConnectionProfileButton, 0, 0);
+            SetGridPosition(QuickProfileButton, 0, 1);
+            SetGridPosition(FullProfileButton, 0, 2);
+            SetGridPosition(StressProfileButton, 0, 3);
+        }
+        else
+        {
+            ProfileGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ProfileGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ProfileGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            ProfileGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetGridPosition(ConnectionProfileButton, 0, 0);
+            SetGridPosition(QuickProfileButton, 0, 1);
+            SetGridPosition(FullProfileButton, 1, 0);
+            SetGridPosition(StressProfileButton, 1, 1);
+        }
+
+        DiagnosticDetailsGrid.ColumnDefinitions.Clear();
+        DiagnosticDetailsGrid.RowDefinitions.Clear();
+        if (wide)
+        {
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.2, GridUnitType.Star)));
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.9, GridUnitType.Star)));
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.72, GridUnitType.Star)));
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetGridPosition(SelectedQuestionPanel, 0, 0);
+            SetGridPosition(MethodPanel, 0, 1);
+            SetGridPosition(RunPlanPanel, 0, 2);
+            SetGridPosition(RunActionPanel, 0, 3);
+        }
+        else if (medium)
+        {
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetGridPosition(SelectedQuestionPanel, 0, 0);
+            SetGridPosition(MethodPanel, 0, 1);
+            SetGridPosition(RunPlanPanel, 1, 0);
+            SetGridPosition(RunActionPanel, 1, 1);
+        }
+        else
+        {
+            DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            for (var index = 0; index < 4; index++)
+            {
+                DiagnosticDetailsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            }
+            SetGridPosition(SelectedQuestionPanel, 0, 0);
+            SetGridPosition(MethodPanel, 1, 0);
+            SetGridPosition(RunPlanPanel, 2, 0);
+            SetGridPosition(RunActionPanel, 3, 0);
+        }
+    }
+
+    private static void SetGridPosition(Control control, int row, int column)
+    {
+        Grid.SetRow(control, row);
+        Grid.SetColumn(control, column);
+        Grid.SetRowSpan(control, 1);
+        Grid.SetColumnSpan(control, 1);
     }
 
     private void ProfileClicked(object? sender, RoutedEventArgs eventArgs)
