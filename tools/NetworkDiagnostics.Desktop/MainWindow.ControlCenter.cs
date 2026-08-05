@@ -12,6 +12,7 @@ public sealed partial class MainWindow
     {
         if (testSetupWorkspace is null) return;
         testSetupWorkspace.DiagnosticLauncherRequested += ControlCenterDiagnosticLauncherRequested;
+        testSetupWorkspace.DiagnosticRunRequested += ControlCenterDiagnosticRunRequested;
         testSetupWorkspace.RecentReportRequested += ControlCenterReportRequested;
         testSetupWorkspace.RecentReportEditRequested += ControlCenterReportEditRequested;
         testSetupWorkspace.InlineBaselineRequested += ControlCenterBaselineRequested;
@@ -45,7 +46,14 @@ public sealed partial class MainWindow
 
         ShowControlCenterUnderlay();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Deeper diagnostics", content, 1180, 620);
+        workbenchShell.OpenOverlay("Customize diagnostic", content, 1180, 620);
+    }
+
+    private async void ControlCenterDiagnosticRunRequested(object? sender, IndexRequestedEventArgs eventArgs)
+    {
+        if (activeRunSession.Snapshot.IsActive) return;
+        await SelectProfileAsync(eventArgs.Index);
+        TestSetupRunRequested(sender, EventArgs.Empty);
     }
 
     private void ControlCenterReportRequested(object? sender, StoredReportEventArgs eventArgs) =>
