@@ -4,6 +4,7 @@ using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Models;
+using NetworkDiagnostics.Desktop.Monitoring;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
@@ -26,6 +27,7 @@ public sealed partial class MainWindow : Window
     private readonly ActiveRunSession activeRunSession = new();
     private readonly Dictionary<WorkspaceKind, NavigationEntry> lastWorkspaceEntries = new();
     private readonly ReportStore reportStore;
+    private readonly ContinuousMonitorService monitoringService;
     private CancellationTokenSource? runCancellation => activeRunSession.CancellationSource;
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
@@ -59,6 +61,7 @@ public sealed partial class MainWindow : Window
         }
     }
     private DesktopSettings settings = new();
+    private MonitorWindow monitorWindow = MonitorWindow.FiveMinutes;
     private NetworkDiagnosticsReportV2? currentReport;
     private NetworkDiagnosticsReportV2? comparisonBaselineReport;
     private StoredReport? selectedHistoryReport { get; set; }
@@ -89,6 +92,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         reportStore = new ReportStore(settingsStore.RootDirectory);
+        monitoringService = new ContinuousMonitorService(settingsStore.RootDirectory);
         InitializeComponent();
         InstallTestWorkspace();
         InstallWorkbenchShell();
@@ -109,6 +113,7 @@ public sealed partial class MainWindow : Window
         settingsLoaded = false;
         settings = await settingsStore.LoadAsync();
         ApplyAppearance(settings.Appearance);
+        monitorWindow = settings.SelectedMonitoringWindow;
         reportStore.Configure(settings.ReportDirectory);
         selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
         selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
@@ -123,6 +128,7 @@ public sealed partial class MainWindow : Window
         RenderMethodSelection();
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
+        await InitializeMonitoringAsync();
         SyncTestWorkspace();
         SyncSettingsWorkspace();
         settingsLoaded = true;
@@ -135,6 +141,7 @@ public sealed partial class MainWindow : Window
         activeRunSession.Dispose();
         preflightCancellation?.Cancel();
         lanServerCancellation?.Cancel();
+        _ = monitoringService.DisposeAsync();
     }
 
     private void PopulateInterfaceChoices()
