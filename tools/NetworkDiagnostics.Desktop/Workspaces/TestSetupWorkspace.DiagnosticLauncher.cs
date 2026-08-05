@@ -145,7 +145,8 @@ public sealed partial class TestSetupWorkspace
         {
             ColumnDefinitions = new ColumnDefinitions("*,*,*"),
             ColumnSpacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            MaxWidth = 560,
+            HorizontalAlignment = HorizontalAlignment.Left
         };
         presets.Children.Add(quickLauncherButton);
         Grid.SetColumn(fullLauncherButton, 1);
@@ -259,8 +260,10 @@ public sealed partial class TestSetupWorkspace
         {
             Content = content,
             Tag = profileIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            MinWidth = 0,
             MinHeight = 64,
             Padding = new Thickness(13, 10),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Center
         };
