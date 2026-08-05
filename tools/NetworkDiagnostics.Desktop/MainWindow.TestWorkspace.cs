@@ -22,6 +22,12 @@ public sealed partial class MainWindow
         testSetupWorkspace.RunRequested += TestSetupRunRequested;
         testSetupWorkspace.ActiveRunRequested += TestSetupActiveRunRequested;
         testSetupWorkspace.SettingsRequested += TestSetupSettingsRequested;
+        testSetupWorkspace.MonitorWindowRequested += TestSetupMonitorWindowRequested;
+        testSetupWorkspace.MonitoringToggleRequested += TestSetupMonitoringToggleRequested;
+        testSetupWorkspace.ContentSpeedRequested += TestSetupContentSpeedRequested;
+        testSetupWorkspace.PeakSpeedRequested += TestSetupPeakSpeedRequested;
+        testSetupWorkspace.MarkAlertsReadRequested += TestSetupMarkAlertsReadRequested;
+        testSetupWorkspace.ClearAlertsRequested += TestSetupClearAlertsRequested;
 
         testConfigurationPanel.InterfaceRequested += TestConfigurationInterfaceRequested;
         testConfigurationPanel.IdentifiersChanged += TestConfigurationIdentifiersChanged;
@@ -51,7 +57,7 @@ public sealed partial class MainWindow
         ReturnToActiveRun();
 
     private void TestSetupSettingsRequested(object? sender, EventArgs eventArgs) =>
-        NavigateToDestination(new SettingsDestination("Measurement"));
+        NavigateToDestination(new SettingsDestination("General"));
 
     private void RunningWorkspaceStopRequested(object? sender, EventArgs eventArgs) =>
         StopClicked(sender, new RoutedEventArgs());
@@ -123,11 +129,12 @@ public sealed partial class MainWindow
         RunningView.IsVisible = false;
         ResultsView.IsVisible = true;
         SyncRunResultWorkspaces();
+        _ = RecordCurrentReportForMonitoringAsync();
 
         var destination = new TestResultDestination(reportId);
         lastWorkspaceEntries[WorkspaceKind.Test] = new NavigationEntry(
             destination,
-            new NavigationViewState(InspectorOpen: workbenchShell?.InspectorOpen ?? true));
+            new NavigationViewState(InspectorOpen: workbenchShell?.InspectorOpen ?? false));
 
         if (navigationService.Current?.Destination is RunningTestDestination)
         {
@@ -166,7 +173,8 @@ public sealed partial class MainWindow
             snapshot.IsActive,
             $"{profileName} · {methodName}",
             snapshot.Detail,
-            snapshot.Progress));
+            snapshot.Progress,
+            CurrentNetworkExperience()));
 
         testConfigurationPanel.Render(new TestConfigurationModel(
             interfaceLabels,
