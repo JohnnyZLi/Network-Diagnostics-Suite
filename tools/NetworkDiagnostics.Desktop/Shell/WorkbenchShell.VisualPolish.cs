@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
@@ -8,11 +9,14 @@ namespace NetworkDiagnostics.Desktop.Shell;
 public sealed partial class WorkbenchShell
 {
     private Button? settingsUtilityButton;
+    private Panel? toolbarActions;
+    private Control? primaryNavigation;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
+        ResolveHeaderContainers();
         EnsureSettingsUtility();
         HidePrimaryPageNavigation();
         LayoutUpdated += VisualPolishLayoutUpdated;
@@ -26,6 +30,8 @@ public sealed partial class WorkbenchShell
 
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
+        ResolveHeaderContainers();
+        EnsureSettingsUtility();
         HidePrimaryPageNavigation();
         if (settingsUtilityButton is not null)
         {
@@ -34,23 +40,29 @@ public sealed partial class WorkbenchShell
         SimplifyContextLabel();
     }
 
+    private void ResolveHeaderContainers()
+    {
+        toolbarActions ??= CommandToolbarButton.GetLogicalParent() as Panel;
+        primaryNavigation ??= TestWorkspaceButton.GetLogicalParent()?.GetLogicalParent() as Control;
+    }
+
     private void EnsureSettingsUtility()
     {
-        if (settingsUtilityButton is not null) return;
+        if (settingsUtilityButton is not null || toolbarActions is null) return;
         settingsUtilityButton = new Button
         {
             Content = "Settings",
             MinWidth = 34
         };
-        settingsUtilityButton.Classes.Add("toolbar");
+        settingsUtilityButton.Classes.Add("utilityKey");
         settingsUtilityButton.Click += (_, _) =>
             WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
-        ToolbarActions.Children.Insert(0, settingsUtilityButton);
+        toolbarActions.Children.Insert(0, settingsUtilityButton);
     }
 
     private void HidePrimaryPageNavigation()
     {
-        WorkspaceNavigation.IsVisible = false;
+        if (primaryNavigation is not null) primaryNavigation.IsVisible = false;
         TestWorkspaceButton.IsVisible = false;
         ReportsWorkspaceButton.IsVisible = false;
         ComparisonsWorkspaceButton.IsVisible = false;
