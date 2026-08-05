@@ -9,7 +9,7 @@ namespace NetworkDiagnostics.Desktop.Shell;
 public sealed partial class WorkbenchShell : UserControl
 {
     private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
-    private bool inspectorRequested = true;
+    private bool inspectorRequested;
 
     public WorkbenchShell()
     {
@@ -63,9 +63,15 @@ public sealed partial class WorkbenchShell : UserControl
         ForwardButton.IsEnabled = canGoForward;
         RenderBreadcrumbs(entry.Destination.Breadcrumbs);
         SelectWorkspace(entry.Destination.Workspace);
-        SetInspectorOpen(entry.ViewState.InspectorOpen);
+        if (!entry.ViewState.InspectorOpen)
+        {
+            inspectorRequested = false;
+        }
+        ApplyResponsiveLayout(Bounds.Width);
 
-        InspectorWorkspaceText.Text = entry.Destination.Workspace.ToString();
+        InspectorWorkspaceText.Text = entry.Destination.Workspace == WorkspaceKind.Test
+            ? "Overview"
+            : entry.Destination.Workspace.ToString();
         InspectorSelectionText.Text = SelectionLabel(entry.Destination);
     }
 
@@ -166,24 +172,19 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ApplyResponsiveLayout(double width)
     {
-        var compactSidebar = width < 1080;
-        var showInspector = inspectorRequested && width >= 760;
+        var compact = width < 960;
+        var showInspector = inspectorRequested && width >= 820;
 
-        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 164 : 188);
-        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 272 : 0);
-
-        ProductNameText.IsVisible = !compactSidebar;
-        ProductModeText.IsVisible = !compactSidebar;
-        TestWorkspaceLabel.IsVisible = true;
-        ReportsWorkspaceLabel.IsVisible = true;
-        ComparisonsWorkspaceLabel.IsVisible = true;
-        SettingsWorkspaceLabel.IsVisible = true;
-        CommandHintText.IsVisible = !compactSidebar;
-        ActiveRunTitleText.IsVisible = true;
-        ActiveRunDetailText.IsVisible = !compactSidebar;
-
+        ShellGrid.ColumnDefinitions[1].Width = new GridLength(showInspector ? 320 : 0);
         InspectorBorder.IsVisible = showInspector;
-        InspectorToggleButton.Content = showInspector ? "Hide info" : "Inspector";
+        ProductStack.IsVisible = width >= 880;
+        ActiveRunDetailText.IsVisible = width >= 1180;
+        CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
+        InspectorToggleButton.Content = showInspector ? "Hide info" : "Info";
+        TestWorkspaceLabel.Text = compact ? "Home" : "Overview";
+        ReportsWorkspaceLabel.Text = compact ? "History" : "Reports";
+        ComparisonsWorkspaceLabel.Text = compact ? "Compare" : "Compare";
+        SettingsWorkspaceLabel.Text = compact ? "Settings" : "Settings";
     }
 
     private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
@@ -197,7 +198,7 @@ public sealed partial class WorkbenchShell : UserControl
                 var separator = new TextBlock
                 {
                     Text = "/",
-                    FontSize = 11,
+                    FontSize = 9,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
                 separator.Classes.Add("shellMuted");
@@ -205,9 +206,10 @@ public sealed partial class WorkbenchShell : UserControl
             }
 
             var segment = breadcrumbs[index];
+            var label = segment.Label == "Test" ? "Overview" : segment.Label;
             var button = new Button
             {
-                Content = segment.Label,
+                Content = label,
                 Tag = segment.Destination,
                 IsEnabled = segment.Destination is not null
             };
@@ -260,7 +262,7 @@ public sealed partial class WorkbenchShell : UserControl
                 "Preview terminal result states without network activity, changing measurement settings, or saving a diagnostic report."),
             _ => (
                 "Application defaults",
-                "Set the starting profile, transfer method, and interface for new diagnostics. Existing and active tests keep their own configuration.")
+                "Set monitoring, appearance, and diagnostic defaults. Existing and active tests keep their own configuration.")
         };
     }
 
@@ -272,6 +274,7 @@ public sealed partial class WorkbenchShell : UserControl
         ComparisonDestination comparison when comparison.BaselineId is not null && comparison.CandidateId is not null => "Two reports",
         ComparisonDestination comparison when comparison.BaselineId is not null => "Baseline selected",
         SettingsDestination settings => settings.Section,
+        TestSetupDestination => "Live monitor",
         _ => "None"
     };
 
