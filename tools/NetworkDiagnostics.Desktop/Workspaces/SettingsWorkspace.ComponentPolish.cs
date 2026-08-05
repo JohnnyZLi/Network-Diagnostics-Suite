@@ -2,28 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
-using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class SettingsWorkspace
 {
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
-    {
-        base.OnAttachedToVisualTree(eventArgs);
-        ApplyComponentPolish();
-        LayoutUpdated += SettingsComponentLayoutUpdated;
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
-    {
-        LayoutUpdated -= SettingsComponentLayoutUpdated;
-        base.OnDetachedFromVisualTree(eventArgs);
-    }
-
-    private void SettingsComponentLayoutUpdated(object? sender, EventArgs eventArgs) =>
-        ApplyComponentPolish();
-
     private void ApplyComponentPolish()
     {
         foreach (var button in new[]
