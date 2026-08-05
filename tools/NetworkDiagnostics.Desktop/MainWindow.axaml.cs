@@ -135,6 +135,9 @@ public sealed partial class MainWindow : Window
         SyncSettingsWorkspace();
         settingsLoaded = true;
         await RestorePersistedWorkbenchStateAsync();
+        workbenchShell?.SetInspectorOpen(false);
+        PreserveCurrentNavigationState();
+        await PersistWorkbenchStateAsync();
         RefreshWorkbenchChrome();
     }
 
