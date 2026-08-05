@@ -101,7 +101,7 @@ jobs:
 
           capture overview-dark-wide
 
-          xdotool mousemove 900 680 click 1
+          xdotool mousemove 1330 680 click 1
           capture deeper-diagnostics-overlay
           xdotool mousemove 70 500 click 1
 
