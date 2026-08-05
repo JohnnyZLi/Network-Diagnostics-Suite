@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
@@ -15,12 +14,6 @@ public sealed partial class TestSetupWorkspace
     public event EventHandler? DiagnosticLauncherRequested;
 
     public Control? DiagnosticLauncherContent => diagnosticLauncherContent;
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
-    {
-        base.OnAttachedToVisualTree(eventArgs);
-        InstallDiagnosticLauncher();
-    }
 
     private void InstallDiagnosticLauncher()
     {
