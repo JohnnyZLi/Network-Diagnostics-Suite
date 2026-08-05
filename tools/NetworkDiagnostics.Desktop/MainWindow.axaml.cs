@@ -108,6 +108,7 @@ public sealed partial class MainWindow : Window
         initialized = false;
         settingsLoaded = false;
         settings = await settingsStore.LoadAsync();
+        ApplyAppearance(settings.Appearance);
         reportStore.Configure(settings.ReportDirectory);
         selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
         selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
