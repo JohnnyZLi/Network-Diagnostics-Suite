@@ -8,6 +8,7 @@ public sealed class MonitorHistoryStoreTests
     [Fact]
     public async Task SamplesAndAlertsRoundTripLocally()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var root = CreateTemporaryRoot();
         try
         {
@@ -30,11 +31,11 @@ public sealed class MonitorHistoryStoreTests
                 "Network score dropped",
                 "The five-minute score fell below its threshold.");
 
-            await store.AppendSampleAsync(sample);
-            await store.SaveAlertsAsync([alert]);
+            await store.AppendSampleAsync(sample, cancellationToken);
+            await store.SaveAlertsAsync([alert], cancellationToken);
 
-            var samples = await store.LoadSamplesAsync();
-            var alerts = await store.LoadAlertsAsync();
+            var samples = await store.LoadSamplesAsync(cancellationToken);
+            var alerts = await store.LoadAlertsAsync(cancellationToken);
 
             Assert.Single(samples);
             Assert.Equal(sample.NetworkSignature, samples[0].NetworkSignature);
@@ -50,6 +51,7 @@ public sealed class MonitorHistoryStoreTests
     [Fact]
     public async Task InvalidSampleLineDoesNotDiscardValidHistory()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var root = CreateTemporaryRoot();
         try
         {
@@ -64,10 +66,13 @@ public sealed class MonitorHistoryStoreTests
                 0,
                 "Ethernet",
                 "network");
-            await store.AppendSampleAsync(sample);
-            await File.AppendAllTextAsync(store.SamplesPath, "{interrupted write" + Environment.NewLine);
+            await store.AppendSampleAsync(sample, cancellationToken);
+            await File.AppendAllTextAsync(
+                store.SamplesPath,
+                "{interrupted write" + Environment.NewLine,
+                cancellationToken);
 
-            var samples = await store.LoadSamplesAsync();
+            var samples = await store.LoadSamplesAsync(cancellationToken);
 
             Assert.Single(samples);
             Assert.Equal("Ethernet", samples[0].InterfaceName);
@@ -81,6 +86,7 @@ public sealed class MonitorHistoryStoreTests
     [Fact]
     public async Task PruneRemovesHistoryOutsideRetentionWindow()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var root = CreateTemporaryRoot();
         try
         {
@@ -101,8 +107,8 @@ public sealed class MonitorHistoryStoreTests
                 NetworkSignature = "stale"
             };
 
-            await store.PruneAsync([stale, recent]);
-            var samples = await store.LoadSamplesAsync();
+            await store.PruneAsync([stale, recent], cancellationToken);
+            var samples = await store.LoadSamplesAsync(cancellationToken);
 
             Assert.Single(samples);
             Assert.Equal("recent", samples[0].NetworkSignature);
