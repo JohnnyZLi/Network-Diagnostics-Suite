@@ -258,7 +258,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
             Content = grid,
             Tag = stored
         };
-        button.Classes.Add("reportRow");
+        button.Classes.Add("dataRow");
         if (selectedReport?.Report.Run.Id == stored.Report.Run.Id)
         {
             button.Classes.Add("selected");
