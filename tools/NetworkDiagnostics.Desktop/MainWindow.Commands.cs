@@ -48,6 +48,10 @@ public sealed partial class MainWindow
             case "navigate.settings.developer":
                 NavigateToDestination(new SettingsDestination("Developer"));
                 break;
+            case "developer.preview-healthy":
+                fixtureIndex = 0;
+                PreviewFixture();
+                break;
             case "monitor.toggle":
                 TestSetupMonitoringToggleRequested(sender, EventArgs.Empty);
                 break;
@@ -123,6 +127,7 @@ public sealed partial class MainWindow
             new("navigate.settings.privacy", "Settings: Privacy & data", "Local identifiers and remembered data approvals.", "settings privacy identifiers approval data", Priority: 23),
             new("navigate.settings.storage", "Settings: Storage", "Inspect and open the local data directory.", "settings storage folder reports history", Priority: 24),
             new("navigate.settings.developer", "Settings: Developer", "Preview result states without running the engine.", "settings developer fixture preview", Priority: 25),
+            new("developer.preview-healthy", "Preview healthy result", "Open the healthy-connection presentation fixture without running a diagnostic.", "developer fixture preview healthy result", Priority: 26),
             new("preflight.refresh", "Refresh connection preflight", "Probe the current interface, endpoint candidates, and network context.", "refresh endpoint latency network interface", Priority: 30),
             new("reports.folder", "Open data folder", "Open the local application-data directory in the system file manager.", "storage directory finder explorer", Priority: 31),
             new("view.inspector", workbenchShell?.InspectorOpen == true ? "Hide information drawer" : "Show information drawer", "Toggle contextual information and controls.", "view panel info details", Priority: 40),
