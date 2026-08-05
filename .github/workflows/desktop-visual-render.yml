@@ -103,7 +103,7 @@ jobs:
 
           run_command 'customize diagnostic'
           capture deeper-diagnostics-overlay
-          xdotool key Escape
+          xdotool mousemove 70 500 click 1
 
           xdotool key --clearmodifiers End
           capture control-center-recent-diagnostics
