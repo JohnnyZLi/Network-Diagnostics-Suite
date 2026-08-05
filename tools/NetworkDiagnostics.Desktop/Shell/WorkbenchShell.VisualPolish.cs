@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Shell;
@@ -59,9 +58,9 @@ public sealed partial class WorkbenchShell
         {
             Text = selected,
             FontSize = 9,
-            Foreground = this.FindResource("AppTextMutedBrush") as IBrush,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
+        label.Classes.Add("shellMuted");
         BreadcrumbPanel.Children.Add(label);
     }
 }
