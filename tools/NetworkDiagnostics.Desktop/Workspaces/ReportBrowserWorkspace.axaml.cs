@@ -159,12 +159,12 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         {
             var empty = new StackPanel
             {
-                Margin = new Avalonia.Thickness(22, 28),
+                Margin = new Avalonia.Thickness(22, 30),
                 Spacing = 6
             };
             empty.Children.Add(new TextBlock
             {
-                Text = allReports.Count == 0 ? "No saved reports" : "No reports match this search",
+                Text = allReports.Count == 0 ? "No saved reports yet" : "No reports match this search",
                 FontSize = 16,
                 FontWeight = FontWeight.SemiBold
             });
@@ -173,7 +173,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
                 Text = allReports.Count == 0
                     ? "Completed diagnostics and imported schema 2.0 reports will appear here."
                     : "Try a profile, verdict, label, tag, interface, or network name.",
-                FontSize = 12,
+                FontSize = 11,
                 TextWrapping = TextWrapping.Wrap
             };
             detail.Classes.Add("muted");
@@ -199,7 +199,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
     private Button BuildRow(StoredReport stored)
     {
         var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
-        var resultPanel = new StackPanel { Spacing = 2 };
+        var resultPanel = new StackPanel { Spacing = 3 };
         resultPanel.Children.Add(new TextBlock
         {
             Text = stored.Label ?? presentation.Verdict,
@@ -212,7 +212,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
             var verdictText = new TextBlock
             {
                 Text = presentation.Verdict,
-                FontSize = 10,
+                FontSize = 9,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             verdictText.Classes.Add("muted");
@@ -221,8 +221,8 @@ public sealed partial class ReportBrowserWorkspace : UserControl
 
         var grid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("128,112,*,210"),
-            ColumnSpacing = 12
+            ColumnDefinitions = new ColumnDefinitions("148,112,*,300"),
+            ColumnSpacing = 14
         };
         grid.Children.Add(new TextBlock
         {
@@ -233,7 +233,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var profile = new TextBlock
         {
             Text = stored.ProfileName,
-            FontSize = 11,
+            FontSize = 10,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -245,7 +245,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var context = new TextBlock
         {
             Text = ReportComparisonService.ContextLabel(stored.Report),
-            FontSize = 10,
+            FontSize = 9,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -256,7 +256,8 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var button = new Button
         {
             Content = grid,
-            Tag = stored
+            Tag = stored,
+            MinHeight = 54
         };
         button.Classes.Add("dataRow");
         if (selectedReport?.Report.Run.Id == stored.Report.Run.Id)
@@ -270,16 +271,18 @@ public sealed partial class ReportBrowserWorkspace : UserControl
     private void RenderSelection()
     {
         var enabled = selectedReport is not null;
+        SelectionPanel.IsVisible = enabled;
+        SelectionHintBorder.IsVisible = !enabled;
         OpenSelectedButton.IsEnabled = enabled;
         CompareSelectedButton.IsEnabled = enabled;
         EditSelectedButton.IsEnabled = enabled;
 
         if (selectedReport is null)
         {
-            SelectedTitleText.Text = "Select a report";
-            SelectedMetaText.Text = "Choose a row to inspect its context and available actions.";
-            SelectedContextText.Text = "No report selected";
-            SelectedTagsText.Text = "No tags";
+            SelectedTitleText.Text = string.Empty;
+            SelectedMetaText.Text = string.Empty;
+            SelectedContextText.Text = string.Empty;
+            SelectedTagsText.Text = string.Empty;
             return;
         }
 
@@ -301,7 +304,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var trend = ReportComparisonService.AnalyzeTrend(allReports);
         LibrarySummaryText.Text = allReports.Count == 0
             ? "The library is empty."
-            : $"{allReports.Count} saved · {profileCount} profile type{(profileCount == 1 ? string.Empty : "s")}\n{trend.CompatibleRuns} compatible in the latest trend set";
+            : $"{allReports.Count} saved · {profileCount} profile type{(profileCount == 1 ? string.Empty : "s")}\n{trend.CompatibleRuns} in the latest trend set";
     }
 
     private void RaiseStateChanged() =>
