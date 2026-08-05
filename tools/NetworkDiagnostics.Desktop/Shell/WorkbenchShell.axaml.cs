@@ -10,6 +10,7 @@ public sealed partial class WorkbenchShell : UserControl
 {
     private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
     private bool inspectorRequested;
+    private WorkspaceKind currentWorkspace = WorkspaceKind.Test;
 
     public WorkbenchShell()
     {
@@ -61,17 +62,19 @@ public sealed partial class WorkbenchShell : UserControl
     {
         BackButton.IsEnabled = canGoBack;
         ForwardButton.IsEnabled = canGoForward;
+        currentWorkspace = entry.Destination.Workspace;
         RenderBreadcrumbs(entry.Destination.Breadcrumbs);
-        SelectWorkspace(entry.Destination.Workspace);
-        if (!entry.ViewState.InspectorOpen)
+        SelectWorkspace(currentWorkspace);
+
+        if (currentWorkspace != WorkspaceKind.Test || !entry.ViewState.InspectorOpen)
         {
             inspectorRequested = false;
         }
         ApplyResponsiveLayout(Bounds.Width);
 
-        InspectorWorkspaceText.Text = entry.Destination.Workspace == WorkspaceKind.Test
+        InspectorWorkspaceText.Text = currentWorkspace == WorkspaceKind.Test
             ? "Overview"
-            : entry.Destination.Workspace.ToString();
+            : currentWorkspace.ToString();
         InspectorSelectionText.Text = SelectionLabel(entry.Destination);
     }
 
@@ -117,7 +120,7 @@ public sealed partial class WorkbenchShell : UserControl
 
     public void SetInspectorOpen(bool open)
     {
-        inspectorRequested = open;
+        inspectorRequested = open && currentWorkspace == WorkspaceKind.Test;
         ApplyResponsiveLayout(Bounds.Width);
     }
 
@@ -162,6 +165,7 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void InspectorClicked(object? sender, RoutedEventArgs eventArgs)
     {
+        if (currentWorkspace != WorkspaceKind.Test) return;
         inspectorRequested = !InspectorBorder.IsVisible;
         ApplyResponsiveLayout(Bounds.Width);
         InspectorVisibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -173,18 +177,19 @@ public sealed partial class WorkbenchShell : UserControl
     private void ApplyResponsiveLayout(double width)
     {
         var compact = width < 960;
-        var showInspector = inspectorRequested && width >= 820;
+        var inspectorEligible = currentWorkspace == WorkspaceKind.Test;
+        var showInspector = inspectorEligible && inspectorRequested && width >= 820;
 
-        ShellGrid.ColumnDefinitions[1].Width = new GridLength(showInspector ? 320 : 0);
         InspectorBorder.IsVisible = showInspector;
+        InspectorToggleButton.IsVisible = inspectorEligible;
         ProductStack.IsVisible = width >= 880;
         ActiveRunDetailText.IsVisible = width >= 1180;
         CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
-        InspectorToggleButton.Content = showInspector ? "Hide info" : "Info";
+        InspectorToggleButton.Content = showInspector ? "Close info" : "Info";
         TestWorkspaceLabel.Text = compact ? "Home" : "Overview";
-        ReportsWorkspaceLabel.Text = compact ? "History" : "Reports";
-        ComparisonsWorkspaceLabel.Text = compact ? "Compare" : "Compare";
-        SettingsWorkspaceLabel.Text = compact ? "Settings" : "Settings";
+        ReportsWorkspaceLabel.Text = compact ? "History" : "History";
+        ComparisonsWorkspaceLabel.Text = "Compare";
+        SettingsWorkspaceLabel.Text = "Settings";
     }
 
     private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
@@ -198,7 +203,7 @@ public sealed partial class WorkbenchShell : UserControl
                 var separator = new TextBlock
                 {
                     Text = "/",
-                    FontSize = 9,
+                    FontSize = 8,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
                 separator.Classes.Add("shellMuted");
