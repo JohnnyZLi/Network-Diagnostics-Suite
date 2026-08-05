@@ -10,9 +10,9 @@ public sealed partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-        Styles.Add(new StyleInclude(new Uri("avares://NetworkDiagnostics.Desktop/"))
+        Styles.Add(new StyleInclude(new Uri("avares://NetworkDiagnosticsDesktop/"))
         {
-            Source = new Uri("avares://NetworkDiagnostics.Desktop/Styles/ComponentPolish.axaml")
+            Source = new Uri("avares://NetworkDiagnosticsDesktop/Styles/ComponentPolish.axaml")
         });
     }
 
