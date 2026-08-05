@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Styling;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Workspaces;
@@ -15,6 +17,7 @@ public sealed partial class MainWindow
         settingsWorkspace.SectionRequested += SettingsSectionRequested;
         settingsWorkspace.ProfileRequested += SettingsProfileRequested;
         settingsWorkspace.MethodRequested += SettingsMethodRequested;
+        settingsWorkspace.AppearanceRequested += SettingsAppearanceRequested;
         settingsWorkspace.InterfaceRequested += SettingsInterfaceRequested;
         settingsWorkspace.IdentifiersChanged += SettingsIdentifiersChanged;
         settingsWorkspace.RefreshPreflightRequested += SettingsRefreshPreflightRequested;
@@ -38,6 +41,7 @@ public sealed partial class MainWindow
             currentSection,
             selectedProfileIndex,
             selectedMethodIndex,
+            AppearanceIndex(settings.Appearance),
             interfaceLabels,
             selectedInterfaceIndex,
             settings.IncludeLocalIdentifiers,
@@ -62,6 +66,16 @@ public sealed partial class MainWindow
 
     private void SettingsMethodRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs) =>
         SelectMethod(eventArgs.Index);
+
+    private async void SettingsAppearanceRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs)
+    {
+        var appearance = AppearanceId(eventArgs.Index);
+        settings = settings with { Appearance = appearance };
+        ApplyAppearance(appearance);
+        await PersistSettingsAsync();
+        SyncSettingsWorkspace("General");
+        RefreshWorkbenchChrome();
+    }
 
     private async void SettingsInterfaceRequested(object? sender, SettingsIndexRequestedEventArgs eventArgs) =>
         await SelectInterfaceAsync(eventArgs.Index);
@@ -123,6 +137,32 @@ public sealed partial class MainWindow
         lanDurationText = settingsWorkspace.LanDuration;
         lanConnectionsText = settingsWorkspace.LanConnections;
     }
+
+    private static void ApplyAppearance(string? appearance)
+    {
+        if (Application.Current is not { } app) return;
+
+        app.RequestedThemeVariant = appearance?.Trim().ToLowerInvariant() switch
+        {
+            "light" => ThemeVariant.Light,
+            "dark" => ThemeVariant.Dark,
+            _ => ThemeVariant.Default
+        };
+    }
+
+    private static int AppearanceIndex(string? appearance) => appearance?.Trim().ToLowerInvariant() switch
+    {
+        "light" => 1,
+        "dark" => 2,
+        _ => 0
+    };
+
+    private static string AppearanceId(int index) => index switch
+    {
+        1 => "light",
+        2 => "dark",
+        _ => "system"
+    };
 
     private string ApprovalSummary()
     {
