@@ -3,18 +3,21 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using NetworkDiagnostics.Desktop.Monitoring;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestSetupWorkspace
 {
     private const int MinimumTimelineSlots = 24;
+    private Button? sevenDaysButton;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualLayoutSizeChanged;
         LayoutUpdated += RenderedLayoutUpdated;
+        EnsureSevenDayButton();
         ApplyRenderedVisualLayout(Bounds.Width);
     }
 
@@ -32,6 +35,7 @@ public sealed partial class TestSetupWorkspace
     {
         NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
         NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
+        SyncSevenDaySelection();
     }
 
     private void ApplyRenderedVisualLayout(double width)
@@ -57,6 +61,44 @@ public sealed partial class TestSetupWorkspace
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.1, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.8, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+    }
+
+    private void EnsureSevenDayButton()
+    {
+        if (sevenDaysButton is not null
+            || TwentyFourHoursButton.GetVisualParent() is not StackPanel rangePanel)
+        {
+            return;
+        }
+
+        sevenDaysButton = new Button
+        {
+            Content = "7 days",
+            Tag = "7d"
+        };
+        sevenDaysButton.Classes.Add("range");
+        sevenDaysButton.Click += SevenDaysClicked;
+        rangePanel.Children.Add(sevenDaysButton);
+    }
+
+    private void SevenDaysClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs eventArgs)
+    {
+        SetSelected(OneMinuteButton, false);
+        SetSelected(FiveMinutesButton, false);
+        SetSelected(OneHourButton, false);
+        SetSelected(TwentyFourHoursButton, false);
+        if (sevenDaysButton is not null) SetSelected(sevenDaysButton, true);
+        MonitorWindowRequested?.Invoke(this, new MonitorWindowRequestedEventArgs(MonitorWindow.SevenDays));
+    }
+
+    private void SyncSevenDaySelection()
+    {
+        if (sevenDaysButton is null) return;
+        var shorterWindowSelected = OneMinuteButton.Classes.Contains("selected")
+            || FiveMinutesButton.Classes.Contains("selected")
+            || OneHourButton.Classes.Contains("selected")
+            || TwentyFourHoursButton.Classes.Contains("selected");
+        SetSelected(sevenDaysButton, !shorterWindowSelected);
     }
 
     private static void NormalizeSparseTimeline(Grid grid, bool colorByLatency)
