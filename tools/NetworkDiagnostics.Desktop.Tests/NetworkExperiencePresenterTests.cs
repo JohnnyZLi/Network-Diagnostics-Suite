@@ -31,6 +31,35 @@ public sealed class NetworkExperiencePresenterTests
     }
 
     [Fact]
+    public void InitialEndpointFailuresRemainNeutralUntilBaselineExists()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var alert = new MonitorAlert(
+            Guid.NewGuid(),
+            now,
+            MonitorAlertKind.Degradation,
+            MonitorAlertSeverity.Warning,
+            "Network score dropped",
+            "The five-minute network score fell to 0.");
+        var snapshot = new MonitorSnapshot(
+            true,
+            now.AddMinutes(-1),
+            now,
+            [new MonitorSample(now, MonitorSampleState.Unresponsive, null, null, null, null, 100, "Wi-Fi", "network")],
+            [alert],
+            "Endpoint is currently unreachable");
+
+        var presentation = NetworkExperiencePresenter.Build(snapshot, Options, MonitorWindow.FiveMinutes);
+
+        Assert.Null(presentation.Score);
+        Assert.Equal(ExperienceBand.Unavailable, presentation.Band);
+        Assert.Equal("Monitor unavailable", presentation.Status);
+        Assert.Null(presentation.Reliability.Score);
+        Assert.All(presentation.Timeline, sample => Assert.Equal(MonitorSampleState.Inactive, sample.State));
+        Assert.Empty(presentation.Alerts);
+    }
+
+    [Fact]
     public void HealthySamplesAndExpectedSpeedProduceExcellentScore()
     {
         var now = DateTimeOffset.UtcNow;
