@@ -91,13 +91,21 @@ public sealed partial class WorkbenchShell
         ShellGrid.Children.Add(overlayRoot);
     }
 
-    public void OpenOverlay(string title, Control content, double maxWidth = 1180)
+    public void OpenOverlay(
+        string title,
+        Control content,
+        double maxWidth = 1180,
+        double? maxHeight = null)
     {
         EnsureOverlay();
         DetachFromLogicalParent(content);
         content.IsVisible = true;
         overlayTitle!.Text = title;
         overlaySheet!.MaxWidth = maxWidth;
+        overlaySheet.MaxHeight = maxHeight ?? double.PositiveInfinity;
+        overlaySheet.VerticalAlignment = maxHeight is null
+            ? VerticalAlignment.Stretch
+            : VerticalAlignment.Center;
         overlayHost!.Content = content;
         overlayRoot!.IsVisible = true;
         inspectorRequested = false;
