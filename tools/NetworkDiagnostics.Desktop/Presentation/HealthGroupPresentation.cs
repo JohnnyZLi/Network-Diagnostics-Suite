@@ -86,7 +86,13 @@ public static class HealthGroupPresenter
 
     private static bool FindingMatches(FindingPresentation finding, HealthGroupKind kind)
     {
-        var text = $"{finding.Label} {finding.Title} {finding.Summary}".ToLowerInvariant();
+        var label = finding.Label.ToLowerInvariant();
+        if (FindingLabelGroup(label) is { } explicitGroup)
+        {
+            return explicitGroup == kind;
+        }
+
+        var text = $"{finding.Title} {finding.Summary}".ToLowerInvariant();
         return kind switch
         {
             HealthGroupKind.Responsiveness => ContainsAny(text, "respons", "latency", "jitter", "delay", "dns"),
@@ -94,6 +100,23 @@ public static class HealthGroupPresenter
             HealthGroupKind.Throughput => ContainsAny(text, "throughput", "download", "upload", "speed", "bandwidth", "capacity", "scaling"),
             _ => false
         };
+    }
+
+    private static HealthGroupKind? FindingLabelGroup(string label)
+    {
+        if (ContainsAny(label, "respons", "latency", "jitter", "delay", "dns"))
+        {
+            return HealthGroupKind.Responsiveness;
+        }
+        if (ContainsAny(label, "reliab", "loss", "packet", "reach", "stability", "availability", "failure", "gateway", "wi-fi", "wifi", "signal", "run state"))
+        {
+            return HealthGroupKind.Reliability;
+        }
+        if (ContainsAny(label, "throughput", "download", "upload", "speed", "bandwidth", "capacity", "scaling"))
+        {
+            return HealthGroupKind.Throughput;
+        }
+        return null;
     }
 
     private static (string State, HealthGroupTone Tone) State(
