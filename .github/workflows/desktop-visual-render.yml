@@ -1,0 +1,124 @@
+name: Desktop visual render
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-visual-render.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb openbox xdotool wmctrl scrot
+
+      - name: Publish Linux desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output desktop-visual/publish
+
+      - name: Launch virtual desktop
+        run: |
+          mkdir -p desktop-visual/screenshots
+          Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/desktop-xvfb.log 2>&1 &
+          echo $! > /tmp/desktop-xvfb.pid
+          sleep 1
+          openbox > /tmp/desktop-openbox.log 2>&1 &
+          echo $! > /tmp/desktop-openbox.pid
+          desktop-visual/publish/NetworkDiagnosticsDesktop > /tmp/desktop-app.log 2>&1 &
+          echo $! > /tmp/desktop-app.pid
+          for attempt in {1..40}; do
+            if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
+              wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+              sleep 2
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/desktop-app.log
+          exit 1
+
+      - name: Capture desktop states
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capture() {
+            local name="$1"
+            sleep 0.8
+            scrot "desktop-visual/screenshots/${name}.png"
+          }
+
+          run_command() {
+            local query="$1"
+            xdotool key --clearmodifiers ctrl+k
+            sleep 0.25
+            xdotool type --delay 12 "$query"
+            sleep 0.2
+            xdotool key Return
+            sleep 0.6
+          }
+
+          capture overview-dark-wide
+
+          xdotool key --clearmodifiers ctrl+k
+          sleep 0.35
+          capture command-palette
+          xdotool key Escape
+
+          run_command 'open reports'
+          capture history-empty
+
+          run_command 'open comparisons'
+          capture compare-empty
+
+          for section in general monitoring diagnostics privacy storage developer; do
+            run_command "settings ${section}"
+            capture "settings-${section}"
+          done
+
+          run_command 'open network overview'
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,1100,800
+          capture overview-1100x800
+          wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,900,700
+          capture overview-900x700
+
+      - name: Upload rendered desktop states
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: desktop-visual-render
+          path: |
+            desktop-visual/screenshots
+            /tmp/desktop-app.log
+            /tmp/desktop-openbox.log
+            /tmp/desktop-xvfb.log
+          retention-days: 7
