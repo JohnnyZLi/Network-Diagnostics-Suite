@@ -134,6 +134,11 @@ public sealed partial class ReportBrowserWorkspace : UserControl
 
     private void RefreshRows()
     {
+        var libraryEmpty = allReports.Count == 0;
+        EmptyStateBorder.IsVisible = libraryEmpty;
+        FilterBar.IsVisible = !libraryEmpty;
+        ReportTableBorder.IsVisible = !libraryEmpty;
+
         var query = SearchBox.Text?.Trim() ?? string.Empty;
         IEnumerable<StoredReport> filtered = allReports;
         if (query.Length > 0)
@@ -155,25 +160,26 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         VisibleCountText.Text = visibleReports.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
         ReportListPanel.Children.Clear();
 
-        if (visibleReports.Length == 0)
+        if (!libraryEmpty && visibleReports.Length == 0)
         {
             var empty = new StackPanel
             {
-                Margin = new Avalonia.Thickness(22, 30),
-                Spacing = 6
+                Margin = new Avalonia.Thickness(32, 70),
+                Spacing = 7,
+                HorizontalAlignment = HorizontalAlignment.Center
             };
             empty.Children.Add(new TextBlock
             {
-                Text = allReports.Count == 0 ? "No saved reports yet" : "No reports match this search",
-                FontSize = 16,
-                FontWeight = FontWeight.SemiBold
+                Text = "No matching reports",
+                FontSize = 18,
+                FontWeight = FontWeight.SemiBold,
+                TextAlignment = TextAlignment.Center
             });
             var detail = new TextBlock
             {
-                Text = allReports.Count == 0
-                    ? "Completed diagnostics and imported schema 2.0 reports will appear here."
-                    : "Try a profile, verdict, label, tag, interface, or network name.",
+                Text = "Try a profile, verdict, label, tag, interface, or network name.",
                 FontSize = 11,
+                TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
             };
             detail.Classes.Add("muted");
@@ -272,7 +278,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
     {
         var enabled = selectedReport is not null;
         SelectionPanel.IsVisible = enabled;
-        SelectionHintBorder.IsVisible = !enabled;
+        SelectionHintBorder.IsVisible = !enabled && allReports.Count > 0;
         OpenSelectedButton.IsEnabled = enabled;
         CompareSelectedButton.IsEnabled = enabled;
         EditSelectedButton.IsEnabled = enabled;
