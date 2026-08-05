@@ -32,7 +32,7 @@ public sealed record DesktopSettings(
     bool ReduceMotion = false,
     bool IncreaseContrast = false,
     DesktopWorkbenchState? Workbench = null,
-    int VisualGeneration = 2)
+    int VisualGeneration = 3)
 {
     public TestProfileId SelectedProfile => DefaultProfile switch
     {
@@ -134,7 +134,7 @@ public sealed record DesktopSettings(
 
 public sealed class DesktopSettingsStore
 {
-    private const int CurrentVisualGeneration = 2;
+    private const int CurrentVisualGeneration = 3;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -166,6 +166,7 @@ public sealed class DesktopSettingsStore
                 ? loaded with
                 {
                     Appearance = "dark",
+                    Workbench = null,
                     VisualGeneration = CurrentVisualGeneration
                 }
                 : loaded;
