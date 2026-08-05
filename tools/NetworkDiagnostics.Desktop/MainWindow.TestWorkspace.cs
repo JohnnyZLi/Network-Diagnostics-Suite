@@ -28,6 +28,7 @@ public sealed partial class MainWindow
         testSetupWorkspace.PeakSpeedRequested += TestSetupPeakSpeedRequested;
         testSetupWorkspace.MarkAlertsReadRequested += TestSetupMarkAlertsReadRequested;
         testSetupWorkspace.ClearAlertsRequested += TestSetupClearAlertsRequested;
+        WireControlCenterEvents();
 
         testConfigurationPanel.InterfaceRequested += TestConfigurationInterfaceRequested;
         testConfigurationPanel.IdentifiersChanged += TestConfigurationIdentifiersChanged;
@@ -175,6 +176,7 @@ public sealed partial class MainWindow
             snapshot.Detail,
             snapshot.Progress,
             CurrentNetworkExperience()));
+        SyncControlCenterSections();
 
         testConfigurationPanel.Render(new TestConfigurationModel(
             interfaceLabels,
