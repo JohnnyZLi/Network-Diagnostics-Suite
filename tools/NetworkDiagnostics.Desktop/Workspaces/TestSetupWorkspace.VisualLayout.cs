@@ -126,7 +126,7 @@ public sealed partial class TestSetupWorkspace
     private static void NormalizeSparseTimeline(Grid grid, bool colorByLatency)
     {
         var bars = grid.Children.OfType<Border>().ToArray();
-        if (bars.Length == 0 || grid.ColumnDefinitions.Count != bars.Length)
+        if (bars.Length == 0)
         {
             RemoveSparseTimelineHint(grid);
             return;
@@ -138,18 +138,15 @@ public sealed partial class TestSetupWorkspace
             return;
         }
 
-        if (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
+        while (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
         {
-            while (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
-            {
-                grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            }
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        }
 
-            var offset = MinimumTimelineSlots - bars.Length;
-            for (var index = 0; index < bars.Length; index++)
-            {
-                Grid.SetColumn(bars[index], offset + index);
-            }
+        var offset = Math.Max(0, grid.ColumnDefinitions.Count - bars.Length);
+        for (var index = 0; index < bars.Length; index++)
+        {
+            Grid.SetColumn(bars[index], offset + index);
         }
 
         UpdateSparseTimelineHint(grid, bars.Length, colorByLatency);
