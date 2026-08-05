@@ -72,12 +72,14 @@ public sealed partial class ReportDetailWorkspace : UserControl
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
                 ColumnSpacing = 9
             };
-            row.Children.Add(new TextBlock
+            var marker = new TextBlock
             {
                 Text = "•",
-                Foreground = Brush.Parse("#C77E68"),
                 FontSize = 12
-            });
+            };
+            marker.Classes.Add("eyebrow");
+            row.Children.Add(marker);
+
             var text = new TextBlock
             {
                 Text = item,
@@ -85,7 +87,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
                 LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap
             };
-            text.Classes.Add("muted");
+            text.Classes.Add("secondary");
             Grid.SetColumn(text, 1);
             row.Children.Add(text);
             EvidencePanel.Children.Add(row);
@@ -121,79 +123,80 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
     private static Border BuildMetric(MetricPresentation metric)
     {
+        var label = new TextBlock
+        {
+            Text = metric.Label.ToUpperInvariant(),
+            FontSize = 9,
+            FontWeight = FontWeight.SemiBold,
+            LetterSpacing = 1.2
+        };
+        label.Classes.Add("muted");
+
+        var value = new TextBlock
+        {
+            Text = metric.Value,
+            FontSize = 21,
+            FontWeight = FontWeight.SemiBold,
+            Opacity = metric.WasMeasured ? 1 : 0.62
+        };
+
         var detail = new TextBlock
         {
             Text = metric.Detail,
             FontSize = 10,
             LineHeight = 15,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = Brush.Parse("#969B9C")
+            TextWrapping = TextWrapping.Wrap
         };
+        detail.Classes.Add("muted");
+
         var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(new TextBlock
-        {
-            Text = metric.Label.ToUpperInvariant(),
-            FontSize = 9,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 1.2,
-            Foreground = Brush.Parse("#969B9C")
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = metric.Value,
-            FontSize = 21,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = metric.WasMeasured ? Brush.Parse("#F0EDE7") : Brush.Parse("#969B9C")
-        });
+        stack.Children.Add(label);
+        stack.Children.Add(value);
         stack.Children.Add(detail);
 
-        return new Border
-        {
-            Width = 200,
-            Height = 104,
-            Margin = new Avalonia.Thickness(0, 0, 10, 10),
-            Padding = new Avalonia.Thickness(14),
-            Background = Brush.Parse("#171B1C"),
-            BorderBrush = Brush.Parse(metric.WasMeasured ? "#303536" : "#3B3732"),
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(9),
-            Child = stack
-        };
+        var card = new Border { Child = stack };
+        card.Classes.Add("metricCard");
+        if (!metric.WasMeasured) card.Classes.Add("unmeasured");
+        return card;
     }
 
     private static Border BuildFinding(FindingPresentation finding)
     {
-        var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(new TextBlock
+        var label = new TextBlock
         {
-            Text = finding.Label.ToUpperInvariant(),
-            FontSize = 9,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 1.2,
-            Foreground = Brush.Parse("#C77E68")
-        });
-        stack.Children.Add(new TextBlock
+            Text = finding.Label.ToUpperInvariant()
+        };
+        label.Classes.Add("eyebrow");
+
+        var title = new TextBlock
         {
             Text = finding.Title,
             FontSize = 14,
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
-        });
-        stack.Children.Add(new TextBlock
+        };
+
+        var summary = new TextBlock
         {
             Text = finding.Summary,
             FontSize = 12,
             LineHeight = 18,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = Brush.Parse("#969B9C")
-        });
+            TextWrapping = TextWrapping.Wrap
+        };
+        summary.Classes.Add("secondary");
 
-        return new Border
+        var stack = new StackPanel { Spacing = 4 };
+        stack.Children.Add(label);
+        stack.Children.Add(title);
+        stack.Children.Add(summary);
+
+        var row = new Border
         {
-            BorderBrush = Brush.Parse("#303536"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-            Padding = new Avalonia.Thickness(0, 0, 0, 12),
+            Padding = new Avalonia.Thickness(0, 3, 0, 12),
+            Margin = new Avalonia.Thickness(0, 0, 0, 12),
             Child = stack
         };
+        row.Classes.Add("divider");
+        return row;
     }
 }
