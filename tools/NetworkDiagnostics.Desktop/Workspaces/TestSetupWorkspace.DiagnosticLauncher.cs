@@ -16,9 +16,8 @@ public sealed partial class TestSetupWorkspace
     private Button? stressLauncherButton;
     private Button? moreLauncherButton;
     private Button? launcherRunButton;
+    private TextBlock? launcherSelectedProfileText;
     private TextBlock? launcherSummaryText;
-    private Grid? launcherActionsGrid;
-    private Border? launcherSelectorGroup;
     private bool diagnosticLauncherInstalled;
     private int pendingLauncherProfileIndex = 1;
 
@@ -120,91 +119,152 @@ public sealed partial class TestSetupWorkspace
         var title = new TextBlock
         {
             Text = "Run a deeper diagnostic",
-            FontSize = 14,
+            FontSize = 15,
+            FontWeight = FontWeight.SemiBold
+        };
+        var description = new TextBlock
+        {
+            Text = "Choose a preset, review the plan, then run it.",
+            FontSize = 10,
+            TextWrapping = TextWrapping.Wrap
+        };
+        description.Classes.Add("muted");
+
+        var heading = new StackPanel
+        {
+            Spacing = 3
+        };
+        heading.Children.Add(title);
+        heading.Children.Add(description);
+
+        quickLauncherButton = CreateLauncherSelector("Quick", "Fast baseline", 1);
+        fullLauncherButton = CreateLauncherSelector("Full", "Broad evidence", 2);
+        stressLauncherButton = CreateLauncherSelector("Stress", "Sustained load", 3);
+
+        var presets = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,*,*"),
+            ColumnSpacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        presets.Children.Add(quickLauncherButton);
+        Grid.SetColumn(fullLauncherButton, 1);
+        presets.Children.Add(fullLauncherButton);
+        Grid.SetColumn(stressLauncherButton, 2);
+        presets.Children.Add(stressLauncherButton);
+
+        var presetSection = new StackPanel
+        {
+            Spacing = 13,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        presetSection.Children.Add(heading);
+        presetSection.Children.Add(presets);
+
+        var selectedLabel = new TextBlock
+        {
+            Text = "SELECTED PLAN",
+            FontSize = 9,
+            FontWeight = FontWeight.SemiBold,
+            LetterSpacing = 1.1
+        };
+        selectedLabel.Classes.Add("eyebrow");
+
+        launcherSelectedProfileText = new TextBlock
+        {
+            Text = "Quick",
+            FontSize = 18,
             FontWeight = FontWeight.SemiBold
         };
         launcherSummaryText = new TextBlock
         {
-            Text = "Quick selected",
+            Text = "Loading run plan…",
             FontSize = 10,
+            LineHeight = 16,
             TextWrapping = TextWrapping.Wrap
         };
         launcherSummaryText.Classes.Add("muted");
 
-        var copy = new StackPanel
-        {
-            Spacing = 3,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        copy.Children.Add(title);
-        copy.Children.Add(launcherSummaryText);
-
-        quickLauncherButton = CreateLauncherSelector("Quick", 1);
-        fullLauncherButton = CreateLauncherSelector("Full", 2);
-        stressLauncherButton = CreateLauncherSelector("Stress", 3);
-
-        var selectorGrid = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,*,*"),
-            ColumnSpacing = 0
-        };
-        selectorGrid.Children.Add(quickLauncherButton);
-        Grid.SetColumn(fullLauncherButton, 1);
-        selectorGrid.Children.Add(fullLauncherButton);
-        Grid.SetColumn(stressLauncherButton, 2);
-        selectorGrid.Children.Add(stressLauncherButton);
-
-        launcherSelectorGroup = new Border
-        {
-            Child = selectorGrid,
-            Padding = new Thickness(3),
-            MinWidth = 286,
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-        launcherSelectorGroup.Classes.Add("surfaceSubtle");
-
         moreLauncherButton = CreateLauncherAction("Customize…", "secondary", MoreLauncherClicked, 108);
-        launcherRunButton = CreateLauncherAction("Run Quick", "primary", LauncherRunClicked, 132);
+        launcherRunButton = CreateLauncherAction("Run Quick", "primary", LauncherRunClicked, 116);
 
-        launcherActionsGrid = new Grid
+        var actionButtons = new Grid
         {
-            ColumnSpacing = 10,
-            RowSpacing = 10,
+            ColumnDefinitions = new ColumnDefinitions("*,*"),
+            ColumnSpacing = 8,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        launcherActionsGrid.Children.Add(launcherSelectorGroup);
-        launcherActionsGrid.Children.Add(moreLauncherButton);
-        launcherActionsGrid.Children.Add(launcherRunButton);
+        actionButtons.Children.Add(moreLauncherButton);
+        Grid.SetColumn(launcherRunButton, 1);
+        actionButtons.Children.Add(launcherRunButton);
+
+        var planContent = new StackPanel
+        {
+            Spacing = 8
+        };
+        planContent.Children.Add(selectedLabel);
+        planContent.Children.Add(launcherSelectedProfileText);
+        planContent.Children.Add(launcherSummaryText);
+        planContent.Children.Add(actionButtons);
+
+        var planPanel = new Border
+        {
+            Padding = new Thickness(16, 14),
+            CornerRadius = new CornerRadius(12),
+            Child = planContent,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        planPanel.Classes.Add("dashboardPanel");
 
         var layout = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,Auto"),
-            RowSpacing = 12,
-            MinHeight = 108,
-            Margin = new Thickness(18, 14, 18, 16)
+            ColumnDefinitions = new ColumnDefinitions("*,360"),
+            ColumnSpacing = 18,
+            Margin = new Thickness(18, 16),
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        layout.Children.Add(copy);
-        Grid.SetRow(launcherActionsGrid, 1);
-        layout.Children.Add(launcherActionsGrid);
-        layout.SizeChanged += LauncherSurfaceSizeChanged;
-        Dispatcher.UIThread.Post(() => ConfigureLauncherSurfaceLayout(layout.Bounds.Width));
+        layout.Children.Add(presetSection);
+        Grid.SetColumn(planPanel, 1);
+        layout.Children.Add(planPanel);
         return layout;
     }
 
-    private Button CreateLauncherSelector(string label, int profileIndex)
+    private Button CreateLauncherSelector(
+        string label,
+        string detail,
+        int profileIndex)
     {
+        var labelText = new TextBlock
+        {
+            Text = label,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold
+        };
+        var detailText = new TextBlock
+        {
+            Text = detail,
+            FontSize = 9,
+            TextWrapping = TextWrapping.Wrap
+        };
+        detailText.Classes.Add("muted");
+
+        var content = new StackPanel
+        {
+            Spacing = 3
+        };
+        content.Children.Add(labelText);
+        content.Children.Add(detailText);
+
         var button = new Button
         {
-            Content = label,
+            Content = content,
             Tag = profileIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            MinWidth = 0,
-            MinHeight = 38,
-            Padding = new Thickness(14, 7),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
+            MinHeight = 64,
+            Padding = new Thickness(13, 10),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        button.Classes.Add("methodChoice");
+        button.Classes.Add("profileChoice");
         button.Click += LauncherProfileClicked;
         return button;
     }
@@ -219,63 +279,14 @@ public sealed partial class TestSetupWorkspace
         {
             Content = label,
             MinWidth = minWidth,
-            MinHeight = 38,
-            Padding = new Thickness(14, 7),
+            MinHeight = 36,
+            Padding = new Thickness(13, 7),
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center
         };
         button.Classes.Add(styleClass);
         button.Click += clickHandler;
         return button;
-    }
-
-    private void LauncherSurfaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
-        ConfigureLauncherSurfaceLayout(eventArgs.NewSize.Width);
-
-    private void ConfigureLauncherSurfaceLayout(double width)
-    {
-        if (launcherActionsGrid is null
-            || launcherSelectorGroup is null
-            || moreLauncherButton is null
-            || launcherRunButton is null)
-        {
-            return;
-        }
-
-        launcherActionsGrid.ColumnDefinitions.Clear();
-        launcherActionsGrid.RowDefinitions.Clear();
-
-        if (width >= 720)
-        {
-            launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            launcherActionsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
-            SetGridPosition(launcherSelectorGroup, 0, 0);
-            SetGridPosition(moreLauncherButton, 0, 1);
-            SetGridPosition(launcherRunButton, 0, 3);
-            launcherSelectorGroup.Width = 286;
-            launcherSelectorGroup.HorizontalAlignment = HorizontalAlignment.Left;
-            launcherRunButton.HorizontalAlignment = HorizontalAlignment.Right;
-            launcherRunButton.Margin = new Thickness(0);
-            return;
-        }
-
-        launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        launcherActionsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-        launcherActionsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        launcherActionsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
-        SetGridPosition(launcherSelectorGroup, 0, 0);
-        SetGridPosition(moreLauncherButton, 0, 1);
-        SetGridPosition(launcherRunButton, 1, 0);
-        Grid.SetColumnSpan(launcherRunButton, 2);
-        launcherSelectorGroup.Width = double.NaN;
-        launcherSelectorGroup.HorizontalAlignment = HorizontalAlignment.Stretch;
-        launcherRunButton.HorizontalAlignment = HorizontalAlignment.Stretch;
-        launcherRunButton.Margin = new Thickness(0, 2, 0, 0);
     }
 
     private IReadOnlyList<Button> ProfileButtons() =>
@@ -342,6 +353,7 @@ public sealed partial class TestSetupWorkspace
             || stressLauncherButton is null
             || moreLauncherButton is null
             || launcherRunButton is null
+            || launcherSelectedProfileText is null
             || launcherSummaryText is null)
         {
             return;
@@ -359,12 +371,14 @@ public sealed partial class TestSetupWorkspace
         ApplyCustomizeButtonStyle(selectedProfileIndex == 0);
 
         var profileName = ProfileName(selectedProfileIndex);
-        var summary = $"{profileName} · {EstimatedTimeText.Text} · {TransferCapText.Text}";
+        launcherSelectedProfileText.Text = profileName;
+
+        var summary = $"{EstimatedTimeText.Text} · {TransferCapText.Text}";
         if (!string.IsNullOrWhiteSpace(ConfirmationText.Text)
             && !ConfirmationText.Text.Equals("No", StringComparison.OrdinalIgnoreCase)
             && !ConfirmationText.Text.Equals("Not required", StringComparison.OrdinalIgnoreCase))
         {
-            summary += $" · confirmation {ConfirmationText.Text.ToLowerInvariant()}";
+            summary += $"\nConfirmation {ConfirmationText.Text.ToLowerInvariant()}";
         }
 
         if (launcherSummaryText.Text != summary)
@@ -443,11 +457,12 @@ public sealed partial class TestSetupWorkspace
         ApplyCustomizeButtonStyle(false);
 
         var profileName = ProfileName(profileIndex);
+        launcherSelectedProfileText!.Text = profileName;
         if (!Equals(launcherRunButton!.Content, $"Run {profileName}"))
         {
             launcherRunButton.Content = $"Run {profileName}";
         }
-        launcherSummaryText!.Text = $"{profileName} selected · loading saved configuration…";
+        launcherSummaryText!.Text = "Loading saved run plan…";
         ProfileRequested?.Invoke(this, new IndexRequestedEventArgs(profileIndex));
     }
 
