@@ -70,6 +70,15 @@ public sealed partial class MainWindow
             case "monitor.export":
                 await ExportMonitoringHistoryAsync();
                 break;
+            case "test.select.quick":
+                SelectProfile(1);
+                break;
+            case "test.select.full":
+                SelectProfile(2);
+                break;
+            case "test.select.stress":
+                SelectProfile(3);
+                break;
             case "test.run":
                 RunClicked(sender, new RoutedEventArgs());
                 break;
@@ -120,23 +129,26 @@ public sealed partial class MainWindow
             new("monitor.copy", "Copy network summary", "Copy the selected time-window score and component summary.", "share clipboard score summary", Priority: 4),
             new("monitor.share", "Export shareable snapshot", "Create a self-contained HTML network-health snapshot.", "share html snapshot export", Priority: 5),
             new("monitor.export", "Export monitoring history", "Export the selected time window as a privacy-aware CSV file.", "csv history data export", Priority: 6),
-            new("test.run", "Run selected diagnostic", "Start the currently selected explicit profile and transfer method.", "start run diagnostic connection", Enabled: !session.IsActive, Priority: 8),
-            new("test.customize", "Customize diagnostic", "Choose a profile, transfer method, interface, and run plan.", "customize more diagnostic profile transfer method", Enabled: !session.IsActive, Priority: 9),
-            new("navigate.reports", "Open reports", "Browse, search, label, import, and export saved diagnostic reports.", "history library saved reports", "R", Priority: 10),
-            new("reports.import", "Import report JSON", "Import a website or desktop schema 2.0 report.", "json file report import", Priority: 11),
-            new("navigate.comparisons", "Open comparisons", "Choose an explicit baseline and candidate report.", "compare baseline candidate trend", "C", Priority: 12),
-            new("navigate.settings.general", "Settings: General", "Appearance, interface, tray, background, and accessibility.", "settings interface tray appearance", Priority: 20),
-            new("navigate.settings.monitoring", "Settings: Monitoring", "Sampling cadence, speed expectations, and alert threshold.", "settings monitor interval score alert speed", Priority: 21),
-            new("navigate.settings.measurement", "Settings: Diagnostics", "Profiles, endpoint candidates, and LAN isolation.", "settings endpoint origin lan server path", Priority: 22),
-            new("navigate.settings.privacy", "Settings: Privacy & data", "Local identifiers and remembered data approvals.", "settings privacy identifiers approval data", Priority: 23),
-            new("navigate.settings.storage", "Settings: Storage", "Inspect and open the local data directory.", "settings storage folder reports history", Priority: 24),
-            new("navigate.settings.developer", "Settings: Developer", "Preview result states without running the engine.", "settings developer fixture preview", Priority: 25),
-            new("developer.preview-healthy", "Preview healthy result", "Open the healthy-connection presentation fixture without running a diagnostic.", "developer fixture preview healthy result", Priority: 26),
-            new("preflight.refresh", "Refresh connection preflight", "Probe the current interface, endpoint candidates, and network context.", "refresh endpoint latency network interface", Priority: 30),
-            new("reports.folder", "Open data folder", "Open the local application-data directory in the system file manager.", "storage directory finder explorer", Priority: 31),
-            new("view.inspector", workbenchShell?.InspectorOpen == true ? "Hide information drawer" : "Show information drawer", "Toggle contextual information and controls.", "view panel info details", Priority: 40),
-            new("navigation.back", "Go back", "Return to the previous application destination.", "history navigation previous", Enabled: navigationService.CanGoBack, Priority: 45),
-            new("navigation.forward", "Go forward", "Advance to the next application destination.", "history navigation next", Enabled: navigationService.CanGoForward, Priority: 46)
+            new("test.select.quick", "Select Quick diagnostic", "Choose Quick without starting the test.", "select choose quick diagnostic profile", Enabled: !session.IsActive, Priority: 8),
+            new("test.select.full", "Select Full diagnostic", "Choose Full without starting the test.", "select choose full diagnostic profile", Enabled: !session.IsActive, Priority: 9),
+            new("test.select.stress", "Select Stress diagnostic", "Choose Stress without starting the test.", "select choose stress diagnostic profile", Enabled: !session.IsActive, Priority: 10),
+            new("test.run", "Run selected diagnostic", "Start the currently selected explicit profile and transfer method.", "start run diagnostic connection", Enabled: !session.IsActive, Priority: 11),
+            new("test.customize", "Customize diagnostic", "Choose a profile, transfer method, interface, and run plan.", "customize more diagnostic profile transfer method", Enabled: !session.IsActive, Priority: 12),
+            new("navigate.reports", "Open reports", "Browse, search, label, import, and export saved diagnostic reports.", "history library saved reports", "R", Priority: 20),
+            new("reports.import", "Import report JSON", "Import a website or desktop schema 2.0 report.", "json file report import", Priority: 21),
+            new("navigate.comparisons", "Open comparisons", "Choose an explicit baseline and candidate report.", "compare baseline candidate trend", "C", Priority: 22),
+            new("navigate.settings.general", "Settings: General", "Appearance, interface, tray, background, and accessibility.", "settings interface tray appearance", Priority: 30),
+            new("navigate.settings.monitoring", "Settings: Monitoring", "Sampling cadence, speed expectations, and alert threshold.", "settings monitor interval score alert speed", Priority: 31),
+            new("navigate.settings.measurement", "Settings: Diagnostics", "Profiles, endpoint candidates, and LAN isolation.", "settings endpoint origin lan server path", Priority: 32),
+            new("navigate.settings.privacy", "Settings: Privacy & data", "Local identifiers and remembered data approvals.", "settings privacy identifiers approval data", Priority: 33),
+            new("navigate.settings.storage", "Settings: Storage", "Inspect and open the local data directory.", "settings storage folder reports history", Priority: 34),
+            new("navigate.settings.developer", "Settings: Developer", "Preview result states without running the engine.", "settings developer fixture preview", Priority: 35),
+            new("developer.preview-healthy", "Preview healthy result", "Open the healthy-connection presentation fixture without running a diagnostic.", "developer fixture preview healthy result", Priority: 36),
+            new("preflight.refresh", "Refresh connection preflight", "Probe the current interface, endpoint candidates, and network context.", "refresh endpoint latency network interface", Priority: 40),
+            new("reports.folder", "Open data folder", "Open the local application-data directory in the system file manager.", "storage directory finder explorer", Priority: 41),
+            new("view.inspector", workbenchShell?.InspectorOpen == true ? "Hide information drawer" : "Show information drawer", "Toggle contextual information and controls.", "view panel info details", Priority: 50),
+            new("navigation.back", "Go back", "Return to the previous application destination.", "history navigation previous", Enabled: navigationService.CanGoBack, Priority: 55),
+            new("navigation.forward", "Go forward", "Advance to the next application destination.", "history navigation next", Enabled: navigationService.CanGoForward, Priority: 56)
         };
 
         if (session.IsActive || session.ReportId is not null)
