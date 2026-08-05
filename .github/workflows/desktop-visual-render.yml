@@ -135,7 +135,7 @@ jobs:
           # Capture the actual result workspace through a deterministic developer command.
           run_command 'preview healthy result'
           capture result-healthy-overview
-          xdotool mousemove 180 215 click 1
+          xdotool mousemove 255 215 click 1
           capture result-healthy-evidence
 
           run_command 'open network overview'
