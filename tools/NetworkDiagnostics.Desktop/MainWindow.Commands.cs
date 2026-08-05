@@ -73,6 +73,9 @@ public sealed partial class MainWindow
             case "test.run":
                 RunClicked(sender, new RoutedEventArgs());
                 break;
+            case "test.customize":
+                ControlCenterDiagnosticLauncherRequested(sender, EventArgs.Empty);
+                break;
             case "test.active":
                 ReturnToActiveRun();
                 break;
@@ -118,6 +121,7 @@ public sealed partial class MainWindow
             new("monitor.share", "Export shareable snapshot", "Create a self-contained HTML network-health snapshot.", "share html snapshot export", Priority: 5),
             new("monitor.export", "Export monitoring history", "Export the selected time window as a privacy-aware CSV file.", "csv history data export", Priority: 6),
             new("test.run", "Run selected diagnostic", "Start the currently selected explicit profile and transfer method.", "start run diagnostic connection", Enabled: !session.IsActive, Priority: 8),
+            new("test.customize", "Customize diagnostic", "Choose a profile, transfer method, interface, and run plan.", "customize more diagnostic profile transfer method", Enabled: !session.IsActive, Priority: 9),
             new("navigate.reports", "Open reports", "Browse, search, label, import, and export saved diagnostic reports.", "history library saved reports", "R", Priority: 10),
             new("reports.import", "Import report JSON", "Import a website or desktop schema 2.0 report.", "json file report import", Priority: 11),
             new("navigate.comparisons", "Open comparisons", "Choose an explicit baseline and candidate report.", "compare baseline candidate trend", "C", Priority: 12),
