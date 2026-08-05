@@ -5,18 +5,14 @@
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
-    <Style Selector="TextBlock.fieldLabel">
-      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
-      <Setter Property="FontSize" Value="10" />
-    </Style>
     <Style Selector="Button.sectionNav">
-      <Setter Property="Height" Value="39" />
-      <Setter Property="Padding" Value="12,0" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="13,7" />
+      <Setter Property="CornerRadius" Value="17" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="FontSize" Value="10" />
     </Style>
     <Style Selector="Button.sectionNav:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
@@ -27,94 +23,127 @@
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <Style Selector="TextBlock.fieldLabel">
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+      <Setter Property="FontSize" Value="10" />
+    </Style>
+    <Style Selector="Border.settingsPanel">
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="20" />
+    </Style>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="11,8" />
       <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="8" />
     </Style>
     <Style Selector="ComboBox">
       <Setter Property="MinHeight" Value="38" />
-      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="Padding" Value="11,0" />
       <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="MinHeight" Value="30" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
-  <Grid Name="SettingsRootGrid" ColumnDefinitions="190,*">
-    <Border Grid.Column="0"
+  <Grid Name="SettingsRootGrid" RowDefinitions="Auto,*" ColumnDefinitions="*">
+    <Border Grid.Row="0"
             Background="{DynamicResource AppSidebarBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
-            BorderThickness="0,0,1,0"
-            Padding="14,22">
-      <StackPanel Spacing="4">
-        <StackPanel Spacing="4" Margin="5,0,5,18">
-          <TextBlock Classes="eyebrow" Text="SETTINGS" />
-          <TextBlock FontSize="18" FontWeight="SemiBold" Text="Network Diagnostics" />
-          <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Monitoring, testing, privacy, and local data." TextWrapping="Wrap" />
+            BorderThickness="0,0,0,1"
+            Padding="22,11">
+      <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Button Name="GeneralButton" Classes="sectionNav selected" Tag="General" Content="General" Click="SectionClicked" />
+          <Button Name="MonitoringButton" Classes="sectionNav" Tag="Monitoring" Content="Monitoring" Click="SectionClicked" />
+          <Button Name="MeasurementButton" Classes="sectionNav" Tag="Measurement" Content="Diagnostics" Click="SectionClicked" />
+          <Button Name="PrivacyButton" Classes="sectionNav" Tag="Privacy &amp; data" Content="Privacy" Click="SectionClicked" />
+          <Button Name="StorageButton" Classes="sectionNav" Tag="Storage" Content="Storage" Click="SectionClicked" />
+          <Button Name="DeveloperButton" Classes="sectionNav" Tag="Developer" Content="Developer" Click="SectionClicked" />
         </StackPanel>
-        <Button Name="GeneralButton" Classes="sectionNav selected" Tag="General" Content="General" Click="SectionClicked" />
-        <Button Name="MonitoringButton" Classes="sectionNav" Tag="Monitoring" Content="Monitoring" Click="SectionClicked" />
-        <Button Name="MeasurementButton" Classes="sectionNav" Tag="Measurement" Content="Diagnostics" Click="SectionClicked" />
-        <Button Name="PrivacyButton" Classes="sectionNav" Tag="Privacy &amp; data" Content="Privacy &amp; data" Click="SectionClicked" />
-        <Button Name="StorageButton" Classes="sectionNav" Tag="Storage" Content="Storage" Click="SectionClicked" />
-        <Button Name="DeveloperButton" Classes="sectionNav" Tag="Developer" Content="Developer" Click="SectionClicked" />
-      </StackPanel>
+      </ScrollViewer>
     </Border>
 
-    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <Grid Name="SettingsContentContainer" Margin="34,30,34,42" MaxWidth="980" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="19">
-          <StackPanel Spacing="5">
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <Grid Name="SettingsContentContainer"
+            Margin="34,30,34,42"
+            MaxWidth="1120"
+            HorizontalAlignment="Stretch">
+        <StackPanel Spacing="20">
+          <StackPanel Spacing="6">
             <TextBlock Name="SectionEyebrowText" Classes="eyebrow" Text="GENERAL" />
-            <TextBlock Name="SectionTitleText" FontSize="27" FontWeight="SemiBold" Text="Application" TextWrapping="Wrap" />
-            <TextBlock Name="SectionDetailText" Classes="muted" FontSize="12" LineHeight="19" TextWrapping="Wrap" />
+            <TextBlock Name="SectionTitleText" FontSize="30" FontWeight="SemiBold" Text="Application behavior" TextWrapping="Wrap" />
+            <TextBlock Name="SectionDetailText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
           </StackPanel>
 
-          <Border Name="GeneralPanel" Classes="monitorPanel" Padding="20">
+          <Border Name="GeneralPanel" Classes="settingsPanel">
             <StackPanel Spacing="20">
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
-                <StackPanel Grid.Column="0" Spacing="6">
-                  <TextBlock Classes="eyebrow" Text="APPEARANCE" />
-                  <ComboBox Name="AppearanceComboBox" SelectionChanged="AppearanceSelectionChanged">
-                    <ComboBoxItem Content="System" />
-                    <ComboBoxItem Content="Light" />
-                    <ComboBoxItem Content="Dark" />
-                  </ComboBox>
-                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="System follows the operating system appearance." TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="22">
+                <StackPanel Grid.Column="0" Spacing="10">
+                  <TextBlock Classes="eyebrow" Text="APPEARANCE &amp; INTERFACE" />
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Appearance" />
+                      <ComboBox Name="AppearanceComboBox" SelectionChanged="AppearanceSelectionChanged">
+                        <ComboBoxItem Content="System" />
+                        <ComboBoxItem Content="Light" />
+                        <ComboBoxItem Content="Dark" />
+                      </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Network interface" />
+                      <ComboBox Name="InterfaceComboBox" SelectionChanged="InterfaceSelectionChanged" />
+                    </StackPanel>
+                  </Grid>
+                  <Button Name="RefreshPreflightButton"
+                          Classes="ghost"
+                          Content="Refresh connection context"
+                          Click="RefreshPreflightClicked"
+                          HorizontalAlignment="Left" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="6">
-                  <TextBlock Classes="eyebrow" Text="NETWORK INTERFACE" />
-                  <ComboBox Name="InterfaceComboBox" SelectionChanged="InterfaceSelectionChanged" />
-                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Automatic follows the active system route." TextWrapping="Wrap" />
+
+                <StackPanel Grid.Column="1" Spacing="10">
+                  <TextBlock Classes="eyebrow" Text="DESKTOP BEHAVIOR" />
+                  <CheckBox Name="StartInBackgroundCheckBox" Content="Open without activating the main window" />
+                  <CheckBox Name="LiveTrayCheckBox" Content="Keep live status in the menu bar or system tray" />
+                  <CheckBox Name="ReduceMotionCheckBox" Content="Reduce interface motion" />
+                  <CheckBox Name="IncreaseContrastCheckBox" Content="Increase interface contrast" />
+                  <TextBlock Name="PlatformFeatureStatusText" Classes="muted" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>
+
               <Border Classes="divider" />
-              <StackPanel Spacing="10">
-                <TextBlock Classes="eyebrow" Text="APPLICATION BEHAVIOR" />
-                <CheckBox Name="StartInBackgroundCheckBox" Content="Start monitoring when the application opens" />
-                <CheckBox Name="LiveTrayCheckBox" Content="Show the live network score in the menu bar or system tray" />
-                <CheckBox Name="ReduceMotionCheckBox" Content="Reduce motion" />
-                <CheckBox Name="IncreaseContrastCheckBox" Content="Increase contrast" />
-                <TextBlock Name="PlatformFeatureStatusText" Classes="muted" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
-                <Button Classes="primary" Content="Save application settings" Click="SaveGeneralClicked" HorizontalAlignment="Left" />
-              </StackPanel>
+
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+                <TextBlock Grid.Column="0"
+                           Classes="muted"
+                           FontSize="10"
+                           VerticalAlignment="Center"
+                           Text="Dark is the default for the rebuilt desktop product. Existing diagnostics are unaffected." />
+                <Button Grid.Column="1" Classes="primary" Content="Save application settings" Click="SaveGeneralClicked" />
+              </Grid>
             </StackPanel>
           </Border>
 
-          <Border Name="MonitoringPanel" Classes="monitorPanel" Padding="20" IsVisible="False">
+          <Border Name="MonitoringPanel" Classes="settingsPanel" IsVisible="False">
             <StackPanel Spacing="20">
-              <Grid ColumnDefinitions="1.05*,0.95*" ColumnSpacing="24">
-                <StackPanel Grid.Column="0" Spacing="9">
+              <Grid ColumnDefinitions="1.05*,0.95*" ColumnSpacing="22">
+                <StackPanel Grid.Column="0" Spacing="11">
                   <TextBlock Classes="eyebrow" Text="CONTINUOUS HEALTH" />
-                  <CheckBox Name="MonitoringEnabledCheckBox" Content="Monitor this connection continuously" />
+                  <CheckBox Name="MonitoringEnabledCheckBox" Content="Enable lightweight continuous monitoring" />
                   <StackPanel Spacing="5">
-                    <TextBlock Classes="fieldLabel" Text="Lightweight sample interval" />
+                    <TextBlock Classes="fieldLabel" Text="Sampling interval" />
                     <ComboBox Name="MonitoringIntervalComboBox">
                       <ComboBoxItem Content="Every 2 seconds" />
                       <ComboBoxItem Content="Every 5 seconds" />
@@ -130,15 +159,14 @@
                       <ComboBoxItem Content="Every 4 hours" />
                       <ComboBoxItem Content="Every 6 hours" />
                       <ComboBoxItem Content="Every 24 hours" />
-                      <ComboBoxItem Content="Never automatically" />
+                      <ComboBoxItem Content="On demand only" />
                     </ComboBox>
                   </StackPanel>
-                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Lightweight samples measure reachability, DNS, response time, jitter, and availability. Content tests add speed history." TextWrapping="Wrap" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Spacing="9">
-                  <TextBlock Classes="eyebrow" Text="SCORE BASELINE" />
-                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Grid.Column="1" Spacing="11">
+                  <TextBlock Classes="eyebrow" Text="SCORING EXPECTATIONS" />
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                     <StackPanel Grid.Column="0" Spacing="5">
                       <TextBlock Classes="fieldLabel" Text="Expected download (Mbps)" />
                       <TextBox Name="ExpectedDownloadTextBox" />
@@ -149,123 +177,135 @@
                     </StackPanel>
                   </Grid>
                   <StackPanel Spacing="5">
-                    <TextBlock Classes="fieldLabel" Text="Alert when five-minute score falls below" />
+                    <TextBlock Classes="fieldLabel" Text="Alert when score falls below" />
                     <TextBox Name="AlertThresholdTextBox" />
                   </StackPanel>
-                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="The score is transparent: responsiveness 45%, reliability 35%, and speed 20%. Missing components are reweighted rather than treated as zero." TextWrapping="Wrap" />
+                  <TextBlock Name="MonitoringStatusText" Classes="muted" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>
+
               <Border Classes="divider" />
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="primary" Content="Save monitoring settings" Click="SaveMonitoringClicked" />
-                <TextBlock Name="MonitoringStatusText" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
-              </StackPanel>
+              <Button Classes="primary" Content="Save monitoring settings" Click="SaveMonitoringClicked" HorizontalAlignment="Right" />
             </StackPanel>
           </Border>
 
-          <Border Name="MeasurementPanel" Classes="monitorPanel" Padding="20" IsVisible="False">
+          <Border Name="MeasurementPanel" Classes="settingsPanel" IsVisible="False">
             <StackPanel Spacing="20">
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
-                <StackPanel Grid.Column="0" Spacing="6">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="eyebrow" Text="ENDPOINT CANDIDATES" />
+                <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Enter up to eight compatible HTTP or HTTPS origins, one per line. The app probes the candidates and chooses the lowest-latency available endpoint." TextWrapping="Wrap" />
+                <TextBox Name="OriginsTextBox" AcceptsReturn="True" MinHeight="100" PlaceholderText="https://network.johnnyli.dev/" />
+              </StackPanel>
+
+              <Border Classes="divider" />
+
+              <Grid ColumnDefinitions="1.05*,0.95*" ColumnSpacing="22">
+                <StackPanel Grid.Column="0" Spacing="10">
                   <TextBlock Classes="eyebrow" Text="DEFAULT DIAGNOSTIC" />
-                  <TextBlock Classes="fieldLabel" Text="Profile" />
-                  <ComboBox Name="ProfileComboBox" SelectionChanged="ProfileSelectionChanged">
-                    <ComboBoxItem Content="Connection Check" />
-                    <ComboBoxItem Content="Quick" />
-                    <ComboBoxItem Content="Full" />
-                    <ComboBoxItem Content="Stress" />
-                  </ComboBox>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Profile" />
+                      <ComboBox Name="ProfileComboBox" SelectionChanged="ProfileSelectionChanged">
+                        <ComboBoxItem Content="Connection Check" />
+                        <ComboBoxItem Content="Quick" />
+                        <ComboBoxItem Content="Full" />
+                        <ComboBoxItem Content="Stress" />
+                      </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Transfer method" />
+                      <ComboBox Name="MethodComboBox" SelectionChanged="MethodSelectionChanged">
+                        <ComboBoxItem Content="Compare" />
+                        <ComboBoxItem Content="Single" />
+                        <ComboBoxItem Content="Aggregate" />
+                      </ComboBox>
+                    </StackPanel>
+                  </Grid>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="6">
-                  <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
-                  <TextBlock Classes="fieldLabel" Text="Method" />
-                  <ComboBox Name="MethodComboBox" SelectionChanged="MethodSelectionChanged">
-                    <ComboBoxItem Content="Compare" />
-                    <ComboBoxItem Content="Single" />
-                    <ComboBoxItem Content="Aggregate" />
-                  </ComboBox>
+
+                <StackPanel Grid.Column="1" Spacing="10">
+                  <TextBlock Classes="eyebrow" Text="TRUSTED LAN ISOLATION" />
+                  <TextBox Name="LanTargetTextBox" PlaceholderText="Hostname or address" />
+                  <Grid ColumnDefinitions="*,*,*" ColumnSpacing="9">
+                    <StackPanel Grid.Column="0" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Port" />
+                      <TextBox Name="LanPortTextBox" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Seconds" />
+                      <TextBox Name="LanDurationTextBox" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="5">
+                      <TextBlock Classes="fieldLabel" Text="Connections" />
+                      <TextBox Name="LanConnectionsTextBox" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="secondary" Content="Start LAN server" Click="StartLanServerClicked" />
+                    <Button Name="StopLanServerButton" Classes="ghost" Content="Stop" Click="StopLanServerClicked" />
+                  </StackPanel>
+                  <TextBlock Name="LanServerStatusText" Classes="muted" FontSize="10" TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>
+
               <Border Classes="divider" />
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="ENDPOINT CANDIDATES" />
-                <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Enter up to eight compatible HTTP or HTTPS origins, one per line." TextWrapping="Wrap" />
-                <TextBox Name="OriginsTextBox" AcceptsReturn="True" MinHeight="92" PlaceholderText="https://network.johnnyli.dev/" />
-              </StackPanel>
-              <Border Classes="divider" />
-              <StackPanel Spacing="9">
-                <TextBlock Classes="eyebrow" Text="LAN ISOLATION" />
-                <TextBox Name="LanTargetTextBox" PlaceholderText="Trusted LAN hostname or address" />
-                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                  <StackPanel Grid.Column="0" Spacing="5">
-                    <TextBlock Classes="fieldLabel" Text="Port" />
-                    <TextBox Name="LanPortTextBox" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="5">
-                    <TextBlock Classes="fieldLabel" Text="Seconds" />
-                    <TextBox Name="LanDurationTextBox" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="2" Spacing="5">
-                    <TextBlock Classes="fieldLabel" Text="Connections" />
-                    <TextBox Name="LanConnectionsTextBox" />
-                  </StackPanel>
-                </Grid>
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="secondary" Content="Start LAN server" Click="StartLanServerClicked" />
-                  <Button Name="StopLanServerButton" Classes="secondary" Content="Stop server" Click="StopLanServerClicked" />
-                  <TextBlock Name="LanServerStatusText" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
-                </StackPanel>
-              </StackPanel>
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="primary" Content="Save diagnostic settings" Click="SaveMeasurementClicked" />
-                <Button Name="RefreshPreflightButton" Classes="secondary" Content="Refresh preflight" Click="RefreshPreflightClicked" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
                 <TextBlock Name="MeasurementStatusText" Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
-              </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="Save diagnostic settings" Click="SaveMeasurementClicked" />
+              </Grid>
             </StackPanel>
           </Border>
 
-          <Border Name="PrivacyPanel" Classes="monitorPanel" Padding="20" IsVisible="False">
-            <StackPanel Spacing="19">
-              <StackPanel Spacing="8">
-                <TextBlock Classes="eyebrow" Text="REPORT PRIVACY" />
-                <CheckBox Name="IdentifiersCheckBox" Content="Include local addresses and Wi-Fi network name" Click="IdentifiersClicked" />
-                <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Off by default. Measurements remain available while supported local identifiers are omitted." TextWrapping="Wrap" />
-              </StackPanel>
-              <Border Classes="divider" />
-              <StackPanel Spacing="8">
-                <TextBlock Classes="eyebrow" Text="DATA APPROVALS" />
-                <TextBlock Name="ApprovalSummaryText" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <Button Classes="secondary" Content="Reset remembered approvals" Click="ResetApprovalsClicked" HorizontalAlignment="Left" />
-              </StackPanel>
+          <Border Name="PrivacyPanel" Classes="settingsPanel" IsVisible="False">
+            <StackPanel Spacing="20">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="22">
+                <StackPanel Grid.Column="0" Spacing="9">
+                  <TextBlock Classes="eyebrow" Text="REPORT IDENTIFIERS" />
+                  <CheckBox Name="IdentifiersCheckBox" Content="Include local addresses and Wi-Fi network name" Click="IdentifiersClicked" />
+                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Off by default. Diagnostic measurements remain available while supported local identifiers are omitted from saved reports and monitoring exports." TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="9">
+                  <TextBlock Classes="eyebrow" Text="HIGH-DATA APPROVALS" />
+                  <TextBlock Name="ApprovalSummaryText" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Full and Stress remember approval only for the current transfer ceiling. A higher ceiling asks again." TextWrapping="Wrap" />
+                  <Button Classes="secondary" Content="Reset remembered approvals" Click="ResetApprovalsClicked" HorizontalAlignment="Left" />
+                </StackPanel>
+              </Grid>
               <TextBlock Name="PrivacyStatusText" Classes="muted" FontSize="10" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
-          <Border Name="StoragePanel" Classes="monitorPanel" Padding="20" IsVisible="False">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="eyebrow" Text="LOCAL DATA" />
-              <TextBlock FontSize="14" FontWeight="SemiBold" Text="Reports and monitoring history" />
-              <Border Classes="surfaceSubtle" Padding="12">
-                <TextBlock Name="ReportsDirectoryText" FontSize="10" LineHeight="16" TextWrapping="Wrap" />
-              </Border>
-              <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Reports, alerts, and monitoring samples remain local unless you explicitly export them." TextWrapping="Wrap" />
-              <Button Classes="secondary" Content="Open data folder" Click="OpenReportsFolderClicked" HorizontalAlignment="Left" />
-            </StackPanel>
+          <Border Name="StoragePanel" Classes="settingsPanel" IsVisible="False">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+              <StackPanel Grid.Column="0" Spacing="8">
+                <TextBlock Classes="eyebrow" Text="LOCAL APPLICATION DATA" />
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Reports, monitoring history, and alerts" />
+                <Border Background="{DynamicResource AppInsetBrush}" CornerRadius="9" Padding="13">
+                  <TextBlock Name="ReportsDirectoryText" FontSize="10" LineHeight="15" TextWrapping="Wrap" />
+                </Border>
+                <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Nothing leaves this directory unless you explicitly export, copy, or share it." TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="primary" Content="Open data folder" Click="OpenReportsFolderClicked" VerticalAlignment="Bottom" />
+            </Grid>
           </Border>
 
-          <Border Name="DeveloperPanel" Classes="monitorPanel" Padding="20" IsVisible="False">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="eyebrow" Text="PRESENTATION PREVIEWS" />
-              <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Preview result states without starting a measurement or saving a report." TextWrapping="Wrap" />
-              <ComboBox Name="FixtureComboBox">
-                <ComboBoxItem Content="Healthy" />
-                <ComboBoxItem Content="Problematic" />
-                <ComboBoxItem Content="Inconclusive" />
-                <ComboBoxItem Content="Unavailable" />
-                <ComboBoxItem Content="Failed" />
-              </ComboBox>
-              <Button Classes="primary" Content="Preview selected state" Click="PreviewClicked" HorizontalAlignment="Left" />
-            </StackPanel>
+          <Border Name="DeveloperPanel" Classes="settingsPanel" IsVisible="False">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+              <StackPanel Grid.Column="0" Spacing="8">
+                <TextBlock Classes="eyebrow" Text="RESULT PREVIEW" />
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Exercise terminal presentation states" />
+                <TextBlock Classes="muted" FontSize="10" LineHeight="15" Text="Preview a saved result state without network activity, changing measurement settings, or writing a report." TextWrapping="Wrap" />
+                <ComboBox Name="FixtureComboBox">
+                  <ComboBoxItem Content="Healthy connection" />
+                  <ComboBoxItem Content="Investigate responsiveness" />
+                  <ComboBoxItem Content="Investigate reliability" />
+                  <ComboBoxItem Content="Transfer unavailable" />
+                  <ComboBoxItem Content="Connection unavailable" />
+                </ComboBox>
+              </StackPanel>
+              <Button Grid.Column="1" Classes="primary" Content="Preview result" Click="PreviewClicked" VerticalAlignment="Bottom" />
+            </Grid>
           </Border>
         </StackPanel>
       </Grid>
