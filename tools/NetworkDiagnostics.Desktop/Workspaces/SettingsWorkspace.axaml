@@ -1,26 +1,26 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Workspaces.SettingsWorkspace"
-             Background="#111415"
-             Foreground="#E9E6E0"
+             Background="{DynamicResource AppCanvasBrush}"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9B" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
+      <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.5" />
     </Style>
     <Style Selector="TextBlock.fieldLabel">
-      <Setter Property="Foreground" Value="#969B9B" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="FontSize" Value="11" />
     </Style>
     <Style Selector="Border.panel">
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="BorderBrush" Value="#303536" />
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="18" />
@@ -31,51 +31,57 @@
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#AEB3B3" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="8" />
     </Style>
     <Style Selector="Button.sectionNav:pointerover">
-      <Setter Property="Background" Value="#202526" />
-      <Setter Property="Foreground" Value="#F0EDE7" />
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
     <Style Selector="Button.sectionNav.selected">
-      <Setter Property="Background" Value="#29231C" />
-      <Setter Property="Foreground" Value="#F4F0EA" />
+      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
     <Style Selector="Button.primary">
       <Setter Property="MinHeight" Value="40" />
       <Setter Property="Padding" Value="16,0" />
-      <Setter Property="Background" Value="#C96346" />
+      <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
       <Setter Property="Foreground" Value="White" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AppAccentHoverBrush}" />
+    </Style>
     <Style Selector="Button.secondary">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="13,0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#D2D6D6" />
-      <Setter Property="BorderBrush" Value="#414748" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.secondary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+    </Style>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="11,8" />
-      <Setter Property="Background" Value="#111415" />
-      <Setter Property="Foreground" Value="#E9E6E0" />
-      <Setter Property="BorderBrush" Value="#3B4142" />
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
     </Style>
     <Style Selector="ComboBox">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="11,0" />
-      <Setter Property="Background" Value="#111415" />
-      <Setter Property="Foreground" Value="#E9E6E0" />
-      <Setter Property="BorderBrush" Value="#3B4142" />
+      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="CheckBox">
@@ -86,8 +92,8 @@
 
   <Grid Name="SettingsRootGrid" ColumnDefinitions="184,*">
     <Border Grid.Column="0"
-            Background="#15191A"
-            BorderBrush="#303536"
+            Background="{DynamicResource AppSidebarBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="0,0,1,0"
             Padding="14,22">
       <Grid RowDefinitions="Auto,Auto,*">
@@ -117,7 +123,7 @@
 
           <Border Name="GeneralPanel" Classes="panel">
             <Grid Name="GeneralLayoutGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18">
-              <StackPanel Name="GeneralDefaultsSection" Grid.Column="0" Spacing="7">
+              <StackPanel Name="GeneralDefaultsSection" Grid.Column="0" Spacing="8">
                 <TextBlock Classes="eyebrow" Text="DEFAULT TEST" />
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
                   <StackPanel Grid.Column="0" Spacing="5">
@@ -139,11 +145,23 @@
                   </StackPanel>
                 </Grid>
                 <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="These selections become the starting point for a new diagnostic. They do not alter a test already in progress." TextWrapping="Wrap" />
+
+                <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0" Margin="0,6,0,2" />
+
+                <StackPanel Spacing="5">
+                  <TextBlock Classes="eyebrow" Text="APPEARANCE" />
+                  <ComboBox Name="AppearanceComboBox" SelectionChanged="AppearanceSelectionChanged">
+                    <ComboBoxItem Content="System" />
+                    <ComboBoxItem Content="Light" />
+                    <ComboBoxItem Content="Dark" />
+                  </ComboBox>
+                  <TextBlock Classes="muted" FontSize="11" LineHeight="17" Text="System follows the current macOS, Windows, or Linux appearance. Light and Dark override it for this app." TextWrapping="Wrap" />
+                </StackPanel>
               </StackPanel>
 
               <Border Name="GeneralInterfaceContainer"
                       Grid.Column="1"
-                      BorderBrush="#303536"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
                       BorderThickness="1,0,0,0"
                       Padding="24,0,0,0">
                 <StackPanel Spacing="7">
@@ -171,7 +189,7 @@
                 <TextBox Name="OriginsTextBox" AcceptsReturn="True" MinHeight="96" PlaceholderText="https://network.johnnyli.dev/" />
               </StackPanel>
 
-              <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
+              <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0" />
 
               <StackPanel Spacing="10">
                 <TextBlock Classes="eyebrow" Text="LAN ISOLATION" />
@@ -216,7 +234,7 @@
 
               <Border Name="PrivacyApprovalsContainer"
                       Grid.Column="1"
-                      BorderBrush="#303536"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
                       BorderThickness="1,0,0,0"
                       Padding="24,0,0,0">
                 <StackPanel Spacing="8">
@@ -241,7 +259,7 @@
               <StackPanel Name="StorageDetailsSection" Grid.Column="0" Spacing="7">
                 <TextBlock Classes="eyebrow" Text="SAVED REPORTS" />
                 <TextBlock FontSize="15" FontWeight="SemiBold" Text="Local report directory" />
-                <Border Background="#111415" BorderBrush="#303536" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
                   <TextBlock Name="ReportsDirectoryText" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
                 </Border>
                 <TextBlock Classes="muted" FontSize="12" LineHeight="18" Text="Completed and imported reports remain local and use the shared schema 2.0 JSON format." TextWrapping="Wrap" />
