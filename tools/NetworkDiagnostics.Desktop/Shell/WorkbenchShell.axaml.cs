@@ -9,6 +9,7 @@ namespace NetworkDiagnostics.Desktop.Shell;
 public sealed partial class WorkbenchShell : UserControl
 {
     private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
+    private const double InspectorMinimumWidth = 1180;
     private bool inspectorRequested;
     private WorkspaceKind currentWorkspace = WorkspaceKind.Test;
 
@@ -165,7 +166,7 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void InspectorClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (currentWorkspace != WorkspaceKind.Test) return;
+        if (currentWorkspace != WorkspaceKind.Test || Bounds.Width < InspectorMinimumWidth) return;
         inspectorRequested = !InspectorBorder.IsVisible;
         ApplyResponsiveLayout(Bounds.Width);
         InspectorVisibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -177,8 +178,8 @@ public sealed partial class WorkbenchShell : UserControl
     private void ApplyResponsiveLayout(double width)
     {
         var compact = width < 960;
-        var inspectorEligible = currentWorkspace == WorkspaceKind.Test;
-        var showInspector = inspectorEligible && inspectorRequested && width >= 820;
+        var inspectorEligible = currentWorkspace == WorkspaceKind.Test && width >= InspectorMinimumWidth;
+        var showInspector = inspectorEligible && inspectorRequested;
 
         InspectorBorder.IsVisible = showInspector;
         InspectorToggleButton.IsVisible = inspectorEligible;
@@ -187,7 +188,7 @@ public sealed partial class WorkbenchShell : UserControl
         CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
         InspectorToggleButton.Content = showInspector ? "Close info" : "Info";
         TestWorkspaceLabel.Text = compact ? "Home" : "Overview";
-        ReportsWorkspaceLabel.Text = compact ? "History" : "History";
+        ReportsWorkspaceLabel.Text = "History";
         ComparisonsWorkspaceLabel.Text = "Compare";
         SettingsWorkspaceLabel.Text = "Settings";
     }
