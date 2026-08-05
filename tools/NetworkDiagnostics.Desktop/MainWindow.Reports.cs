@@ -161,6 +161,7 @@ public sealed partial class MainWindow
         var reports = await reportStore.ListAsync();
         comparisonBaselineReport ??= currentReport;
         savedReportCount = reports.Count;
+        SetControlCenterReports(reports);
 
         ReportBrowserState? browserState = viewState is null
             ? null
@@ -230,14 +231,12 @@ public sealed partial class MainWindow
                 ? DiagnosticReportPresenter.FromReport(updated.Report)
                 : currentPresentation;
 
+            await RefreshHistoryAsync(navigationService.Current?.Destination is ReportListDestination
+                ? navigationService.Current.ViewState with { SelectedReportId = updated.Report.Run.Id }
+                : null);
+
             switch (navigationService.Current?.Destination)
             {
-                case ReportListDestination:
-                    await RefreshHistoryAsync(navigationService.Current.ViewState with
-                    {
-                        SelectedReportId = updated.Report.Run.Id
-                    });
-                    break;
                 case ReportDetailDestination:
                     reportDetailWorkspace?.Render(updated, DiagnosticReportPresenter.FromReport(updated.Report));
                     break;
@@ -245,6 +244,7 @@ public sealed partial class MainWindow
                     await RefreshComparisonHistoryAsync();
                     break;
             }
+            SyncControlCenterSections();
             RefreshWorkbenchChrome();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
