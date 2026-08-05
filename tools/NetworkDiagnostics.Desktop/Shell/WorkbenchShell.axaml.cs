@@ -36,7 +36,17 @@ public sealed partial class WorkbenchShell : UserControl
     public object? WorkspaceContent
     {
         get => WorkspaceHost.Content;
-        set => WorkspaceHost.Content = value;
+        set
+        {
+            if (value is Control control
+                && TopLevel.GetTopLevel(control) is Window window
+                && ReferenceEquals(window.Content, control))
+            {
+                window.Content = null;
+            }
+
+            WorkspaceHost.Content = value;
+        }
     }
 
     public bool InspectorOpen => InspectorBorder.IsVisible;
