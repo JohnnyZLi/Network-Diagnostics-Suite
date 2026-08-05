@@ -101,9 +101,9 @@ jobs:
 
           capture overview-dark-wide
 
-          xdotool mousemove 1365 688 click 1
+          run_command 'customize diagnostic'
           capture deeper-diagnostics-overlay
-          xdotool mousemove 70 500 click 1
+          xdotool key Escape
 
           xdotool key --clearmodifiers End
           capture control-center-recent-diagnostics
@@ -169,6 +169,8 @@ jobs:
           wait_for_window
           run_command 'open network overview'
           capture overview-light-wide
+          run_command 'customize diagnostic'
+          capture deeper-diagnostics-overlay-light
 
       - name: Upload rendered desktop states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
