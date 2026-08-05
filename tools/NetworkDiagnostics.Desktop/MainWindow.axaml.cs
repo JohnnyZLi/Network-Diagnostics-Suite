@@ -96,6 +96,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         InstallTestWorkspace();
         InstallWorkbenchShell();
+        SetWorkbenchReady(false);
         initialized = true;
         RenderProfileSelection();
         RenderMethodSelection();
@@ -111,34 +112,58 @@ public sealed partial class MainWindow : Window
     {
         initialized = false;
         settingsLoaded = false;
-        settings = await settingsStore.LoadAsync();
-        ApplyAppearance(settings.Appearance);
-        ApplyAccessibilityPreferences();
-        monitorWindow = settings.SelectedMonitoringWindow;
-        reportStore.Configure(settings.ReportDirectory);
-        selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
-        selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
-        testOriginsText = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
-        lanTargetText = settings.LanTarget ?? string.Empty;
-        lanPortText = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        lanDurationText = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        lanConnectionsText = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        PopulateInterfaceChoices();
-        initialized = true;
-        RenderProfileSelection();
-        RenderMethodSelection();
+
+        try
+        {
+            settings = await settingsStore.LoadAsync();
+            ApplyAppearance(settings.Appearance);
+            ApplyAccessibilityPreferences();
+            monitorWindow = settings.SelectedMonitoringWindow;
+            reportStore.Configure(settings.ReportDirectory);
+            selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
+            selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
+            testOriginsText = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
+            lanTargetText = settings.LanTarget ?? string.Empty;
+            lanPortText = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            lanDurationText = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            lanConnectionsText = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            PopulateInterfaceChoices();
+            initialized = true;
+            RenderProfileSelection();
+            RenderMethodSelection();
+            SyncTestWorkspace();
+            SyncSettingsWorkspace();
+            settingsLoaded = true;
+
+            // Restore the intended destination before exposing the shell. The previous
+            // sequence displayed the default setup workspace while startup services ran,
+            // then visibly replaced it with Home several seconds later.
+            await RestorePersistedWorkbenchStateAsync();
+            workbenchShell?.SetInspectorOpen(false);
+            PreserveCurrentNavigationState();
+            await PersistWorkbenchStateAsync();
+            RefreshWorkbenchChrome();
+        }
+        finally
+        {
+            SetWorkbenchReady(true);
+        }
+
+        // Slower local and network-backed data can populate the restored screen in place.
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
         await InitializeMonitoringAsync();
         await UpdateTrayIntegrationAsync();
         SyncTestWorkspace();
         SyncSettingsWorkspace();
-        settingsLoaded = true;
-        await RestorePersistedWorkbenchStateAsync();
-        workbenchShell?.SetInspectorOpen(false);
-        PreserveCurrentNavigationState();
-        await PersistWorkbenchStateAsync();
         RefreshWorkbenchChrome();
+    }
+
+    private void SetWorkbenchReady(bool ready)
+    {
+        if (workbenchShell is null) return;
+        workbenchShell.Opacity = ready ? 1 : 0;
+        workbenchShell.IsHitTestVisible = ready;
     }
 
     private void WindowClosed(object? sender, EventArgs eventArgs)
