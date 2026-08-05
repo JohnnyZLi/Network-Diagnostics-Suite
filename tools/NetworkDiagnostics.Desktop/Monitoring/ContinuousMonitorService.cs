@@ -126,6 +126,7 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(report);
         if (report.InternetTransfer is not { } transfer) return;
 
+        var identity = ActiveNetworkIdentity();
         var sample = new MonitorSample(
             DateTimeOffset.UtcNow,
             MonitorSampleState.Responsive,
@@ -133,9 +134,9 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
             null,
             null,
             null,
-            transfer.IdleLatency.LossPercent ?? 0,
-            ActiveNetworkIdentity().InterfaceName,
-            ActiveNetworkIdentity().Signature,
+            transfer.IdleLatency.LossPercent,
+            identity.InterfaceName,
+            identity.Signature,
             transfer.Download.SteadyMbps,
             transfer.Upload.SteadyMbps,
             true);
@@ -227,7 +228,7 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
             requestWatch.Stop();
             ttfbMs = requestWatch.Elapsed.TotalMilliseconds;
             latencyMs = ttfbMs;
-            var reachable = response.StatusCode < HttpStatusCode.InternalServerError;
+            var reachable = (int)response.StatusCode < 500;
             loss = reachable ? 0 : 100;
             state = !reachable
                 ? MonitorSampleState.Unresponsive
@@ -295,7 +296,7 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
                     MonitorAlertKind.Outage,
                     MonitorAlertSeverity.Critical,
                     "Connection became unreachable",
-                    $"The monitor could not reach {activeOptions.Endpoint.Host}.") , cancellationToken);
+                    $"The monitor could not reach {activeOptions.Endpoint.Host}."), cancellationToken);
             }
             else if (previous.State == MonitorSampleState.Unresponsive
                      && current.State != MonitorSampleState.Unresponsive)
