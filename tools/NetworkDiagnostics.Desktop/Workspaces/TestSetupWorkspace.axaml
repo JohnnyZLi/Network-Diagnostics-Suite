@@ -1,215 +1,243 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Workspaces.TestSetupWorkspace"
-             Background="#111415"
-             Foreground="#E9E6E0"
+             Background="{DynamicResource AppCanvasBrush}"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9B" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
-      <Setter Property="FontSize" Value="10" />
+      <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+      <Setter Property="FontSize" Value="9" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.6" />
+      <Setter Property="LetterSpacing" Value="1.5" />
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
     </Style>
     <Style Selector="TextBlock.choiceTitle">
       <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LineHeight" Value="16" />
+      <Setter Property="LineHeight" Value="17" />
     </Style>
     <Style Selector="TextBlock.choiceDetail">
-      <Setter Property="Foreground" Value="#969B9B" />
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="LineHeight" Value="13" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="LineHeight" Value="15" />
     </Style>
     <Style Selector="Border.panel">
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="BorderBrush" Value="#303536" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Padding" Value="18" />
-    </Style>
-    <Style Selector="Button.choice">
-      <Setter Property="MinHeight" Value="66" />
-      <Setter Property="Padding" Value="14,11" />
-      <Setter Property="Background" Value="#15191A" />
-      <Setter Property="Foreground" Value="#B6BBBB" />
-      <Setter Property="BorderBrush" Value="#303536" />
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="17" />
+    </Style>
+    <Style Selector="Button.choice">
+      <Setter Property="MinHeight" Value="76" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.choice:pointerover">
-      <Setter Property="Background" Value="#1D2223" />
-      <Setter Property="Foreground" Value="#F0EDE7" />
-      <Setter Property="BorderBrush" Value="#464C4D" />
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
     </Style>
     <Style Selector="Button.choice.selected">
-      <Setter Property="Background" Value="#29231C" />
-      <Setter Property="Foreground" Value="#F4F0EA" />
-      <Setter Property="BorderBrush" Value="#8D5948" />
+      <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
     </Style>
     <Style Selector="Button.method">
-      <Setter Property="Height" Value="40" />
-      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="10,0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#A9AEAE" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="7" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="12" />
     </Style>
     <Style Selector="Button.method:pointerover">
-      <Setter Property="Background" Value="#202526" />
-      <Setter Property="Foreground" Value="#F0EDE7" />
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
     <Style Selector="Button.method.selected">
-      <Setter Property="Background" Value="#29231C" />
-      <Setter Property="Foreground" Value="#F4F0EA" />
-      <Setter Property="BorderBrush" Value="#8D5948" />
+      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.primary">
-      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinHeight" Value="42" />
       <Setter Property="Padding" Value="18,0" />
-      <Setter Property="Background" Value="#C96346" />
+      <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
       <Setter Property="Foreground" Value="White" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.primary:pointerover">
-      <Setter Property="Background" Value="#D16D50" />
+      <Setter Property="Background" Value="{DynamicResource AppAccentHoverBrush}" />
     </Style>
     <Style Selector="Button.secondary">
-      <Setter Property="MinHeight" Value="38" />
-      <Setter Property="Padding" Value="13,0" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="12,0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#D2D6D6" />
-      <Setter Property="BorderBrush" Value="#414748" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.secondary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
   </UserControl.Styles>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <Grid Margin="30,24,30,30" MaxWidth="1080" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
-      <StackPanel Grid.Row="0" Spacing="6">
+    <Grid Margin="34,28,34,34" MaxWidth="1120" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="22">
+      <StackPanel Grid.Row="0" Spacing="7">
         <TextBlock Classes="eyebrow" Text="NEW DIAGNOSTIC" />
-        <TextBlock FontSize="28" FontWeight="SemiBold" Text="Choose the test that answers the question." TextWrapping="Wrap" />
-        <TextBlock Classes="muted" FontSize="14" LineHeight="21" MaxWidth="760"
-                   Text="Start short. Use deeper profiles only when you need more evidence about responsiveness, local network conditions, path behavior, or services."
-                   TextWrapping="Wrap" />
+        <TextBlock FontSize="26" FontWeight="SemiBold" LineHeight="31" Text="Choose what you need to learn." TextWrapping="Wrap" />
+        <TextBlock Classes="muted" FontSize="13" LineHeight="20" MaxWidth="700" Text="Start with the shortest useful test. Move deeper only when you need evidence about load, the local network, the path, or service behavior." TextWrapping="Wrap" />
       </StackPanel>
 
-      <Border Name="ActiveRunBorder" Grid.Row="1" Classes="panel" IsVisible="False" BorderBrush="#8D5948">
+      <Border Name="ActiveRunBorder" Grid.Row="1" Background="{DynamicResource AppAccentSoftBrush}" BorderBrush="{DynamicResource AppAccentBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="15" IsVisible="False">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
           <StackPanel Spacing="5" VerticalAlignment="Center">
             <TextBlock Classes="eyebrow" Text="DIAGNOSTIC IN PROGRESS" />
-            <TextBlock Name="ActiveRunTitleText" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock Name="ActiveRunDetailText" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-            <ProgressBar Name="ActiveRunProgress" Margin="0,5,0,0" Height="5" Minimum="0" Maximum="100" />
+            <TextBlock Name="ActiveRunTitleText" FontSize="15" FontWeight="SemiBold" />
+            <TextBlock Name="ActiveRunDetailText" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <ProgressBar Name="ActiveRunProgress" Margin="0,5,0,0" Height="4" Minimum="0" Maximum="100" />
           </StackPanel>
           <Button Grid.Column="1" Classes="secondary" Content="Open active test" Click="ActiveRunClicked" VerticalAlignment="Center" />
         </Grid>
       </Border>
 
-      <Grid Grid.Row="2" ColumnDefinitions="1.2*,0.8*" ColumnSpacing="18">
-        <Border Grid.Column="0" Classes="panel">
-          <StackPanel Spacing="14">
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
-              <Button Name="ConnectionProfileButton" Grid.Row="0" Grid.Column="0" Classes="choice selected" Tag="0" Click="ProfileClicked">
+      <Grid Grid.Row="2" ColumnDefinitions="1.25*,0.75*" ColumnSpacing="22">
+        <StackPanel Grid.Column="0" Spacing="13">
+          <TextBlock Classes="sectionTitle" Text="Test profile" />
+
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+            <Button Name="ConnectionProfileButton" Grid.Row="0" Grid.Column="0" Classes="choice selected" Tag="0" Click="ProfileClicked">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <StackPanel Spacing="4" VerticalAlignment="Center">
                   <TextBlock Classes="choiceTitle" Text="Connection Check" />
-                  <TextBlock Classes="choiceDetail" Text="Fast reachability and responsiveness check" TextWrapping="Wrap" />
+                  <TextBlock Classes="choiceDetail" Text="Reachability, responsiveness, and basic transfer health" TextWrapping="Wrap" />
                 </StackPanel>
-              </Button>
-              <Button Name="QuickProfileButton" Grid.Row="0" Grid.Column="1" Classes="choice" Tag="1" Click="ProfileClicked">
+                <TextBlock Grid.Column="1" Classes="eyebrow" Text="LOW DATA" VerticalAlignment="Top" />
+              </Grid>
+            </Button>
+
+            <Button Name="QuickProfileButton" Grid.Row="0" Grid.Column="1" Classes="choice" Tag="1" Click="ProfileClicked">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <StackPanel Spacing="4" VerticalAlignment="Center">
                   <TextBlock Classes="choiceTitle" Text="Quick" />
-                  <TextBlock Classes="choiceDetail" Text="Headline performance with limited data use" TextWrapping="Wrap" />
+                  <TextBlock Classes="choiceDetail" Text="Headline throughput and loaded responsiveness" TextWrapping="Wrap" />
                 </StackPanel>
-              </Button>
-              <Button Name="FullProfileButton" Grid.Row="1" Grid.Column="0" Classes="choice" Tag="2" Click="ProfileClicked">
+                <TextBlock Grid.Column="1" Classes="eyebrow" Text="FAST" VerticalAlignment="Top" />
+              </Grid>
+            </Button>
+
+            <Button Name="FullProfileButton" Grid.Row="1" Grid.Column="0" Classes="choice" Tag="2" Click="ProfileClicked">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <StackPanel Spacing="4" VerticalAlignment="Center">
                   <TextBlock Classes="choiceTitle" Text="Full" />
                   <TextBlock Classes="choiceDetail" Text="Local, path, service, and transfer evidence" TextWrapping="Wrap" />
                 </StackPanel>
-              </Button>
-              <Button Name="StressProfileButton" Grid.Row="1" Grid.Column="1" Classes="choice" Tag="3" Click="ProfileClicked">
+                <TextBlock Grid.Column="1" Classes="eyebrow" Text="DIAGNOSE" VerticalAlignment="Top" />
+              </Grid>
+            </Button>
+
+            <Button Name="StressProfileButton" Grid.Row="1" Grid.Column="1" Classes="choice" Tag="3" Click="ProfileClicked">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <StackPanel Spacing="4" VerticalAlignment="Center">
                   <TextBlock Classes="choiceTitle" Text="Stress" />
-                  <TextBlock Classes="choiceDetail" Text="Longer saturation and stability analysis" TextWrapping="Wrap" />
+                  <TextBlock Classes="choiceDetail" Text="Sustained load, scaling, and stability analysis" TextWrapping="Wrap" />
                 </StackPanel>
-              </Button>
-            </Grid>
+                <TextBlock Grid.Column="1" Classes="eyebrow" Text="HEAVY" VerticalAlignment="Top" />
+              </Grid>
+            </Button>
+          </Grid>
 
-            <Border BorderBrush="#303536" BorderThickness="0,1,0,0" Padding="0,14,0,0">
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="SELECTED QUESTION" />
-                <TextBlock Name="QuestionText" FontSize="18" FontWeight="SemiBold" LineHeight="21" TextWrapping="Wrap" />
-                <TextBlock Name="PurposeText" Classes="muted" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </Border>
+          <Border Background="{DynamicResource AppAccentSoftBrush}" CornerRadius="9" Padding="15,13">
+            <StackPanel Spacing="5">
+              <TextBlock Classes="eyebrow" Text="SELECTED QUESTION" />
+              <TextBlock Name="QuestionText" FontSize="17" FontWeight="SemiBold" LineHeight="21" TextWrapping="Wrap" />
+              <TextBlock Name="PurposeText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
 
-        <StackPanel Grid.Column="1" Spacing="18">
-          <Border Classes="panel">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="eyebrow" Text="TRANSFER METHOD" />
-              <Border Background="#111415" BorderBrush="#303536" BorderThickness="1" CornerRadius="9" Padding="4">
+        <Border Grid.Column="1" Classes="panel">
+          <StackPanel Spacing="18">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="sectionTitle" Text="Transfer method" />
+              <Border Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="4">
                 <Grid ColumnDefinitions="*,*,*">
                   <Button Name="CompareMethodButton" Grid.Column="0" Classes="method selected" Tag="0" Content="Compare" Click="MethodClicked" />
                   <Button Name="SingleMethodButton" Grid.Column="1" Classes="method" Tag="1" Content="Single" Click="MethodClicked" />
                   <Button Name="AggregateMethodButton" Grid.Column="2" Classes="method" Tag="2" Content="Aggregate" Click="MethodClicked" />
                 </Grid>
               </Border>
-              <TextBlock Name="MethodDetailText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+              <TextBlock Name="MethodDetailText" Classes="muted" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
             </StackPanel>
-          </Border>
 
-          <Border Classes="panel">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="eyebrow" Text="RUN PLAN" />
+            <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0" />
+
+            <StackPanel Spacing="9">
+              <TextBlock Classes="sectionTitle" Text="Run plan" />
               <Grid ColumnDefinitions="*,Auto" MinHeight="22">
-                <TextBlock Classes="muted" FontSize="12" Text="Estimated time" VerticalAlignment="Center" />
-                <TextBlock Name="EstimatedTimeText" Grid.Column="1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" FontSize="11" Text="Estimated time" VerticalAlignment="Center" />
+                <TextBlock Name="EstimatedTimeText" Grid.Column="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
               </Grid>
               <Grid ColumnDefinitions="*,Auto" MinHeight="22">
-                <TextBlock Classes="muted" FontSize="12" Text="Transfer cap" VerticalAlignment="Center" />
-                <TextBlock Name="TransferCapText" Grid.Column="1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" FontSize="11" Text="Transfer cap" VerticalAlignment="Center" />
+                <TextBlock Name="TransferCapText" Grid.Column="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
               </Grid>
               <Grid ColumnDefinitions="*,Auto" MinHeight="22">
-                <TextBlock Classes="muted" FontSize="12" Text="Confirmation" VerticalAlignment="Center" />
-                <TextBlock Name="ConfirmationText" Grid.Column="1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" FontSize="11" Text="Confirmation" VerticalAlignment="Center" />
+                <TextBlock Name="ConfirmationText" Grid.Column="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
               </Grid>
-              <Border BorderBrush="#303536" BorderThickness="0,1,0,0" Margin="0,3,0,0" Padding="0,10,0,0">
-                <TextBlock Name="AvailabilityText" Classes="muted" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
-              </Border>
+              <TextBlock Name="AvailabilityText" Classes="muted" Margin="0,4,0,0" FontSize="10" LineHeight="16" TextWrapping="Wrap" />
             </StackPanel>
-          </Border>
-        </StackPanel>
+          </StackPanel>
+        </Border>
       </Grid>
 
-      <Border Grid.Row="3" Classes="panel">
+      <Border Grid.Row="3" Background="{DynamicResource AppRaisedBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="15">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
-          <StackPanel Spacing="7" VerticalAlignment="Center">
-            <TextBlock Classes="eyebrow" Text="READY CHECK" />
-            <WrapPanel ItemSpacing="18" LineSpacing="6">
-              <TextBlock Name="InterfaceText" Classes="muted" FontSize="12" LineHeight="16" />
-              <TextBlock Name="EndpointText" Classes="muted" FontSize="12" LineHeight="16" />
-              <TextBlock Name="NetworkText" Classes="muted" FontSize="12" LineHeight="16" />
-            </WrapPanel>
-          </StackPanel>
-          <Button Name="RunButton" Grid.Column="1" Classes="primary" Content="Run diagnostic" Click="RunClicked" VerticalAlignment="Center" />
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="18" VerticalAlignment="Center">
+            <StackPanel Grid.Column="0" Spacing="3">
+              <TextBlock Classes="eyebrow" Text="INTERFACE" />
+              <TextBlock Name="InterfaceText" Classes="muted" FontSize="11" LineHeight="16" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="3">
+              <TextBlock Classes="eyebrow" Text="ENDPOINT" />
+              <TextBlock Name="EndpointText" Classes="muted" FontSize="11" LineHeight="16" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="3">
+              <TextBlock Classes="eyebrow" Text="NETWORK" />
+              <TextBlock Name="NetworkText" Classes="muted" FontSize="11" LineHeight="16" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+          <Button Name="RunButton" Grid.Column="1" Classes="primary" MinWidth="150" Content="Run diagnostic" Click="RunClicked" VerticalAlignment="Center" />
         </Grid>
       </Border>
     </Grid>
