@@ -9,7 +9,7 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestSetupWorkspace
 {
-    private const int MinimumTimelineSlots = 24;
+    private const int MinimumTimelineSlots = 48;
     private Button? sevenDaysButton;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
@@ -125,7 +125,7 @@ public sealed partial class TestSetupWorkspace
         if (!colorByLatency) return;
         foreach (var bar in bars)
         {
-            AlignBarToneWithLatency(bar);
+            AlignBarGeometryAndTone(bar);
         }
     }
 
@@ -135,13 +135,14 @@ public sealed partial class TestSetupWorkspace
         && ToolTip.GetTip(bars[0]) is null
         && bars[0].CornerRadius.TopLeft >= 4;
 
-    private static void AlignBarToneWithLatency(Border bar)
+    private static void AlignBarGeometryAndTone(Border bar)
     {
         var tooltip = ToolTip.GetTip(bar)?.ToString();
         if (string.IsNullOrWhiteSpace(tooltip)) return;
         var token = tooltip.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var latency)) return;
 
+        bar.Height = Math.Clamp(8 + latency / 4, 10, 58);
         RemoveScoreClasses(bar);
         bar.Classes.Add(latency switch
         {
