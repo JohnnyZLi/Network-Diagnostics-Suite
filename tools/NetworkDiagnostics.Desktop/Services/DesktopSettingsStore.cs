@@ -7,7 +7,7 @@ namespace NetworkDiagnostics.Desktop.Services;
 
 public sealed record DesktopSettings(
     bool IncludeLocalIdentifiers = false,
-    string Appearance = "system",
+    string Appearance = "dark",
     string DefaultProfile = "connection-check",
     string DefaultTransferMethod = "compare",
     string? ReportDirectory = null,
@@ -31,7 +31,8 @@ public sealed record DesktopSettings(
     bool LiveTrayEnabled = false,
     bool ReduceMotion = false,
     bool IncreaseContrast = false,
-    DesktopWorkbenchState? Workbench = null)
+    DesktopWorkbenchState? Workbench = null,
+    int VisualGeneration = 2)
 {
     public TestProfileId SelectedProfile => DefaultProfile switch
     {
@@ -133,6 +134,8 @@ public sealed record DesktopSettings(
 
 public sealed class DesktopSettingsStore
 {
+    private const int CurrentVisualGeneration = 2;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -158,7 +161,17 @@ public sealed class DesktopSettingsStore
         try
         {
             var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken);
-            return JsonSerializer.Deserialize<DesktopSettings>(json, JsonOptions) ?? new DesktopSettings();
+            var loaded = JsonSerializer.Deserialize<DesktopSettings>(json, JsonOptions) ?? new DesktopSettings();
+            return loaded.VisualGeneration < CurrentVisualGeneration
+                ? loaded with
+                {
+                    Appearance = "dark",
+                    VisualGeneration = CurrentVisualGeneration,
+                    Workbench = loaded.Workbench is null
+                        ? null
+                        : loaded.Workbench with { InspectorOpen = false }
+                }
+                : loaded;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
         {
