@@ -6,6 +6,7 @@
     <Setter Property="Padding" Value="13,6" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
@@ -54,20 +55,91 @@
     <Setter Property="Padding" Value="18,12" />
   </Style>
 
+  <Style Selector="ComboBox">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="MaxDropDownHeight" Value="300" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+  </Style>
+  <Style Selector="ComboBox /template/ ContentControl#ContentPresenter">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Margin" Value="0,0,12,0" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="ComboBox:dropdownopen /template/ Border#PopupBorder">
+    <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="5" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="BoxShadow" Value="0 14 38 0 #78000000" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ComboBoxItem /template/ ContentPresenter">
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:disabled">
+    <Setter Property="Opacity" Value="0.42" />
+  </Style>
+
   <Style Selector="workspaces|TestSetupWorkspace Button.speedAction">
     <Setter Property="MinHeight" Value="34" />
     <Setter Property="Padding" Value="13,6" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
   <Style Selector="workspaces|SettingsWorkspace Button.sectionNav">
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="Padding" Value="12,5" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="13,0" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="10" />
     <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace Button.sectionNav:pointerover">
     <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
@@ -84,10 +156,13 @@
     <Setter Property="FontSize" Value="12" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace ComboBox">
-    <Setter Property="MinHeight" Value="34" />
-    <Setter Property="Padding" Value="10,0" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="9" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace Border.settingsCard">
     <Setter Property="CornerRadius" Value="12" />
