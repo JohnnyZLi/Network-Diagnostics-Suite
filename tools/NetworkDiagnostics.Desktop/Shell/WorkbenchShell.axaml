@@ -70,7 +70,7 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.activeRun:pointerover">
-      <Setter Property="Background" Value="#38271F" />
+      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
     </Style>
     <Style Selector="Button.breadcrumb">
