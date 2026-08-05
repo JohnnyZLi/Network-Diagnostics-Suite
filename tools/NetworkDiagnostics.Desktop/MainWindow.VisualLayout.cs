@@ -10,6 +10,7 @@ public sealed partial class MainWindow
     {
         base.OnOpened(eventArgs);
         ApplyViewportAwareLayouts();
+        WireControlCenterOverlays();
         SizeChanged += VisualLayoutWindowSizeChanged;
     }
 
