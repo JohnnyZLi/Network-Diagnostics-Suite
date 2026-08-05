@@ -216,14 +216,13 @@ public sealed partial class TestSetupWorkspace : UserControl
                 Width = samples.Count > 50 ? 4 : 6,
                 Height = height,
                 CornerRadius = new CornerRadius(2),
-                VerticalAlignment = VerticalAlignment.Bottom,
-                ToolTip = new ToolTip
-                {
-                    Content = sample.State == MonitorSampleState.Unresponsive
-                        ? $"Unreachable · {sample.Timestamp.ToLocalTime():h:mm:ss tt}"
-                        : $"{sample.LatencyMs:0.#} ms · {sample.Timestamp.ToLocalTime():h:mm:ss tt}"
-                }
+                VerticalAlignment = VerticalAlignment.Bottom
             };
+            ToolTip.SetTip(
+                bar,
+                sample.State == MonitorSampleState.Unresponsive
+                    ? $"Unreachable · {sample.Timestamp.ToLocalTime():h:mm:ss tt}"
+                    : $"{sample.LatencyMs:0.#} ms · {sample.Timestamp.ToLocalTime():h:mm:ss tt}");
             ApplySampleClass(bar, sample);
             ResponsivenessTimelinePanel.Children.Add(bar);
         }
