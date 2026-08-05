@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
@@ -39,10 +40,10 @@ public sealed partial class WorkbenchShell : UserControl
         set
         {
             if (value is Control control
-                && TopLevel.GetTopLevel(control) is Window window
-                && ReferenceEquals(window.Content, control))
+                && control.GetLogicalParent() is ContentControl parent
+                && ReferenceEquals(parent.Content, control))
             {
-                window.Content = null;
+                parent.Content = null;
             }
 
             WorkspaceHost.Content = value;
