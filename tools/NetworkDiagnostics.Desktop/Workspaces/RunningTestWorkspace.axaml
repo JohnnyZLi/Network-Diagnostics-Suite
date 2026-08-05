@@ -4,69 +4,91 @@
              Background="{DynamicResource AppCanvasBrush}"
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
-  <Grid RowDefinitions="Auto,*" Margin="30,26,30,30">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+  <Grid RowDefinitions="Auto,*"
+        Margin="34,30,34,34"
+        MaxWidth="1380"
+        HorizontalAlignment="Stretch">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="22">
       <StackPanel Spacing="5">
-        <TextBlock Classes="eyebrow" Text="ACTIVE DIAGNOSTIC" />
-        <TextBlock Name="TitleText" FontSize="29" FontWeight="SemiBold" Text="Running test" />
+        <TextBlock Classes="eyebrow" Text="LIVE DIAGNOSTIC" />
+        <TextBlock Name="TitleText" FontSize="30" FontWeight="SemiBold" Text="Running test" />
         <TextBlock Name="SubtitleText" Classes="muted" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
       <Button Name="StopButton"
               Grid.Column="1"
               Classes="danger"
-              Content="Stop test"
+              Content="Stop diagnostic"
               Click="StopClicked"
-              VerticalAlignment="Top" />
+              VerticalAlignment="Center" />
     </Grid>
 
-    <Grid Grid.Row="1" Margin="0,22,0,0" ColumnDefinitions="1.45*,0.85*" ColumnSpacing="16">
+    <Grid Grid.Row="1" Margin="0,22,0,0" ColumnDefinitions="0.92*,1.08*" ColumnSpacing="18">
       <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="14">
-          <Border Classes="accentSurface" Padding="20">
-            <StackPanel Spacing="14">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="eyebrow" Text="CURRENT PHASE" />
-                  <TextBlock Name="PhaseText" FontSize="22" FontWeight="SemiBold" />
-                  <TextBlock Name="DetailText" Classes="secondary" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+        <StackPanel Spacing="16">
+          <Border Background="{DynamicResource AppRaisedBrush}"
+                  CornerRadius="16"
+                  Padding="24">
+            <StackPanel Spacing="20" HorizontalAlignment="Stretch">
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <TextBlock Classes="eyebrow" Text="CURRENT PHASE" HorizontalAlignment="Center" />
+                <Border Width="230"
+                        Height="230"
+                        CornerRadius="115"
+                        Background="{DynamicResource AppSelectedBrush}"
+                        BorderBrush="{DynamicResource AppAccentBorderBrush}"
+                        BorderThickness="1">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <TextBlock Name="ProgressText"
+                               FontSize="48"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Name="PhaseText"
+                               FontSize="17"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="160" />
+                  </StackPanel>
+                </Border>
+                <TextBlock Name="DetailText"
+                           Classes="secondary"
+                           FontSize="11"
+                           LineHeight="17"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="420" />
+              </StackPanel>
+
+              <ProgressBar Name="ProgressBar" Minimum="0" Maximum="100" Height="6" />
+
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Classes="eyebrow" Text="RATE" />
+                  <TextBlock Name="RateText" FontSize="21" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" FontSize="9" Text="Current transfer" />
                 </StackPanel>
-                <TextBlock Name="ProgressText"
-                           Grid.Column="1"
-                           FontSize="30"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Classes="eyebrow" Text="LATENCY" />
+                  <TextBlock Name="LatencyText" FontSize="21" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" FontSize="9" Text="Current response" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Classes="eyebrow" Text="MEASURED" />
+                  <TextBlock Name="BytesText" FontSize="21" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" FontSize="9" Text="Reported payload" />
+                </StackPanel>
               </Grid>
-              <ProgressBar Name="ProgressBar" Minimum="0" Maximum="100" Height="7" />
             </StackPanel>
           </Border>
 
-          <Border Classes="surface" Padding="0">
-            <Grid ColumnDefinitions="*,1,*,1,*">
-              <StackPanel Grid.Column="0" Margin="18,16" Spacing="5">
-                <TextBlock Classes="eyebrow" Text="LIVE RATE" />
-                <TextBlock Name="RateText" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="10" Text="Current transfer sample" />
-              </StackPanel>
-              <Border Grid.Column="1" Width="1" Background="{DynamicResource AppBorderBrush}" />
-              <StackPanel Grid.Column="2" Margin="18,16" Spacing="5">
-                <TextBlock Classes="eyebrow" Text="LIVE LATENCY" />
-                <TextBlock Name="LatencyText" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="10" Text="Current responsiveness" />
-              </StackPanel>
-              <Border Grid.Column="3" Width="1" Background="{DynamicResource AppBorderBrush}" />
-              <StackPanel Grid.Column="4" Margin="18,16" Spacing="5">
-                <TextBlock Classes="eyebrow" Text="MEASURED" />
-                <TextBlock Name="BytesText" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="10" Text="Reported payload" />
-              </StackPanel>
-            </Grid>
-          </Border>
-
-          <Border Classes="surface" Padding="18">
-            <StackPanel Spacing="12">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="eyebrow" Text="PHASE TIMELINE" />
-                <TextBlock Classes="muted" FontSize="11" Text="Progress through the diagnostic measurement plan." />
+          <Border Background="{DynamicResource AppRaisedBrush}"
+                  CornerRadius="14"
+                  Padding="19">
+            <StackPanel Spacing="13">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="eyebrow" Text="MEASUREMENT PLAN" />
+                <TextBlock Classes="muted" FontSize="10" Text="Completed, current, and upcoming phases." />
               </StackPanel>
               <ItemsControl Name="PhaseItems" />
             </StackPanel>
@@ -74,18 +96,24 @@
         </StackPanel>
       </ScrollViewer>
 
-      <Border Grid.Column="1" Classes="surface" Padding="18">
+      <Border Grid.Column="1"
+              Background="{DynamicResource AppRaisedBrush}"
+              CornerRadius="16"
+              Padding="20">
         <Grid RowDefinitions="Auto,*">
           <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Classes="eyebrow" Text="LIVE EVIDENCE" />
-            <TextBlock FontSize="17" FontWeight="SemiBold" Text="Engine observations" />
+            <TextBlock FontSize="18" FontWeight="SemiBold" Text="Engine observations" />
             <TextBlock Classes="muted"
-                       FontSize="11"
-                       LineHeight="17"
-                       Text="Newest updates appear first and remain available for this run."
+                       FontSize="10"
+                       LineHeight="15"
+                       Text="Newest measurements appear first and remain attached to this run."
                        TextWrapping="Wrap" />
           </StackPanel>
-          <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Grid.Row="1"
+                        Margin="0,15,0,0"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
             <StackPanel Name="EventPanel" />
           </ScrollViewer>
         </Grid>
