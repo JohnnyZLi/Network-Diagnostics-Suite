@@ -57,40 +57,42 @@ public sealed partial class TestResultWorkspace : UserControl
     private void RenderMetrics(IReadOnlyList<MetricPresentation> metrics)
     {
         MetricGrid.Children.Clear();
-        for (var index = 0; index < Math.Min(4, metrics.Count); index++)
+        var visibleCount = Math.Min(4, metrics.Count);
+        for (var index = 0; index < visibleCount; index++)
         {
             var metric = metrics[index];
             var label = new TextBlock
             {
-                Text = metric.Label.ToUpperInvariant(),
-                FontSize = 10,
-                FontWeight = FontWeight.SemiBold,
-                LetterSpacing = 1.2,
-                Foreground = Brush.Parse("#C77E68")
+                Text = metric.Label.ToUpperInvariant()
             };
+            label.Classes.Add("eyebrow");
+
             var value = new TextBlock
             {
                 Text = metric.Value,
                 FontSize = 23,
                 FontWeight = FontWeight.SemiBold,
-                Opacity = metric.WasMeasured ? 1 : 0.65
+                Opacity = metric.WasMeasured ? 1 : 0.62
             };
             var detail = new TextBlock
             {
                 Text = metric.Detail,
-                FontSize = 11,
-                Foreground = Brush.Parse("#969C9D"),
+                FontSize = 10,
+                LineHeight = 15,
                 TextWrapping = TextWrapping.Wrap
             };
+            detail.Classes.Add("muted");
+
             var content = new StackPanel { Spacing = 5 };
             content.Children.Add(label);
             content.Children.Add(value);
             content.Children.Add(detail);
-            var card = new Border { Child = content };
-            card.Classes.Add("panel");
-            card.Padding = new Avalonia.Thickness(14);
-            Grid.SetColumn(card, index);
-            MetricGrid.Children.Add(card);
+
+            var cell = new Border { Child = content };
+            cell.Classes.Add("metricCell");
+            if (index == visibleCount - 1) cell.Classes.Add("last");
+            Grid.SetColumn(cell, index);
+            MetricGrid.Children.Add(cell);
         }
     }
 
@@ -101,16 +103,14 @@ public sealed partial class TestResultWorkspace : UserControl
         {
             var label = new TextBlock
             {
-                Text = finding.Label.ToUpperInvariant(),
-                FontSize = 10,
-                FontWeight = FontWeight.SemiBold,
-                LetterSpacing = 1.2,
-                Foreground = Brush.Parse("#C77E68")
+                Text = finding.Label.ToUpperInvariant()
             };
+            label.Classes.Add("eyebrow");
+
             var title = new TextBlock
             {
                 Text = finding.Title,
-                FontSize = 16,
+                FontSize = 15,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap
             };
@@ -118,20 +118,24 @@ public sealed partial class TestResultWorkspace : UserControl
             {
                 Text = finding.Summary,
                 FontSize = 12,
-                Foreground = Brush.Parse("#969C9D"),
+                LineHeight = 18,
                 TextWrapping = TextWrapping.Wrap
             };
+            summary.Classes.Add("secondary");
+
             var content = new StackPanel { Spacing = 4 };
             content.Children.Add(label);
             content.Children.Add(title);
             content.Children.Add(summary);
-            FindingsPanel.Children.Add(new Border
+
+            var row = new Border
             {
-                BorderBrush = Brush.Parse("#303536"),
-                BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-                Padding = new Avalonia.Thickness(0, 0, 0, 12),
+                Padding = new Avalonia.Thickness(0, 4, 0, 13),
+                Margin = new Avalonia.Thickness(0, 0, 0, 12),
                 Child = content
-            });
+            };
+            row.Classes.Add("divider");
+            FindingsPanel.Children.Add(row);
         }
     }
 
@@ -143,16 +147,20 @@ public sealed partial class TestResultWorkspace : UserControl
             var marker = new TextBlock
             {
                 Text = "•",
-                Foreground = Brush.Parse("#C77E68"),
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Top
             };
+            marker.Classes.Add("eyebrow");
+
             var text = new TextBlock
             {
                 Text = item,
                 FontSize = 12,
-                Foreground = Brush.Parse("#D6D3CD"),
+                LineHeight = 18,
                 TextWrapping = TextWrapping.Wrap
             };
+            text.Classes.Add("secondary");
+
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
             row.Children.Add(marker);
             Grid.SetColumn(text, 1);
@@ -176,7 +184,9 @@ public sealed partial class TestResultWorkspace : UserControl
 
     private void AddDetail(string label, string value)
     {
-        var labelText = new TextBlock { Text = label, FontSize = 11, Foreground = Brush.Parse("#969C9D") };
+        var labelText = new TextBlock { Text = label, FontSize = 11 };
+        labelText.Classes.Add("muted");
+
         var valueText = new TextBlock
         {
             Text = value,
@@ -233,8 +243,7 @@ public sealed partial class TestResultWorkspace : UserControl
             var context = ReportComparisonService.ContextLabel(report);
             return string.IsNullOrWhiteSpace(context)
                 ? $"Saved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}"
-                : $"{context}\nSaved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}"
-                ;
+                : $"{context}\nSaved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}";
         }
 
         return session.Status switch
