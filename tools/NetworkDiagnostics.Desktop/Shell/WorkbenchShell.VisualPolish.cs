@@ -9,6 +9,7 @@ public sealed partial class WorkbenchShell
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
+        EnsureOverlay();
         ReportsWorkspaceButton.IsVisible = false;
         ComparisonsWorkspaceButton.IsVisible = false;
         TestWorkspaceLabel.Text = "Control center";
