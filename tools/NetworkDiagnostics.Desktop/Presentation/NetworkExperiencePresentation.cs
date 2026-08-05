@@ -49,25 +49,43 @@ public static class NetworkExperiencePresenter
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(options);
 
-        var cutoff = DateTimeOffset.UtcNow - window.Duration();
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now - window.Duration();
         var heartbeatSamples = snapshot.Samples
             .Where(sample => !sample.IsSpeedMeasurement && sample.Timestamp >= cutoff)
             .OrderBy(sample => sample.Timestamp)
             .ToArray();
+        var successfulHeartbeatHistory = snapshot.Samples
+            .Where(sample => !sample.IsSpeedMeasurement)
+            .Where(sample => sample.State is MonitorSampleState.Responsive or MonitorSampleState.Laggy)
+            .OrderBy(sample => sample.Timestamp)
+            .ToArray();
+        var hasSuccessfulBaseline = successfulHeartbeatHistory.Length > 0;
+        var endpointUnavailable = snapshot.IsRunning
+            && heartbeatSamples.Length > 0
+            && !hasSuccessfulBaseline
+            && heartbeatSamples.All(sample => sample.State is MonitorSampleState.Unresponsive or MonitorSampleState.Inactive);
+        var presentationSamples = endpointUnavailable
+            ? heartbeatSamples.Select(NeutralizePreBaselineFailure).ToArray()
+            : heartbeatSamples;
         var latestSpeed = snapshot.Samples
-            .Where(sample => sample.IsSpeedMeasurement && sample.Timestamp >= DateTimeOffset.UtcNow - TimeSpan.FromHours(24))
+            .Where(sample => sample.IsSpeedMeasurement && sample.Timestamp >= now - TimeSpan.FromHours(24))
             .OrderByDescending(sample => sample.Timestamp)
             .FirstOrDefault();
 
-        var responsiveness = BuildResponsiveness(heartbeatSamples);
-        var reliability = BuildReliability(heartbeatSamples);
+        var responsiveness = BuildResponsiveness(presentationSamples);
+        var reliability = BuildReliability(presentationSamples);
         var speed = BuildSpeed(latestSpeed, options);
-        var score = WeightedOverall(responsiveness.Score, reliability.Score, speed.Score);
+        var score = endpointUnavailable
+            ? null
+            : WeightedOverall(responsiveness.Score, reliability.Score, speed.Score);
         var band = Band(score);
         var latest = heartbeatSamples.LastOrDefault() ?? snapshot.Samples.OrderBy(sample => sample.Timestamp).LastOrDefault();
-        var timeline = Downsample(heartbeatSamples, MaximumTimelinePoints);
+        var timeline = Downsample(presentationSamples, MaximumTimelinePoints);
+        var firstSuccessfulSample = successfulHeartbeatHistory.FirstOrDefault()?.Timestamp;
         var alerts = snapshot.Alerts
             .Where(alert => alert.Timestamp >= cutoff)
+            .Where(alert => firstSuccessfulSample is not null && alert.Timestamp >= firstSuccessfulSample)
             .OrderByDescending(alert => alert.Timestamp)
             .Take(12)
             .ToArray();
@@ -75,11 +93,17 @@ public static class NetworkExperiencePresenter
         return new NetworkExperiencePresentation(
             score,
             band,
-            StatusFor(band),
-            SummaryFor(band, snapshot.IsRunning, heartbeatSamples.Length),
+            endpointUnavailable ? "Monitor unavailable" : StatusFor(band),
+            endpointUnavailable
+                ? "The monitoring endpoint could not be reached. This does not yet prove that the local connection is down."
+                : SummaryFor(band, snapshot.IsRunning, heartbeatSamples.Length),
             Environment.MachineName,
             latest?.InterfaceName ?? "Automatic routing",
-            latest is null ? "No measurements yet" : $"Updated {RelativeTime(latest.Timestamp)}",
+            latest is null
+                ? "No measurements yet"
+                : endpointUnavailable
+                    ? $"Endpoint check failed {RelativeTime(latest.Timestamp)}"
+                    : $"Updated {RelativeTime(latest.Timestamp)}",
             snapshot.IsRunning,
             window,
             responsiveness,
@@ -87,24 +111,36 @@ public static class NetworkExperiencePresenter
             speed,
             timeline,
             alerts,
-            snapshot.Alerts.Count(alert => !alert.IsRead));
+            alerts.Count(alert => !alert.IsRead));
     }
+
+    private static MonitorSample NeutralizePreBaselineFailure(MonitorSample sample) =>
+        sample.State == MonitorSampleState.Unresponsive
+            ? sample with
+            {
+                State = MonitorSampleState.Inactive,
+                PacketLossPercent = 0
+            }
+            : sample;
 
     private static ExperienceComponentPresentation BuildResponsiveness(IReadOnlyList<MonitorSample> samples)
     {
-        var measured = samples
+        var activeSamples = samples
+            .Where(sample => sample.State is MonitorSampleState.Responsive or MonitorSampleState.Laggy or MonitorSampleState.Unresponsive)
+            .ToArray();
+        var measured = activeSamples
             .Where(sample => sample.State is MonitorSampleState.Responsive or MonitorSampleState.Laggy)
             .Where(sample => sample.LatencyMs is not null)
             .ToArray();
         if (measured.Length == 0)
         {
-            return Unavailable("Responsiveness", "Waiting for response-time samples", "Latency, jitter, DNS, and time to first byte will appear here.");
+            return Unavailable("Responsiveness", "Waiting for response-time samples", "Latency, jitter, DNS, and time to first byte will appear after the endpoint responds.");
         }
 
         var latency = Median(measured.Select(sample => sample.LatencyMs!.Value));
         var jitterValues = measured.Where(sample => sample.JitterMs is not null).Select(sample => sample.JitterMs!.Value).ToArray();
         var jitter = jitterValues.Length == 0 ? 0 : Median(jitterValues);
-        var loss = samples.Count == 0 ? 0 : samples.Average(sample => sample.PacketLossPercent);
+        var loss = activeSamples.Length == 0 ? 0 : activeSamples.Average(sample => sample.PacketLossPercent);
         var latencyScore = ScoreLowerIsBetter(latency, [(20, 100), (50, 82), (100, 58), (250, 24), (500, 0)]);
         var jitterScore = ScoreLowerIsBetter(jitter, [(5, 100), (20, 82), (50, 52), (100, 18), (200, 0)]);
         var lossScore = Math.Clamp(100 - loss * 18, 0, 100);
@@ -133,20 +169,23 @@ public static class NetworkExperiencePresenter
 
     private static ExperienceComponentPresentation BuildReliability(IReadOnlyList<MonitorSample> samples)
     {
-        if (samples.Count == 0)
+        var activeSamples = samples
+            .Where(sample => sample.State is MonitorSampleState.Responsive or MonitorSampleState.Laggy or MonitorSampleState.Unresponsive)
+            .ToArray();
+        if (activeSamples.Length == 0)
         {
-            return Unavailable("Reliability", "Waiting for availability samples", "Responsive, laggy, and outage periods will appear here.");
+            return Unavailable("Reliability", "Waiting for availability samples", "Responsive, laggy, and outage periods will appear after a monitoring baseline is established.");
         }
 
-        var responsive = samples.Count(sample => sample.State == MonitorSampleState.Responsive);
-        var laggy = samples.Count(sample => sample.State == MonitorSampleState.Laggy);
-        var unresponsive = samples.Count(sample => sample.State == MonitorSampleState.Unresponsive);
-        var active = Math.Max(1, responsive + laggy + unresponsive);
+        var responsive = activeSamples.Count(sample => sample.State == MonitorSampleState.Responsive);
+        var laggy = activeSamples.Count(sample => sample.State == MonitorSampleState.Laggy);
+        var unresponsive = activeSamples.Count(sample => sample.State == MonitorSampleState.Unresponsive);
+        var active = responsive + laggy + unresponsive;
         var availability = (responsive + laggy) / (double)active * 100;
         var responsivePercent = responsive / (double)active * 100;
         var laggyPercent = laggy / (double)active * 100;
         var unresponsivePercent = unresponsive / (double)active * 100;
-        var averageLoss = samples.Average(sample => sample.PacketLossPercent);
+        var averageLoss = activeSamples.Average(sample => sample.PacketLossPercent);
         var score = (int)Math.Round(Math.Clamp(
             availability - unresponsivePercent * 1.5 - laggyPercent * 0.18 - averageLoss * 2.2,
             0,
