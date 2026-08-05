@@ -4,22 +4,6 @@
              Background="{DynamicResource AppCanvasBrush}"
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
-  <UserControl.Styles>
-    <Style Selector="Border.metricCard">
-      <Setter Property="Width" Value="200" />
-      <Setter Property="Height" Value="104" />
-      <Setter Property="Margin" Value="0,0,10,10" />
-      <Setter Property="Padding" Value="14" />
-      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
-    </Style>
-    <Style Selector="Border.metricCard.unmeasured">
-      <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
-    </Style>
-  </UserControl.Styles>
-
   <Grid RowDefinitions="52,*">
     <Border Grid.Row="0"
             BorderBrush="{DynamicResource AppBorderBrush}"
@@ -40,36 +24,79 @@
     </Border>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="34,30,34,40" Spacing="18">
-        <Grid ColumnDefinitions="*,300" ColumnSpacing="22">
-          <StackPanel Grid.Column="0" Spacing="8">
+      <StackPanel Margin="34,30,34,42" Spacing="22">
+        <Grid ColumnDefinitions="Auto,*,300" ColumnSpacing="14">
+          <Border Name="OutcomeIndicator"
+                  Grid.Column="0"
+                  Width="12"
+                  Height="12"
+                  CornerRadius="6"
+                  Classes="indicatorNeutral"
+                  Margin="0,8,0,0"
+                  VerticalAlignment="Top" />
+
+          <StackPanel Grid.Column="1" Spacing="8">
             <TextBlock Name="OutcomeLabelText" Classes="eyebrow" />
-            <TextBlock Name="VerdictText" FontSize="30" FontWeight="SemiBold" LineHeight="36" TextWrapping="Wrap" />
-            <TextBlock Name="SummaryText" Classes="secondary" FontSize="15" LineHeight="23" MaxWidth="780" TextWrapping="Wrap" />
+            <TextBlock Name="VerdictText"
+                       FontSize="32"
+                       FontWeight="SemiBold"
+                       LineHeight="38"
+                       TextWrapping="Wrap" />
+            <TextBlock Name="SummaryText"
+                       Classes="secondary"
+                       FontSize="15"
+                       LineHeight="23"
+                       MaxWidth="780"
+                       TextWrapping="Wrap" />
           </StackPanel>
-          <Border Grid.Column="1" Classes="accentSurface" Padding="17">
+
+          <Border Grid.Column="2" Classes="accentSurface" Padding="18">
             <StackPanel Spacing="7">
-              <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
-              <TextBlock Name="NextActionText" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
+              <TextBlock Classes="eyebrow" Text="RECOMMENDED NEXT STEP" />
+              <TextBlock Name="NextActionText"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         LineHeight="21"
+                         TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </Grid>
 
-        <StackPanel Spacing="9">
-          <TextBlock Classes="eyebrow" Text="MEASUREMENTS" />
-          <WrapPanel Name="MetricsPanel" ItemWidth="210" ItemHeight="114" />
+        <StackPanel Spacing="11">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="eyebrow" Text="NETWORK HEALTH" />
+              <TextBlock FontSize="17" FontWeight="SemiBold" Text="The saved run at a glance" />
+            </StackPanel>
+            <TextBlock Grid.Column="1"
+                       Classes="muted"
+                       FontSize="10"
+                       Text="Responsiveness · Reliability · Throughput"
+                       VerticalAlignment="Bottom" />
+          </Grid>
+
+          <Grid Name="HealthGroupGrid"
+                ColumnDefinitions="*,*,*"
+                RowDefinitions="Auto"
+                ColumnSpacing="12"
+                RowSpacing="12">
+            <ContentControl Name="ResponsivenessGroupHost" Grid.Column="0" />
+            <ContentControl Name="ReliabilityGroupHost" Grid.Column="1" />
+            <ContentControl Name="ThroughputGroupHost" Grid.Column="2" />
+          </Grid>
         </StackPanel>
 
-        <Grid ColumnDefinitions="1.15*,0.85*" ColumnSpacing="14">
-          <Border Grid.Column="0" Classes="surface" Padding="18">
-            <StackPanel Spacing="13">
+        <Grid ColumnDefinitions="1.18*,0.82*" ColumnSpacing="18">
+          <StackPanel Grid.Column="0" Spacing="11">
+            <StackPanel Spacing="4">
               <TextBlock Classes="eyebrow" Text="FINDINGS" />
-              <StackPanel Name="FindingsPanel" />
+              <TextBlock FontSize="17" FontWeight="SemiBold" Text="What materially affected the verdict" />
             </StackPanel>
-          </Border>
+            <StackPanel Name="FindingsPanel" />
+          </StackPanel>
 
-          <Border Grid.Column="1" Classes="surface" Padding="18">
-            <StackPanel Spacing="16">
+          <StackPanel Grid.Column="1" Spacing="12">
+            <Border Classes="surface" Padding="18">
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="REPORT CONTEXT" />
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="18" RowSpacing="8">
@@ -83,15 +110,20 @@
                   <TextBlock Name="ContextText" Grid.Row="3" Grid.Column="1" FontSize="11" TextAlignment="Right" TextWrapping="Wrap" />
                 </Grid>
               </StackPanel>
+            </Border>
 
-              <Border Classes="divider" />
-
-              <StackPanel Spacing="11">
-                <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
-                <StackPanel Name="EvidencePanel" Spacing="8" />
-              </StackPanel>
-            </StackPanel>
-          </Border>
+            <Border Classes="surface" Padding="0" ClipToBounds="True">
+              <Expander IsExpanded="False">
+                <Expander.Header>
+                  <StackPanel Margin="14,12" Spacing="3">
+                    <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
+                    <TextBlock Classes="muted" FontSize="10" Text="Expand raw run and measurement details" />
+                  </StackPanel>
+                </Expander.Header>
+                <StackPanel Name="EvidencePanel" Margin="18,2,18,18" Spacing="8" />
+              </Expander>
+            </Border>
+          </StackPanel>
         </Grid>
       </StackPanel>
     </ScrollViewer>
