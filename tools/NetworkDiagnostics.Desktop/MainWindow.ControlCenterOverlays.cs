@@ -34,13 +34,20 @@ public sealed partial class MainWindow
 
             case ReportDetailDestination when reportDetailWorkspace is not null:
                 ShowControlCenterUnderlay();
+                workbenchShell.SelectControlCenter();
                 workbenchShell.OpenOverlay("Saved diagnostic", reportDetailWorkspace, 1180);
                 break;
 
             case ComparisonDestination:
                 workbenchShell.CloseOverlay();
                 ShowControlCenterUnderlay();
+                workbenchShell.SelectControlCenter();
                 testSetupWorkspace?.OpenInlineComparison();
+                break;
+
+            case ReportListDestination:
+                workbenchShell.CloseOverlay();
+                workbenchShell.SelectControlCenter();
                 break;
 
             default:
