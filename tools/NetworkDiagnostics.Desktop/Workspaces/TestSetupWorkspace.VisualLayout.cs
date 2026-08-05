@@ -18,6 +18,7 @@ public sealed partial class TestSetupWorkspace
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualLayoutSizeChanged;
         LayoutUpdated += RenderedLayoutUpdated;
+        InstallDiagnosticLauncher();
         EnsureSevenDayButton();
         ApplyRenderedVisualLayout(Bounds.Width);
     }
