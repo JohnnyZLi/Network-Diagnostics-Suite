@@ -1,4 +1,5 @@
 using System.Text;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using NetworkDiagnostics.Desktop.Monitoring;
 
