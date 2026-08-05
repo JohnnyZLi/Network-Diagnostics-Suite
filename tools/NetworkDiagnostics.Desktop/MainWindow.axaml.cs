@@ -113,6 +113,7 @@ public sealed partial class MainWindow : Window
         settingsLoaded = false;
         settings = await settingsStore.LoadAsync();
         ApplyAppearance(settings.Appearance);
+        ApplyAccessibilityPreferences();
         monitorWindow = settings.SelectedMonitoringWindow;
         reportStore.Configure(settings.ReportDirectory);
         selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
@@ -129,6 +130,7 @@ public sealed partial class MainWindow : Window
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
         await InitializeMonitoringAsync();
+        await UpdateTrayIntegrationAsync();
         SyncTestWorkspace();
         SyncSettingsWorkspace();
         settingsLoaded = true;
@@ -141,6 +143,7 @@ public sealed partial class MainWindow : Window
         activeRunSession.Dispose();
         preflightCancellation?.Cancel();
         lanServerCancellation?.Cancel();
+        if (liveTrayIcon is not null) liveTrayIcon.IsVisible = false;
         _ = monitoringService.DisposeAsync();
     }
 
