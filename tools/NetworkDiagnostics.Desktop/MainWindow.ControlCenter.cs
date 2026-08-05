@@ -42,11 +42,12 @@ public sealed partial class MainWindow
     private void ControlCenterDiagnosticLauncherRequested(object? sender, EventArgs eventArgs)
     {
         var content = testSetupWorkspace?.DiagnosticLauncherContent;
-        if (workbenchShell is null || content is null) return;
+        if (workbenchShell is null || testSetupWorkspace is null || content is null) return;
 
         ShowControlCenterUnderlay();
+        testSetupWorkspace.PrepareDiagnosticLauncherLayout();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Customize diagnostic", content, 1180, 620);
+        workbenchShell.OpenOverlay("Customize diagnostic", content, 920, 760);
     }
 
     private async void ControlCenterDiagnosticRunRequested(object? sender, IndexRequestedEventArgs eventArgs)
