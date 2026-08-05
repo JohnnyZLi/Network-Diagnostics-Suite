@@ -5,7 +5,8 @@ public enum MonitorWindow
     OneMinute,
     FiveMinutes,
     OneHour,
-    TwentyFourHours
+    TwentyFourHours,
+    SevenDays
 }
 
 public enum MonitorSampleState
@@ -98,7 +99,8 @@ public static class MonitorWindowExtensions
         MonitorWindow.OneMinute => TimeSpan.FromMinutes(1),
         MonitorWindow.FiveMinutes => TimeSpan.FromMinutes(5),
         MonitorWindow.OneHour => TimeSpan.FromHours(1),
-        _ => TimeSpan.FromHours(24)
+        MonitorWindow.TwentyFourHours => TimeSpan.FromHours(24),
+        _ => TimeSpan.FromDays(7)
     };
 
     public static string ContractId(this MonitorWindow window) => window switch
@@ -106,7 +108,8 @@ public static class MonitorWindowExtensions
         MonitorWindow.OneMinute => "1m",
         MonitorWindow.FiveMinutes => "5m",
         MonitorWindow.OneHour => "1h",
-        _ => "24h"
+        MonitorWindow.TwentyFourHours => "24h",
+        _ => "7d"
     };
 
     public static MonitorWindow Parse(string? value) => value switch
@@ -114,6 +117,7 @@ public static class MonitorWindowExtensions
         "1m" => MonitorWindow.OneMinute,
         "5m" => MonitorWindow.FiveMinutes,
         "1h" => MonitorWindow.OneHour,
+        "7d" => MonitorWindow.SevenDays,
         _ => MonitorWindow.TwentyFourHours
     };
 }
