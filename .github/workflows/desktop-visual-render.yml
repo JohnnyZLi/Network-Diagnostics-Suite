@@ -128,7 +128,7 @@ jobs:
           done
 
           run_command 'settings general'
-          xdotool mousemove 780 456 click 1
+          xdotool mousemove 790 435 click 1
           capture settings-interface-dropdown
           xdotool key Escape
 
