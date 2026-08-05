@@ -120,7 +120,7 @@ public sealed partial class SettingsWorkspace : UserControl
         {
             "Monitoring" => ("MONITORING", "Continuous network health", "Configure lightweight sampling, content-speed cadence, score expectations, and degradation alerts."),
             "Measurement" => ("DIAGNOSTICS", "Explicit diagnostic runs", "Configure default profiles, endpoint candidates, and optional trusted-LAN isolation."),
-            "Privacy & data" => ("PRIVACY & DATA", "Report privacy and approvals", "Control local identifiers in saved reports and remembered high-data approvals."),
+            "Privacy & data" => ("PRIVACY", "Report privacy and approvals", "Control local identifiers in saved reports and remembered high-data approvals."),
             "Storage" => ("STORAGE", "Local history and reports", "Inspect the local directory used for reports, alerts, and monitoring samples."),
             "Developer" => ("DEVELOPER", "Presentation previews", "Exercise terminal result states without starting a network measurement."),
             _ => ("GENERAL", "Application behavior", "Choose appearance, active interface, startup behavior, accessibility, and platform integration.")
@@ -206,9 +206,7 @@ public sealed partial class SettingsWorkspace : UserControl
 
     private void SettingsWorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
     {
-        var compact = eventArgs.NewSize.Width < 760;
-        SettingsRootGrid.ColumnDefinitions[0].Width = compact ? new GridLength(154) : new GridLength(190);
-        SettingsContentContainer.Margin = compact
+        SettingsContentContainer.Margin = eventArgs.NewSize.Width < 760
             ? new Thickness(22, 24, 22, 36)
             : new Thickness(34, 30, 34, 42);
     }
