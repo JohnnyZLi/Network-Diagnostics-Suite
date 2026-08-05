@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Styling;
@@ -20,6 +21,8 @@ public sealed partial class MainWindow
         settingsWorkspace.AppearanceRequested += SettingsAppearanceRequested;
         settingsWorkspace.InterfaceRequested += SettingsInterfaceRequested;
         settingsWorkspace.IdentifiersChanged += SettingsIdentifiersChanged;
+        settingsWorkspace.SaveGeneralRequested += SettingsSaveGeneralRequested;
+        settingsWorkspace.SaveMonitoringRequested += SettingsSaveMonitoringRequested;
         settingsWorkspace.RefreshPreflightRequested += SettingsRefreshPreflightRequested;
         settingsWorkspace.SaveMeasurementRequested += SettingsSaveMeasurementRequested;
         settingsWorkspace.StartLanServerRequested += SettingsStartLanServerRequested;
@@ -44,6 +47,18 @@ public sealed partial class MainWindow
             AppearanceIndex(settings.Appearance),
             interfaceLabels,
             selectedInterfaceIndex,
+            settings.StartInBackground,
+            settings.LiveTrayEnabled,
+            settings.ReduceMotion,
+            settings.IncreaseContrast,
+            PlatformFeatureStatus(),
+            settings.MonitoringEnabled,
+            MonitoringIntervalIndex(settings.MonitoringIntervalSeconds),
+            ContentCadenceIndex(settings.ContentSpeedCadenceHours),
+            settings.ExpectedDownloadMbps.ToString("0.###", CultureInfo.InvariantCulture),
+            settings.ExpectedUploadMbps.ToString("0.###", CultureInfo.InvariantCulture),
+            settings.MonitoringAlertScoreThreshold.ToString(CultureInfo.InvariantCulture),
+            monitoringService.Snapshot.StatusMessage,
             settings.IncludeLocalIdentifiers,
             testOriginsText,
             lanTargetText,
@@ -52,7 +67,7 @@ public sealed partial class MainWindow
             lanConnectionsText,
             lanServerStatus,
             lanServerRunning,
-            reportStore.ReportsDirectory,
+            settingsStore.RootDirectory,
             ApprovalSummary(),
             settingsStatus,
             fixtureIndex));
@@ -87,6 +102,54 @@ public sealed partial class MainWindow
         RefreshWorkbenchChrome();
     }
 
+    private async void SettingsSaveGeneralRequested(object? sender, EventArgs eventArgs)
+    {
+        if (settingsWorkspace is null) return;
+        settings = settings with
+        {
+            StartInBackground = settingsWorkspace.StartInBackground,
+            LiveTrayEnabled = settingsWorkspace.LiveTrayEnabled,
+            ReduceMotion = settingsWorkspace.ReduceMotion,
+            IncreaseContrast = settingsWorkspace.IncreaseContrast
+        };
+        ApplyAccessibilityPreferences();
+        settingsStatus = "Application settings saved.";
+        await PersistSettingsAsync();
+        await UpdateTrayIntegrationAsync();
+        SyncSettingsWorkspace("General");
+    }
+
+    private async void SettingsSaveMonitoringRequested(object? sender, EventArgs eventArgs)
+    {
+        if (settingsWorkspace is null) return;
+        if (!TryPositiveDouble(settingsWorkspace.ExpectedDownload, out var expectedDownload)
+            || !TryPositiveDouble(settingsWorkspace.ExpectedUpload, out var expectedUpload)
+            || !int.TryParse(settingsWorkspace.AlertThreshold, NumberStyles.Integer, CultureInfo.InvariantCulture, out var threshold)
+            || threshold is < 1 or > 100)
+        {
+            settingsStatus = "Enter positive expected speeds and an alert threshold from 1 to 100.";
+            SyncSettingsWorkspace("Monitoring");
+            return;
+        }
+
+        settings = settings with
+        {
+            MonitoringEnabled = settingsWorkspace.MonitoringEnabled,
+            MonitoringIntervalSeconds = MonitoringIntervalSeconds(settingsWorkspace.MonitoringIntervalIndex),
+            ContentSpeedCadenceHours = ContentCadenceHours(settingsWorkspace.ContentCadenceIndex),
+            ExpectedDownloadMbps = expectedDownload,
+            ExpectedUploadMbps = expectedUpload,
+            MonitoringAlertScoreThreshold = threshold
+        };
+        await PersistSettingsAsync();
+        await monitoringService.UpdateOptionsAsync(settings.ToMonitorOptions());
+        settingsStatus = settings.MonitoringEnabled
+            ? "Continuous monitoring settings saved and active."
+            : "Continuous monitoring is paused.";
+        SyncSettingsWorkspace("Monitoring");
+        SyncTestWorkspace();
+    }
+
     private async void SettingsRefreshPreflightRequested(object? sender, EventArgs eventArgs)
     {
         await RefreshPreflightAsync();
@@ -99,6 +162,7 @@ public sealed partial class MainWindow
         if (settingsWorkspace is null) return;
         CopyMeasurementSettingsFromWorkspace();
         await SaveAdvancedSettingsAsync();
+        await monitoringService.UpdateOptionsAsync(settings.ToMonitorOptions());
         SyncSettingsWorkspace("Measurement");
         RefreshWorkbenchChrome();
     }
@@ -150,6 +214,23 @@ public sealed partial class MainWindow
         };
     }
 
+    private void ApplyAccessibilityPreferences()
+    {
+        Classes.Set("increasedContrast", settings.IncreaseContrast);
+        Classes.Set("reducedMotion", settings.ReduceMotion);
+    }
+
+    private string PlatformFeatureStatus()
+    {
+        var tray = settings.LiveTrayEnabled
+            ? "Live menu-bar/system-tray status is enabled."
+            : "Live menu-bar/system-tray status is off.";
+        var startup = settings.StartInBackground
+            ? "The app may open without activating its main window."
+            : "The main window opens normally.";
+        return $"{tray} {startup}";
+    }
+
     private static int AppearanceIndex(string? appearance) => appearance?.Trim().ToLowerInvariant() switch
     {
         "light" => 1,
@@ -163,6 +244,46 @@ public sealed partial class MainWindow
         2 => "dark",
         _ => "system"
     };
+
+    private static int MonitoringIntervalIndex(int seconds) => seconds switch
+    {
+        <= 2 => 0,
+        <= 5 => 1,
+        <= 10 => 2,
+        <= 30 => 3,
+        _ => 4
+    };
+
+    private static int MonitoringIntervalSeconds(int index) => index switch
+    {
+        0 => 2,
+        2 => 10,
+        3 => 30,
+        4 => 60,
+        _ => 5
+    };
+
+    private static int ContentCadenceIndex(int hours) => hours switch
+    {
+        1 => 0,
+        4 => 1,
+        6 => 2,
+        24 => 3,
+        _ => 4
+    };
+
+    private static int ContentCadenceHours(int index) => index switch
+    {
+        0 => 1,
+        1 => 4,
+        2 => 6,
+        3 => 24,
+        _ => 0
+    };
+
+    private static bool TryPositiveDouble(string value, out double parsed) =>
+        double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed)
+        && parsed > 0;
 
     private string ApprovalSummary()
     {
