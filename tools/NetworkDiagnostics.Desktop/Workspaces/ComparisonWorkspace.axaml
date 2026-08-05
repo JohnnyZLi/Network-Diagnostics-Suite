@@ -14,42 +14,118 @@
     <Style Selector="TextBlock.deltaNeutral">
       <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
     </Style>
+    <Style Selector="Border.conditionCard">
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+    <Style Selector="TextBlock.columnHeader">
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+      <Setter Property="FontSize" Value="9" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1" />
+    </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*" Margin="30,26,30,26" RowSpacing="16">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
+  <Grid RowDefinitions="Auto,Auto,*"
+        Margin="34,30,34,34"
+        RowSpacing="18"
+        MaxWidth="1480"
+        HorizontalAlignment="Stretch">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="20">
       <StackPanel Spacing="5">
-        <TextBlock Classes="eyebrow" Text="COMPARISON WORKSPACE" />
-        <TextBlock FontSize="28" FontWeight="SemiBold" Text="Compare two reports" />
+        <TextBlock Classes="eyebrow" Text="COMPARE" />
+        <TextBlock FontSize="30" FontWeight="SemiBold" Text="Compare network conditions" />
         <TextBlock Classes="muted"
                    FontSize="12"
-                   Text="Choose an explicit baseline and candidate. Differences in test context remain visible as cautions." />
+                   Text="Use one saved diagnostic as the reference and another as the changed condition." />
       </StackPanel>
       <Button Name="ClearButton"
               Grid.Column="1"
               Classes="ghost"
-              Content="Clear comparison"
+              Content="Clear selection"
               VerticalAlignment="Center"
               IsEnabled="False"
               Click="ClearClicked" />
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="330,*" ColumnSpacing="14">
-      <Border Grid.Column="0" Classes="surface" ClipToBounds="True">
+    <Grid Grid.Row="1" ColumnDefinitions="*,220,*" ColumnSpacing="12">
+      <Border Grid.Column="0" Classes="conditionCard">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="eyebrow" Text="BASELINE" />
+            <TextBlock Name="BaselineTitleText" FontSize="18" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
+            <TextBlock Name="BaselineMetaText" Classes="muted" FontSize="10" LineHeight="15" Text="Choose the report that represents the reference condition." TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Name="OpenBaselineButton"
+                  Grid.Column="1"
+                  Classes="ghost"
+                  Content="Open"
+                  VerticalAlignment="Center"
+                  IsEnabled="False"
+                  Click="OpenBaselineClicked" />
+        </Grid>
+      </Border>
+
+      <Border Name="CompatibilityBanner"
+              Grid.Column="1"
+              Background="{DynamicResource AppInsetBrush}"
+              CornerRadius="14"
+              Padding="15">
+        <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Border Name="CompatibilityIndicator"
+                  Classes="indicatorNeutral"
+                  Width="9"
+                  Height="9"
+                  CornerRadius="5" />
+          <TextBlock Name="CompatibilityTitleText"
+                     FontSize="11"
+                     FontWeight="SemiBold"
+                     Text="Waiting for two reports"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+          <TextBlock Name="CompatibilityDetailText"
+                     Classes="muted"
+                     FontSize="9"
+                     LineHeight="13"
+                     Text="Compatibility checks compare profile, method, endpoint, interface, and transfer ceiling."
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2" Classes="conditionCard">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="eyebrow" Text="CANDIDATE" />
+            <TextBlock Name="CandidateTitleText" FontSize="18" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
+            <TextBlock Name="CandidateMetaText" Classes="muted" FontSize="10" LineHeight="15" Text="Choose a second report to measure change." TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Name="OpenCandidateButton"
+                  Grid.Column="1"
+                  Classes="ghost"
+                  Content="Open"
+                  VerticalAlignment="Center"
+                  IsEnabled="False"
+                  Click="OpenCandidateClicked" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="2" ColumnDefinitions="360,*" ColumnSpacing="18">
+      <Border Grid.Column="0"
+              Background="{DynamicResource AppRaisedBrush}"
+              CornerRadius="14"
+              ClipToBounds="True">
         <Grid RowDefinitions="Auto,*">
-          <Border Background="{DynamicResource AppInsetBrush}"
-                  BorderBrush="{DynamicResource AppBorderBrush}"
-                  BorderThickness="0,0,0,1"
-                  Padding="14,13">
-            <StackPanel Spacing="4">
-              <TextBlock Classes="eyebrow" Text="SAVED REPORTS" />
-              <TextBlock Name="PickerInstructionText"
-                         Classes="muted"
-                         FontSize="11"
-                         Text="Select a baseline first."
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
+          <StackPanel Margin="17,16,17,13" Spacing="4">
+            <TextBlock Classes="eyebrow" Text="SAVED DIAGNOSTICS" />
+            <TextBlock Name="PickerInstructionText"
+                       Classes="muted"
+                       FontSize="10"
+                       Text="Select a baseline first."
+                       TextWrapping="Wrap" />
+          </StackPanel>
           <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Name="ReportPickerPanel" />
           </ScrollViewer>
@@ -57,74 +133,46 @@
       </Border>
 
       <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="14">
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-            <Border Grid.Column="0" Classes="surface" Padding="17">
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="BASELINE" />
-                <TextBlock Name="BaselineTitleText" FontSize="17" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
-                <TextBlock Name="BaselineMetaText" Classes="muted" FontSize="11" LineHeight="17" Text="Choose the report that represents the reference condition." TextWrapping="Wrap" />
-                <Button Name="OpenBaselineButton" Classes="ghost" Content="Open baseline" HorizontalAlignment="Left" IsEnabled="False" Click="OpenBaselineClicked" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Classes="surface" Padding="17">
-              <StackPanel Spacing="7">
-                <TextBlock Classes="eyebrow" Text="CANDIDATE" />
-                <TextBlock Name="CandidateTitleText" FontSize="17" FontWeight="SemiBold" Text="Not selected" TextWrapping="Wrap" />
-                <TextBlock Name="CandidateMetaText" Classes="muted" FontSize="11" LineHeight="17" Text="Choose a second report to measure change." TextWrapping="Wrap" />
-                <Button Name="OpenCandidateButton" Classes="ghost" Content="Open candidate" HorizontalAlignment="Left" IsEnabled="False" Click="OpenCandidateClicked" />
-              </StackPanel>
-            </Border>
-          </Grid>
-
-          <Border Name="CompatibilityBanner" Classes="surfaceSubtle" Padding="15">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-              <Border Name="CompatibilityIndicator"
-                      Classes="indicatorNeutral"
-                      Width="8"
-                      Height="8"
-                      CornerRadius="4"
-                      VerticalAlignment="Top"
-                      Margin="0,4,0,0" />
-              <StackPanel Grid.Column="1" Spacing="3">
-                <TextBlock Name="CompatibilityTitleText" FontSize="13" FontWeight="SemiBold" Text="Waiting for two reports" />
-                <TextBlock Name="CompatibilityDetailText" Classes="muted" FontSize="11" LineHeight="17" Text="Compatibility checks compare profile, method, endpoint, interface, and transfer ceiling." TextWrapping="Wrap" />
-              </StackPanel>
-            </Grid>
-          </Border>
-
-          <Border Classes="accentSurface" Padding="17">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="eyebrow" Text="SUMMARY" />
+        <StackPanel Spacing="16">
+          <Border Background="{DynamicResource AppSelectedBrush}"
+                  CornerRadius="14"
+                  Padding="20">
+            <StackPanel Spacing="6">
+              <TextBlock Classes="eyebrow" Text="INTERPRETATION" />
               <TextBlock Name="ComparisonSummaryText"
-                         FontSize="14"
-                         LineHeight="21"
+                         FontSize="17"
+                         FontWeight="SemiBold"
+                         LineHeight="24"
                          Text="Select two reports to calculate changes."
                          TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
-          <Border Classes="surface" ClipToBounds="True">
-            <Grid RowDefinitions="40,*">
+          <Border Background="{DynamicResource AppRaisedBrush}"
+                  CornerRadius="14"
+                  ClipToBounds="True">
+            <Grid RowDefinitions="42,*">
               <Border Background="{DynamicResource AppInsetBrush}"
                       BorderBrush="{DynamicResource AppBorderBrush}"
                       BorderThickness="0,0,0,1"
-                      Padding="14,0">
+                      Padding="16,0">
                 <Grid ColumnDefinitions="*,130,130,190" ColumnSpacing="12">
-                  <TextBlock Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="METRIC" />
-                  <TextBlock Grid.Column="1" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="BASELINE" />
-                  <TextBlock Grid.Column="2" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="CANDIDATE" />
-                  <TextBlock Grid.Column="3" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="CHANGE" />
+                  <TextBlock Classes="columnHeader" VerticalAlignment="Center" Text="METRIC" />
+                  <TextBlock Grid.Column="1" Classes="columnHeader" VerticalAlignment="Center" Text="BASELINE" />
+                  <TextBlock Grid.Column="2" Classes="columnHeader" VerticalAlignment="Center" Text="CANDIDATE" />
+                  <TextBlock Grid.Column="3" Classes="columnHeader" VerticalAlignment="Center" Text="CHANGE" />
                 </Grid>
               </Border>
               <StackPanel Name="MetricRowsPanel" Grid.Row="1" />
             </Grid>
           </Border>
 
-          <Border Classes="surfaceSubtle" Padding="17">
-            <StackPanel Spacing="7">
+          <Border Background="{DynamicResource AppRaisedBrush}"
+                  CornerRadius="14"
+                  Padding="18">
+            <StackPanel Spacing="6">
               <TextBlock Classes="eyebrow" Text="LOCAL TREND" />
-              <TextBlock Name="TrendText" Classes="secondary" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
+              <TextBlock Name="TrendText" Classes="secondary" FontSize="11" LineHeight="17" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </StackPanel>
