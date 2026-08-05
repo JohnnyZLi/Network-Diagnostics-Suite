@@ -12,6 +12,7 @@ public sealed partial class SettingsWorkspace
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualSettingsSizeChanged;
         ApplyFieldSizing();
+        ApplyComponentPolish();
         ApplySettingsCardLayout(Bounds.Width);
     }
 
@@ -21,8 +22,11 @@ public sealed partial class SettingsWorkspace
         base.OnDetachedFromVisualTree(eventArgs);
     }
 
-    private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+    private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
+    {
+        ApplyComponentPolish();
         ApplySettingsCardLayout(eventArgs.NewSize.Width);
+    }
 
     private void ApplyFieldSizing()
     {
