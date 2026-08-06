@@ -17,6 +17,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
         SizeChanged += WorkspaceSizeChanged;
     }
 
+    public event EventHandler? HomeRequested;
+
     public event EventHandler? BackRequested;
 
     public event EventHandler<StoredReportEventArgs>? CompareRequested;
@@ -117,6 +119,9 @@ public sealed partial class ReportDetailWorkspace : UserControl
             HealthGroupGrid,
             [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
             width);
+
+    private void HomeClicked(object? sender, RoutedEventArgs eventArgs) =>
+        HomeRequested?.Invoke(this, EventArgs.Empty);
 
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
