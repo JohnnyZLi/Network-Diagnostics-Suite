@@ -137,7 +137,7 @@
     <Setter Property="Padding" Value="13,0" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="10" />
-    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
@@ -150,10 +150,10 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace TextBox">
-    <Setter Property="MinHeight" Value="34" />
-    <Setter Property="Padding" Value="10,5" />
-    <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="11,7" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="FontSize" Value="11" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace ComboBox">
     <Setter Property="MinHeight" Value="38" />
@@ -166,7 +166,7 @@
   </Style>
   <Style Selector="workspaces|SettingsWorkspace Border.settingsCard">
     <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="Padding" Value="16" />
+    <Setter Property="Padding" Value="18" />
   </Style>
   <Style Selector="workspaces|SettingsWorkspace TextBlock.fieldLabel">
     <Setter Property="FontSize" Value="9.5" />
