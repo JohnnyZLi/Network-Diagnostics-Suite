@@ -101,13 +101,31 @@ jobs:
 
           capture overview-dark-wide
 
-          # Selecting a profile must update the plan and Run label without starting a test.
+          # Selecting a preset must update the plan and Run label without starting a test.
           run_command 'select full diagnostic'
           capture diagnostic-selector-full
+          run_command 'select stress diagnostic'
+          capture diagnostic-selector-stress
           run_command 'select quick diagnostic'
 
+          # Audit every profile in the actual opened configurator.
           run_command 'customize diagnostic'
-          capture deeper-diagnostics-overlay
+          xdotool mousemove 470 525 click 1
+          capture configurator-dark-quick
+          xdotool mousemove 470 595 click 1
+          capture configurator-dark-full
+          xdotool mousemove 470 665 click 1
+          capture configurator-dark-stress
+          xdotool mousemove 470 455 click 1
+          capture configurator-dark-connection
+          xdotool mousemove 470 525 click 1
+
+          # Verify the same sheet at a compact desktop window size.
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture configurator-dark-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 1
           xdotool mousemove 70 500 click 1
 
           xdotool key --clearmodifiers End
@@ -175,7 +193,10 @@ jobs:
           run_command 'open network overview'
           capture overview-light-wide
           run_command 'customize diagnostic'
-          capture deeper-diagnostics-overlay-light
+          xdotool mousemove 470 525 click 1
+          capture configurator-light-quick
+          xdotool mousemove 470 665 click 1
+          capture configurator-light-stress
 
       - name: Upload rendered desktop states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
