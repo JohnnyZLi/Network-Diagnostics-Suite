@@ -51,11 +51,8 @@ public sealed partial class MainWindow
         };
     }
 
-    private void RenderPresentation(ConnectionCheckPresentation presentation)
-    {
+    private void RenderPresentation(ConnectionCheckPresentation presentation) =>
         currentPresentationValue = presentation;
-        SyncRunResultWorkspaces();
-    }
 
     private static string MethodName(TransferMethod method) => method switch
     {
