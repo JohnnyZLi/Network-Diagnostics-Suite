@@ -30,8 +30,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public void Render(StoredReport stored, ConnectionCheckPresentation presentation)
     {
         report = stored;
-        ToolbarTitleText.Text = stored.Label ?? presentation.Verdict;
-        ToolbarMetaText.Text = $"{stored.ProfileName} · {stored.DisplayDate}";
+        ToolbarTitleText.Text = $"{stored.ProfileName} diagnostic";
+        ToolbarMetaText.Text = $"{stored.DisplayDate} · {stored.Report.Run.TransferMethod}";
         GeneratedText.Text = stored.DisplayDate;
         ProfileText.Text = stored.ProfileName;
         MethodText.Text = stored.Report.Run.TransferMethod.ToString();
@@ -42,8 +42,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public void RenderPreview(ConnectionCheckPresentation presentation)
     {
         report = null;
-        ToolbarTitleText.Text = "Saved diagnostic preview";
-        ToolbarMetaText.Text = "Quick · preview data";
+        ToolbarTitleText.Text = "Quick diagnostic";
+        ToolbarMetaText.Text = "Preview data · Compare";
         GeneratedText.Text = "Today · preview";
         ProfileText.Text = "Quick";
         MethodText.Text = "Compare";
