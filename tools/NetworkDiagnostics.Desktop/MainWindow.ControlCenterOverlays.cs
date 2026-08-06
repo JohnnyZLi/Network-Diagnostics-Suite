@@ -20,12 +20,23 @@ public sealed partial class MainWindow
 
     private void ShowControlCenterUnderlay()
     {
-        HideRedesignedWorkspaces();
+        HideWhenNotInOverlay(reportBrowserWorkspace);
+        HideWhenNotInOverlay(reportDetailWorkspace);
+        HideWhenNotInOverlay(comparisonWorkspace);
+        HideWhenNotInOverlay(settingsWorkspace);
         TestArea.IsVisible = true;
         currentTestState = TestViewState.Setup;
         SetupView.IsVisible = true;
         RunningView.IsVisible = false;
         ResultsView.IsVisible = false;
+    }
+
+    private void HideWhenNotInOverlay(Avalonia.Controls.Control? surface)
+    {
+        if (surface is not null && workbenchShell?.IsOverlayContent(surface) != true)
+        {
+            surface.IsVisible = false;
+        }
     }
 
     private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs)
