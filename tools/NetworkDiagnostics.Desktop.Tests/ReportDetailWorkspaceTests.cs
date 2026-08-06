@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
+using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Workspaces;
 using Xunit;
 
@@ -41,5 +42,32 @@ public sealed class ReportDetailWorkspaceTests
 
         Assert.False(body.IsVisible);
         Assert.Equal("Show details", label.Text);
+    }
+
+    [AvaloniaFact]
+    public void CurrentResultModeAddsRunAgainWithoutReplacingTheReportViewer()
+    {
+        var workspace = new ReportDetailWorkspace();
+        var requested = false;
+        workspace.RunAgainRequested += (_, _) => requested = true;
+
+        workspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
+
+        var runAgain = Assert.Single(
+            workspace.GetLogicalDescendants()
+                .OfType<Button>()
+                .Where(button => string.Equals(button.Content?.ToString(), "Run again", StringComparison.Ordinal)));
+        var compare = Assert.Single(
+            workspace.GetLogicalDescendants()
+                .OfType<Button>()
+                .Where(button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal)));
+
+        Assert.True(runAgain.IsVisible);
+        Assert.Contains("primary", runAgain.Classes);
+        Assert.Contains("secondary", compare.Classes);
+
+        runAgain.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+        Assert.True(requested);
     }
 }
