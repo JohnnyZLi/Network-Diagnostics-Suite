@@ -11,14 +11,14 @@ namespace NetworkDiagnostics.Desktop.Tests;
 public sealed class ReportDetailWorkspaceTests
 {
     [AvaloniaFact]
-    public void HomeButtonRaisesHomeRequested()
+    public void CloseButtonRaisesCloseRequested()
     {
         var workspace = new ReportDetailWorkspace();
         var requested = false;
-        workspace.HomeRequested += (_, _) => requested = true;
+        workspace.CloseRequested += (_, _) => requested = true;
 
-        var homeButton = Assert.IsType<Button>(workspace.FindControl<Button>("HomeButton"));
-        homeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var closeButton = Assert.IsType<Button>(workspace.FindControl<Button>("CloseButton"));
+        closeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
         Assert.True(requested);
     }
@@ -46,7 +46,7 @@ public sealed class ReportDetailWorkspaceTests
     }
 
     [AvaloniaFact]
-    public void CurrentResultModeAddsRunAgainWithoutReplacingTheReportViewer()
+    public void CurrentResultModeUsesTheSameToolbarWithRunAgainAsPrimary()
     {
         var workspace = new ReportDetailWorkspace();
         var requested = false;
@@ -54,20 +54,32 @@ public sealed class ReportDetailWorkspaceTests
 
         workspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
 
-        var buttons = workspace.GetLogicalDescendants().OfType<Button>();
-        var runAgain = Assert.Single(
-            buttons,
-            button => string.Equals(button.Content?.ToString(), "Run again", StringComparison.Ordinal));
-        var compare = Assert.Single(
-            buttons,
-            button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal));
+        var runAgain = Assert.IsType<Button>(workspace.FindControl<Button>("RunAgainButton"));
+        var compare = Assert.IsType<Button>(workspace.FindControl<Button>("CompareButton"));
+        var close = Assert.IsType<Button>(workspace.FindControl<Button>("CloseButton"));
 
         Assert.True(runAgain.IsVisible);
         Assert.Contains("primary", runAgain.Classes);
         Assert.Contains("secondary", compare.Classes);
+        Assert.True(close.IsVisible);
 
         runAgain.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
         Assert.True(requested);
+    }
+
+    [AvaloniaFact]
+    public void SavedReportModeKeepsComparePrimaryAndHidesRunAgain()
+    {
+        var workspace = new ReportDetailWorkspace();
+
+        workspace.RenderPreview(ConnectionCheckFixtures.Get(0));
+
+        var runAgain = Assert.IsType<Button>(workspace.FindControl<Button>("RunAgainButton"));
+        var compare = Assert.IsType<Button>(workspace.FindControl<Button>("CompareButton"));
+
+        Assert.False(runAgain.IsVisible);
+        Assert.Contains("primary", compare.Classes);
+        Assert.DoesNotContain("secondary", compare.Classes);
     }
 }
