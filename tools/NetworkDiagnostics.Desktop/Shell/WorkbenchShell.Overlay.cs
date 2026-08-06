@@ -1,26 +1,20 @@
 using Avalonia;
-using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
-using Avalonia.Threading;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
-    private static readonly TimeSpan OverlayFadeDuration = TimeSpan.FromMilliseconds(110);
-
     private Grid? overlayRoot;
     private Border? overlaySheet;
     private Border? overlayHeader;
     private ContentControl? overlayHost;
     private TextBlock? overlayTitle;
     private double? overlayRequestedMaxHeight;
-    private bool reducedMotion;
-    private int overlayTransitionGeneration;
 
     public event EventHandler? OverlayCloseRequested;
 
@@ -90,7 +84,7 @@ public sealed partial class WorkbenchShell
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             ClipToBounds = true,
-            Opacity = 0,
+            Opacity = 1,
             Child = sheetGrid
         };
         overlaySheet.Classes.Add("modalSheet");
@@ -107,13 +101,13 @@ public sealed partial class WorkbenchShell
         overlayRoot.Children.Add(overlaySheet);
         ShellGrid.Children.Add(overlayRoot);
         ShellGrid.SizeChanged += OverlayViewportChanged;
-        ConfigureOverlayTransitions();
     }
 
     public void SetReducedMotion(bool value)
     {
-        reducedMotion = value;
-        ConfigureOverlayTransitions();
+        // Overlay presentation is intentionally atomic for every motion preference.
+        // Keeping this API preserves the accessibility call site without maintaining
+        // a second transition path that can flash on platform compositors.
     }
 
     public void OpenOverlay(
@@ -125,13 +119,7 @@ public sealed partial class WorkbenchShell
         bool showHeader = true)
     {
         EnsureOverlay();
-        if (TopLevel.GetTopLevel(this) is { } topLevel)
-        {
-            SetReducedMotion(topLevel.Classes.Contains("reducedMotion"));
-        }
 
-        var wasOpen = OverlayOpen;
-        var generation = ++overlayTransitionGeneration;
         if (overlayHost!.Content is Control previous && !ReferenceEquals(previous, content))
         {
             overlayHost.Content = null;
@@ -150,25 +138,15 @@ public sealed partial class WorkbenchShell
         overlayHost.Content = content;
         ApplyOverlayBounds();
 
-        // The backdrop appears at its final, intentionally soft opacity immediately.
-        // Only the bounded sheet fades, avoiding whole-window luminance changes.
-        overlayRoot!.IsVisible = true;
+        // Mount the completely laid-out sheet in one visual state. Opacity ramps on
+        // large desktop surfaces caused visible flashes on macOS even when the
+        // backdrop itself was not animated.
+        overlaySheet.Opacity = 1;
+        overlayRoot!.Opacity = 1;
+        overlayRoot.IsVisible = true;
         overlayRoot.IsHitTestVisible = true;
-        overlayRoot.Opacity = 1;
-        overlaySheet.Opacity = wasOpen || reducedMotion ? 1 : 0;
         inspectorRequested = false;
         RefreshResponsiveChrome();
-
-        if (!wasOpen && !reducedMotion)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (generation == overlayTransitionGeneration && OverlayOpen && overlaySheet is not null)
-                {
-                    overlaySheet.Opacity = 1;
-                }
-            }, DispatcherPriority.Render);
-        }
     }
 
     public void SelectControlCenter()
@@ -180,54 +158,18 @@ public sealed partial class WorkbenchShell
 
     public void CloseOverlay()
     {
-        if (overlayRoot is null || overlaySheet is null || !OverlayOpen) return;
-        var generation = ++overlayTransitionGeneration;
+        if (overlayRoot is null || overlayHost is null || !OverlayOpen) return;
+
+        // Close atomically as well. There is no transparent intermediate frame where
+        // the backdrop remains while the report body has already disappeared.
         overlayRoot.IsHitTestVisible = false;
-
-        if (reducedMotion)
-        {
-            FinishOverlayClose(generation);
-            return;
-        }
-
-        overlaySheet.Opacity = 0;
-        DispatcherTimer.RunOnce(
-            () => FinishOverlayClose(generation),
-            OverlayFadeDuration + TimeSpan.FromMilliseconds(20));
-    }
-
-    private void FinishOverlayClose(int generation)
-    {
-        if (generation != overlayTransitionGeneration
-            || overlayRoot is null
-            || overlaySheet is null
-            || overlayHost is null)
-        {
-            return;
-        }
-
         var content = overlayHost.Content as Control;
         overlayHost.Content = null;
         if (content is not null) content.IsVisible = false;
         overlayRoot.IsVisible = false;
         overlayRoot.Opacity = 1;
-        overlaySheet.Opacity = 0;
+        if (overlaySheet is not null) overlaySheet.Opacity = 1;
         RefreshResponsiveChrome();
-    }
-
-    private void ConfigureOverlayTransitions()
-    {
-        if (overlaySheet is null) return;
-        overlaySheet.Transitions = reducedMotion
-            ? null
-            : new Transitions
-            {
-                new DoubleTransition
-                {
-                    Property = OpacityProperty,
-                    Duration = OverlayFadeDuration
-                }
-            };
     }
 
     private void OverlayViewportChanged(object? sender, SizeChangedEventArgs eventArgs) =>
