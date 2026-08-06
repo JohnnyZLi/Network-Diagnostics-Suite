@@ -33,6 +33,10 @@ public sealed partial class ReportDetailWorkspace
             ? new Thickness(10, 0)
             : new Thickness(18, 0);
 
+        // Report detail is now a normal focused workspace under the persistent shell
+        // header. Back/Forward/Home own workspace navigation; a modal-style × no
+        // longer belongs in the report toolbar.
+        CloseButton.IsVisible = false;
         ToolbarTitleText.IsVisible = width >= 700;
         ToolbarMetaText.IsVisible = width >= 900;
 
