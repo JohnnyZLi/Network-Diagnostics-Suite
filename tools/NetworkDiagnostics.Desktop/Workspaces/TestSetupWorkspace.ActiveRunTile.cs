@@ -14,6 +14,7 @@ public sealed partial class TestSetupWorkspace
 {
     private Border? testHubActiveRunTile;
     private Grid? testHubActiveMetricsGrid;
+    private TextBlock? testHubActiveStatusText;
     private TextBlock? testHubActiveTitleText;
     private TextBlock? testHubActiveDetailText;
     private TextBlock? testHubActivePhaseText;
@@ -37,7 +38,7 @@ public sealed partial class TestSetupWorkspace
 
         if (snapshot.IsActive)
         {
-            RenderActiveRunSnapshot(snapshot);
+            RenderRunTileSnapshot(snapshot, completedHandoff: false);
             ActiveRunBorder.IsVisible = false;
         }
 
@@ -51,10 +52,43 @@ public sealed partial class TestSetupWorkspace
         EnsureActiveRunTile();
         if (!snapshot.IsActive || testHubActiveRunTile is null) return;
 
+        RenderRunTileSnapshot(snapshot, completedHandoff: false);
+    }
+
+    public void HoldCompletedRunTile(ActiveRunSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Status != ActiveRunStatus.Completed || snapshot.ReportId is null)
+        {
+            return;
+        }
+
+        activeRunTileVisible = true;
+        EnsureActiveRunTile();
+        RenderRunTileSnapshot(snapshot, completedHandoff: true);
+    }
+
+    public void BringActiveRunIntoView()
+    {
+        if (activeRunTileVisible)
+        {
+            testHubActiveRunTile?.BringIntoView();
+        }
+    }
+
+    private void RenderRunTileSnapshot(ActiveRunSnapshot snapshot, bool completedHandoff)
+    {
+        if (testHubActiveRunTile is null) return;
+
+        SetActiveText(
+            testHubActiveStatusText,
+            completedHandoff ? "DIAGNOSTIC COMPLETE" : "DIAGNOSTIC IN PROGRESS");
         SetActiveText(
             testHubActiveTitleText,
             $"{DiagnosticReportPresenter.ProfileName(snapshot.Profile)} · {ActiveMethodName(snapshot.Method)}");
-        SetActiveText(testHubActiveDetailText, snapshot.Detail);
+        SetActiveText(
+            testHubActiveDetailText,
+            completedHandoff ? "Preparing the saved result…" : snapshot.Detail);
         SetActiveText(testHubActivePhaseText, snapshot.Phase);
         SetActiveText(testHubActiveProgressText, $"{snapshot.Progress:0}%");
         SetActiveText(
@@ -77,25 +111,21 @@ public sealed partial class TestSetupWorkspace
 
         if (testHubActiveStopButton is not null)
         {
-            var canStop = snapshot.Status is ActiveRunStatus.Preparing or ActiveRunStatus.Running;
-            testHubActiveStopButton.IsEnabled = canStop;
-            var stopLabel = snapshot.Status == ActiveRunStatus.Cancelling ? "Stopping…" : "Stop test";
-            if (!string.Equals(testHubActiveStopButton.Content?.ToString(), stopLabel, StringComparison.Ordinal))
+            testHubActiveStopButton.IsVisible = !completedHandoff;
+            if (!completedHandoff)
             {
-                testHubActiveStopButton.Content = stopLabel;
+                var canStop = snapshot.Status is ActiveRunStatus.Preparing or ActiveRunStatus.Running;
+                testHubActiveStopButton.IsEnabled = canStop;
+                var stopLabel = snapshot.Status == ActiveRunStatus.Cancelling ? "Stopping…" : "Stop test";
+                if (!string.Equals(testHubActiveStopButton.Content?.ToString(), stopLabel, StringComparison.Ordinal))
+                {
+                    testHubActiveStopButton.Content = stopLabel;
+                }
             }
         }
 
         ActiveRunBorder.IsVisible = false;
         ApplyActiveRunTileLayout(testHubRoot?.Bounds.Width ?? Bounds.Width);
-    }
-
-    public void BringActiveRunIntoView()
-    {
-        if (activeRunTileVisible)
-        {
-            testHubActiveRunTile?.BringIntoView();
-        }
     }
 
     private void EnsureActiveRunTile()
@@ -164,19 +194,19 @@ public sealed partial class TestSetupWorkspace
             VerticalAlignment = VerticalAlignment.Center
         };
         indicator.Classes.Add("indicatorAccent");
-        var eyebrow = new TextBlock
+        testHubActiveStatusText = new TextBlock
         {
             Text = "DIAGNOSTIC IN PROGRESS",
             VerticalAlignment = VerticalAlignment.Center
         };
-        eyebrow.Classes.Add("eyebrow");
+        testHubActiveStatusText.Classes.Add("eyebrow");
         var status = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8
         };
         status.Children.Add(indicator);
-        status.Children.Add(eyebrow);
+        status.Children.Add(testHubActiveStatusText);
 
         var heading = new StackPanel { Spacing = 5 };
         heading.Children.Add(status);
