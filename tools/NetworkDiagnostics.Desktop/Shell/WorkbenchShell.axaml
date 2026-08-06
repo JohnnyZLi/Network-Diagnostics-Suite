@@ -71,13 +71,6 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="FontSize" Value="9" />
     </Style>
-    <Style Selector="Button.breadcrumb:pointerover">
-      <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
-    </Style>
-    <Style Selector="Button.breadcrumb:disabled">
-      <Setter Property="Opacity" Value="1" />
-      <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
-    </Style>
     <Style Selector="Button.utilityKey">
       <Setter Property="Height" Value="30" />
       <Setter Property="Padding" Value="10,0" />
@@ -91,6 +84,9 @@
     <Style Selector="Button.utilityKey:pointerover">
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="Button.utilityKey:disabled">
+      <Setter Property="Opacity" Value="0.48" />
     </Style>
     <Style Selector="Button.utilityIcon">
       <Setter Property="Width" Value="30" />
@@ -108,6 +104,9 @@
       <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
     </Style>
+    <Style Selector="Button.utilityIcon:disabled">
+      <Setter Property="Opacity" Value="0.42" />
+    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="58,*">
@@ -121,6 +120,12 @@
             <Button Name="BackButton" Classes="shellIcon" Content="‹" ToolTip.Tip="Back" Click="BackClicked" />
             <Button Name="ForwardButton" Classes="shellIcon" Content="›" ToolTip.Tip="Forward" Click="ForwardClicked" />
           </StackPanel>
+          <Button Name="HomeButton"
+                  Classes="utilityKey"
+                  Content="Home"
+                  MinWidth="54"
+                  ToolTip.Tip="Return to Home"
+                  Click="HomeClicked" />
           <Grid Width="28" Height="28">
             <Border Width="28"
                     Height="28"
@@ -142,7 +147,7 @@
                       VerticalAlignment="Center" />
             </Border>
           </Grid>
-          <StackPanel Name="ProductStack" Spacing="0" MinWidth="146">
+          <StackPanel Name="ProductStack" Spacing="0" Width="160">
             <TextBlock FontSize="12" FontWeight="SemiBold" Text="Network Diagnostics" />
             <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
               <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="4" />
@@ -175,6 +180,12 @@
         </Border>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+          <Button Name="SettingsToolbarButton"
+                  Classes="utilityKey"
+                  Content="Settings"
+                  MinWidth="58"
+                  ToolTip.Tip="Open Settings"
+                  Click="SettingsClicked" />
           <Button Name="ActiveRunPanel" Classes="activeRun" IsVisible="False" ToolTip.Tip="Return to active diagnostic" Click="ActiveRunClicked">
             <Grid ColumnDefinitions="Auto,68" ColumnSpacing="8">
               <StackPanel Spacing="1" VerticalAlignment="Center">
