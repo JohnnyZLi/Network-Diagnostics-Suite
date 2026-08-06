@@ -24,6 +24,8 @@ public sealed partial class WorkbenchShell : UserControl
 
     public event EventHandler? ForwardRequested;
 
+    public event EventHandler? HomeRequested;
+
     public event EventHandler? ActiveRunRequested;
 
     public event EventHandler? CommandPaletteRequested;
@@ -125,6 +127,8 @@ public sealed partial class WorkbenchShell : UserControl
         ApplyResponsiveLayout(Bounds.Width);
     }
 
+    public void RefreshResponsiveChrome() => ApplyResponsiveLayout(Bounds.Width);
+
     public void OpenCommandPalette(IReadOnlyList<WorkbenchCommand> commands) =>
         CommandPaletteControl.Open(commands);
 
@@ -135,6 +139,12 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ForwardClicked(object? sender, RoutedEventArgs eventArgs) =>
         ForwardRequested?.Invoke(this, EventArgs.Empty);
+
+    private void HomeClicked(object? sender, RoutedEventArgs eventArgs) =>
+        HomeRequested?.Invoke(this, EventArgs.Empty);
+
+    private void SettingsClicked(object? sender, RoutedEventArgs eventArgs) =>
+        WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
 
     private void ActiveRunClicked(object? sender, RoutedEventArgs eventArgs) =>
         ActiveRunRequested?.Invoke(this, EventArgs.Empty);
@@ -166,7 +176,7 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void InspectorClicked(object? sender, RoutedEventArgs eventArgs)
     {
-        if (currentWorkspace != WorkspaceKind.Test || Bounds.Width < InspectorMinimumWidth) return;
+        if (currentWorkspace != WorkspaceKind.Test || Bounds.Width < InspectorMinimumWidth || OverlayOpen) return;
         inspectorRequested = !InspectorBorder.IsVisible;
         ApplyResponsiveLayout(Bounds.Width);
         InspectorVisibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -178,13 +188,20 @@ public sealed partial class WorkbenchShell : UserControl
     private void ApplyResponsiveLayout(double width)
     {
         var compact = width < 960;
-        var inspectorEligible = currentWorkspace == WorkspaceKind.Test && width >= InspectorMinimumWidth;
+        var inspectorEligible = currentWorkspace == WorkspaceKind.Test
+            && width >= InspectorMinimumWidth
+            && !OverlayOpen;
         var showInspector = inspectorEligible && inspectorRequested;
 
         InspectorBorder.IsVisible = showInspector;
-        InspectorToggleButton.IsVisible = inspectorEligible;
+        InspectorToggleButton.IsVisible = width >= 960;
+        InspectorToggleButton.IsEnabled = inspectorEligible;
         ProductStack.IsVisible = width >= 880;
         ActiveRunDetailText.IsVisible = width >= 1180;
+        HomeButton.Content = compact ? "⌂" : "Home";
+        HomeButton.MinWidth = compact ? 34 : 54;
+        SettingsToolbarButton.Content = compact ? "⚙" : "Settings";
+        SettingsToolbarButton.MinWidth = compact ? 34 : 58;
         CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
         InspectorToggleButton.Content = showInspector ? "Close info" : "Info";
         TestWorkspaceLabel.Text = compact ? "Home" : "Overview";
@@ -195,34 +212,49 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
     {
-        BreadcrumbPanel.Children.Clear();
-
-        for (var index = 0; index < breadcrumbs.Count; index++)
+        var label = ContextLabel(breadcrumbs);
+        if (BreadcrumbPanel.Children.Count == 1
+            && BreadcrumbPanel.Children[0] is TextBlock current
+            && string.Equals(current.Text, label, StringComparison.Ordinal))
         {
-            if (index > 0)
-            {
-                var separator = new TextBlock
-                {
-                    Text = "/",
-                    FontSize = 8,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-                separator.Classes.Add("shellMuted");
-                BreadcrumbPanel.Children.Add(separator);
-            }
-
-            var segment = breadcrumbs[index];
-            var label = segment.Label == "Test" ? "Overview" : segment.Label;
-            var button = new Button
-            {
-                Content = label,
-                Tag = segment.Destination,
-                IsEnabled = segment.Destination is not null
-            };
-            button.Classes.Add("breadcrumb");
-            button.Click += BreadcrumbClicked;
-            BreadcrumbPanel.Children.Add(button);
+            return;
         }
+
+        BreadcrumbPanel.Children.Clear();
+        var text = new TextBlock
+        {
+            Text = label,
+            FontSize = 9,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+            MaxWidth = 160
+        };
+        text.Classes.Add("shellMuted");
+        BreadcrumbPanel.Children.Add(text);
+    }
+
+    private static string ContextLabel(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
+    {
+        if (breadcrumbs.Count == 0) return "Live control center";
+        var labels = breadcrumbs
+            .Select(segment => segment.Label)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToArray();
+        if (labels.Length == 0) return "Live control center";
+
+        var selected = labels[^1];
+        if (selected is "Overview" or "Evidence" && labels.Length > 1)
+        {
+            selected = labels[^2];
+        }
+
+        return selected switch
+        {
+            "Test" or "Overview" => "Live control center",
+            "Reports" => "Diagnostics library",
+            "Comparisons" => "Comparison",
+            _ => selected
+        };
     }
 
     private void SelectWorkspace(WorkspaceKind workspace)
