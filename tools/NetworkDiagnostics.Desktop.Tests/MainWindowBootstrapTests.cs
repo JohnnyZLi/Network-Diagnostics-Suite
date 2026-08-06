@@ -108,10 +108,11 @@ public sealed class MainWindowBootstrapTests
 
             Assert.True(shell.OverlayOpen);
             Assert.Empty(
-                shell.GetVisualDescendants().OfType<Border>(),
-                border => border.Classes.Contains("modalBackdrop")
-                    || border.Classes.Contains("modalSheet")
-                    || border.Classes.Contains("modalHeader"));
+                shell.GetVisualDescendants()
+                    .OfType<Border>()
+                    .Where(border => border.Classes.Contains("modalBackdrop")
+                        || border.Classes.Contains("modalSheet")
+                        || border.Classes.Contains("modalHeader")));
         }
         finally
         {
