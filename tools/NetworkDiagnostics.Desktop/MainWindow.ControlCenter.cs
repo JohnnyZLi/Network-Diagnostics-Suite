@@ -46,8 +46,9 @@ public sealed partial class MainWindow
 
         ShowControlCenterUnderlay();
         testSetupWorkspace.PrepareDiagnosticLauncherLayout();
+        testSetupWorkspace.ApplyDiagnosticConfiguratorPolish();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Customize diagnostic", content, 920, 640);
+        workbenchShell.OpenOverlay("Customize diagnostic", content, 960, 620);
     }
 
     private void ControlCenterDiagnosticLauncherDismissRequested(object? sender, EventArgs eventArgs) =>
