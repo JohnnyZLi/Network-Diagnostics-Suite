@@ -55,12 +55,12 @@ public sealed partial class WorkbenchShell
 
     private void PolishHeaderUtilities()
     {
-        PolishUtilityButton(HomeButton, Bounds.Width < 960 ? 34 : 54);
+        PolishUtilityButton(HomeButton, Bounds.Width < 960 ? 34 : 52);
         PolishUtilityButton(SettingsToolbarButton, Bounds.Width < 960 ? 34 : 58);
         PolishUtilityButton(CommandToolbarButton, Bounds.Width < 960 ? 42 : 84);
 
         InspectorToggleButton.Width = double.NaN;
-        PolishUtilityButton(InspectorToggleButton, 46);
+        PolishUtilityButton(InspectorToggleButton, 44);
     }
 
     private void PolishActiveRunLayout()
@@ -80,29 +80,32 @@ public sealed partial class WorkbenchShell
             {
                 Grid.SetColumn(textStack, 0);
                 Grid.SetRow(textStack, 0);
+                textStack.Spacing = 0;
             }
 
             Grid.SetColumn(ActiveRunProgress, 0);
             Grid.SetRow(ActiveRunProgress, 1);
-            ActiveRunProgress.Height = 3;
-            ActiveRunProgress.Margin = new Thickness(0, 4, 0, 0);
+            ActiveRunProgress.Height = 2;
+            ActiveRunProgress.Margin = new Thickness(0, 3, 0, 0);
             ActiveRunProgress.HorizontalAlignment = HorizontalAlignment.Stretch;
             ActiveRunProgress.VerticalAlignment = VerticalAlignment.Center;
             ActiveRunProgress.IsHitTestVisible = false;
 
+            ActiveRunTitleText.FontSize = 9;
+            ActiveRunDetailText.FontSize = 8;
             ActiveRunTitleText.TextWrapping = TextWrapping.NoWrap;
             ActiveRunTitleText.TextTrimming = TextTrimming.CharacterEllipsis;
             ActiveRunDetailText.TextWrapping = TextWrapping.NoWrap;
             ActiveRunDetailText.TextTrimming = TextTrimming.CharacterEllipsis;
 
-            ActiveRunPanel.Height = 42;
-            ActiveRunPanel.MinHeight = 42;
-            ActiveRunPanel.Padding = new Thickness(10, 5);
+            ActiveRunPanel.Height = 34;
+            ActiveRunPanel.MinHeight = 34;
+            ActiveRunPanel.Padding = new Thickness(10, 4);
             ActiveRunPanel.VerticalContentAlignment = VerticalAlignment.Center;
             activeRunLayoutPolished = true;
         }
 
-        var targetWidth = Bounds.Width < 1100 ? 180d : 250d;
+        var targetWidth = Bounds.Width < 1100 ? 176d : 224d;
         if (Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
         {
             ActiveRunPanel.Width = targetWidth;
@@ -114,7 +117,7 @@ public sealed partial class WorkbenchShell
         button.Height = 30;
         button.MinHeight = 30;
         button.MinWidth = minimumWidth;
-        button.Padding = new Thickness(11, 0);
+        button.Padding = new Thickness(10, 0);
         button.CornerRadius = new CornerRadius(9);
         button.FontSize = 9;
         button.FontWeight = FontWeight.Medium;
