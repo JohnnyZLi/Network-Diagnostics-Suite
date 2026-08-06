@@ -113,7 +113,7 @@ public sealed partial class WorkbenchShell
         overlayHost!.Content = content;
         overlayRoot!.IsVisible = true;
         inspectorRequested = false;
-        ApplyResponsiveLayout(Bounds.Width);
+        RefreshResponsiveChrome();
     }
 
     public void SelectControlCenter() => SelectWorkspace(WorkspaceKind.Test);
@@ -121,6 +121,7 @@ public sealed partial class WorkbenchShell
     public void CloseOverlay()
     {
         if (overlayRoot is not null) overlayRoot.IsVisible = false;
+        RefreshResponsiveChrome();
     }
 
     private void OverlayCloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs eventArgs) =>
