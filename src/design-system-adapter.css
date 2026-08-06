@@ -138,6 +138,26 @@ body::after,
   color: var(--accent);
 }
 
+/* Legacy translucent panels were authored against the light palette. In dark
+   mode, give those analytical surfaces an explicit dark token background so
+   their inherited semantic text remains readable. */
+:root[data-theme="dark"] .test-controls,
+:root[data-theme="dark"] .metric-card,
+:root[data-theme="dark"] .report-panel,
+:root[data-theme="dark"] .deep-probe__actions {
+  background: var(--panel);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme="dark"] .deep-probe {
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--jl-color-accent-soft) 18%, transparent),
+    color-mix(in srgb, var(--panel) 38%, transparent) 42%,
+    transparent 72%
+  );
+}
+
 /* The legacy stylesheet hides every header nav below 760px. Restore only the
    shared controller's open state; all popover geometry remains package-owned. */
 @media (max-width: 760px) {
