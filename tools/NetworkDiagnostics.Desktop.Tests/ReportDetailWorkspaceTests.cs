@@ -54,14 +54,13 @@ public sealed class ReportDetailWorkspaceTests
 
         workspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
 
+        var buttons = workspace.GetLogicalDescendants().OfType<Button>();
         var runAgain = Assert.Single(
-            workspace.GetLogicalDescendants()
-                .OfType<Button>()
-                .Where(button => string.Equals(button.Content?.ToString(), "Run again", StringComparison.Ordinal)));
+            buttons,
+            button => string.Equals(button.Content?.ToString(), "Run again", StringComparison.Ordinal));
         var compare = Assert.Single(
-            workspace.GetLogicalDescendants()
-                .OfType<Button>()
-                .Where(button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal)));
+            buttons,
+            button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal));
 
         Assert.True(runAgain.IsVisible);
         Assert.Contains("primary", runAgain.Classes);
