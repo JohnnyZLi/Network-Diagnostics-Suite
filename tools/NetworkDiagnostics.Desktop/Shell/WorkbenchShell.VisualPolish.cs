@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
@@ -11,11 +12,13 @@ public sealed partial class WorkbenchShell
 {
     private Control? primaryNavigation;
     private bool activeRunLayoutPolished;
+    private bool persistentNavigationWired;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
+        WirePersistentNavigation();
         ResolveHeaderContainers();
         HidePrimaryPageNavigation();
         PolishHeaderUtilities();
@@ -27,6 +30,16 @@ public sealed partial class WorkbenchShell
     {
         LayoutUpdated -= VisualPolishLayoutUpdated;
         base.OnDetachedFromVisualTree(eventArgs);
+    }
+
+    private void WirePersistentNavigation()
+    {
+        if (persistentNavigationWired) return;
+        persistentNavigationWired = true;
+        HomeRequested += (_, _) =>
+            DestinationRequested?.Invoke(
+                this,
+                new DestinationRequestedEventArgs(new TestSetupDestination()));
     }
 
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
