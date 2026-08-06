@@ -127,6 +127,7 @@ public sealed partial class WorkbenchShell
             SetReducedMotion(topLevel.Classes.Contains("reducedMotion"));
         }
 
+        // The generation token makes open/close handoffs atomic across render frames.
         var wasOpen = OverlayOpen;
         var generation = ++overlayTransitionGeneration;
         if (overlayHost!.Content is Control previous && !ReferenceEquals(previous, content))
