@@ -18,4 +18,19 @@ public sealed partial class MainWindow
             maxHeight: 820,
             stretchWidth: true);
     }
+
+    private void PreviewCurrentResult()
+    {
+        if (reportDetailWorkspace is null || workbenchShell is null) return;
+
+        reportDetailWorkspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
+        ShowControlCenterUnderlay();
+        workbenchShell.SelectControlCenter();
+        workbenchShell.OpenOverlay(
+            "Diagnostic result",
+            reportDetailWorkspace,
+            maxWidth: 1160,
+            maxHeight: 820,
+            stretchWidth: true);
+    }
 }
