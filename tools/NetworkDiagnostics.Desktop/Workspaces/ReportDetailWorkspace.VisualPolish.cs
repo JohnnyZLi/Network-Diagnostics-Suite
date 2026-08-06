@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -26,54 +25,98 @@ public sealed partial class ReportDetailWorkspace
     private void ApplyReportDetailPolish(double width)
     {
         HomeButton.IsVisible = false;
-        ReportBody.Margin = width < 820
-            ? new Thickness(18, 18, 18, 28)
-            : new Thickness(28, 22, 28, 36);
-        ReportBody.MaxWidth = 1320;
-        ReportBody.Spacing = 18;
+        ReportBody.Margin = width < 720
+            ? new Thickness(16, 16, 16, 26)
+            : new Thickness(24, 18, 24, 32);
+        ReportBody.MaxWidth = 1160;
+        ReportBody.Spacing = width < 720 ? 13 : 15;
+        ReportToolbarGrid.Margin = width < 720
+            ? new Thickness(12, 0)
+            : new Thickness(24, 0);
 
-        ToolbarTitleText.IsVisible = width >= 760;
-        ToolbarMetaText.IsVisible = width >= 900;
+        ToolbarTitleText.IsVisible = width >= 620;
+        ToolbarMetaText.IsVisible = width >= 820;
 
-        var compact = width < 980;
+        ApplyHeroLayout(width);
+        ApplyContextLayout(width);
+    }
+
+    private void ApplyHeroLayout(double width)
+    {
         ReportHeroGrid.ColumnDefinitions.Clear();
         ReportHeroGrid.RowDefinitions.Clear();
-        ReportLowerGrid.ColumnDefinitions.Clear();
-        ReportLowerGrid.RowDefinitions.Clear();
 
-        if (!compact)
+        if (width >= 900)
         {
             ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(300)));
+            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(280)));
             ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             Grid.SetColumn(ReportNextActionCard, 1);
             Grid.SetRow(ReportNextActionCard, 0);
             ReportNextActionCard.Margin = new Thickness(0);
-
-            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.12, GridUnitType.Star)));
-            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.88, GridUnitType.Star)));
-            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(ReportFindingsCard, 0);
-            Grid.SetRow(ReportFindingsCard, 0);
-            Grid.SetColumn(ReportSideStack, 1);
-            Grid.SetRow(ReportSideStack, 0);
+            return;
         }
-        else
+
+        ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        Grid.SetColumn(ReportNextActionCard, 0);
+        Grid.SetRow(ReportNextActionCard, 1);
+        ReportNextActionCard.Margin = new Thickness(0, 12, 0, 0);
+    }
+
+    private void ApplyContextLayout(double width)
+    {
+        ReportContextGrid.ColumnDefinitions.Clear();
+        ReportContextGrid.RowDefinitions.Clear();
+
+        var items = new Control[]
         {
-            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(ReportNextActionCard, 0);
-            Grid.SetRow(ReportNextActionCard, 1);
-            ReportNextActionCard.Margin = new Thickness(0, 14, 0, 0);
+            GeneratedContextItem,
+            ProfileContextItem,
+            MethodContextItem,
+            RouteContextItem
+        };
 
-            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(ReportFindingsCard, 0);
-            Grid.SetRow(ReportFindingsCard, 0);
-            Grid.SetColumn(ReportSideStack, 0);
-            Grid.SetRow(ReportSideStack, 1);
+        if (width >= 900)
+        {
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.05, GridUnitType.Star)));
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.75, GridUnitType.Star)));
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.75, GridUnitType.Star)));
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.65, GridUnitType.Star)));
+            ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            for (var index = 0; index < items.Length; index++)
+            {
+                SetContextPosition(items[index], 0, index);
+            }
+            return;
         }
+
+        if (width >= 600)
+        {
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetContextPosition(GeneratedContextItem, 0, 0);
+            SetContextPosition(ProfileContextItem, 0, 1);
+            SetContextPosition(MethodContextItem, 1, 0);
+            SetContextPosition(RouteContextItem, 1, 1);
+            return;
+        }
+
+        ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        for (var index = 0; index < items.Length; index++)
+        {
+            ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            SetContextPosition(items[index], index, 0);
+        }
+    }
+
+    private static void SetContextPosition(Control control, int row, int column)
+    {
+        Grid.SetRow(control, row);
+        Grid.SetColumn(control, column);
+        Grid.SetColumnSpan(control, 1);
     }
 }
