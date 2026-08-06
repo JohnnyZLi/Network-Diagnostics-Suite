@@ -10,7 +10,6 @@ public sealed partial class MainWindow
     {
         if (controlCenterOverlaysWired || workbenchShell is null) return;
         controlCenterOverlaysWired = true;
-        workbenchShell.OverlayCloseRequested += ControlCenterOverlayCloseRequested;
         if (reportDetailWorkspace is not null)
         {
             reportDetailWorkspace.CloseRequested += ReportDetailCloseRequested;
@@ -46,18 +45,5 @@ public sealed partial class MainWindow
     {
         workbenchShell?.CloseOverlay();
         RunAgainClicked(sender, new Avalonia.Interactivity.RoutedEventArgs());
-    }
-
-    private void ControlCenterOverlayCloseRequested(object? sender, EventArgs eventArgs)
-    {
-        if (navigationService.Current?.Destination is SettingsDestination
-            or ReportDetailDestination
-            or TestResultDestination)
-        {
-            NavigateToDestination(new TestSetupDestination());
-            return;
-        }
-
-        workbenchShell?.CloseOverlay();
     }
 }
