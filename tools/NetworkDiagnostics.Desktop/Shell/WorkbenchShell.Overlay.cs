@@ -25,6 +25,9 @@ public sealed partial class WorkbenchShell
 
     public bool OverlayOpen => overlayRoot?.IsVisible == true && overlayRoot.IsHitTestVisible;
 
+    public bool IsOverlayContent(Control? content) =>
+        content is not null && ReferenceEquals(overlayHost?.Content, content);
+
     public void EnsureOverlay()
     {
         if (overlayRoot is not null) return;
