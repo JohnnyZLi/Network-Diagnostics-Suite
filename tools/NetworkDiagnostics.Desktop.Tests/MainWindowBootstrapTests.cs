@@ -16,6 +16,10 @@ public sealed class MainWindowBootstrapTests
         Assert.NotNull(shell.WorkspaceContent);
         Assert.False(shell.InspectorOpen);
         Assert.False(shell.OverlayOpen);
+        Assert.NotNull(shell.FindControl<Button>("HomeButton"));
+        Assert.NotNull(shell.FindControl<Button>("SettingsToolbarButton"));
+        Assert.NotNull(shell.FindControl<Button>("CommandToolbarButton"));
+        Assert.NotNull(shell.FindControl<Button>("InspectorToggleButton"));
     }
 
     [AvaloniaFact]
@@ -26,12 +30,18 @@ public sealed class MainWindowBootstrapTests
         var workspace = new Border();
         originalParent.Children.Add(workspace);
 
+        var home = Assert.IsType<Button>(shell.FindControl<Button>("HomeButton"));
+        var settings = Assert.IsType<Button>(shell.FindControl<Button>("SettingsToolbarButton"));
         shell.OpenOverlay("Settings", workspace);
 
         Assert.True(shell.OverlayOpen);
         Assert.DoesNotContain(workspace, originalParent.Children);
+        Assert.True(home.IsVisible);
+        Assert.True(settings.IsVisible);
 
         shell.CloseOverlay();
         Assert.False(shell.OverlayOpen);
+        Assert.True(home.IsVisible);
+        Assert.True(settings.IsVisible);
     }
 }
