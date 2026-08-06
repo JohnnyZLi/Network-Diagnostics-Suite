@@ -13,6 +13,10 @@ public sealed partial class MainWindow
         if (controlCenterOverlaysWired || workbenchShell is null) return;
         controlCenterOverlaysWired = true;
         workbenchShell.OverlayCloseRequested += ControlCenterOverlayCloseRequested;
+        if (reportDetailWorkspace is not null)
+        {
+            reportDetailWorkspace.HomeRequested += ReportDetailHomeRequested;
+        }
         navigationService.Changed += ControlCenterOverlayNavigationChanged;
         ApplyControlCenterDestination(navigationService.Current?.Destination);
     }
@@ -66,6 +70,9 @@ public sealed partial class MainWindow
         ResultsView.IsVisible = false;
         SyncTestWorkspace();
     }
+
+    private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs) =>
+        NavigateToDestination(new TestSetupDestination());
 
     private void ControlCenterOverlayCloseRequested(object? sender, EventArgs eventArgs)
     {
