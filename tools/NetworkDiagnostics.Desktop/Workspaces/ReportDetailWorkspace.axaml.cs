@@ -10,6 +10,7 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 public sealed partial class ReportDetailWorkspace : UserControl
 {
     private StoredReport? report;
+    private bool evidenceExpanded;
 
     public ReportDetailWorkspace()
     {
@@ -30,7 +31,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public void Render(StoredReport stored, ConnectionCheckPresentation presentation)
     {
         report = stored;
-        ToolbarTitleText.Text = $"{stored.ProfileName} diagnostic";
+        ToolbarTitleText.Text = stored.ProfileName;
         ToolbarMetaText.Text = $"{stored.DisplayDate} · {stored.Report.Run.TransferMethod}";
         GeneratedText.Text = stored.DisplayDate;
         ProfileText.Text = stored.ProfileName;
@@ -42,7 +43,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public void RenderPreview(ConnectionCheckPresentation presentation)
     {
         report = null;
-        ToolbarTitleText.Text = "Quick diagnostic";
+        ToolbarTitleText.Text = "Quick";
         ToolbarMetaText.Text = "Preview data · Compare";
         GeneratedText.Text = "Today · preview";
         ProfileText.Text = "Quick";
@@ -61,15 +62,22 @@ public sealed partial class ReportDetailWorkspace : UserControl
         RenderHealthGroups(presentation);
         RenderFindings(presentation.Findings);
         RenderEvidence(presentation.TechnicalEvidence);
+        SetEvidenceExpanded(false);
     }
 
     private void RenderHealthGroups(ConnectionCheckPresentation presentation)
     {
         var groups = HealthGroupPresenter.Build(presentation)
             .ToDictionary(group => group.Kind);
-        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Responsiveness]);
-        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Reliability]);
-        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Throughput]);
+        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(
+            groups[HealthGroupKind.Responsiveness],
+            compact: true);
+        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(
+            groups[HealthGroupKind.Reliability],
+            compact: true);
+        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(
+            groups[HealthGroupKind.Throughput],
+            compact: true);
         ApplyHealthGroupLayout(Bounds.Width);
     }
 
@@ -81,7 +89,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
             var empty = new TextBlock
             {
                 Text = "No material findings were generated for this report.",
-                FontSize = 12,
+                FontSize = 11,
                 TextWrapping = TextWrapping.Wrap
             };
             empty.Classes.Add("muted");
@@ -98,6 +106,23 @@ public sealed partial class ReportDetailWorkspace : UserControl
     private void RenderEvidence(IReadOnlyList<string> evidence)
     {
         EvidencePanel.Children.Clear();
+        EvidenceCountText.Text = evidence.Count == 0
+            ? "No additional measurement notes"
+            : $"{evidence.Count} measurement note{(evidence.Count == 1 ? string.Empty : "s")} and run details";
+
+        if (evidence.Count == 0)
+        {
+            var empty = new TextBlock
+            {
+                Text = "This report does not contain additional technical evidence.",
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap
+            };
+            empty.Classes.Add("muted");
+            EvidencePanel.Children.Add(empty);
+            return;
+        }
+
         foreach (var item in evidence)
         {
             var row = new Grid
@@ -105,12 +130,15 @@ public sealed partial class ReportDetailWorkspace : UserControl
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
                 ColumnSpacing = 9
             };
-            var marker = new TextBlock
+            var marker = new Border
             {
-                Text = "•",
-                FontSize = 12
+                Width = 6,
+                Height = 6,
+                CornerRadius = new Avalonia.CornerRadius(3),
+                Margin = new Avalonia.Thickness(0, 5, 0, 0),
+                VerticalAlignment = VerticalAlignment.Top
             };
-            marker.Classes.Add("eyebrow");
+            marker.Classes.Add("indicatorAccent");
             row.Children.Add(marker);
 
             var text = new TextBlock
@@ -135,6 +163,16 @@ public sealed partial class ReportDetailWorkspace : UserControl
             HealthGroupGrid,
             [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
             width);
+
+    private void EvidenceToggleClicked(object? sender, RoutedEventArgs eventArgs) =>
+        SetEvidenceExpanded(!evidenceExpanded);
+
+    private void SetEvidenceExpanded(bool expanded)
+    {
+        evidenceExpanded = expanded;
+        EvidenceBody.IsVisible = expanded;
+        EvidenceToggleLabelText.Text = expanded ? "Hide details" : "Show details";
+    }
 
     private void HomeClicked(object? sender, RoutedEventArgs eventArgs) =>
         HomeRequested?.Invoke(this, EventArgs.Empty);
@@ -177,7 +215,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
         var title = new TextBlock
         {
             Text = finding.Title,
-            FontSize = 14,
+            FontSize = 13,
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
         };
@@ -185,21 +223,21 @@ public sealed partial class ReportDetailWorkspace : UserControl
         var summary = new TextBlock
         {
             Text = finding.Summary,
-            FontSize = 12,
-            LineHeight = 18,
+            FontSize = 11,
+            LineHeight = 17,
             TextWrapping = TextWrapping.Wrap
         };
         summary.Classes.Add("secondary");
 
-        var stack = new StackPanel { Spacing = 4 };
+        var stack = new StackPanel { Spacing = 3 };
         stack.Children.Add(label);
         stack.Children.Add(title);
         stack.Children.Add(summary);
 
         var row = new Border
         {
-            Padding = new Avalonia.Thickness(0, 5, 0, 14),
-            Margin = new Avalonia.Thickness(0, 0, 0, 12),
+            Padding = new Avalonia.Thickness(0, 5, 0, 12),
+            Margin = new Avalonia.Thickness(0, 0, 0, 10),
             Child = stack
         };
         row.Classes.Add("divider");
