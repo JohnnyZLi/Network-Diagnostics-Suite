@@ -332,7 +332,7 @@ public sealed partial class MainWindow
 
     private void WorkbenchKeyDown(object? sender, KeyEventArgs eventArgs)
     {
-        var commandPalette = eventArgs.Key == Key.K
+        var commandPalette = eventArgs.Key == Key.F
             && (eventArgs.KeyModifiers.HasFlag(KeyModifiers.Meta)
                 || eventArgs.KeyModifiers.HasFlag(KeyModifiers.Control));
         if (commandPalette)
