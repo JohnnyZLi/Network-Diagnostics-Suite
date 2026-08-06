@@ -4,65 +4,76 @@
              Background="{DynamicResource AppCanvasBrush}"
              Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
-  <Grid RowDefinitions="Auto,Auto,*"
-        Margin="34,30,34,34"
-        MaxWidth="1380"
+  <Grid Name="ResultRoot"
+        RowDefinitions="Auto,Auto,*"
+        Margin="28,22,28,28"
+        MaxWidth="1320"
         HorizontalAlignment="Stretch">
-    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
-      <Border Name="OutcomeIndicator"
-              Grid.Column="0"
-              Width="11"
-              Height="11"
-              CornerRadius="6"
-              Classes="indicatorNeutral"
-              Margin="0,8,0,0"
-              VerticalAlignment="Top" />
-
-      <StackPanel Grid.Column="1" Spacing="6">
-        <TextBlock Name="LabelText" Classes="eyebrow" />
+    <Grid Name="ResultHeaderGrid" Grid.Row="0" ColumnDefinitions="*,220" ColumnSpacing="28">
+      <StackPanel Grid.Column="0" Spacing="7">
+        <StackPanel Orientation="Horizontal" Spacing="9">
+          <Border Name="OutcomeIndicator"
+                  Width="10"
+                  Height="10"
+                  CornerRadius="5"
+                  Classes="indicatorNeutral"
+                  VerticalAlignment="Center" />
+          <TextBlock Name="LabelText" Classes="eyebrow" VerticalAlignment="Center" />
+        </StackPanel>
         <TextBlock Name="VerdictText"
-                   FontSize="34"
+                   FontSize="30"
                    FontWeight="SemiBold"
-                   LineHeight="40"
+                   LineHeight="36"
                    TextWrapping="Wrap" />
         <TextBlock Name="SummaryText"
                    Classes="secondary"
-                   FontSize="13"
-                   LineHeight="20"
-                   MaxWidth="860"
+                   FontSize="12"
+                   LineHeight="18"
+                   MaxWidth="820"
                    TextWrapping="Wrap" />
       </StackPanel>
 
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
-        <Button Name="ReportsButton" Classes="ghost" Content="History" Click="ReportsClicked" />
-        <Button Name="CompareButton" Classes="ghost" Content="Compare" Click="CompareClicked" />
-        <Button Name="ExportButton" Classes="ghost" Content="Export" Click="ExportClicked" />
-        <Button Classes="primary" Content="Run again" Click="RunAgainClicked" />
+      <StackPanel Name="ResultActionsPanel" Grid.Column="1" Spacing="6" VerticalAlignment="Top">
+        <Button Name="RunAgainButton"
+                Classes="primary"
+                Content="Run again"
+                Click="RunAgainClicked"
+                HorizontalAlignment="Stretch" />
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="3">
+          <Button Name="ReportsButton" Grid.Column="0" Classes="ghost" Content="History" Click="ReportsClicked" />
+          <Button Name="CompareButton" Grid.Column="1" Classes="ghost" Content="Compare" Click="CompareClicked" />
+          <Button Name="ExportButton" Grid.Column="2" Classes="ghost" Content="Export" Click="ExportClicked" />
+        </Grid>
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" Margin="26,18,0,0" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="4">
-      <Button Name="OverviewButton" Grid.Column="0" Classes="tab selected" Content="Overview" Tag="Overview" Click="SectionClicked" />
-      <Button Name="EvidenceButton" Grid.Column="1" Classes="tab" Content="Evidence" Tag="Evidence" Click="SectionClicked" />
-    </Grid>
+    <Border Name="ResultTabsSurface"
+            Grid.Row="1"
+            Classes="surfaceSubtle"
+            Margin="0,18,0,0"
+            Padding="3"
+            HorizontalAlignment="Left">
+      <StackPanel Orientation="Horizontal" Spacing="1">
+        <Button Name="OverviewButton" Classes="tab selected" Content="Overview" Tag="Overview" Click="SectionClicked" />
+        <Button Name="EvidenceButton" Classes="tab" Content="Evidence" Tag="Evidence" Click="SectionClicked" />
+      </StackPanel>
+    </Border>
 
     <Grid Grid.Row="2" Margin="0,16,0,0">
       <ScrollViewer Name="OverviewView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="20">
-          <Grid ColumnDefinitions="1.28*,0.72*" ColumnSpacing="14">
-            <Border Grid.Column="0"
-                    Background="{DynamicResource AppSelectedBrush}"
-                    BorderBrush="{DynamicResource AppAccentBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="15"
-                    Padding="22">
+        <StackPanel Spacing="18" Margin="0,0,4,0">
+          <Grid Name="ResultSummaryGrid" ColumnDefinitions="1.22*,0.78*" ColumnSpacing="12" RowSpacing="12">
+            <Border Name="NextActionCard"
+                    Grid.Column="0"
+                    Classes="accentSurface"
+                    Padding="20">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
-                <StackPanel Grid.Column="0" Spacing="7">
+                <StackPanel Grid.Column="0" Spacing="6">
                   <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
                   <TextBlock Name="NextActionText"
-                             FontSize="20"
+                             FontSize="19"
                              FontWeight="SemiBold"
-                             LineHeight="26"
+                             LineHeight="25"
                              TextWrapping="Wrap" />
                 </StackPanel>
                 <Button Name="QuickButton"
@@ -75,11 +86,11 @@
               </Grid>
             </Border>
 
-            <Border Grid.Column="1"
-                    Background="{DynamicResource AppRaisedBrush}"
-                    CornerRadius="15"
-                    Padding="19">
-              <StackPanel Spacing="7">
+            <Border Name="RunContextCard"
+                    Grid.Column="1"
+                    Classes="surface"
+                    Padding="18">
+              <StackPanel Spacing="6">
                 <TextBlock Classes="eyebrow" Text="RUN CONTEXT" />
                 <TextBlock Name="ContextText"
                            Classes="secondary"
@@ -90,8 +101,8 @@
             </Border>
           </Grid>
 
-          <StackPanel Spacing="12">
-            <StackPanel Spacing="4">
+          <StackPanel Spacing="11">
+            <StackPanel Spacing="3">
               <TextBlock Classes="eyebrow" Text="NETWORK HEALTH" />
               <TextBlock FontSize="18" FontWeight="SemiBold" Text="What this run says about the connection" />
             </StackPanel>
@@ -107,11 +118,9 @@
             </Grid>
           </StackPanel>
 
-          <Border Background="{DynamicResource AppRaisedBrush}"
-                  CornerRadius="15"
-                  Padding="20">
-            <StackPanel Spacing="12">
-              <StackPanel Spacing="4">
+          <Border Classes="surface" Padding="20">
+            <StackPanel Spacing="11">
+              <StackPanel Spacing="3">
                 <TextBlock Classes="eyebrow" Text="FINDINGS" />
                 <TextBlock Classes="muted"
                            FontSize="10"
@@ -127,40 +136,33 @@
                     IsVisible="False"
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="16">
-          <StackPanel Spacing="4">
+        <StackPanel Spacing="16" Margin="0,0,4,0">
+          <StackPanel Spacing="3">
             <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
             <TextBlock FontSize="18" FontWeight="SemiBold" Text="Verify the result" />
             <TextBlock Classes="muted"
                        FontSize="10"
-                       Text="Inspect retained measurements, run metadata, and unavailable sections without changing the overview verdict." />
+                       Text="Inspect retained measurements and run metadata without changing the overview verdict." />
           </StackPanel>
 
-          <Grid ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16">
-            <Border Grid.Column="0"
-                    Background="{DynamicResource AppRaisedBrush}"
-                    CornerRadius="15"
-                    Padding="20">
+          <Grid Name="EvidenceLayoutGrid" ColumnDefinitions="1.12*,0.88*" ColumnSpacing="14" RowSpacing="14">
+            <Border Name="MeasurementsCard" Grid.Column="0" Classes="surface" Padding="20">
               <StackPanel Spacing="13">
                 <TextBlock Classes="eyebrow" Text="MEASUREMENTS" />
                 <StackPanel Name="EvidencePanel" Spacing="10" />
               </StackPanel>
             </Border>
 
-            <StackPanel Grid.Column="1" Spacing="16">
-              <Border Background="{DynamicResource AppRaisedBrush}"
-                      CornerRadius="15"
-                      Padding="20">
-                <StackPanel Spacing="11">
+            <StackPanel Name="EvidenceSideStack" Grid.Column="1" Spacing="14">
+              <Border Classes="surface" Padding="18">
+                <StackPanel Spacing="10">
                   <TextBlock Classes="eyebrow" Text="RUN DETAILS" />
                   <StackPanel Name="RunDetailPanel" Spacing="8" />
                 </StackPanel>
               </Border>
 
-              <Border Background="{DynamicResource AppSelectedBrush}"
-                      CornerRadius="15"
-                      Padding="20">
-                <StackPanel Spacing="7">
+              <Border Classes="accentSurface" Padding="18">
+                <StackPanel Spacing="6">
                   <TextBlock Classes="eyebrow" Text="INTERPRETATION" />
                   <TextBlock Name="InterpretationText"
                              Classes="secondary"
