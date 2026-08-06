@@ -9,6 +9,7 @@ namespace NetworkDiagnostics.Desktop;
 public sealed partial class MainWindow
 {
     private bool monitoringSubscribed;
+    private int monitoringUiUpdateQueued;
 
     private async Task InitializeMonitoringAsync()
     {
@@ -30,12 +31,28 @@ public sealed partial class MainWindow
 
     private void MonitoringSnapshotChanged(object? sender, MonitorSnapshotChangedEventArgs eventArgs)
     {
+        // Monitoring can publish while the UI thread is busy. Keep at most one
+        // dashboard refresh queued and always read the service's latest snapshot
+        // when that refresh executes. The old path queued a complete workspace
+        // rebuild for every sample, including hidden report/result surfaces.
+        if (Interlocked.Exchange(ref monitoringUiUpdateQueued, 1) != 0)
+        {
+            return;
+        }
+
         Dispatcher.UIThread.Post(() =>
         {
-            SyncTestWorkspace();
-            UpdateTrayPresentation();
-            RefreshWorkbenchChrome();
-        });
+            try
+            {
+                testSetupWorkspace?.RenderMonitoringSnapshot(CurrentNetworkExperience());
+                UpdateTrayPresentation();
+                RefreshWorkbenchChrome();
+            }
+            finally
+            {
+                Volatile.Write(ref monitoringUiUpdateQueued, 0);
+            }
+        }, DispatcherPriority.Background);
     }
 
     private void MonitoringContentSpeedDue(object? sender, MonitorContentSpeedDueEventArgs eventArgs)
