@@ -30,6 +30,9 @@ public sealed partial class MainWindow
 
     private void HideWhenNotInOverlay(Avalonia.Controls.Control? surface)
     {
+        // IsOverlayContent is now the compatibility hook for the currently focused
+        // in-shell workspace. Keep that surface alive until the destination switch is
+        // ready, while ordinary sibling workspaces remain hidden.
         if (surface is not null && workbenchShell?.IsOverlayContent(surface) != true)
         {
             surface.IsVisible = false;
