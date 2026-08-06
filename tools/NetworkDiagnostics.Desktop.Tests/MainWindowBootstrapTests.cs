@@ -131,6 +131,7 @@ public sealed class MainWindowBootstrapTests
             var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
             Assert.True(shell.OverlayOpen);
             Assert.Same(second, host.Content);
+            Assert.False(first.IsVisible);
             Assert.True(second.IsVisible);
         }
         finally
