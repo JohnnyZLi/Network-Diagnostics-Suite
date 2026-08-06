@@ -20,4 +20,26 @@ public sealed class ReportDetailWorkspaceTests
 
         Assert.True(requested);
     }
+
+    [AvaloniaFact]
+    public void TechnicalEvidenceUsesAStableDisclosureButton()
+    {
+        var workspace = new ReportDetailWorkspace();
+        var toggle = Assert.IsType<Button>(workspace.FindControl<Button>("EvidenceToggleButton"));
+        var body = Assert.IsType<Border>(workspace.FindControl<Border>("EvidenceBody"));
+        var label = Assert.IsType<TextBlock>(workspace.FindControl<TextBlock>("EvidenceToggleLabelText"));
+
+        Assert.False(body.IsVisible);
+        Assert.Equal("Show details", label.Text);
+
+        toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+        Assert.True(body.IsVisible);
+        Assert.Equal("Hide details", label.Text);
+
+        toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+        Assert.False(body.IsVisible);
+        Assert.Equal("Show details", label.Text);
+    }
 }
