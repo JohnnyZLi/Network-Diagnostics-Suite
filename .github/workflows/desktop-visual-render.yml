@@ -145,35 +145,55 @@ jobs:
           capture control-center-inline-compare
           xdotool key --clearmodifiers Home
 
+          # Clicking the command-palette backdrop must dismiss it without another shortcut.
           xdotool key --clearmodifiers ctrl+k
           sleep 0.35
           capture command-palette
-          xdotool key Escape
+          xdotool mousemove 40 560 click 1
+          capture command-palette-dismissed
 
           run_command 'open reports'
           capture diagnostics-library-empty
 
-          # The report toolbar must expose direct Home and History routes.
+          # Saved-report chrome must stay inside a bounded sheet with persistent shell navigation.
           run_command 'preview saved report'
           capture saved-report-detail
-          xdotool key Escape
-          sleep 0.4
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture saved-report-detail-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          run_command 'open network overview'
 
+          # Settings should open over the stable Home shell without first replacing the page.
           for section in general monitoring diagnostics privacy storage developer; do
             run_command "settings ${section}"
             capture "settings-${section}"
           done
 
           run_command 'settings general'
-          xdotool mousemove 908 456 click 1
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture settings-general-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          run_command 'settings general'
+          xdotool mousemove 760 470 click 1
           capture settings-interface-dropdown
           xdotool key Escape
+          xdotool mousemove 12 500 click 1
+          capture overview-after-settings
 
-          # Capture the actual result workspace through a deterministic developer command.
+          # Capture the result workspace in wide and compact layouts.
           run_command 'preview healthy result'
           capture result-healthy-overview
           xdotool mousemove 255 215 click 1
           capture result-healthy-evidence
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture result-healthy-evidence-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
 
           # Exercise a live diagnostic over several telemetry updates. These frames
           # verify that the header progress stays below its text and the running view
