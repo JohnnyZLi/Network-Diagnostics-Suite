@@ -58,19 +58,15 @@ public sealed partial class MainWindow
         }
         finally
         {
-            // Do not rebuild the test hub here. On a successful run the completed
-            // live tile must remain mounted until the report sheet is already visible;
-            // rebuilding here creates an idle-layout flash behind the handoff.
+            // Do not rebuild or refresh the test hub here. Session state changes and
+            // destination navigation already own those visual updates. A second pass
+            // during the report handoff can expose an intermediate frame on macOS.
             RenderProfileSelection();
-            RefreshWorkbenchChrome();
         }
     }
 
-    private void StopClicked(object? sender, RoutedEventArgs eventArgs)
-    {
+    private void StopClicked(object? sender, RoutedEventArgs eventArgs) =>
         activeRunSession.RequestCancel();
-        RefreshWorkbenchChrome();
-    }
 
     private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs) =>
         NavigateToDestination(new TestSetupDestination());
@@ -91,6 +87,8 @@ public sealed partial class MainWindow
         }
 
         displayedRunProgress = nextProgress;
+        // UpdateProgress raises ActiveRunSession.Changed, whose single UI handler
+        // updates the fixed live tile and workbench chrome. Do not refresh it twice.
         activeRunSession.UpdateProgress(
             progress.Phase,
             LiveProgressText(progress),
@@ -98,13 +96,13 @@ public sealed partial class MainWindow
             progress.LiveMbps,
             progress.LiveLatencyMs,
             progress.BytesTransferred);
-        RefreshWorkbenchChrome();
     }
 
     private void ResetRunningState()
     {
+        // ActiveRunSession.Start already raised the state change that installs the
+        // live tile. This method only resets the monotonic progress accumulator.
         displayedRunProgress = 0;
-        RefreshWorkbenchChrome();
     }
 
     private void CompleteRunningState()
