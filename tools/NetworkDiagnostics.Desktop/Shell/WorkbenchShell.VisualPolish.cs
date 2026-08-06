@@ -13,6 +13,7 @@ public sealed partial class WorkbenchShell
     private Button? settingsUtilityButton;
     private Panel? toolbarActions;
     private Control? primaryNavigation;
+    private bool activeRunLayoutPolished;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
@@ -22,6 +23,7 @@ public sealed partial class WorkbenchShell
         EnsureSettingsUtility();
         HidePrimaryPageNavigation();
         PolishHeaderUtilities();
+        PolishActiveRunLayout();
         LayoutUpdated += VisualPolishLayoutUpdated;
     }
 
@@ -41,6 +43,7 @@ public sealed partial class WorkbenchShell
             settingsUtilityButton.Content = Bounds.Width < 960 ? "⚙" : "Settings";
         }
         PolishHeaderUtilities();
+        PolishActiveRunLayout();
         SimplifyContextLabel();
     }
 
@@ -75,6 +78,52 @@ public sealed partial class WorkbenchShell
 
         InspectorToggleButton.Width = double.NaN;
         PolishUtilityButton(InspectorToggleButton, 46);
+    }
+
+    private void PolishActiveRunLayout()
+    {
+        if (!activeRunLayoutPolished && ActiveRunPanel.Content is Grid grid)
+        {
+            grid.ColumnDefinitions.Clear();
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Clear();
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.ColumnSpacing = 0;
+            grid.RowSpacing = 0;
+
+            var textStack = grid.Children.OfType<StackPanel>().FirstOrDefault();
+            if (textStack is not null)
+            {
+                Grid.SetColumn(textStack, 0);
+                Grid.SetRow(textStack, 0);
+            }
+
+            Grid.SetColumn(ActiveRunProgress, 0);
+            Grid.SetRow(ActiveRunProgress, 1);
+            ActiveRunProgress.Height = 3;
+            ActiveRunProgress.Margin = new Thickness(0, 4, 0, 0);
+            ActiveRunProgress.HorizontalAlignment = HorizontalAlignment.Stretch;
+            ActiveRunProgress.VerticalAlignment = VerticalAlignment.Center;
+            ActiveRunProgress.IsHitTestVisible = false;
+
+            ActiveRunTitleText.TextWrapping = TextWrapping.NoWrap;
+            ActiveRunTitleText.TextTrimming = TextTrimming.CharacterEllipsis;
+            ActiveRunDetailText.TextWrapping = TextWrapping.NoWrap;
+            ActiveRunDetailText.TextTrimming = TextTrimming.CharacterEllipsis;
+
+            ActiveRunPanel.Height = 42;
+            ActiveRunPanel.MinHeight = 42;
+            ActiveRunPanel.Padding = new Thickness(10, 5);
+            ActiveRunPanel.VerticalContentAlignment = VerticalAlignment.Center;
+            activeRunLayoutPolished = true;
+        }
+
+        var targetWidth = Bounds.Width < 1100 ? 180d : 250d;
+        if (Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
+        {
+            ActiveRunPanel.Width = targetWidth;
+        }
     }
 
     private static void PolishUtilityButton(Button button, double minimumWidth)
