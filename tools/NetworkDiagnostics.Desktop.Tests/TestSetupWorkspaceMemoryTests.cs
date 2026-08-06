@@ -1,7 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
+using NetworkDeepProbe.Models;
+using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Monitoring;
 using NetworkDiagnostics.Desktop.Presentation;
+using NetworkDiagnostics.Desktop.Services;
 using NetworkDiagnostics.Desktop.Workspaces;
 using Xunit;
 
@@ -60,6 +64,50 @@ public sealed class TestSetupWorkspaceMemoryTests
             Assert.True(
                 retainedGrowth < 32L * 1024 * 1024,
                 $"Monitoring refreshes retained {retainedGrowth / 1024d / 1024d:0.0} MB.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void CompletedRunKeepsTheLiveTileMountedUntilTheReportSheetOpens()
+    {
+        var workspace = new TestSetupWorkspace();
+        var window = new Window
+        {
+            Width = 1200,
+            Height = 800,
+            Content = workspace
+        };
+
+        try
+        {
+            window.Show();
+            workspace.HoldCompletedRunTile(new ActiveRunSnapshot(
+                Guid.NewGuid(),
+                ActiveRunStatus.Completed,
+                TestProfileId.ConnectionCheck,
+                TransferMethod.Aggregate,
+                DateTimeOffset.UtcNow,
+                "Complete",
+                "Diagnostic completed and saved.",
+                100,
+                182,
+                34.2,
+                64_000_000,
+                Guid.NewGuid()));
+
+            var texts = workspace.GetVisualDescendants().OfType<TextBlock>().ToArray();
+            var buttons = workspace.GetVisualDescendants().OfType<Button>().ToArray();
+
+            Assert.Contains(texts, text => text.Text == "DIAGNOSTIC COMPLETE");
+            Assert.Contains(texts, text => text.Text == "Preparing the saved result…");
+            var stop = Assert.Single(
+                buttons,
+                button => string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal));
+            Assert.False(stop.IsVisible);
         }
         finally
         {
