@@ -10,6 +10,7 @@ public sealed partial class WorkbenchShell : UserControl
 {
     private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
     private const double InspectorMinimumWidth = 1180;
+    private const string StableProductContext = "Local diagnostics";
     private bool inspectorRequested;
     private WorkspaceKind currentWorkspace = WorkspaceKind.Test;
 
@@ -66,7 +67,7 @@ public sealed partial class WorkbenchShell : UserControl
         BackButton.IsEnabled = canGoBack;
         ForwardButton.IsEnabled = canGoForward;
         currentWorkspace = entry.Destination.Workspace;
-        RenderBreadcrumbs(entry.Destination.Breadcrumbs);
+        RenderProductContext();
         SelectWorkspace(currentWorkspace);
 
         if (currentWorkspace != WorkspaceKind.Test || !entry.ViewState.InspectorOpen)
@@ -199,7 +200,7 @@ public sealed partial class WorkbenchShell : UserControl
         ProductStack.IsVisible = width >= 880;
         ActiveRunDetailText.IsVisible = width >= 1180;
         HomeButton.Content = compact ? "⌂" : "Home";
-        HomeButton.MinWidth = compact ? 34 : 54;
+        HomeButton.MinWidth = compact ? 34 : 52;
         SettingsToolbarButton.Content = compact ? "⚙" : "Settings";
         SettingsToolbarButton.MinWidth = compact ? 34 : 58;
         CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
@@ -210,12 +211,11 @@ public sealed partial class WorkbenchShell : UserControl
         SettingsWorkspaceLabel.Text = "Settings";
     }
 
-    private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
+    private void RenderProductContext()
     {
-        var label = ContextLabel(breadcrumbs);
         if (BreadcrumbPanel.Children.Count == 1
             && BreadcrumbPanel.Children[0] is TextBlock current
-            && string.Equals(current.Text, label, StringComparison.Ordinal))
+            && string.Equals(current.Text, StableProductContext, StringComparison.Ordinal))
         {
             return;
         }
@@ -223,38 +223,14 @@ public sealed partial class WorkbenchShell : UserControl
         BreadcrumbPanel.Children.Clear();
         var text = new TextBlock
         {
-            Text = label,
-            FontSize = 9,
+            Text = StableProductContext,
+            FontSize = 8,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-            MaxWidth = 160
+            MaxWidth = 148
         };
         text.Classes.Add("shellMuted");
         BreadcrumbPanel.Children.Add(text);
-    }
-
-    private static string ContextLabel(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
-    {
-        if (breadcrumbs.Count == 0) return "Live control center";
-        var labels = breadcrumbs
-            .Select(segment => segment.Label)
-            .Where(label => !string.IsNullOrWhiteSpace(label))
-            .ToArray();
-        if (labels.Length == 0) return "Live control center";
-
-        var selected = labels[^1];
-        if (selected is "Overview" or "Evidence" && labels.Length > 1)
-        {
-            selected = labels[^2];
-        }
-
-        return selected switch
-        {
-            "Test" or "Overview" => "Live control center",
-            "Reports" => "Diagnostics library",
-            "Comparisons" => "Comparison",
-            _ => selected
-        };
     }
 
     private void SelectWorkspace(WorkspaceKind workspace)
