@@ -101,11 +101,12 @@ requireFragments(app, [
   'className="header-actions jl-global-header__actions"',
   "data-site-switcher", "data-site-switcher-button", "data-site-switcher-menu",
   "data-header-menu", "data-header-menu-button", "jl-header-menu--open", "jl-header-menu-toggle",
-  "OWNED_SITES.map", 'site.id === "network"', "installSiteSwitcher", "installHeaderMenu",
+  "populate: true", 'currentSite: "network"', "installSiteSwitcher", "installHeaderMenu",
   "siteController.destroy()", "navigationController.destroy()",
   "mobileNavControllerRef.current?.close()", "siteController.close()",
 ], "Network shared header");
 if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");
+if (app.includes("OWNED_SITES.map") || app.includes("import { OWNED_SITES")) fail("Network repeats shared Sites menu content instead of using populate.");
 const headerActionsPosition = app.indexOf('className="header-actions jl-global-header__actions"');
 const menuButtonPosition = app.indexOf("data-header-menu-button", headerActionsPosition);
 const sitesPosition = app.indexOf("data-site-switcher", headerActionsPosition);

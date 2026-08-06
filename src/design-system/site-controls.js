@@ -4,6 +4,8 @@ export const OWNED_SITES = Object.freeze([
   Object.freeze({ id: "rolepacket", label: "RolePacket", href: "https://rolepacket.johnnyli.dev" }),
 ]);
 
+export const THEME_PREFERENCES = Object.freeze(["system", "light", "dark"]);
+
 function requireElement(value, label) {
   if (!(value instanceof HTMLElement)) {
     throw new TypeError(`${label} must be an HTMLElement.`);
@@ -11,21 +13,62 @@ function requireElement(value, label) {
   return value;
 }
 
-function menuLinks(menu) {
-  return [...menu.querySelectorAll("a[href]")];
+function menuItems(menu) {
+  return [...menu.querySelectorAll("a[href], button:not([disabled])")];
 }
 
-function focusLink(menu, position) {
-  const links = menuLinks(menu);
-  if (links.length === 0) return;
-  const index = position === "last" ? links.length - 1 : 0;
-  links[index]?.focus();
+function focusItem(menu, position) {
+  const items = menuItems(menu);
+  if (items.length === 0) return;
+  const index = position === "last" ? items.length - 1 : 0;
+  items[index]?.focus();
+}
+
+function themeApi(document) {
+  return document.defaultView?.JLTheme ?? null;
+}
+
+function syncThemeButtons(menu) {
+  const preference = themeApi(menu.ownerDocument)?.getPreference?.()
+    ?? menu.ownerDocument.documentElement.dataset.themePreference
+    ?? "system";
+  for (const button of menu.querySelectorAll("[data-theme-preference]")) {
+    if (!(button instanceof HTMLButtonElement)) continue;
+    const selected = button.dataset.themePreference === preference;
+    button.setAttribute("aria-pressed", String(selected));
+  }
+}
+
+function createThemeControl(document) {
+  const item = document.createElement("li");
+  item.className = "jl-theme-menu-item";
+
+  const label = document.createElement("span");
+  label.className = "jl-theme-menu-label";
+  label.textContent = "Appearance";
+
+  const group = document.createElement("div");
+  group.className = "jl-theme-options";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", "Appearance");
+
+  for (const preference of THEME_PREFERENCES) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.themePreference = preference;
+    button.textContent = preference[0].toUpperCase() + preference.slice(1);
+    button.setAttribute("aria-pressed", "false");
+    group.append(button);
+  }
+
+  item.append(label, group);
+  return item;
 }
 
 export function populateOwnedSites(menu, currentSite) {
   requireElement(menu, "Owned-sites menu");
   const document = menu.ownerDocument;
-  menu.replaceChildren(...OWNED_SITES.map((site) => {
+  const siteItems = OWNED_SITES.map((site) => {
     const item = document.createElement("li");
     const link = document.createElement("a");
     link.href = site.href;
@@ -33,7 +76,37 @@ export function populateOwnedSites(menu, currentSite) {
     if (site.id === currentSite) link.setAttribute("aria-current", "page");
     item.append(link);
     return item;
-  }));
+  });
+  menu.replaceChildren(...siteItems, createThemeControl(document));
+  syncThemeButtons(menu);
+}
+
+export function installThemeControl(menu) {
+  requireElement(menu, "Theme menu");
+  const window = menu.ownerDocument.defaultView;
+
+  const handleClick = (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest("[data-theme-preference]")
+      : null;
+    if (!(button instanceof HTMLButtonElement)) return;
+    const preference = button.dataset.themePreference;
+    if (!THEME_PREFERENCES.includes(preference)) return;
+    themeApi(menu.ownerDocument)?.setPreference?.(preference);
+    syncThemeButtons(menu);
+  };
+
+  const handleThemeChange = () => syncThemeButtons(menu);
+  menu.addEventListener("click", handleClick);
+  window?.addEventListener("jl-theme-change", handleThemeChange);
+  syncThemeButtons(menu);
+
+  return {
+    destroy() {
+      menu.removeEventListener("click", handleClick);
+      window?.removeEventListener("jl-theme-change", handleThemeChange);
+    },
+  };
 }
 
 export function installDisclosureMenu({
@@ -66,7 +139,7 @@ export function installDisclosureMenu({
     onOpenChange?.(open);
 
     if (open && focus) {
-      queueMicrotask(() => focusLink(menu, focus));
+      queueMicrotask(() => focusItem(menu, focus));
     } else if (!open && restoreFocus) {
       button.focus();
     }
@@ -83,23 +156,23 @@ export function installDisclosureMenu({
     openMenu({ focus: event.key === "ArrowUp" ? "last" : "first" });
   };
   const handleMenuKeyDown = (event) => {
-    const links = menuLinks(menu);
+    const items = menuItems(menu);
     if (event.key === "Escape") {
       event.preventDefault();
       close({ restoreFocus: true });
       return;
     }
-    if (!links.includes(document.activeElement)) return;
+    if (!items.includes(document.activeElement)) return;
 
-    const current = links.indexOf(document.activeElement);
+    const current = items.indexOf(document.activeElement);
     let next = null;
-    if (event.key === "ArrowDown") next = (current + 1) % links.length;
-    if (event.key === "ArrowUp") next = (current - 1 + links.length) % links.length;
+    if (event.key === "ArrowDown") next = (current + 1) % items.length;
+    if (event.key === "ArrowUp") next = (current - 1 + items.length) % items.length;
     if (event.key === "Home") next = 0;
-    if (event.key === "End") next = links.length - 1;
+    if (event.key === "End") next = items.length - 1;
     if (next === null) return;
     event.preventDefault();
-    links[next]?.focus();
+    items[next]?.focus();
   };
   const handleMenuClick = (event) => {
     if (closeOnSelect && event.target instanceof Element && event.target.closest("a[href]")) close();
@@ -148,7 +221,8 @@ export function installSiteSwitcher(root, options = {}) {
   const button = root.querySelector("[data-site-switcher-button]");
   const menu = root.querySelector("[data-site-switcher-menu]");
   if (options.populate && options.currentSite) populateOwnedSites(menu, options.currentSite);
-  return installDisclosureMenu({
+  const theme = installThemeControl(menu);
+  const disclosure = installDisclosureMenu({
     root,
     button,
     menu,
@@ -156,6 +230,13 @@ export function installSiteSwitcher(root, options = {}) {
     onBeforeOpen: options.onBeforeOpen,
     onOpenChange: options.onOpenChange,
   });
+  return {
+    ...disclosure,
+    destroy() {
+      disclosure.destroy();
+      theme.destroy();
+    },
+  };
 }
 
 export function installHeaderMenu(root, options = {}) {
