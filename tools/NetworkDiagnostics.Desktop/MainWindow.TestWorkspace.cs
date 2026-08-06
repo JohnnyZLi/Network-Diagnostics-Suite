@@ -12,11 +12,7 @@ public sealed partial class MainWindow
     {
         testSetupWorkspace = new TestSetupWorkspace();
         testConfigurationPanel = new TestConfigurationPanel();
-        runningTestWorkspace = new RunningTestWorkspace();
-        testResultWorkspace = new TestResultWorkspace();
         SetupView.Content = testSetupWorkspace;
-        RunningView.Content = runningTestWorkspace;
-        ResultsView.Content = testResultWorkspace;
 
         testSetupWorkspace.ProfileRequested += TestSetupProfileRequested;
         testSetupWorkspace.MethodRequested += TestSetupMethodRequested;
@@ -36,13 +32,6 @@ public sealed partial class MainWindow
         testConfigurationPanel.IdentifiersChanged += TestConfigurationIdentifiersChanged;
         testConfigurationPanel.RefreshRequested += TestConfigurationRefreshRequested;
         testConfigurationPanel.SettingsRequested += TestSetupSettingsRequested;
-
-        runningTestWorkspace.StopRequested += RunningWorkspaceStopRequested;
-        testResultWorkspace.RunAgainRequested += TestResultRunAgainRequested;
-        testResultWorkspace.QuickRequested += TestResultQuickRequested;
-        testResultWorkspace.ExportRequested += TestResultExportRequested;
-        testResultWorkspace.ReportsRequested += TestResultReportsRequested;
-        testResultWorkspace.CompareRequested += TestResultCompareRequested;
 
         activeRunSession.Changed += ActiveRunSessionChanged;
     }
@@ -64,29 +53,6 @@ public sealed partial class MainWindow
 
     private void TestSetupSettingsRequested(object? sender, EventArgs eventArgs) =>
         NavigateToDestination(new SettingsDestination("General"));
-
-    private void RunningWorkspaceStopRequested(object? sender, EventArgs eventArgs) =>
-        StopClicked(sender, new RoutedEventArgs());
-
-    private void TestResultRunAgainRequested(object? sender, EventArgs eventArgs) =>
-        RunAgainClicked(sender, new RoutedEventArgs());
-
-    private void TestResultQuickRequested(object? sender, EventArgs eventArgs) =>
-        ChooseQuickClicked(sender, new RoutedEventArgs());
-
-    private void TestResultExportRequested(object? sender, EventArgs eventArgs) =>
-        ExportReportClicked(sender, new RoutedEventArgs());
-
-    private void TestResultReportsRequested(object? sender, EventArgs eventArgs) =>
-        NavigateToDestination(new ReportListDestination());
-
-    private void TestResultCompareRequested(object? sender, EventArgs eventArgs)
-    {
-        if (currentReport is not null)
-        {
-            NavigateToDestination(new ComparisonDestination(currentReport.Run.Id));
-        }
-    }
 
     private async void TestConfigurationInterfaceRequested(object? sender, IndexRequestedEventArgs eventArgs) =>
         await SelectInterfaceAsync(eventArgs.Index);
@@ -111,11 +77,9 @@ public sealed partial class MainWindow
         var snapshot = activeRunSession.Snapshot;
         if (snapshot.IsActive)
         {
-            // Live telemetry updates a fixed dashboard tile and the compatibility
-            // running renderer. Neither path rebuilds hidden workspaces or the full
-            // monitoring surface, preserving the bounded-memory behavior.
+            // The live tile is the only visual run renderer. Updating fixed controls
+            // here avoids hidden workspace churn while preserving the bounded-memory path.
             testSetupWorkspace?.RenderActiveRunSnapshot(snapshot);
-            runningTestWorkspace?.Render(snapshot, activeRunSession.Events);
             RefreshWorkbenchChrome();
             return;
         }
@@ -123,17 +87,13 @@ public sealed partial class MainWindow
         if (snapshot.Status == ActiveRunStatus.Completed && snapshot.ReportId is not null)
         {
             // Keep the final live layout mounted until the report sheet owns the
-            // interaction. Restoring the two idle choice cards here caused a visible
-            // dashboard reflow immediately before the backdrop and result appeared.
+            // interaction. Restoring idle choices first creates a visible reflow.
             testSetupWorkspace?.HoldCompletedRunTile(snapshot);
-            SyncRunResultWorkspaces();
             RefreshWorkbenchChrome();
             return;
         }
 
-        // Cancelled and failed runs return to the normal test choices immediately.
-        // SyncTestWorkspace already calls SyncRunResultWorkspaces, so do not invoke
-        // it a second time here.
+        // Cancelled and failed runs return to the normal choices immediately.
         SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
@@ -156,7 +116,6 @@ public sealed partial class MainWindow
     private void PresentRunOutcome(Guid reportId)
     {
         ShowControlCenterUnderlay();
-        SyncRunResultWorkspaces();
         _ = RecordCurrentReportForMonitoringAsync();
 
         var destination = new TestResultDestination(reportId);
@@ -213,17 +172,5 @@ public sealed partial class MainWindow
             settings.IncludeLocalIdentifiers,
             CompactStatusValue(preflightEndpoint),
             CompactStatusValue(preflightNetwork)));
-
-        SyncRunResultWorkspaces();
-    }
-
-    private void SyncRunResultWorkspaces()
-    {
-        var snapshot = activeRunSession.Snapshot;
-        runningTestWorkspace?.Render(snapshot, activeRunSession.Events);
-        var section = navigationService.Current?.Destination is TestResultDestination result
-            ? result.Section
-            : "Overview";
-        testResultWorkspace?.Render(currentPresentation, currentReport, snapshot, section);
     }
 }
