@@ -1,18 +1,25 @@
 using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using Avalonia.Threading;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
+    private static readonly TimeSpan OverlayFadeDuration = TimeSpan.FromMilliseconds(120);
+
     private Grid? overlayRoot;
     private Border? overlaySheet;
     private ContentControl? overlayHost;
     private TextBlock? overlayTitle;
+    private double? overlayRequestedMaxHeight;
+    private bool reducedMotion;
+    private int overlayTransitionGeneration;
 
     public event EventHandler? OverlayCloseRequested;
 
@@ -75,7 +82,7 @@ public sealed partial class WorkbenchShell
             Margin = new Thickness(30),
             MaxWidth = 1180,
             HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center,
             ClipToBounds = true,
             Child = sheetGrid
         };
@@ -84,11 +91,20 @@ public sealed partial class WorkbenchShell
         overlayRoot = new Grid
         {
             IsVisible = false,
+            Opacity = 0,
             ZIndex = 50
         };
         overlayRoot.Children.Add(backdrop);
         overlayRoot.Children.Add(overlaySheet);
         ShellGrid.Children.Add(overlayRoot);
+        ShellGrid.SizeChanged += OverlayViewportChanged;
+        ConfigureOverlayTransitions();
+    }
+
+    public void SetReducedMotion(bool value)
+    {
+        reducedMotion = value;
+        ConfigureOverlayTransitions();
     }
 
     public void OpenOverlay(
@@ -99,6 +115,9 @@ public sealed partial class WorkbenchShell
         bool stretchWidth = false)
     {
         EnsureOverlay();
+        var wasOpen = overlayRoot!.IsVisible;
+        var generation = ++overlayTransitionGeneration;
+
         DetachFromLogicalParent(content);
         content.IsVisible = true;
         overlayTitle!.Text = title;
@@ -106,14 +125,26 @@ public sealed partial class WorkbenchShell
         overlaySheet.HorizontalAlignment = stretchWidth
             ? HorizontalAlignment.Stretch
             : HorizontalAlignment.Center;
-        overlaySheet.MaxHeight = maxHeight ?? double.PositiveInfinity;
-        overlaySheet.VerticalAlignment = maxHeight is null
-            ? VerticalAlignment.Stretch
-            : VerticalAlignment.Center;
+        overlayRequestedMaxHeight = maxHeight;
         overlayHost!.Content = content;
-        overlayRoot!.IsVisible = true;
+        ApplyOverlayBounds();
+
+        overlayRoot.IsVisible = true;
+        overlayRoot.IsHitTestVisible = true;
+        overlayRoot.Opacity = wasOpen || reducedMotion ? 1 : 0;
         inspectorRequested = false;
         RefreshResponsiveChrome();
+
+        if (!wasOpen && !reducedMotion)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (generation == overlayTransitionGeneration && overlayRoot.IsVisible)
+                {
+                    overlayRoot.Opacity = 1;
+                }
+            }, DispatcherPriority.Render);
+        }
     }
 
     public void SelectControlCenter()
@@ -126,8 +157,70 @@ public sealed partial class WorkbenchShell
 
     public void CloseOverlay()
     {
-        if (overlayRoot is not null) overlayRoot.IsVisible = false;
+        if (overlayRoot is null || !overlayRoot.IsVisible) return;
+        var generation = ++overlayTransitionGeneration;
+        overlayRoot.IsHitTestVisible = false;
+
+        if (reducedMotion)
+        {
+            FinishOverlayClose(generation);
+            return;
+        }
+
+        overlayRoot.Opacity = 0;
+        DispatcherTimer.RunOnce(
+            () => FinishOverlayClose(generation),
+            OverlayFadeDuration + TimeSpan.FromMilliseconds(20));
+    }
+
+    private void FinishOverlayClose(int generation)
+    {
+        if (generation != overlayTransitionGeneration || overlayRoot is null || overlayHost is null)
+        {
+            return;
+        }
+
+        var content = overlayHost.Content as Control;
+        overlayHost.Content = null;
+        if (content is not null) content.IsVisible = false;
+        overlayRoot.IsVisible = false;
+        overlayRoot.Opacity = 0;
         RefreshResponsiveChrome();
+    }
+
+    private void ConfigureOverlayTransitions()
+    {
+        if (overlayRoot is null) return;
+        overlayRoot.Transitions = reducedMotion
+            ? null
+            : new Transitions
+            {
+                new DoubleTransition
+                {
+                    Property = OpacityProperty,
+                    Duration = OverlayFadeDuration
+                }
+            };
+    }
+
+    private void OverlayViewportChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyOverlayBounds();
+
+    private void ApplyOverlayBounds()
+    {
+        if (overlaySheet is null) return;
+
+        var width = Math.Max(320, ShellGrid.Bounds.Width);
+        var height = Math.Max(320, ShellGrid.Bounds.Height);
+        var margin = width < 900 ? 12d : 30d;
+        var availableHeight = Math.Max(280, height - margin * 2);
+        var resolvedHeight = overlayRequestedMaxHeight is { } requested
+            ? Math.Min(requested, availableHeight)
+            : availableHeight;
+
+        overlaySheet.Margin = new Thickness(margin);
+        overlaySheet.Height = resolvedHeight;
+        overlaySheet.MaxHeight = resolvedHeight;
     }
 
     private void OverlayCloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs eventArgs) =>
