@@ -11,6 +11,7 @@ namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
+    // Keep overlay motion short and bounded; the sheet should never read as a page transition.
     private static readonly TimeSpan OverlayFadeDuration = TimeSpan.FromMilliseconds(120);
 
     private Grid? overlayRoot;
