@@ -108,6 +108,38 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
+    public async Task ReopeningDuringCloseKeepsTheNewSheetMounted()
+    {
+        var shell = new WorkbenchShell();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = shell
+        };
+        window.Show();
+        try
+        {
+            var first = new Border();
+            var second = new Border { MinHeight = 420 };
+            shell.OpenOverlay("Settings", first, maxHeight: 700);
+            shell.CloseOverlay();
+            shell.OpenOverlay("Diagnostic result", second, maxHeight: 820);
+
+            await Task.Delay(200);
+
+            var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
+            Assert.True(shell.OverlayOpen);
+            Assert.Same(second, host.Content);
+            Assert.True(second.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void HomeTestHubUsesSelectionBeforeRunAndOnePrimaryActionPerGroup()
     {
         var window = new MainWindow();
