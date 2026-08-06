@@ -120,7 +120,7 @@ public sealed partial class WorkbenchShell
     {
         currentWorkspace = WorkspaceKind.Test;
         SelectWorkspace(WorkspaceKind.Test);
-        RenderBreadcrumbs(new TestSetupDestination().Breadcrumbs);
+        RenderProductContext();
         RefreshResponsiveChrome();
     }
 
