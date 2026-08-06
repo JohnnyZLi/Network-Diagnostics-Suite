@@ -191,6 +191,7 @@ public sealed partial class MainWindow
             snapshot.Detail,
             snapshot.Progress,
             CurrentNetworkExperience()));
+        testSetupWorkspace.RefreshModelDependentVisuals();
         SyncControlCenterSections();
 
         testConfigurationPanel.Render(new TestConfigurationModel(
