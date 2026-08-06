@@ -26,16 +26,22 @@ public sealed partial class TestSetupWorkspace
     private Button? testHubActiveStopButton;
     private bool activeRunTileInstalled;
     private bool activeRunTileVisible;
-    private bool activeRunLayoutApplied;
+    private double activeRunStableHeight;
 
     public event EventHandler? ActiveRunStopRequested;
 
     public void SetActiveRunTileState(ActiveRunSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        activeRunTileVisible = snapshot.IsActive;
         EnsureActiveRunTile();
 
+        var enteringActive = snapshot.IsActive && !activeRunTileVisible;
+        if (enteringActive && testHubTilesGrid?.Bounds.Height > 0)
+        {
+            activeRunStableHeight = testHubTilesGrid.Bounds.Height;
+        }
+
+        activeRunTileVisible = snapshot.IsActive;
         if (snapshot.IsActive)
         {
             RenderRunTileSnapshot(snapshot, completedHandoff: false);
@@ -48,10 +54,10 @@ public sealed partial class TestSetupWorkspace
     public void RenderActiveRunSnapshot(ActiveRunSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        activeRunTileVisible = snapshot.IsActive;
         EnsureActiveRunTile();
         if (!snapshot.IsActive || testHubActiveRunTile is null) return;
 
+        activeRunTileVisible = true;
         RenderRunTileSnapshot(snapshot, completedHandoff: false);
     }
 
@@ -262,32 +268,30 @@ public sealed partial class TestSetupWorkspace
         if (!activeRunTileVisible)
         {
             testHubActiveRunTile.IsVisible = false;
+            Grid.SetColumnSpan(testHubActiveRunTile, 1);
+            Grid.SetRowSpan(testHubActiveRunTile, 1);
+            testHubTilesGrid.MinHeight = 0;
+            activeRunStableHeight = 0;
             testHubSpeedTile.IsVisible = true;
             testHubDiagnosticTile.IsVisible = true;
-            if (activeRunLayoutApplied)
-            {
-                activeRunLayoutApplied = false;
-                ApplyTestHubResponsiveLayout(resolvedWidth);
-            }
+            ApplyTestHubResponsiveLayout(resolvedWidth);
             return;
         }
 
+        // Keep the idle grid structure intact. The live state simply spans the cells
+        // already used by the two choice tiles, eliminating definition teardown/rebuild
+        // and the resulting layout jump at run boundaries.
+        ApplyTestHubResponsiveLayout(resolvedWidth);
         testHubSpeedTile.IsVisible = false;
         testHubDiagnosticTile.IsVisible = false;
         testHubActiveRunTile.IsVisible = true;
-        activeRunLayoutApplied = true;
-
-        // Avalonia still validates attached Grid.Row/Grid.Column values for hidden
-        // children while measuring. Normalize every child before reducing the grid
-        // to one cell so a previously second-column tile cannot reference a removed
-        // definition and crash the layout pass.
-        SetGridPosition(testHubSpeedTile, 0, 0);
-        SetGridPosition(testHubDiagnosticTile, 0, 0);
         SetGridPosition(testHubActiveRunTile, 0, 0);
-        testHubTilesGrid.ColumnDefinitions.Clear();
-        testHubTilesGrid.RowDefinitions.Clear();
-        testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        testHubTilesGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        Grid.SetColumnSpan(testHubActiveRunTile, resolvedWidth < 900 ? 1 : 2);
+        Grid.SetRowSpan(testHubActiveRunTile, resolvedWidth < 900 ? 2 : 1);
+        if (activeRunStableHeight > 0)
+        {
+            testHubTilesGrid.MinHeight = activeRunStableHeight;
+        }
 
         var compactMetrics = resolvedWidth < 760;
         testHubActiveMetricsGrid.ColumnDefinitions.Clear();
