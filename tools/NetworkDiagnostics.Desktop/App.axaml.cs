@@ -14,6 +14,10 @@ public sealed partial class App : Application
         {
             Source = new Uri("avares://NetworkDiagnosticsDesktop/Styles/ComponentPolish.axaml")
         });
+        Styles.Add(new StyleInclude(new Uri("avares://NetworkDiagnosticsDesktop/"))
+        {
+            Source = new Uri("avares://NetworkDiagnosticsDesktop/Styles/DiagnosticConfiguratorPolish.axaml")
+        });
     }
 
     public override void OnFrameworkInitializationCompleted()
