@@ -11,19 +11,16 @@ public sealed partial class ReportDetailWorkspace : UserControl
 {
     private StoredReport? report;
     private bool evidenceExpanded;
-    private Button? compareButton;
-    private Button? runAgainButton;
 
     public ReportDetailWorkspace()
     {
         InitializeComponent();
         SizeChanged += WorkspaceSizeChanged;
-        EnsureContextActions();
     }
 
-    public event EventHandler? HomeRequested;
-
     public event EventHandler? BackRequested;
+
+    public event EventHandler? CloseRequested;
 
     public event EventHandler? RunAgainRequested;
 
@@ -182,38 +179,12 @@ public sealed partial class ReportDetailWorkspace : UserControl
         }
     }
 
-    private void EnsureContextActions()
-    {
-        if (runAgainButton is not null) return;
-        var actionPanel = ReportToolbarGrid.Children
-            .OfType<StackPanel>()
-            .FirstOrDefault(panel => Grid.GetColumn(panel) == 2);
-        if (actionPanel is null) return;
-
-        compareButton = actionPanel.Children
-            .OfType<Button>()
-            .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal));
-        runAgainButton = new Button
-        {
-            Content = "Run again",
-            MinHeight = 32,
-            Padding = new Avalonia.Thickness(13, 5),
-            IsVisible = false
-        };
-        runAgainButton.Classes.Add("primary");
-        runAgainButton.Click += RunAgainClicked;
-        actionPanel.Children.Add(runAgainButton);
-    }
-
     private void SetCurrentRunMode(bool currentRun)
     {
-        EnsureContextActions();
-        if (runAgainButton is not null) runAgainButton.IsVisible = currentRun;
-        if (compareButton is null) return;
-
-        compareButton.Classes.Remove("primary");
-        compareButton.Classes.Remove("secondary");
-        compareButton.Classes.Add(currentRun ? "secondary" : "primary");
+        RunAgainButton.IsVisible = currentRun;
+        CompareButton.Classes.Remove("primary");
+        CompareButton.Classes.Remove("secondary");
+        CompareButton.Classes.Add(currentRun ? "secondary" : "primary");
     }
 
     private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
@@ -235,11 +206,11 @@ public sealed partial class ReportDetailWorkspace : UserControl
         EvidenceToggleLabelText.Text = expanded ? "Hide details" : "Show details";
     }
 
-    private void HomeClicked(object? sender, RoutedEventArgs eventArgs) =>
-        HomeRequested?.Invoke(this, EventArgs.Empty);
-
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CloseClicked(object? sender, RoutedEventArgs eventArgs) =>
+        CloseRequested?.Invoke(this, EventArgs.Empty);
 
     private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs) =>
         RunAgainRequested?.Invoke(this, EventArgs.Empty);
