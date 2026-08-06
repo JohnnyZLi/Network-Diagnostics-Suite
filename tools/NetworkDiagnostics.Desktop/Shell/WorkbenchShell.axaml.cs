@@ -115,10 +115,15 @@ public sealed partial class WorkbenchShell : UserControl
         string detail,
         double progress)
     {
+        var visibilityChanged = ActiveRunPanel.IsVisible != visible;
         ActiveRunPanel.IsVisible = visible;
         ActiveRunTitleText.Text = title;
         ActiveRunDetailText.Text = detail;
         ActiveRunProgress.Value = Math.Clamp(progress, 0, 100);
+        if (visibilityChanged)
+        {
+            ApplyResponsiveLayout(Bounds.Width);
+        }
     }
 
     public void SetInspectorOpen(bool open)
@@ -181,11 +186,13 @@ public sealed partial class WorkbenchShell : UserControl
             && width >= InspectorMinimumWidth
             && !OverlayOpen;
         var showInspector = inspectorEligible && inspectorRequested;
+        var showProductIdentity = width >= 880
+            && (!ActiveRunPanel.IsVisible || width >= 1080);
 
         InspectorBorder.IsVisible = showInspector;
         InspectorToggleButton.IsVisible = width >= 960;
         InspectorToggleButton.IsEnabled = inspectorEligible;
-        ProductStack.IsVisible = width >= 880;
+        ProductStack.IsVisible = showProductIdentity;
         ActiveRunDetailText.IsVisible = width >= 1180;
         HomeButton.Content = compact ? "⌂" : "Home";
         HomeButton.MinWidth = compact ? 34 : 52;
