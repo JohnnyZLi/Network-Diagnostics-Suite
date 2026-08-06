@@ -131,8 +131,9 @@ public sealed partial class MainWindow
             switch (eventArgs.Current.Destination)
             {
                 case TestSetupDestination:
-                    ShowArea(DesktopArea.Test);
-                    ShowTestState(TestViewState.Setup);
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.CloseOverlay();
+                    workbenchShell?.SelectControlCenter();
                     SyncTestWorkspace();
                     break;
 
@@ -146,48 +147,96 @@ public sealed partial class MainWindow
                         navigationService.Navigate(replacement, replaceCurrent: true);
                         return;
                     }
+
                     activeRunNavigationId = activeRun.RunId;
-                    ShowArea(DesktopArea.Test);
-                    ShowTestState(TestViewState.Running);
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.CloseOverlay();
+                    workbenchShell?.SelectControlCenter();
+                    SyncTestWorkspace();
+                    Avalonia.Threading.Dispatcher.UIThread.Post(
+                        () => testSetupWorkspace?.BringActiveRunIntoView(),
+                        Avalonia.Threading.DispatcherPriority.Loaded);
                     break;
 
                 case TestResultDestination result:
-                    if (result.ReportId != Guid.Empty)
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.SelectControlCenter();
+
+                    if (result.ReportId == Guid.Empty)
                     {
-                        await LoadReportForNavigationAsync(result.ReportId);
+                        reportDetailWorkspace?.RenderCurrentPreview(currentPresentation);
                     }
-                    ShowArea(DesktopArea.Test);
-                    ShowTestState(TestViewState.Results);
+                    else if (!await LoadReportForNavigationAsync(result.ReportId)
+                             || selectedHistoryReport is null)
+                    {
+                        navigationService.Navigate(new TestSetupDestination(), replaceCurrent: true);
+                        return;
+                    }
+                    else
+                    {
+                        reportDetailWorkspace?.RenderCurrent(selectedHistoryReport, currentPresentation);
+                    }
+
+                    if (reportDetailWorkspace is not null)
+                    {
+                        workbenchShell?.OpenOverlay(
+                            "Diagnostic result",
+                            reportDetailWorkspace,
+                            maxWidth: 1160,
+                            maxHeight: 820,
+                            stretchWidth: true);
+                    }
                     break;
 
                 case ReportListDestination:
+                    workbenchShell?.CloseOverlay();
                     await RefreshHistoryAsync(eventArgs.Current.ViewState);
                     ShowWorkspaceSurface(reportBrowserWorkspace);
                     break;
 
                 case ReportDetailDestination detail:
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.SelectControlCenter();
                     if (!await LoadReportForNavigationAsync(detail.ReportId))
                     {
                         navigationService.Navigate(new ReportListDestination(), replaceCurrent: true);
                         return;
                     }
-                    if (selectedHistoryReport is not null)
+                    if (selectedHistoryReport is not null && reportDetailWorkspace is not null)
                     {
-                        reportDetailWorkspace?.Render(selectedHistoryReport, currentPresentation);
+                        reportDetailWorkspace.Render(selectedHistoryReport, currentPresentation);
+                        workbenchShell?.OpenOverlay(
+                            "Saved diagnostic",
+                            reportDetailWorkspace,
+                            maxWidth: 1160,
+                            maxHeight: 820,
+                            stretchWidth: true);
                     }
-                    ShowWorkspaceSurface(reportDetailWorkspace);
                     break;
 
                 case ComparisonDestination comparison:
+                    workbenchShell?.CloseOverlay();
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.SelectControlCenter();
                     comparisonBaselineId = comparison.BaselineId;
                     comparisonCandidateId = comparison.CandidateId;
                     await RefreshComparisonHistoryAsync();
-                    ShowWorkspaceSurface(comparisonWorkspace);
+                    testSetupWorkspace?.OpenInlineComparison();
                     break;
 
                 case SettingsDestination settingsDestination:
+                    ShowControlCenterUnderlay();
+                    workbenchShell?.SelectControlCenter();
                     SyncSettingsWorkspace(settingsDestination.Section);
-                    ShowWorkspaceSurface(settingsWorkspace);
+                    if (settingsWorkspace is not null)
+                    {
+                        workbenchShell?.OpenOverlay(
+                            "Settings",
+                            settingsWorkspace,
+                            maxWidth: 1100,
+                            maxHeight: 760,
+                            stretchWidth: true);
+                    }
                     break;
             }
 
@@ -395,12 +444,17 @@ public sealed partial class MainWindow
     private void ShowTestState(TestViewState state)
     {
         var previousState = currentTestState;
-        currentTestState = state;
-        SetupView.IsVisible = state == TestViewState.Setup;
-        RunningView.IsVisible = state == TestViewState.Running;
-        ResultsView.IsVisible = state == TestViewState.Results;
+        var requestedState = state;
 
-        if (state == TestViewState.Running && previousState != TestViewState.Running)
+        // Running and completed diagnostics are now control-center states. Keep the
+        // setup surface mounted so no legacy page can flash before the live tile or
+        // result sheet is ready.
+        currentTestState = TestViewState.Setup;
+        SetupView.IsVisible = true;
+        RunningView.IsVisible = false;
+        ResultsView.IsVisible = false;
+
+        if (requestedState == TestViewState.Running && previousState != TestViewState.Running)
         {
             activeRunNavigationId = activeRunSession.Snapshot.IsActive
                 ? activeRunSession.Snapshot.RunId
@@ -409,7 +463,7 @@ public sealed partial class MainWindow
 
         if (!applyingNavigation && navigationService.Current is not null)
         {
-            AppDestination destination = state switch
+            AppDestination destination = requestedState switch
             {
                 TestViewState.Running => new RunningTestDestination(activeRunNavigationId),
                 TestViewState.Results => new TestResultDestination(currentReport?.Run.Id ?? Guid.Empty),
@@ -470,7 +524,7 @@ public sealed partial class MainWindow
             case TestResultDestination:
                 workbenchShell.SetInspectorContent(
                     "Test result",
-                    "The active or preview result remains in the Test workspace. Saved reports open in the dedicated report-detail surface.",
+                    "The completed result opens over the persistent control center and shares its viewer with saved diagnostics.",
                     currentReport is null ? "Preview" : DiagnosticReportPresenter.ProfileName(currentReport.Run.Profile));
                 break;
             case ReportDetailDestination:
