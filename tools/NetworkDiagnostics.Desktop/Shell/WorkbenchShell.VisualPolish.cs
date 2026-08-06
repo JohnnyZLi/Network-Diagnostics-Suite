@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using NetworkDiagnostics.Desktop.Navigation;
@@ -10,7 +9,6 @@ namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
-    private Control? primaryNavigation;
     private bool activeRunLayoutPolished;
     private bool persistentNavigationWired;
 
@@ -19,8 +17,6 @@ public sealed partial class WorkbenchShell
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
         WirePersistentNavigation();
-        ResolveHeaderContainers();
-        HidePrimaryPageNavigation();
         PolishHeaderUtilities();
         PolishActiveRunLayout();
         LayoutUpdated += VisualPolishLayoutUpdated;
@@ -44,14 +40,9 @@ public sealed partial class WorkbenchShell
 
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
-        ResolveHeaderContainers();
-        HidePrimaryPageNavigation();
         PolishHeaderUtilities();
         PolishActiveRunLayout();
     }
-
-    private void ResolveHeaderContainers() =>
-        primaryNavigation ??= TestWorkspaceButton.GetLogicalParent()?.GetLogicalParent() as Control;
 
     private void PolishHeaderUtilities()
     {
@@ -134,14 +125,5 @@ public sealed partial class WorkbenchShell
         button.FontWeight = FontWeight.Medium;
         button.HorizontalContentAlignment = HorizontalAlignment.Center;
         button.VerticalContentAlignment = VerticalAlignment.Center;
-    }
-
-    private void HidePrimaryPageNavigation()
-    {
-        if (primaryNavigation is not null) primaryNavigation.IsVisible = false;
-        TestWorkspaceButton.IsVisible = false;
-        ReportsWorkspaceButton.IsVisible = false;
-        ComparisonsWorkspaceButton.IsVisible = false;
-        SettingsWorkspaceButton.IsVisible = false;
     }
 }
