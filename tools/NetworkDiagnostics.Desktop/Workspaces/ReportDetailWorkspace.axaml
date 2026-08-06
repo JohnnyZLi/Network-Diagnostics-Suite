@@ -11,7 +11,10 @@
             BorderThickness="0,0,0,1"
             Padding="18,0">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-        <Button Classes="ghost" Content="← History" VerticalAlignment="Center" Click="BackClicked" />
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+          <Button Name="HomeButton" Classes="ghost" Content="Home" Click="HomeClicked" />
+          <Button Classes="ghost" Content="← History" Click="BackClicked" />
+        </StackPanel>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
           <TextBlock Name="ToolbarTitleText" FontSize="11" FontWeight="SemiBold" Text="Saved report" />
           <TextBlock Name="ToolbarMetaText" Classes="muted" FontSize="9" />
