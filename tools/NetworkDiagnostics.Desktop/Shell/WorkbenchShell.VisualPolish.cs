@@ -10,6 +10,7 @@ namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
+    private Button? homeNavigationButton;
     private Button? settingsUtilityButton;
     private Panel? toolbarActions;
     private Control? primaryNavigation;
@@ -20,6 +21,7 @@ public sealed partial class WorkbenchShell
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
         ResolveHeaderContainers();
+        EnsureHomeNavigation();
         EnsureSettingsUtility();
         HidePrimaryPageNavigation();
         PolishHeaderUtilities();
@@ -36,8 +38,13 @@ public sealed partial class WorkbenchShell
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
         ResolveHeaderContainers();
+        EnsureHomeNavigation();
         EnsureSettingsUtility();
         HidePrimaryPageNavigation();
+        if (homeNavigationButton is not null)
+        {
+            homeNavigationButton.Content = Bounds.Width < 960 ? "⌂" : "Home";
+        }
         if (settingsUtilityButton is not null)
         {
             settingsUtilityButton.Content = Bounds.Width < 960 ? "⚙" : "Settings";
@@ -51,6 +58,26 @@ public sealed partial class WorkbenchShell
     {
         toolbarActions ??= CommandToolbarButton.GetLogicalParent() as Panel;
         primaryNavigation ??= TestWorkspaceButton.GetLogicalParent()?.GetLogicalParent() as Control;
+    }
+
+    private void EnsureHomeNavigation()
+    {
+        if (homeNavigationButton is not null) return;
+        if (BackButton.GetLogicalParent()?.GetLogicalParent() is not Panel productNavigation) return;
+
+        homeNavigationButton = new Button
+        {
+            Content = "Home",
+            MinWidth = 54
+        };
+        homeNavigationButton.Classes.Add("utilityKey");
+        ToolTip.SetTip(homeNavigationButton, "Return to the live network overview");
+        homeNavigationButton.Click += (_, _) =>
+            DestinationRequested?.Invoke(
+                this,
+                new DestinationRequestedEventArgs(new TestSetupDestination()));
+
+        productNavigation.Children.Insert(1, homeNavigationButton);
     }
 
     private void EnsureSettingsUtility()
@@ -69,6 +96,11 @@ public sealed partial class WorkbenchShell
 
     private void PolishHeaderUtilities()
     {
+        if (homeNavigationButton is not null)
+        {
+            PolishUtilityButton(homeNavigationButton, Bounds.Width < 960 ? 34 : 54);
+        }
+
         if (settingsUtilityButton is not null)
         {
             PolishUtilityButton(settingsUtilityButton, Bounds.Width < 960 ? 34 : 58);
