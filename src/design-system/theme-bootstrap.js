@@ -66,7 +66,6 @@
     const theme = resolveTheme(nextPreference);
     root.dataset.themePreference = nextPreference;
     root.dataset.theme = theme;
-    root.style.colorScheme = theme;
     syncThemeColor(theme);
     if (persist) writePreference(nextPreference);
     if (announce) {
@@ -109,14 +108,12 @@
       printTheme = { preference: api.getPreference(), theme: api.getTheme() };
     }
     root.dataset.theme = "light";
-    root.style.colorScheme = "light";
     syncThemeColor("light");
   });
 
   window.addEventListener("afterprint", () => {
     if (!printTheme) return;
     root.dataset.theme = printTheme.theme;
-    root.style.colorScheme = printTheme.theme;
     syncThemeColor(printTheme.theme);
     printTheme = null;
   });
