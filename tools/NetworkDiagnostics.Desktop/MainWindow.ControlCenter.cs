@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         testSetupWorkspace.ApplyDiagnosticConfiguratorPolishSafely();
         testSetupWorkspace.InstallDiagnosticConfiguratorResponsiveGuard();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Customize diagnostic", content, 960, 620);
+        workbenchShell.OpenOverlay("Customize diagnostic", content, 960, 620, stretchWidth: true);
     }
 
     private void ControlCenterDiagnosticLauncherDismissRequested(object? sender, EventArgs eventArgs) =>
