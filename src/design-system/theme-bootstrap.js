@@ -105,7 +105,9 @@
   });
 
   window.addEventListener("beforeprint", () => {
-    printTheme = { preference: api.getPreference(), theme: api.getTheme() };
+    if (!printTheme) {
+      printTheme = { preference: api.getPreference(), theme: api.getTheme() };
+    }
     root.dataset.theme = "light";
     root.style.colorScheme = "light";
     syncThemeColor("light");

@@ -1,3 +1,58 @@
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --_jl-focus-gap-color: var(--jl-theme-dark-color-focus-gap-dark);
+  --jl-color-canvas: var(--jl-theme-dark-color-canvas);
+  --jl-color-canvas-dot: var(--jl-theme-dark-color-canvas-dot);
+  --jl-color-surface: var(--jl-theme-dark-color-surface);
+  --jl-color-surface-muted: var(--jl-theme-dark-color-surface-muted);
+  --jl-color-surface-strong: var(--jl-theme-dark-color-surface-strong);
+  --jl-color-surface-inverse: var(--jl-theme-dark-color-surface-inverse);
+  --jl-color-ink: var(--jl-theme-dark-color-ink);
+  --jl-color-text: var(--jl-theme-dark-color-text);
+  --jl-color-muted: var(--jl-theme-dark-color-muted);
+  --jl-color-text-inverse: var(--jl-theme-dark-color-text-inverse);
+  --jl-color-muted-inverse: var(--jl-theme-dark-color-muted-inverse);
+  --jl-color-rule: var(--jl-theme-dark-color-rule);
+  --jl-color-rule-strong: var(--jl-theme-dark-color-rule-strong);
+  --jl-color-rule-inverse: var(--jl-theme-dark-color-rule-inverse);
+  --jl-color-overlay: var(--jl-theme-dark-color-overlay);
+  --jl-color-accent: var(--jl-theme-dark-color-accent);
+  --jl-color-accent-hover: var(--jl-theme-dark-color-accent-hover);
+  --jl-color-accent-active: var(--jl-theme-dark-color-accent-active);
+  --jl-color-accent-decorative: var(--jl-theme-dark-color-accent-decorative);
+  --jl-color-accent-soft: var(--jl-theme-dark-color-accent-soft);
+  --jl-color-on-accent: var(--jl-theme-dark-color-on-accent);
+  --jl-color-danger-hover: var(--jl-theme-dark-color-danger-hover);
+  --jl-color-danger-active: var(--jl-theme-dark-color-danger-active);
+  --jl-color-placeholder: var(--jl-theme-dark-color-placeholder);
+  --jl-color-selection-background: var(--jl-theme-dark-color-selection-background);
+  --jl-color-selection-text: var(--jl-theme-dark-color-selection-text);
+  --jl-color-skeleton: var(--jl-theme-dark-color-skeleton);
+  --jl-color-focus-ring: var(--jl-theme-dark-color-focus-ring);
+  --jl-color-focus-gap-light: var(--jl-theme-dark-color-focus-gap-light);
+  --jl-color-focus-gap-dark: var(--jl-theme-dark-color-focus-gap-dark);
+  --jl-semantic-success-text: var(--jl-theme-dark-semantic-success-text);
+  --jl-semantic-success-surface: var(--jl-theme-dark-semantic-success-surface);
+  --jl-semantic-success-border: var(--jl-theme-dark-semantic-success-border);
+  --jl-semantic-warning-text: var(--jl-theme-dark-semantic-warning-text);
+  --jl-semantic-warning-surface: var(--jl-theme-dark-semantic-warning-surface);
+  --jl-semantic-warning-border: var(--jl-theme-dark-semantic-warning-border);
+  --jl-semantic-danger-text: var(--jl-theme-dark-semantic-danger-text);
+  --jl-semantic-danger-surface: var(--jl-theme-dark-semantic-danger-surface);
+  --jl-semantic-danger-border: var(--jl-theme-dark-semantic-danger-border);
+  --jl-semantic-info-text: var(--jl-theme-dark-semantic-info-text);
+  --jl-semantic-info-surface: var(--jl-theme-dark-semantic-info-surface);
+  --jl-semantic-info-border: var(--jl-theme-dark-semantic-info-border);
+  --jl-semantic-violet-text: var(--jl-theme-dark-semantic-violet-text);
+  --jl-semantic-violet-surface: var(--jl-theme-dark-semantic-violet-surface);
+  --jl-semantic-violet-border: var(--jl-theme-dark-semantic-violet-border);
+}
+
+:root[data-theme="dark"] .jl-surface-inverse,
+:root[data-theme="dark"] [data-jl-surface="inverse"] {
+  --_jl-focus-gap-color: var(--jl-color-focus-gap-light);
+}
+
 .jl-theme-menu-item {
   display: grid;
   gap: var(--jl-space-2);
