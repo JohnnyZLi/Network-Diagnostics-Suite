@@ -120,10 +120,12 @@ jobs:
           capture configurator-dark-connection
           xdotool mousemove 470 525 click 1
 
-          # Verify the same sheet at a compact desktop window size.
+          # Verify the same sheet at compact desktop window sizes.
           wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
           wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
           capture configurator-dark-compact
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,900,700
+          capture configurator-dark-900x700
           wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
           sleep 1
           xdotool mousemove 70 500 click 1
