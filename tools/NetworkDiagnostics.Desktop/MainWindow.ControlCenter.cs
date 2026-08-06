@@ -46,7 +46,7 @@ public sealed partial class MainWindow
 
         ShowControlCenterUnderlay();
         testSetupWorkspace.PrepareDiagnosticLauncherLayout();
-        testSetupWorkspace.ApplyDiagnosticConfiguratorPolish();
+        testSetupWorkspace.ApplyDiagnosticConfiguratorPolishSafely();
         workbenchShell.SelectControlCenter();
         workbenchShell.OpenOverlay("Customize diagnostic", content, 960, 620);
     }
