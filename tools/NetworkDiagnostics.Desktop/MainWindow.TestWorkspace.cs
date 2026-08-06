@@ -86,10 +86,10 @@ public sealed partial class MainWindow
 
         if (snapshot.Status == ActiveRunStatus.Completed && snapshot.ReportId is not null)
         {
-            // Keep the final live layout mounted until the report sheet owns the
-            // interaction. Restoring idle choices first creates a visible reflow.
+            // Keep both the completed live tile and the existing active-run header
+            // presentation stable until the fully rendered report sheet is mounted.
+            // Refreshing chrome here would hide the header chip one frame too early.
             testSetupWorkspace?.HoldCompletedRunTile(snapshot);
-            RefreshWorkbenchChrome();
             return;
         }
 
