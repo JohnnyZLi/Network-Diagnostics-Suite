@@ -14,13 +14,18 @@ public sealed partial class TestSetupWorkspace
     private Grid? testHubTilesGrid;
     private Border? testHubSpeedTile;
     private Border? testHubDiagnosticTile;
-    private Grid? testHubDiagnosticGrid;
-    private StackPanel? testHubDiagnosticPresetSection;
-    private Border? testHubPlanPanel;
+    private Grid? testHubSpeedFooterGrid;
+    private Grid? testHubDiagnosticFooterGrid;
+    private StackPanel? testHubSpeedActions;
+    private StackPanel? testHubDiagnosticActions;
     private Button? testHubContentButton;
     private Button? testHubPeakButton;
+    private Button? testHubSpeedRunButton;
+    private TextBlock? testHubSpeedSelectedText;
+    private TextBlock? testHubSpeedSummaryText;
     private bool testHubInstalled;
     private bool legacySpeedActionsHidden;
+    private int selectedSpeedTestIndex;
 
     private void CaptureTestHubHost()
     {
@@ -65,16 +70,22 @@ public sealed partial class TestSetupWorkspace
         ConfigureLauncherPreset(fullLauncherButton);
         ConfigureLauncherPreset(stressLauncherButton);
 
-        testHubContentButton = CreateSpeedTestButton(
-            "Content test",
+        testHubContentButton = CreateHubChoiceButton(
+            "Content",
             "Everyday delivery",
-            "secondary",
-            TestHubContentClicked);
-        testHubPeakButton = CreateSpeedTestButton(
-            "Peak test",
+            "ContentSpeedChoice",
+            TestHubContentSelected);
+        testHubPeakButton = CreateHubChoiceButton(
+            "Peak",
             "Maximum capacity",
+            "PeakSpeedChoice",
+            TestHubPeakSelected);
+        testHubSpeedRunButton = CreateLauncherAction(
+            "Run content test",
             "primary",
-            TestHubPeakClicked);
+            TestHubSpeedRunClicked,
+            150);
+        testHubSpeedRunButton.Name = "RunSelectedSpeedTestButton";
 
         var outerHeading = new StackPanel { Spacing = 3 };
         outerHeading.Children.Add(new TextBlock
@@ -85,7 +96,7 @@ public sealed partial class TestSetupWorkspace
         });
         var outerDescription = new TextBlock
         {
-            Text = "Measure throughput or collect broader evidence about the connection.",
+            Text = "Choose a focused speed measurement or a broader diagnostic run.",
             FontSize = 10,
             TextWrapping = TextWrapping.Wrap
         };
@@ -122,34 +133,41 @@ public sealed partial class TestSetupWorkspace
 
     private Border BuildSpeedTestsTile()
     {
-        var label = new TextBlock { Text = "SPEED TESTS" };
-        label.Classes.Add("eyebrow");
+        var header = BuildTestHubHeader(
+            "SPEED TESTS",
+            "Measure throughput",
+            "Choose ordinary content delivery or a maximum-capacity measurement.");
 
-        var title = new TextBlock
+        var choices = new Grid
         {
-            Text = "Measure throughput",
-            FontSize = 17,
-            FontWeight = FontWeight.SemiBold
+            ColumnDefinitions = new ColumnDefinitions("*,*"),
+            ColumnSpacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
+        choices.Children.Add(testHubContentButton!);
+        Grid.SetColumn(testHubPeakButton!, 1);
+        choices.Children.Add(testHubPeakButton!);
 
-        var detail = new TextBlock
+        testHubSpeedSelectedText = CreateSelectedPlanTitle("Content test");
+        testHubSpeedSummaryText = CreateSelectedPlanSummary("Everyday delivery · lower data use");
+        var selection = BuildSelectionSummary(testHubSpeedSelectedText, testHubSpeedSummaryText);
+
+        testHubSpeedActions = new StackPanel
         {
-            Text = "Check ordinary content delivery or push the connection toward its maximum capacity.",
-            FontSize = 10,
-            LineHeight = 15,
-            TextWrapping = TextWrapping.Wrap
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
         };
-        detail.Classes.Add("muted");
+        testHubSpeedActions.Children.Add(testHubSpeedRunButton!);
 
-        var actions = new StackPanel { Spacing = 8 };
-        actions.Children.Add(testHubContentButton!);
-        actions.Children.Add(testHubPeakButton!);
+        testHubSpeedFooterGrid = BuildTestHubFooter(selection, testHubSpeedActions);
 
-        var content = new StackPanel { Spacing = 9 };
-        content.Children.Add(label);
-        content.Children.Add(title);
-        content.Children.Add(detail);
-        content.Children.Add(actions);
+        var content = new StackPanel { Spacing = 13 };
+        content.Children.Add(header);
+        content.Children.Add(choices);
+        content.Children.Add(CreateTestHubDivider());
+        content.Children.Add(testHubSpeedFooterGrid);
 
         var tile = new Border
         {
@@ -164,24 +182,10 @@ public sealed partial class TestSetupWorkspace
 
     private Border BuildDiagnosticsTile()
     {
-        var label = new TextBlock { Text = "DIAGNOSTICS" };
-        label.Classes.Add("eyebrow");
-
-        var title = new TextBlock
-        {
-            Text = "Investigate connection health",
-            FontSize = 17,
-            FontWeight = FontWeight.SemiBold
-        };
-
-        var detail = new TextBlock
-        {
-            Text = "Choose how much evidence to collect, review the saved plan, then start the run.",
-            FontSize = 10,
-            LineHeight = 15,
-            TextWrapping = TextWrapping.Wrap
-        };
-        detail.Classes.Add("muted");
+        var header = BuildTestHubHeader(
+            "DIAGNOSTICS",
+            "Investigate connection health",
+            "Choose a preset for the amount of evidence and sustained load required.");
 
         var presetGrid = new Grid
         {
@@ -195,84 +199,159 @@ public sealed partial class TestSetupWorkspace
         Grid.SetColumn(stressLauncherButton!, 2);
         presetGrid.Children.Add(stressLauncherButton!);
 
-        testHubDiagnosticPresetSection = new StackPanel { Spacing = 10 };
-        testHubDiagnosticPresetSection.Children.Add(label);
-        testHubDiagnosticPresetSection.Children.Add(title);
-        testHubDiagnosticPresetSection.Children.Add(detail);
-        testHubDiagnosticPresetSection.Children.Add(presetGrid);
-
-        var selectedLabel = new TextBlock { Text = "SELECTED PLAN" };
-        selectedLabel.Classes.Add("eyebrow");
-
-        launcherSelectedProfileText!.FontSize = 17;
+        launcherSelectedProfileText!.FontSize = 12;
         launcherSelectedProfileText.FontWeight = FontWeight.SemiBold;
-        launcherSummaryText!.FontSize = 10;
-        launcherSummaryText.LineHeight = 15;
-        launcherSummaryText.MinHeight = 31;
+        launcherSelectedProfileText.TextTrimming = TextTrimming.CharacterEllipsis;
+        launcherSummaryText!.FontSize = 9.5;
+        launcherSummaryText.LineHeight = 14;
+        launcherSummaryText.MinHeight = 0;
+        launcherSummaryText.MaxLines = 2;
+        launcherSummaryText.TextTrimming = TextTrimming.CharacterEllipsis;
 
         moreLauncherButton!.MinHeight = 36;
+        moreLauncherButton.MinWidth = 108;
         moreLauncherButton.Padding = new Thickness(12, 7);
         moreLauncherButton.HorizontalContentAlignment = HorizontalAlignment.Center;
         launcherRunButton!.MinHeight = 36;
+        launcherRunButton.MinWidth = 136;
         launcherRunButton.Padding = new Thickness(13, 7);
         launcherRunButton.HorizontalContentAlignment = HorizontalAlignment.Center;
 
-        var actions = new Grid
+        testHubDiagnosticActions = new StackPanel
         {
-            ColumnDefinitions = new ColumnDefinitions("*,*"),
-            ColumnSpacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
         };
-        actions.Children.Add(moreLauncherButton);
-        Grid.SetColumn(launcherRunButton, 1);
-        actions.Children.Add(launcherRunButton);
+        testHubDiagnosticActions.Children.Add(moreLauncherButton);
+        testHubDiagnosticActions.Children.Add(launcherRunButton);
 
-        var planContent = new StackPanel { Spacing = 8 };
-        planContent.Children.Add(selectedLabel);
-        planContent.Children.Add(launcherSelectedProfileText);
-        planContent.Children.Add(launcherSummaryText);
-        planContent.Children.Add(actions);
+        var selection = BuildSelectionSummary(launcherSelectedProfileText, launcherSummaryText);
+        testHubDiagnosticFooterGrid = BuildTestHubFooter(selection, testHubDiagnosticActions);
 
-        testHubPlanPanel = new Border
-        {
-            Padding = new Thickness(15, 14),
-            CornerRadius = new CornerRadius(11),
-            MinHeight = 146,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            Child = planContent
-        };
-        testHubPlanPanel.Classes.Add("dashboardPanel");
-
-        testHubDiagnosticGrid = new Grid
-        {
-            ColumnSpacing = 14,
-            RowSpacing = 12,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        testHubDiagnosticGrid.Children.Add(testHubDiagnosticPresetSection);
-        testHubDiagnosticGrid.Children.Add(testHubPlanPanel);
+        var content = new StackPanel { Spacing = 13 };
+        content.Children.Add(header);
+        content.Children.Add(presetGrid);
+        content.Children.Add(CreateTestHubDivider());
+        content.Children.Add(testHubDiagnosticFooterGrid);
 
         var tile = new Border
         {
             Padding = new Thickness(16, 15),
             CornerRadius = new CornerRadius(12),
             VerticalAlignment = VerticalAlignment.Stretch,
-            Child = testHubDiagnosticGrid
+            Child = content
         };
         tile.Classes.Add("surfaceSubtle");
         return tile;
     }
 
-    private static Button CreateSpeedTestButton(
+    private static StackPanel BuildTestHubHeader(string eyebrow, string title, string detail)
+    {
+        var label = new TextBlock { Text = eyebrow };
+        label.Classes.Add("eyebrow");
+
+        var titleText = new TextBlock
+        {
+            Text = title,
+            FontSize = 17,
+            FontWeight = FontWeight.SemiBold
+        };
+
+        var detailText = new TextBlock
+        {
+            Text = detail,
+            FontSize = 10,
+            LineHeight = 15,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 30
+        };
+        detailText.Classes.Add("muted");
+
+        var header = new StackPanel { Spacing = 6 };
+        header.Children.Add(label);
+        header.Children.Add(titleText);
+        header.Children.Add(detailText);
+        return header;
+    }
+
+    private static Grid BuildTestHubFooter(Control selection, Control actions)
+    {
+        var footer = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 14,
+            RowSpacing = 9,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        footer.Children.Add(selection);
+        Grid.SetColumn(actions, 1);
+        footer.Children.Add(actions);
+        return footer;
+    }
+
+    private static StackPanel BuildSelectionSummary(TextBlock title, TextBlock summary)
+    {
+        var selectedLabel = new TextBlock
+        {
+            Text = "Selected",
+            FontSize = 9,
+            FontWeight = FontWeight.Medium
+        };
+        selectedLabel.Classes.Add("muted");
+
+        var stack = new StackPanel
+        {
+            Spacing = 2,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stack.Children.Add(selectedLabel);
+        stack.Children.Add(title);
+        stack.Children.Add(summary);
+        return stack;
+    }
+
+    private static TextBlock CreateSelectedPlanTitle(string text) => new()
+    {
+        Text = text,
+        FontSize = 12,
+        FontWeight = FontWeight.SemiBold,
+        TextTrimming = TextTrimming.CharacterEllipsis
+    };
+
+    private static TextBlock CreateSelectedPlanSummary(string text)
+    {
+        var summary = new TextBlock
+        {
+            Text = text,
+            FontSize = 9.5,
+            LineHeight = 14,
+            TextWrapping = TextWrapping.Wrap,
+            MaxLines = 2,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        summary.Classes.Add("muted");
+        return summary;
+    }
+
+    private static Border CreateTestHubDivider()
+    {
+        var divider = new Border { Height = 1 };
+        divider.Classes.Add("divider");
+        return divider;
+    }
+
+    private static Button CreateHubChoiceButton(
         string title,
         string detail,
-        string styleClass,
+        string name,
         EventHandler<RoutedEventArgs> handler)
     {
         var titleText = new TextBlock
         {
             Text = title,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeight.SemiBold
         };
         var detailText = new TextBlock
@@ -281,22 +360,23 @@ public sealed partial class TestSetupWorkspace
             FontSize = 9,
             TextWrapping = TextWrapping.Wrap
         };
-        detailText.Classes.Add(styleClass == "primary" ? "onAccentSecondary" : "muted");
+        detailText.Classes.Add("muted");
 
-        var content = new StackPanel { Spacing = 2 };
+        var content = new StackPanel { Spacing = 3 };
         content.Children.Add(titleText);
         content.Children.Add(detailText);
 
         var button = new Button
         {
+            Name = name,
             Content = content,
-            MinHeight = 55,
-            Padding = new Thickness(13, 9),
+            MinHeight = 61,
+            Padding = new Thickness(12, 9),
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        button.Classes.Add(styleClass);
+        button.Classes.Add("profileChoice");
         button.Click += handler;
         return button;
     }
@@ -345,15 +425,16 @@ public sealed partial class TestSetupWorkspace
             || testHubTilesGrid is null
             || testHubSpeedTile is null
             || testHubDiagnosticTile is null
-            || testHubDiagnosticGrid is null
-            || testHubDiagnosticPresetSection is null
-            || testHubPlanPanel is null)
+            || testHubSpeedFooterGrid is null
+            || testHubDiagnosticFooterGrid is null
+            || testHubSpeedActions is null
+            || testHubDiagnosticActions is null)
         {
             return;
         }
 
         var resolvedWidth = width > 0 ? width : Bounds.Width;
-        var stackTiles = resolvedWidth < 760;
+        var stackTiles = resolvedWidth < 900;
 
         testHubTilesGrid.ColumnDefinitions.Clear();
         testHubTilesGrid.RowDefinitions.Clear();
@@ -367,35 +448,51 @@ public sealed partial class TestSetupWorkspace
         }
         else
         {
-            testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(280)));
-            testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.82, GridUnitType.Star)));
+            testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.68, GridUnitType.Star)));
             testHubTilesGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             SetGridPosition(testHubSpeedTile, 0, 0);
             SetGridPosition(testHubDiagnosticTile, 0, 1);
         }
 
-        var diagnosticWidth = stackTiles
-            ? resolvedWidth
-            : Math.Max(0, resolvedWidth - 292);
-        var stackDiagnostic = diagnosticWidth < 660;
+        var speedWidth = stackTiles ? resolvedWidth : resolvedWidth * 0.328;
+        ConfigureTestHubFooter(testHubSpeedFooterGrid, testHubSpeedActions, speedWidth < 440);
 
-        testHubDiagnosticGrid.ColumnDefinitions.Clear();
-        testHubDiagnosticGrid.RowDefinitions.Clear();
-        if (stackDiagnostic)
+        var diagnosticWidth = stackTiles ? resolvedWidth : resolvedWidth * 0.672;
+        ConfigureTestHubFooter(testHubDiagnosticFooterGrid, testHubDiagnosticActions, diagnosticWidth < 690);
+    }
+
+    private static void ConfigureTestHubFooter(Grid footer, StackPanel actions, bool stacked)
+    {
+        footer.ColumnDefinitions.Clear();
+        footer.RowDefinitions.Clear();
+        if (stacked)
         {
-            testHubDiagnosticGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            testHubDiagnosticGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            testHubDiagnosticGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            SetGridPosition(testHubDiagnosticPresetSection, 0, 0);
-            SetGridPosition(testHubPlanPanel, 1, 0);
+            footer.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            footer.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            footer.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            var selection = footer.Children[0];
+            SetGridPosition(selection, 0, 0);
+            SetGridPosition(actions, 1, 0);
+            actions.HorizontalAlignment = HorizontalAlignment.Stretch;
+            foreach (var button in actions.Children.OfType<Button>())
+            {
+                button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            }
         }
         else
         {
-            testHubDiagnosticGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.15, GridUnitType.Star)));
-            testHubDiagnosticGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.85, GridUnitType.Star)));
-            testHubDiagnosticGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            SetGridPosition(testHubDiagnosticPresetSection, 0, 0);
-            SetGridPosition(testHubPlanPanel, 0, 1);
+            footer.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            footer.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            footer.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            var selection = footer.Children[0];
+            SetGridPosition(selection, 0, 0);
+            SetGridPosition(actions, 0, 1);
+            actions.HorizontalAlignment = HorizontalAlignment.Right;
+            foreach (var button in actions.Children.OfType<Button>())
+            {
+                button.HorizontalAlignment = HorizontalAlignment.Center;
+            }
         }
     }
 
@@ -405,13 +502,48 @@ public sealed partial class TestSetupWorkspace
         HideLegacySpeedActions();
 
         var controlsEnabled = RunButton.IsEnabled;
-        if (testHubContentButton is not null) testHubContentButton.IsEnabled = controlsEnabled;
-        if (testHubPeakButton is not null) testHubPeakButton.IsEnabled = controlsEnabled;
+        SetEnabled(testHubContentButton!, controlsEnabled);
+        SetEnabled(testHubPeakButton!, controlsEnabled);
+        SetEnabled(testHubSpeedRunButton!, controlsEnabled);
+
+        SetSelected(testHubContentButton!, selectedSpeedTestIndex == 0);
+        SetSelected(testHubPeakButton!, selectedSpeedTestIndex == 1);
+
+        var speedTitle = selectedSpeedTestIndex == 0 ? "Content test" : "Peak test";
+        var speedSummary = selectedSpeedTestIndex == 0
+            ? "Everyday delivery · lower data use"
+            : "Maximum capacity · higher data use";
+        SetTextStable(testHubSpeedSelectedText!, speedTitle);
+        SetTextStable(testHubSpeedSummaryText!, speedSummary);
+
+        var speedRunLabel = controlsEnabled ? $"Run {speedTitle.ToLowerInvariant()}" : "Diagnostic running";
+        if (!Equals(testHubSpeedRunButton!.Content, speedRunLabel))
+        {
+            testHubSpeedRunButton.Content = speedRunLabel;
+        }
     }
 
-    private void TestHubContentClicked(object? sender, RoutedEventArgs eventArgs) =>
-        ContentSpeedRequested?.Invoke(this, EventArgs.Empty);
+    private void TestHubContentSelected(object? sender, RoutedEventArgs eventArgs)
+    {
+        selectedSpeedTestIndex = 0;
+        SyncTestHubLayout();
+    }
 
-    private void TestHubPeakClicked(object? sender, RoutedEventArgs eventArgs) =>
-        PeakSpeedRequested?.Invoke(this, EventArgs.Empty);
+    private void TestHubPeakSelected(object? sender, RoutedEventArgs eventArgs)
+    {
+        selectedSpeedTestIndex = 1;
+        SyncTestHubLayout();
+    }
+
+    private void TestHubSpeedRunClicked(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (selectedSpeedTestIndex == 0)
+        {
+            ContentSpeedRequested?.Invoke(this, EventArgs.Empty);
+        }
+        else
+        {
+            PeakSpeedRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
 }
