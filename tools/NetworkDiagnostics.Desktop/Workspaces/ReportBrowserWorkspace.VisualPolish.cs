@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
-using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -47,15 +46,9 @@ public sealed partial class ReportBrowserWorkspace
             root.MaxWidth = 1380;
         }
 
-        FilterBar.BorderBrush = this.FindResource("AppBorderBrush") as IBrush;
-        FilterBar.BorderThickness = new Thickness(1);
-        FilterBar.CornerRadius = new CornerRadius(12);
-
-        ReportTableBorder.BorderBrush = this.FindResource("AppBorderBrush") as IBrush;
-        ReportTableBorder.BorderThickness = new Thickness(1);
-
-        EmptyStateBorder.BorderBrush = this.FindResource("AppBorderBrush") as IBrush;
-        EmptyStateBorder.BorderThickness = new Thickness(1);
+        AddSurfaceClass(FilterBar);
+        AddSurfaceClass(ReportTableBorder);
+        AddSurfaceClass(EmptyStateBorder);
         EmptyStateBorder.CornerRadius = new CornerRadius(14);
         EmptyStateBorder.VerticalAlignment = VerticalAlignment.Top;
         EmptyStateBorder.Height = width < 900 ? 310 : 350;
@@ -71,6 +64,11 @@ public sealed partial class ReportBrowserWorkspace
                 text.FontSize = 22;
             }
         }
+    }
+
+    private static void AddSurfaceClass(Border border)
+    {
+        if (!border.Classes.Contains("surface")) border.Classes.Add("surface");
     }
 
     private StackPanel? FindHeaderActions()
