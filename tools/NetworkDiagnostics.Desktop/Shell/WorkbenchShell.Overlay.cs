@@ -97,14 +97,10 @@ public sealed partial class WorkbenchShell
     {
         if (focusedWorkspaceContent is null) return;
 
-        // Navigation to Home prepares the previous surface before calling CloseOverlay,
-        // so swap immediately in that case. Navigation to another deep workspace (for
-        // example Report -> Library) may need async data first; keep the current surface
-        // painted until that destination explicitly replaces it instead of flashing Home.
-        var previousReady = focusedPreviousSurface?.IsVisible == true;
-        if (previousReady || focusedPreviousSurface is null)
+        focusedWorkspaceContent.IsVisible = false;
+        if (focusedPreviousSurface is not null)
         {
-            focusedWorkspaceContent.IsVisible = false;
+            focusedPreviousSurface.IsVisible = true;
         }
 
         focusedWorkspaceContent = null;
