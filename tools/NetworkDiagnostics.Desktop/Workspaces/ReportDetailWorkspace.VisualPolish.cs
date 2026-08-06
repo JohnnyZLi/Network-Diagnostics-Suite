@@ -1,23 +1,15 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class ReportDetailWorkspace
 {
-    private Grid? reportDetailRoot;
-    private Border? reportToolbar;
-    private StackPanel? reportBody;
-    private Grid? reportHero;
-    private Border? reportHeroContext;
-
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
-        ResolveReportDetailLayout();
         ApplyReportDetailPolish(Bounds.Width);
         SizeChanged += ReportDetailSizeChanged;
     }
@@ -31,66 +23,57 @@ public sealed partial class ReportDetailWorkspace
     private void ReportDetailSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyReportDetailPolish(eventArgs.NewSize.Width);
 
-    private void ResolveReportDetailLayout()
-    {
-        reportDetailRoot ??= Content as Grid;
-        if (reportDetailRoot is null) return;
-        reportToolbar ??= reportDetailRoot.Children
-            .OfType<Border>()
-            .FirstOrDefault(border => Grid.GetRow(border) == 0);
-        reportBody ??= reportDetailRoot
-            .GetLogicalDescendants()
-            .OfType<StackPanel>()
-            .FirstOrDefault(panel => panel.MaxWidth >= 1300);
-        reportHero ??= OutcomeIndicator.GetLogicalParent() as Grid;
-        reportHeroContext ??= reportHero?.Children
-            .OfType<Border>()
-            .FirstOrDefault(border => Grid.GetColumn(border) == 2);
-    }
-
     private void ApplyReportDetailPolish(double width)
     {
-        ResolveReportDetailLayout();
-        if (reportDetailRoot is null) return;
-
-        reportDetailRoot.RowDefinitions[0].Height = new GridLength(50);
         HomeButton.IsVisible = false;
-        if (reportToolbar is not null)
-        {
-            reportToolbar.Padding = new Thickness(14, 0);
-        }
-        if (reportBody is not null)
-        {
-            reportBody.Margin = new Thickness(30, 24, 30, 36);
-            reportBody.Spacing = 18;
-            reportBody.MaxWidth = 1320;
-        }
+        ReportBody.Margin = width < 820
+            ? new Thickness(18, 18, 18, 28)
+            : new Thickness(28, 22, 28, 36);
+        ReportBody.MaxWidth = 1320;
+        ReportBody.Spacing = 18;
 
-        VerdictText.FontSize = 30;
-        VerdictText.LineHeight = 36;
-        SummaryText.MaxWidth = 780;
+        ToolbarTitleText.IsVisible = width >= 760;
+        ToolbarMetaText.IsVisible = width >= 900;
 
-        if (reportHero is null || reportHeroContext is null) return;
         var compact = width < 980;
-        reportHero.ColumnDefinitions.Clear();
-        reportHero.RowDefinitions.Clear();
-        reportHero.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-        reportHero.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        ReportHeroGrid.ColumnDefinitions.Clear();
+        ReportHeroGrid.RowDefinitions.Clear();
+        ReportLowerGrid.ColumnDefinitions.Clear();
+        ReportLowerGrid.RowDefinitions.Clear();
+
         if (!compact)
         {
-            reportHero.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(320)));
-            reportHero.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(reportHeroContext, 2);
-            Grid.SetRow(reportHeroContext, 0);
-            reportHeroContext.Margin = new Thickness(0);
+            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(300)));
+            ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ReportNextActionCard, 1);
+            Grid.SetRow(ReportNextActionCard, 0);
+            ReportNextActionCard.Margin = new Thickness(0);
+
+            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.12, GridUnitType.Star)));
+            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.88, GridUnitType.Star)));
+            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ReportFindingsCard, 0);
+            Grid.SetRow(ReportFindingsCard, 0);
+            Grid.SetColumn(ReportSideStack, 1);
+            Grid.SetRow(ReportSideStack, 0);
         }
         else
         {
-            reportHero.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            reportHero.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            Grid.SetColumn(reportHeroContext, 1);
-            Grid.SetRow(reportHeroContext, 1);
-            reportHeroContext.Margin = new Thickness(0, 14, 0, 0);
+            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ReportNextActionCard, 0);
+            Grid.SetRow(ReportNextActionCard, 1);
+            ReportNextActionCard.Margin = new Thickness(0, 14, 0, 0);
+
+            ReportLowerGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            ReportLowerGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ReportFindingsCard, 0);
+            Grid.SetRow(ReportFindingsCard, 0);
+            Grid.SetColumn(ReportSideStack, 0);
+            Grid.SetRow(ReportSideStack, 1);
         }
     }
 }
