@@ -37,8 +37,9 @@ public sealed partial class TestResultWorkspace
             button.FontSize = 9;
         }
 
-        RunAgainButton.MinHeight = 36;
-        RunAgainButton.HorizontalAlignment = HorizontalAlignment.Stretch;
+        RunAgainButton.MinHeight = 34;
+        RunAgainButton.MinWidth = 104;
+        RunAgainButton.HorizontalAlignment = HorizontalAlignment.Left;
 
         var compactHeader = width < 1040;
         ResultHeaderGrid.ColumnDefinitions.Clear();
@@ -46,12 +47,12 @@ public sealed partial class TestResultWorkspace
         if (!compactHeader)
         {
             ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(220)));
+            ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             ResultHeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             Grid.SetColumn(ResultActionsPanel, 1);
             Grid.SetRow(ResultActionsPanel, 0);
             ResultActionsPanel.Margin = new Thickness(0);
-            ResultActionsPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+            ResultActionsPanel.HorizontalAlignment = HorizontalAlignment.Right;
         }
         else
         {
@@ -62,7 +63,6 @@ public sealed partial class TestResultWorkspace
             Grid.SetRow(ResultActionsPanel, 1);
             ResultActionsPanel.Margin = new Thickness(0, 12, 0, 0);
             ResultActionsPanel.HorizontalAlignment = HorizontalAlignment.Left;
-            ResultActionsPanel.Width = Math.Min(280, Math.Max(220, width - 36));
         }
 
         ConfigureTwoColumnLayout(
