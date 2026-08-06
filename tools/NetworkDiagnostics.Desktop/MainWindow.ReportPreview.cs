@@ -1,3 +1,4 @@
+using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 
 namespace NetworkDiagnostics.Desktop;
@@ -21,16 +22,8 @@ public sealed partial class MainWindow
 
     private void PreviewCurrentResult()
     {
-        if (reportDetailWorkspace is null || workbenchShell is null) return;
-
-        reportDetailWorkspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
-        ShowControlCenterUnderlay();
-        workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay(
-            "Diagnostic result",
-            reportDetailWorkspace,
-            maxWidth: 1160,
-            maxHeight: 820,
-            stretchWidth: true);
+        currentReport = null;
+        currentPresentation = ConnectionCheckFixtures.Get(1);
+        NavigateToDestination(new TestResultDestination(Guid.Empty));
     }
 }
