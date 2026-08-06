@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using NetworkDiagnostics.Desktop.Monitoring;
@@ -20,6 +21,7 @@ public sealed partial class TestSetupWorkspace
         LayoutUpdated += RenderedLayoutUpdated;
         InstallDiagnosticLauncher();
         EnsureSevenDayButton();
+        PolishRangeSelector();
         ApplyRenderedVisualLayout(Bounds.Width);
     }
 
@@ -36,6 +38,7 @@ public sealed partial class TestSetupWorkspace
     private void RenderedLayoutUpdated(object? sender, EventArgs eventArgs)
     {
         EnsureSevenDayButton();
+        PolishRangeSelector();
         PolishSpeedActions();
         NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
         NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
@@ -65,6 +68,43 @@ public sealed partial class TestSetupWorkspace
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.1, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.8, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+    }
+
+    private void PolishRangeSelector()
+    {
+        var buttons = new[]
+        {
+            OneMinuteButton,
+            FiveMinutesButton,
+            OneHourButton,
+            TwentyFourHoursButton,
+            sevenDaysButton
+        }.Where(button => button is not null).Cast<Button>().ToArray();
+
+        if (buttons.Length == 0) return;
+        if (buttons[0].GetVisualParent() is StackPanel rangePanel)
+        {
+            rangePanel.Spacing = 0;
+            rangePanel.VerticalAlignment = VerticalAlignment.Center;
+            if (rangePanel.GetVisualParent() is Border rangeSurface)
+            {
+                rangeSurface.Padding = new Thickness(3);
+                rangeSurface.CornerRadius = new CornerRadius(10);
+                rangeSurface.VerticalAlignment = VerticalAlignment.Bottom;
+            }
+        }
+
+        foreach (var button in buttons)
+        {
+            button.Height = 32;
+            button.MinHeight = 32;
+            button.MinWidth = button == TwentyFourHoursButton ? 84 : 68;
+            button.Padding = new Thickness(10, 0);
+            button.CornerRadius = new CornerRadius(7);
+            button.FontSize = 10;
+            button.HorizontalContentAlignment = HorizontalAlignment.Center;
+            button.VerticalContentAlignment = VerticalAlignment.Center;
+        }
     }
 
     private void PolishSpeedActions()
@@ -175,8 +215,8 @@ public sealed partial class TestSetupWorkspace
         {
             Name = SparseTimelineHintName,
             FontSize = 9,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Left,
             IsHitTestVisible = false,
             Opacity = 0.82
         };
