@@ -4,15 +4,11 @@ using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
-using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
-    private Button? homeNavigationButton;
-    private Button? settingsUtilityButton;
-    private Panel? toolbarActions;
     private Control? primaryNavigation;
     private bool activeRunLayoutPolished;
 
@@ -21,8 +17,6 @@ public sealed partial class WorkbenchShell
         base.OnAttachedToVisualTree(eventArgs);
         EnsureOverlay();
         ResolveHeaderContainers();
-        EnsureHomeNavigation();
-        EnsureSettingsUtility();
         HidePrimaryPageNavigation();
         PolishHeaderUtilities();
         PolishActiveRunLayout();
@@ -38,74 +32,18 @@ public sealed partial class WorkbenchShell
     private void VisualPolishLayoutUpdated(object? sender, EventArgs eventArgs)
     {
         ResolveHeaderContainers();
-        EnsureHomeNavigation();
-        EnsureSettingsUtility();
         HidePrimaryPageNavigation();
-        if (homeNavigationButton is not null)
-        {
-            homeNavigationButton.Content = Bounds.Width < 960 ? "⌂" : "Home";
-        }
-        if (settingsUtilityButton is not null)
-        {
-            settingsUtilityButton.Content = Bounds.Width < 960 ? "⚙" : "Settings";
-        }
         PolishHeaderUtilities();
         PolishActiveRunLayout();
-        SimplifyContextLabel();
     }
 
-    private void ResolveHeaderContainers()
-    {
-        toolbarActions ??= CommandToolbarButton.GetLogicalParent() as Panel;
+    private void ResolveHeaderContainers() =>
         primaryNavigation ??= TestWorkspaceButton.GetLogicalParent()?.GetLogicalParent() as Control;
-    }
-
-    private void EnsureHomeNavigation()
-    {
-        if (homeNavigationButton is not null) return;
-        if (BackButton.GetLogicalParent()?.GetLogicalParent() is not Panel productNavigation) return;
-
-        homeNavigationButton = new Button
-        {
-            Content = "Home",
-            MinWidth = 54
-        };
-        homeNavigationButton.Classes.Add("utilityKey");
-        ToolTip.SetTip(homeNavigationButton, "Return to the live network overview");
-        homeNavigationButton.Click += (_, _) =>
-            DestinationRequested?.Invoke(
-                this,
-                new DestinationRequestedEventArgs(new TestSetupDestination()));
-
-        productNavigation.Children.Insert(1, homeNavigationButton);
-    }
-
-    private void EnsureSettingsUtility()
-    {
-        if (settingsUtilityButton is not null || toolbarActions is null) return;
-        settingsUtilityButton = new Button
-        {
-            Content = "Settings",
-            MinWidth = 58
-        };
-        settingsUtilityButton.Classes.Add("utilityKey");
-        settingsUtilityButton.Click += (_, _) =>
-            WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
-        toolbarActions.Children.Insert(0, settingsUtilityButton);
-    }
 
     private void PolishHeaderUtilities()
     {
-        if (homeNavigationButton is not null)
-        {
-            PolishUtilityButton(homeNavigationButton, Bounds.Width < 960 ? 34 : 54);
-        }
-
-        if (settingsUtilityButton is not null)
-        {
-            PolishUtilityButton(settingsUtilityButton, Bounds.Width < 960 ? 34 : 58);
-        }
-
+        PolishUtilityButton(HomeButton, Bounds.Width < 960 ? 34 : 54);
+        PolishUtilityButton(SettingsToolbarButton, Bounds.Width < 960 ? 34 : 58);
         PolishUtilityButton(CommandToolbarButton, Bounds.Width < 960 ? 42 : 84);
 
         InspectorToggleButton.Width = double.NaN;
@@ -178,47 +116,5 @@ public sealed partial class WorkbenchShell
         ReportsWorkspaceButton.IsVisible = false;
         ComparisonsWorkspaceButton.IsVisible = false;
         SettingsWorkspaceButton.IsVisible = false;
-    }
-
-    private void SimplifyContextLabel()
-    {
-        var labels = BreadcrumbPanel.Children
-            .OfType<Button>()
-            .Select(button => button.Content?.ToString())
-            .Where(label => !string.IsNullOrWhiteSpace(label))
-            .Cast<string>()
-            .ToArray();
-        if (labels.Length == 0) return;
-
-        var selected = labels[^1];
-        if (selected is "Overview" or "Evidence" && labels.Length > 1)
-        {
-            selected = labels[^2];
-        }
-
-        selected = selected switch
-        {
-            "Test" or "Overview" => "Live control center",
-            "Reports" => "Diagnostics library",
-            "Comparisons" => "Comparison",
-            _ => selected
-        };
-
-        if (BreadcrumbPanel.Children.Count == 1
-            && BreadcrumbPanel.Children[0] is TextBlock current
-            && string.Equals(current.Text, selected, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        BreadcrumbPanel.Children.Clear();
-        var label = new TextBlock
-        {
-            Text = selected,
-            FontSize = 9,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        label.Classes.Add("shellMuted");
-        BreadcrumbPanel.Children.Add(label);
     }
 }
