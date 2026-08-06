@@ -34,8 +34,6 @@ public sealed partial class MainWindow : Window
     private WorkbenchShell? workbenchShell;
     private TestSetupWorkspace? testSetupWorkspace;
     private TestConfigurationPanel? testConfigurationPanel;
-    private RunningTestWorkspace? runningTestWorkspace;
-    private TestResultWorkspace? testResultWorkspace;
     private ReportBrowserWorkspace? reportBrowserWorkspace;
     private ReportDetailWorkspace? reportDetailWorkspace;
     private ComparisonWorkspace? comparisonWorkspace;
@@ -54,11 +52,7 @@ public sealed partial class MainWindow : Window
     private ConnectionCheckPresentation currentPresentation
     {
         get => currentPresentationValue;
-        set
-        {
-            currentPresentationValue = value;
-            SyncRunResultWorkspaces();
-        }
+        set => currentPresentationValue = value;
     }
     private DesktopSettings settings = new();
     private MonitorWindow monitorWindow = MonitorWindow.FiveMinutes;
