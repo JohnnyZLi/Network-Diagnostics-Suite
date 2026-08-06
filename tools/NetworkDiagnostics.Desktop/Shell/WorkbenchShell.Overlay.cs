@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
