@@ -11,11 +11,11 @@ namespace NetworkDiagnostics.Desktop.Shell;
 
 public sealed partial class WorkbenchShell
 {
-    // Keep overlay motion short and bounded; the sheet should never read as a page transition.
-    private static readonly TimeSpan OverlayFadeDuration = TimeSpan.FromMilliseconds(120);
+    private static readonly TimeSpan OverlayFadeDuration = TimeSpan.FromMilliseconds(110);
 
     private Grid? overlayRoot;
     private Border? overlaySheet;
+    private Border? overlayHeader;
     private ContentControl? overlayHost;
     private TextBlock? overlayTitle;
     private double? overlayRequestedMaxHeight;
@@ -64,8 +64,8 @@ public sealed partial class WorkbenchShell
         Grid.SetColumn(close, 1);
         headerGrid.Children.Add(close);
 
-        var header = new Border { Child = headerGrid };
-        header.Classes.Add("modalHeader");
+        overlayHeader = new Border { Child = headerGrid };
+        overlayHeader.Classes.Add("modalHeader");
 
         overlayHost = new ContentControl
         {
@@ -78,7 +78,7 @@ public sealed partial class WorkbenchShell
         {
             RowDefinitions = new RowDefinitions("Auto,*")
         };
-        sheetGrid.Children.Add(header);
+        sheetGrid.Children.Add(overlayHeader);
         Grid.SetRow(overlayHost, 1);
         sheetGrid.Children.Add(overlayHost);
 
@@ -90,6 +90,7 @@ public sealed partial class WorkbenchShell
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             ClipToBounds = true,
+            Opacity = 0,
             Child = sheetGrid
         };
         overlaySheet.Classes.Add("modalSheet");
@@ -99,7 +100,7 @@ public sealed partial class WorkbenchShell
             Name = "OverlayRoot",
             IsVisible = false,
             IsHitTestVisible = false,
-            Opacity = 0,
+            Opacity = 1,
             ZIndex = 50
         };
         overlayRoot.Children.Add(backdrop);
@@ -120,7 +121,8 @@ public sealed partial class WorkbenchShell
         Control content,
         double maxWidth = 1180,
         double? maxHeight = null,
-        bool stretchWidth = false)
+        bool stretchWidth = false,
+        bool showHeader = true)
     {
         EnsureOverlay();
         if (TopLevel.GetTopLevel(this) is { } topLevel)
@@ -139,6 +141,7 @@ public sealed partial class WorkbenchShell
         DetachFromLogicalParent(content);
         content.IsVisible = true;
         overlayTitle!.Text = title;
+        overlayHeader!.IsVisible = showHeader;
         overlaySheet!.MaxWidth = maxWidth;
         overlaySheet.HorizontalAlignment = stretchWidth
             ? HorizontalAlignment.Stretch
@@ -147,9 +150,12 @@ public sealed partial class WorkbenchShell
         overlayHost.Content = content;
         ApplyOverlayBounds();
 
+        // The backdrop appears at its final, intentionally soft opacity immediately.
+        // Only the bounded sheet fades, avoiding whole-window luminance changes.
         overlayRoot!.IsVisible = true;
         overlayRoot.IsHitTestVisible = true;
-        overlayRoot.Opacity = wasOpen || reducedMotion ? 1 : 0;
+        overlayRoot.Opacity = 1;
+        overlaySheet.Opacity = wasOpen || reducedMotion ? 1 : 0;
         inspectorRequested = false;
         RefreshResponsiveChrome();
 
@@ -157,9 +163,9 @@ public sealed partial class WorkbenchShell
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (generation == overlayTransitionGeneration && OverlayOpen)
+                if (generation == overlayTransitionGeneration && OverlayOpen && overlaySheet is not null)
                 {
-                    overlayRoot.Opacity = 1;
+                    overlaySheet.Opacity = 1;
                 }
             }, DispatcherPriority.Render);
         }
@@ -175,7 +181,7 @@ public sealed partial class WorkbenchShell
 
     public void CloseOverlay()
     {
-        if (overlayRoot is null || !OverlayOpen) return;
+        if (overlayRoot is null || overlaySheet is null || !OverlayOpen) return;
         var generation = ++overlayTransitionGeneration;
         overlayRoot.IsHitTestVisible = false;
 
@@ -185,7 +191,7 @@ public sealed partial class WorkbenchShell
             return;
         }
 
-        overlayRoot.Opacity = 0;
+        overlaySheet.Opacity = 0;
         DispatcherTimer.RunOnce(
             () => FinishOverlayClose(generation),
             OverlayFadeDuration + TimeSpan.FromMilliseconds(20));
@@ -193,7 +199,10 @@ public sealed partial class WorkbenchShell
 
     private void FinishOverlayClose(int generation)
     {
-        if (generation != overlayTransitionGeneration || overlayRoot is null || overlayHost is null)
+        if (generation != overlayTransitionGeneration
+            || overlayRoot is null
+            || overlaySheet is null
+            || overlayHost is null)
         {
             return;
         }
@@ -202,14 +211,15 @@ public sealed partial class WorkbenchShell
         overlayHost.Content = null;
         if (content is not null) content.IsVisible = false;
         overlayRoot.IsVisible = false;
-        overlayRoot.Opacity = 0;
+        overlayRoot.Opacity = 1;
+        overlaySheet.Opacity = 0;
         RefreshResponsiveChrome();
     }
 
     private void ConfigureOverlayTransitions()
     {
-        if (overlayRoot is null) return;
-        overlayRoot.Transitions = reducedMotion
+        if (overlaySheet is null) return;
+        overlaySheet.Transitions = reducedMotion
             ? null
             : new Transitions
             {
