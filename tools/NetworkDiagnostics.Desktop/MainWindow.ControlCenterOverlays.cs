@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         workbenchShell.OverlayCloseRequested += ControlCenterOverlayCloseRequested;
         if (reportDetailWorkspace is not null)
         {
-            reportDetailWorkspace.HomeRequested += ReportDetailHomeRequested;
+            reportDetailWorkspace.CloseRequested += ReportDetailCloseRequested;
             reportDetailWorkspace.RunAgainRequested += ReportDetailRunAgainRequested;
         }
     }
@@ -27,8 +27,6 @@ public sealed partial class MainWindow
         TestArea.IsVisible = true;
         currentTestState = TestViewState.Setup;
         SetupView.IsVisible = true;
-        RunningView.IsVisible = false;
-        ResultsView.IsVisible = false;
     }
 
     private void HideWhenNotInOverlay(Avalonia.Controls.Control? surface)
@@ -39,16 +37,13 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs)
-    {
-        workbenchShell?.CloseOverlay();
+    private void ReportDetailCloseRequested(object? sender, EventArgs eventArgs) =>
         NavigateToDestination(new TestSetupDestination());
-    }
 
     private void ReportDetailRunAgainRequested(object? sender, EventArgs eventArgs)
     {
         workbenchShell?.CloseOverlay();
-        TestResultRunAgainRequested(sender, eventArgs);
+        RunAgainClicked(sender, new Avalonia.Interactivity.RoutedEventArgs());
     }
 
     private void ControlCenterOverlayCloseRequested(object? sender, EventArgs eventArgs)
