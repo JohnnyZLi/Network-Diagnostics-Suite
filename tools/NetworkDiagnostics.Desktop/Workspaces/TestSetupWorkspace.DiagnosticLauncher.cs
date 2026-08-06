@@ -182,6 +182,8 @@ public sealed partial class TestSetupWorkspace
             Text = "Loading run plan…",
             FontSize = 10,
             LineHeight = 16,
+            MinHeight = 32,
+            VerticalAlignment = VerticalAlignment.Top,
             TextWrapping = TextWrapping.Wrap
         };
         launcherSummaryText.Classes.Add("muted");
@@ -212,6 +214,7 @@ public sealed partial class TestSetupWorkspace
         {
             Padding = new Thickness(16, 14),
             CornerRadius = new CornerRadius(12),
+            MinHeight = 148,
             Child = planContent,
             VerticalAlignment = VerticalAlignment.Stretch
         };
