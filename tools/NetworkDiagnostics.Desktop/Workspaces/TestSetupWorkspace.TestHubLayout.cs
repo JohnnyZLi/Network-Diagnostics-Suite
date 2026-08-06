@@ -21,8 +21,12 @@ public sealed partial class TestSetupWorkspace
     private Button? testHubContentButton;
     private Button? testHubPeakButton;
     private Button? testHubSpeedRunButton;
+    private Button? testHubCustomizeButton;
+    private Button? testHubDiagnosticRunButton;
     private TextBlock? testHubSpeedSelectedText;
     private TextBlock? testHubSpeedSummaryText;
+    private TextBlock? testHubDiagnosticSelectedText;
+    private TextBlock? testHubDiagnosticSummaryText;
     private bool testHubInstalled;
     private bool legacySpeedActionsHidden;
     private int selectedSpeedTestIndex;
@@ -86,6 +90,19 @@ public sealed partial class TestSetupWorkspace
             TestHubSpeedRunClicked,
             150);
         testHubSpeedRunButton.Name = "RunSelectedSpeedTestButton";
+
+        testHubCustomizeButton = CreateLauncherAction(
+            "Customize…",
+            "secondary",
+            MoreLauncherClicked,
+            108);
+        testHubCustomizeButton.Name = "CustomizeDiagnosticButton";
+        testHubDiagnosticRunButton = CreateLauncherAction(
+            "Run Quick",
+            "primary",
+            LauncherRunClicked,
+            136);
+        testHubDiagnosticRunButton.Name = "RunSelectedDiagnosticButton";
 
         var outerHeading = new StackPanel { Spacing = 3 };
         outerHeading.Children.Add(new TextBlock
@@ -199,23 +216,9 @@ public sealed partial class TestSetupWorkspace
         Grid.SetColumn(stressLauncherButton!, 2);
         presetGrid.Children.Add(stressLauncherButton!);
 
-        launcherSelectedProfileText!.FontSize = 12;
-        launcherSelectedProfileText.FontWeight = FontWeight.SemiBold;
-        launcherSelectedProfileText.TextTrimming = TextTrimming.CharacterEllipsis;
-        launcherSummaryText!.FontSize = 9.5;
-        launcherSummaryText.LineHeight = 14;
-        launcherSummaryText.MinHeight = 0;
-        launcherSummaryText.MaxLines = 2;
-        launcherSummaryText.TextTrimming = TextTrimming.CharacterEllipsis;
-
-        moreLauncherButton!.MinHeight = 36;
-        moreLauncherButton.MinWidth = 108;
-        moreLauncherButton.Padding = new Thickness(12, 7);
-        moreLauncherButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-        launcherRunButton!.MinHeight = 36;
-        launcherRunButton.MinWidth = 136;
-        launcherRunButton.Padding = new Thickness(13, 7);
-        launcherRunButton.HorizontalContentAlignment = HorizontalAlignment.Center;
+        testHubDiagnosticSelectedText = CreateSelectedPlanTitle("Quick");
+        testHubDiagnosticSummaryText = CreateSelectedPlanSummary("Loading saved run plan…");
+        var selection = BuildSelectionSummary(testHubDiagnosticSelectedText, testHubDiagnosticSummaryText);
 
         testHubDiagnosticActions = new StackPanel
         {
@@ -224,10 +227,9 @@ public sealed partial class TestSetupWorkspace
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center
         };
-        testHubDiagnosticActions.Children.Add(moreLauncherButton);
-        testHubDiagnosticActions.Children.Add(launcherRunButton);
+        testHubDiagnosticActions.Children.Add(testHubCustomizeButton!);
+        testHubDiagnosticActions.Children.Add(testHubDiagnosticRunButton!);
 
-        var selection = BuildSelectionSummary(launcherSelectedProfileText, launcherSummaryText);
         testHubDiagnosticFooterGrid = BuildTestHubFooter(selection, testHubDiagnosticActions);
 
         var content = new StackPanel { Spacing = 13 };
@@ -505,6 +507,8 @@ public sealed partial class TestSetupWorkspace
         SetEnabled(testHubContentButton!, controlsEnabled);
         SetEnabled(testHubPeakButton!, controlsEnabled);
         SetEnabled(testHubSpeedRunButton!, controlsEnabled);
+        SetEnabled(testHubCustomizeButton!, controlsEnabled);
+        SetEnabled(testHubDiagnosticRunButton!, controlsEnabled);
 
         SetSelected(testHubContentButton!, selectedSpeedTestIndex == 0);
         SetSelected(testHubPeakButton!, selectedSpeedTestIndex == 1);
@@ -520,6 +524,28 @@ public sealed partial class TestSetupWorkspace
         if (!Equals(testHubSpeedRunButton!.Content, speedRunLabel))
         {
             testHubSpeedRunButton.Content = speedRunLabel;
+        }
+
+        var profileIndex = SelectedProfileIndex();
+        var profileName = ProfileName(profileIndex);
+        var selectedDiagnosticTitle = profileIndex == 0
+            ? $"Custom · {profileName}"
+            : profileName;
+        SetTextStable(testHubDiagnosticSelectedText!, selectedDiagnosticTitle);
+
+        var diagnosticSummary = $"{EstimatedTimeText.Text} · {TransferCapText.Text}";
+        if (!string.IsNullOrWhiteSpace(ConfirmationText.Text)
+            && !ConfirmationText.Text.Equals("No", StringComparison.OrdinalIgnoreCase)
+            && !ConfirmationText.Text.Equals("Not required", StringComparison.OrdinalIgnoreCase))
+        {
+            diagnosticSummary += " · confirmation required";
+        }
+        SetTextStable(testHubDiagnosticSummaryText!, diagnosticSummary);
+
+        var diagnosticRunLabel = controlsEnabled ? $"Run {profileName}" : "Diagnostic running";
+        if (!Equals(testHubDiagnosticRunButton!.Content, diagnosticRunLabel))
+        {
+            testHubDiagnosticRunButton.Content = diagnosticRunLabel;
         }
     }
 
