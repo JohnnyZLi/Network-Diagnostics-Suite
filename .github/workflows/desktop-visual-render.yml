@@ -76,6 +76,11 @@ jobs:
             scrot "desktop-visual/screenshots/${name}.png"
           }
 
+          capture_now() {
+            local name="$1"
+            scrot "desktop-visual/screenshots/${name}.png"
+          }
+
           wait_for_window() {
             for attempt in {1..40}; do
               if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
@@ -89,13 +94,17 @@ jobs:
             exit 1
           }
 
-          run_command() {
+          invoke_command() {
             local query="$1"
-            xdotool key --clearmodifiers ctrl+k
+            xdotool key --clearmodifiers ctrl+f
             sleep 0.25
             xdotool type --delay 12 "$query"
             sleep 0.2
             xdotool key Return
+          }
+
+          run_command() {
+            invoke_command "$1"
             sleep 0.6
           }
 
@@ -146,7 +155,7 @@ jobs:
           xdotool key --clearmodifiers Home
 
           # Clicking the command-palette backdrop must dismiss it without another shortcut.
-          xdotool key --clearmodifiers ctrl+k
+          xdotool key --clearmodifiers ctrl+f
           sleep 0.35
           capture command-palette
           xdotool mousemove 40 560 click 1
@@ -195,10 +204,14 @@ jobs:
           wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
           sleep 0.8
 
-          # A just-completed result must use the same bounded report sheet as history,
-          # with current-run actions rather than replacing the whole control center.
+          # A just-completed result must use the same bounded report sheet as history.
+          # Capture the first painted frame as well as the settled state so a transient
+          # header-only or full-page flash becomes a visual-regression failure instead
+          # of disappearing before the normal delayed screenshot.
           run_command 'open network overview'
-          run_command 'preview current result'
+          invoke_command 'preview current result'
+          sleep 0.04
+          capture_now current-result-opening-frame
           capture current-result-detail
           wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
           wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
@@ -247,6 +260,11 @@ jobs:
           capture configurator-light-quick
           xdotool mousemove 470 665 click 1
           capture configurator-light-stress
+
+          if grep -Ei 'exception|unhandled|fatal' /tmp/desktop-app.log; then
+            cat /tmp/desktop-app.log
+            exit 1
+          fi
 
       - name: Upload rendered desktop states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
