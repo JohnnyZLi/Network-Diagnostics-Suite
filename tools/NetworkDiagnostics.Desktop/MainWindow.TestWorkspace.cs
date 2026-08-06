@@ -103,8 +103,23 @@ public sealed partial class MainWindow
 
     private void ActiveRunSessionChanged(object? sender, EventArgs eventArgs)
     {
+        var snapshot = activeRunSession.Snapshot;
+        if (snapshot.IsActive)
+        {
+            // Live telemetry can arrive several times per second. Only update the
+            // visible running workspace and shell chrome on this hot path. The old
+            // implementation rendered the running workspace twice and rebuilt the
+            // hidden Home and result screens for every sample, which caused visible
+            // flashing on macOS.
+            runningTestWorkspace?.Render(snapshot, activeRunSession.Events);
+            RefreshWorkbenchChrome();
+            return;
+        }
+
+        // Terminal states are infrequent and should refresh every dependent view.
+        // SyncTestWorkspace already calls SyncRunResultWorkspaces, so do not invoke
+        // it a second time here.
         SyncTestWorkspace();
-        SyncRunResultWorkspaces();
         RefreshWorkbenchChrome();
     }
 
