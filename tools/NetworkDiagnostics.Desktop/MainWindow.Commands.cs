@@ -55,6 +55,9 @@ public sealed partial class MainWindow
             case "developer.preview-saved-report":
                 PreviewSavedReport();
                 break;
+            case "developer.preview-current-result":
+                PreviewCurrentResult();
+                break;
             case "monitor.toggle":
                 TestSetupMonitoringToggleRequested(sender, EventArgs.Empty);
                 break;
@@ -148,6 +151,7 @@ public sealed partial class MainWindow
             new("navigate.settings.developer", "Settings: Developer", "Preview result states without running the engine.", "settings developer fixture preview", Priority: 35),
             new("developer.preview-healthy", "Preview healthy result", "Open the healthy-connection presentation fixture without running a diagnostic.", "developer fixture preview healthy result", Priority: 36),
             new("developer.preview-saved-report", "Preview saved report", "Open a deterministic saved-report presentation for interface review.", "developer fixture preview saved report history", Priority: 37),
+            new("developer.preview-current-result", "Preview current result", "Open the shared just-completed report sheet for interface review.", "developer fixture preview current completed result popup", Priority: 38),
             new("preflight.refresh", "Refresh connection preflight", "Probe the current interface, endpoint candidates, and network context.", "refresh endpoint latency network interface", Priority: 40),
             new("reports.folder", "Open data folder", "Open the local application-data directory in the system file manager.", "storage directory finder explorer", Priority: 41),
             new("view.inspector", workbenchShell?.InspectorOpen == true ? "Hide information drawer" : "Show information drawer", "Toggle contextual information and controls.", "view panel info details", Priority: 50),
