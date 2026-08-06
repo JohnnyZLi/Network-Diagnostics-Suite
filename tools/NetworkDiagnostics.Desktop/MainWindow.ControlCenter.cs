@@ -32,12 +32,11 @@ public sealed partial class MainWindow
     private void SyncControlCenterSections()
     {
         if (testSetupWorkspace is null) return;
-        testSetupWorkspace.RenderControlCenter(new ControlCenterSectionModel(
+        testSetupWorkspace.RenderProductControlCenter(new ControlCenterSectionModel(
             controlCenterReports,
             comparisonBaselineId,
             comparisonCandidateId,
             ReportComparisonService.AnalyzeTrend(controlCenterReports)));
-        testSetupWorkspace.ApplyRecentDiagnosticsProductFlow();
     }
 
     private void ControlCenterDiagnosticLauncherRequested(object? sender, EventArgs eventArgs)
