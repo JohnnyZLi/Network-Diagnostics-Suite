@@ -108,7 +108,8 @@ public sealed partial class WorkbenchShell
             : compact
                 ? 132d
                 : 176d;
-        if (Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
+        if (double.IsNaN(ActiveRunPanel.Width)
+            || Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
         {
             ActiveRunPanel.Width = targetWidth;
         }
