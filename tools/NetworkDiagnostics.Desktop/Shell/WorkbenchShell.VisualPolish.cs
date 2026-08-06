@@ -106,7 +106,7 @@ public sealed partial class WorkbenchShell
         var targetWidth = showDetail
             ? 224d
             : compact
-                ? 148d
+                ? 132d
                 : 176d;
         if (Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
         {
