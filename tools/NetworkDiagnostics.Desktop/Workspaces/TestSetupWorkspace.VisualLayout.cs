@@ -112,12 +112,16 @@ public sealed partial class TestSetupWorkspace
     {
         if (speedActionsPolished) return;
 
-        var buttons = this.GetVisualDescendants()
-            .OfType<Button>()
-            .ToDictionary(button => button.Content?.ToString() ?? string.Empty);
-        if (!buttons.TryGetValue("Run content test", out var contentButton)
-            || !buttons.TryGetValue("Run peak test", out var peakButton)
-            || !buttons.TryGetValue("Speed settings", out var settingsButton)
+        var buttons = this.GetVisualDescendants().OfType<Button>().ToArray();
+        var contentButton = buttons.FirstOrDefault(button =>
+            string.Equals(button.Content?.ToString(), "Run content test", StringComparison.Ordinal));
+        var peakButton = buttons.FirstOrDefault(button =>
+            string.Equals(button.Content?.ToString(), "Run peak test", StringComparison.Ordinal));
+        var settingsButton = buttons.FirstOrDefault(button =>
+            string.Equals(button.Content?.ToString(), "Speed settings", StringComparison.Ordinal));
+        if (contentButton is null
+            || peakButton is null
+            || settingsButton is null
             || contentButton.GetVisualParent() is not StackPanel actionPanel
             || actionPanel.GetVisualParent() is not StackPanel speedPanel)
         {
