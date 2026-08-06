@@ -16,17 +16,34 @@ public sealed partial class MainWindow
         if (reportDetailWorkspace is not null)
         {
             reportDetailWorkspace.HomeRequested += ReportDetailHomeRequested;
+            reportDetailWorkspace.RunAgainRequested += ReportDetailRunAgainRequested;
         }
         navigationService.Changed += ControlCenterOverlayNavigationChanged;
         ApplyControlCenterDestination(navigationService.Current?.Destination);
     }
 
-    private void ControlCenterOverlayNavigationChanged(object? sender, NavigationChangedEventArgs eventArgs)
+    private async void ControlCenterOverlayNavigationChanged(object? sender, NavigationChangedEventArgs eventArgs)
     {
-        if (eventArgs.Current.Destination is SettingsDestination or ReportDetailDestination or ComparisonDestination)
+        switch (eventArgs.Current.Destination)
         {
-            ShowControlCenterUnderlay();
-            workbenchShell?.SelectControlCenter();
+            case RunningTestDestination:
+                ShowControlCenterUnderlay();
+                workbenchShell?.CloseOverlay();
+                workbenchShell?.SelectControlCenter();
+                SyncTestWorkspace();
+                Dispatcher.UIThread.Post(() => testSetupWorkspace?.BringActiveRunIntoView());
+                return;
+
+            case TestResultDestination result when result.ReportId != Guid.Empty:
+                ShowControlCenterUnderlay();
+                workbenchShell?.SelectControlCenter();
+                await OpenCurrentResultOverlayAsync(result);
+                return;
+
+            case SettingsDestination or ReportDetailDestination or ComparisonDestination:
+                ShowControlCenterUnderlay();
+                workbenchShell?.SelectControlCenter();
+                break;
         }
 
         Dispatcher.UIThread.Post(() => ApplyControlCenterDestination(eventArgs.Current.Destination));
@@ -38,6 +55,18 @@ public sealed partial class MainWindow
 
         switch (destination)
         {
+            case RunningTestDestination:
+                ShowControlCenterUnderlay();
+                workbenchShell.CloseOverlay();
+                workbenchShell.SelectControlCenter();
+                SyncTestWorkspace();
+                Dispatcher.UIThread.Post(() => testSetupWorkspace?.BringActiveRunIntoView());
+                break;
+
+            case TestResultDestination result when result.ReportId != Guid.Empty:
+                _ = OpenCurrentResultOverlayAsync(result);
+                break;
+
             case SettingsDestination settingsDestination when settingsWorkspace is not null:
                 ShowControlCenterUnderlay();
                 workbenchShell.SelectControlCenter();
@@ -79,6 +108,28 @@ public sealed partial class MainWindow
         }
     }
 
+    private async Task OpenCurrentResultOverlayAsync(TestResultDestination destination)
+    {
+        if (workbenchShell is null || reportDetailWorkspace is null) return;
+        if (!await LoadReportForNavigationAsync(destination.ReportId)
+            || selectedHistoryReport is null)
+        {
+            workbenchShell.CloseOverlay();
+            NavigateToDestination(new TestSetupDestination());
+            return;
+        }
+
+        ShowControlCenterUnderlay();
+        workbenchShell.SelectControlCenter();
+        reportDetailWorkspace.RenderCurrent(selectedHistoryReport, currentPresentation);
+        workbenchShell.OpenOverlay(
+            "Diagnostic result",
+            reportDetailWorkspace,
+            maxWidth: 1160,
+            maxHeight: 820,
+            stretchWidth: true);
+    }
+
     private void ShowControlCenterUnderlay()
     {
         HideRedesignedWorkspaces();
@@ -95,9 +146,17 @@ public sealed partial class MainWindow
         NavigateToDestination(new TestSetupDestination());
     }
 
+    private void ReportDetailRunAgainRequested(object? sender, EventArgs eventArgs)
+    {
+        workbenchShell?.CloseOverlay();
+        TestResultRunAgainRequested(sender, eventArgs);
+    }
+
     private void ControlCenterOverlayCloseRequested(object? sender, EventArgs eventArgs)
     {
-        if (navigationService.Current?.Destination is SettingsDestination or ReportDetailDestination)
+        if (navigationService.Current?.Destination is SettingsDestination
+            or ReportDetailDestination
+            or TestResultDestination)
         {
             NavigateToDestination(new TestSetupDestination());
             return;
