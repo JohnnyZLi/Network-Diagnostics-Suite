@@ -1,4 +1,3 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -10,42 +9,29 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestSetupWorkspace
 {
-    private const int MinimumTimelineSlots = 48;
-    private const string SparseTimelineHintName = "SparseTimelineHint";
     private Button? sevenDaysButton;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualLayoutSizeChanged;
-        LayoutUpdated += RenderedLayoutUpdated;
         CaptureTestHubHost();
         InstallDiagnosticLauncher();
         InstallTestHubLayout();
         EnsureSevenDayButton();
         PolishRangeSelector();
         ApplyRenderedVisualLayout(Bounds.Width);
+        RefreshModelDependentVisuals();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         SizeChanged -= VisualLayoutSizeChanged;
-        LayoutUpdated -= RenderedLayoutUpdated;
         base.OnDetachedFromVisualTree(eventArgs);
     }
 
     private void VisualLayoutSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyRenderedVisualLayout(eventArgs.NewSize.Width);
-
-    private void RenderedLayoutUpdated(object? sender, EventArgs eventArgs)
-    {
-        EnsureSevenDayButton();
-        PolishRangeSelector();
-        SyncTestHubLayout();
-        NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
-        NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
-        SyncSevenDaySelection();
-    }
 
     private void ApplyRenderedVisualLayout(double width)
     {
@@ -62,6 +48,16 @@ public sealed partial class TestSetupWorkspace
         CompareMethodButton.FontSize = 10;
         SingleMethodButton.FontSize = 10;
         AggregateMethodButton.FontSize = 10;
+
+        ApplyTestHubResponsiveLayout(width);
+
+        // Once the profile controls have moved into the overlay, the legacy inline
+        // responsive layout must not reparent them again during a window resize.
+        if (diagnosticConfiguratorBuilt || polishedDiagnosticConfiguratorBuilt)
+        {
+            NormalizeDiagnosticConfiguratorProfileRail();
+            return;
+        }
 
         if (width < 1180) return;
 
@@ -129,11 +125,11 @@ public sealed partial class TestSetupWorkspace
 
     private void SevenDaysClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs eventArgs)
     {
-        SetSelected(OneMinuteButton, false);
-        SetSelected(FiveMinutesButton, false);
-        SetSelected(OneHourButton, false);
-        SetSelected(TwentyFourHoursButton, false);
-        if (sevenDaysButton is not null) SetSelected(sevenDaysButton, true);
+        SetSelectedStable(OneMinuteButton, false);
+        SetSelectedStable(FiveMinutesButton, false);
+        SetSelectedStable(OneHourButton, false);
+        SetSelectedStable(TwentyFourHoursButton, false);
+        if (sevenDaysButton is not null) SetSelectedStable(sevenDaysButton, true);
         MonitorWindowRequested?.Invoke(this, new MonitorWindowRequestedEventArgs(MonitorWindow.SevenDays));
     }
 
@@ -144,103 +140,6 @@ public sealed partial class TestSetupWorkspace
             || FiveMinutesButton.Classes.Contains("selected")
             || OneHourButton.Classes.Contains("selected")
             || TwentyFourHoursButton.Classes.Contains("selected");
-        SetSelected(sevenDaysButton, !shorterWindowSelected);
-    }
-
-    private static void NormalizeSparseTimeline(Grid grid, bool colorByLatency)
-    {
-        var bars = grid.Children.OfType<Border>().ToArray();
-        if (bars.Length == 0)
-        {
-            RemoveSparseTimelineHint(grid);
-            return;
-        }
-
-        if (IsIntentionalEmptyTimeline(bars))
-        {
-            RemoveSparseTimelineHint(grid);
-            return;
-        }
-
-        while (grid.ColumnDefinitions.Count < MinimumTimelineSlots)
-        {
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        }
-
-        var offset = Math.Max(0, grid.ColumnDefinitions.Count - bars.Length);
-        for (var index = 0; index < bars.Length; index++)
-        {
-            Grid.SetColumn(bars[index], offset + index);
-        }
-
-        UpdateSparseTimelineHint(grid, bars.Length, colorByLatency);
-
-        if (!colorByLatency) return;
-        foreach (var bar in bars)
-        {
-            AlignBarGeometryAndTone(bar);
-        }
-    }
-
-    private static void UpdateSparseTimelineHint(Grid grid, int sampleCount, bool colorByLatency)
-    {
-        var existing = grid.Children
-            .OfType<TextBlock>()
-            .FirstOrDefault(item => item.Name == SparseTimelineHintName);
-        var shouldShow = colorByLatency && sampleCount is > 0 and < 4;
-        if (!shouldShow)
-        {
-            if (existing is not null) grid.Children.Remove(existing);
-            return;
-        }
-
-        var hint = existing ?? new TextBlock
-        {
-            Name = SparseTimelineHintName,
-            FontSize = 9,
-            VerticalAlignment = VerticalAlignment.Top,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            IsHitTestVisible = false,
-            Opacity = 0.82
-        };
-        hint.Classes.Add("muted");
-        hint.Text = sampleCount == 1
-            ? "Collecting history · 1 sample"
-            : $"Collecting history · {sampleCount} samples";
-        Grid.SetColumn(hint, 0);
-        Grid.SetColumnSpan(hint, Math.Max(1, grid.ColumnDefinitions.Count));
-        if (existing is null) grid.Children.Add(hint);
-    }
-
-    private static void RemoveSparseTimelineHint(Grid grid)
-    {
-        var existing = grid.Children
-            .OfType<TextBlock>()
-            .FirstOrDefault(item => item.Name == SparseTimelineHintName);
-        if (existing is not null) grid.Children.Remove(existing);
-    }
-
-    private static bool IsIntentionalEmptyTimeline(IReadOnlyList<Border> bars) =>
-        bars.Count == 1
-        && bars[0].Classes.Contains("timelineInactive")
-        && ToolTip.GetTip(bars[0]) is null
-        && bars[0].CornerRadius.TopLeft >= 4;
-
-    private static void AlignBarGeometryAndTone(Border bar)
-    {
-        var tooltip = ToolTip.GetTip(bar)?.ToString();
-        if (string.IsNullOrWhiteSpace(tooltip)) return;
-        var token = tooltip.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var latency)) return;
-
-        bar.Height = Math.Clamp(8 + latency / 4, 10, 58);
-        RemoveScoreClasses(bar);
-        bar.Classes.Add(latency switch
-        {
-            <= 50 => "scoreExcellent",
-            <= 100 => "scoreGood",
-            <= 180 => "scoreFair",
-            _ => "scoreDegraded"
-        });
+        SetSelectedStable(sevenDaysButton, !shorterWindowSelected);
     }
 }
