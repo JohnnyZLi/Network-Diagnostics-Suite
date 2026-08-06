@@ -71,8 +71,11 @@ public sealed partial class MainWindow
         SyncTestWorkspace();
     }
 
-    private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs) =>
+    private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs)
+    {
+        workbenchShell?.CloseOverlay();
         NavigateToDestination(new TestSetupDestination());
+    }
 
     private void ControlCenterOverlayCloseRequested(object? sender, EventArgs eventArgs)
     {
