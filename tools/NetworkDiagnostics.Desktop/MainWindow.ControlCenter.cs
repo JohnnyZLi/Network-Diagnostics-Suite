@@ -48,6 +48,8 @@ public sealed partial class MainWindow
         testSetupWorkspace.PrepareDiagnosticLauncherLayout();
         testSetupWorkspace.ApplyDiagnosticConfiguratorPolishSafely();
         testSetupWorkspace.InstallDiagnosticConfiguratorResponsiveGuard();
+        testSetupWorkspace.DisableLegacyLayoutRefreshLoops();
+        testSetupWorkspace.RefreshModelDependentVisuals();
         workbenchShell.SelectControlCenter();
         workbenchShell.OpenOverlay("Customize diagnostic", content, 960, 620, stretchWidth: true);
     }
