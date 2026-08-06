@@ -116,7 +116,13 @@ public sealed partial class WorkbenchShell
         RefreshResponsiveChrome();
     }
 
-    public void SelectControlCenter() => SelectWorkspace(WorkspaceKind.Test);
+    public void SelectControlCenter()
+    {
+        currentWorkspace = WorkspaceKind.Test;
+        SelectWorkspace(WorkspaceKind.Test);
+        RenderBreadcrumbs(new TestSetupDestination().Breadcrumbs);
+        RefreshResponsiveChrome();
+    }
 
     public void CloseOverlay()
     {
