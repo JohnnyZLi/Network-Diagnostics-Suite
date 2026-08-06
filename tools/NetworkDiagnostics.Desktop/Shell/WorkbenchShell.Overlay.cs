@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using NetworkDiagnostics.Desktop.Navigation;
@@ -14,11 +13,15 @@ public sealed partial class WorkbenchShell
     private Border? overlayHeader;
     private ContentControl? overlayHost;
     private TextBlock? overlayTitle;
-    private double? overlayRequestedMaxHeight;
+    private Panel? focusedOriginalPanel;
+    private ContentControl? focusedOriginalContentControl;
+    private int focusedOriginalIndex = -1;
 
     public event EventHandler? OverlayCloseRequested;
 
-    public bool OverlayOpen => overlayRoot?.IsVisible == true && overlayRoot.IsHitTestVisible;
+    // Compatibility name for callers while the former modal surface now behaves as a
+    // focused in-shell workspace. There is no backdrop or popup chrome.
+    public bool OverlayOpen => overlayRoot?.IsVisible == true;
 
     public bool IsOverlayContent(Control? content) =>
         content is not null && ReferenceEquals(overlayHost?.Content, content);
@@ -26,10 +29,6 @@ public sealed partial class WorkbenchShell
     public void EnsureOverlay()
     {
         if (overlayRoot is not null) return;
-
-        var backdrop = new Border();
-        backdrop.Classes.Add("modalBackdrop");
-        backdrop.PointerPressed += OverlayBackdropPressed;
 
         overlayTitle = new TextBlock
         {
@@ -58,7 +57,13 @@ public sealed partial class WorkbenchShell
         Grid.SetColumn(close, 1);
         headerGrid.Children.Add(close);
 
-        overlayHeader = new Border { Child = headerGrid };
+        // Focused workspaces own their own title/action chrome. The compatibility
+        // header stays mounted but hidden so older callers do not need a second path.
+        overlayHeader = new Border
+        {
+            Child = headerGrid,
+            IsVisible = false
+        };
         overlayHeader.Classes.Add("modalHeader");
 
         overlayHost = new ContentControl
@@ -79,14 +84,17 @@ public sealed partial class WorkbenchShell
         overlaySheet = new Border
         {
             Name = "OverlaySheet",
-            Margin = new Thickness(30),
-            MaxWidth = 1180,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
             ClipToBounds = true,
             Opacity = 1,
             Child = sheetGrid
         };
+        // Retain the class for existing visual-test discovery. Local values above
+        // neutralize the old rounded modal framing.
         overlaySheet.Classes.Add("modalSheet");
 
         overlayRoot = new Grid
@@ -95,9 +103,8 @@ public sealed partial class WorkbenchShell
             IsVisible = false,
             IsHitTestVisible = false,
             Opacity = 1,
-            ZIndex = 50
+            ZIndex = 20
         };
-        overlayRoot.Children.Add(backdrop);
         overlayRoot.Children.Add(overlaySheet);
         ShellGrid.Children.Add(overlayRoot);
         ShellGrid.SizeChanged += OverlayViewportChanged;
@@ -105,9 +112,7 @@ public sealed partial class WorkbenchShell
 
     public void SetReducedMotion(bool value)
     {
-        // Overlay presentation is intentionally atomic for every motion preference.
-        // Keeping this API preserves the accessibility call site without maintaining
-        // a second transition path that can flash on platform compositors.
+        // Focused workspaces never animate, so reduced-motion needs no alternate path.
     }
 
     public void OpenOverlay(
@@ -124,24 +129,29 @@ public sealed partial class WorkbenchShell
         {
             overlayHost.Content = null;
             previous.IsVisible = false;
+            RestoreFocusedContent(previous);
         }
 
-        DetachFromLogicalParent(content);
+        if (!ReferenceEquals(overlayHost.Content, content))
+        {
+            CaptureAndDetachFocusedContent(content);
+            overlayHost.Content = content;
+        }
+
         content.IsVisible = true;
         overlayTitle!.Text = title;
-        overlayHeader!.IsVisible = showHeader;
-        overlaySheet!.MaxWidth = maxWidth;
-        overlaySheet.HorizontalAlignment = stretchWidth
-            ? HorizontalAlignment.Stretch
-            : HorizontalAlignment.Center;
-        overlayRequestedMaxHeight = maxHeight;
-        overlayHost.Content = content;
+        overlayHeader!.IsVisible = false;
+
+        // Reports and Settings are normal application workspaces. Fill the entire
+        // content area below the persistent app header in one frame: no dimming,
+        // backdrop, opacity ramp, centered card, or click-outside behavior.
+        overlaySheet!.Margin = new Thickness(0);
+        overlaySheet.HorizontalAlignment = HorizontalAlignment.Stretch;
+        overlaySheet.VerticalAlignment = VerticalAlignment.Stretch;
+        overlaySheet.Opacity = 1;
+        overlaySheet.Transitions = null;
         ApplyOverlayBounds();
 
-        // Mount the completely laid-out sheet in one visual state. Opacity ramps on
-        // large desktop surfaces caused visible flashes on macOS even when the
-        // backdrop itself was not animated.
-        overlaySheet.Opacity = 1;
         overlayRoot!.Opacity = 1;
         overlayRoot.IsVisible = true;
         overlayRoot.IsHitTestVisible = true;
@@ -160,15 +170,21 @@ public sealed partial class WorkbenchShell
     {
         if (overlayRoot is null || overlayHost is null || !OverlayOpen) return;
 
-        // Close atomically as well. There is no transparent intermediate frame where
-        // the backdrop remains while the report body has already disappeared.
         overlayRoot.IsHitTestVisible = false;
-        var content = overlayHost.Content as Control;
-        overlayHost.Content = null;
-        if (content is not null) content.IsVisible = false;
+        if (overlayHost.Content is Control content)
+        {
+            overlayHost.Content = null;
+            content.IsVisible = false;
+            RestoreFocusedContent(content);
+        }
+
         overlayRoot.IsVisible = false;
         overlayRoot.Opacity = 1;
-        if (overlaySheet is not null) overlaySheet.Opacity = 1;
+        if (overlaySheet is not null)
+        {
+            overlaySheet.Opacity = 1;
+            overlaySheet.Transitions = null;
+        }
         RefreshResponsiveChrome();
     }
 
@@ -180,40 +196,54 @@ public sealed partial class WorkbenchShell
         if (overlaySheet is null) return;
 
         var width = Math.Max(320, ShellGrid.Bounds.Width);
-        var height = Math.Max(320, ShellGrid.Bounds.Height);
-        var margin = width < 900 ? 12d : 30d;
-        var availableHeight = Math.Max(280, height - margin * 2);
-        var resolvedHeight = overlayRequestedMaxHeight is { } requested
-            ? Math.Min(requested, availableHeight)
-            : availableHeight;
-
-        overlaySheet.Margin = new Thickness(margin);
-        overlaySheet.Height = resolvedHeight;
-        overlaySheet.MaxHeight = resolvedHeight;
+        var height = Math.Max(280, ShellGrid.Bounds.Height);
+        overlaySheet.Width = width;
+        overlaySheet.Height = height;
+        overlaySheet.MaxWidth = width;
+        overlaySheet.MaxHeight = height;
     }
 
     private void OverlayCloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs eventArgs) =>
         OverlayCloseRequested?.Invoke(this, EventArgs.Empty);
 
-    private void OverlayBackdropPressed(object? sender, PointerPressedEventArgs eventArgs)
+    private void CaptureAndDetachFocusedContent(Control content)
     {
-        if (eventArgs.Source == sender)
-        {
-            OverlayCloseRequested?.Invoke(this, EventArgs.Empty);
-            eventArgs.Handled = true;
-        }
-    }
+        focusedOriginalPanel = null;
+        focusedOriginalContentControl = null;
+        focusedOriginalIndex = -1;
 
-    private static void DetachFromLogicalParent(Control content)
-    {
         switch (content.GetLogicalParent())
         {
             case Panel panel:
+                focusedOriginalPanel = panel;
+                focusedOriginalIndex = panel.Children.IndexOf(content);
                 panel.Children.Remove(content);
                 break;
             case ContentControl contentControl when ReferenceEquals(contentControl.Content, content):
+                focusedOriginalContentControl = contentControl;
                 contentControl.Content = null;
                 break;
         }
+    }
+
+    private void RestoreFocusedContent(Control content)
+    {
+        if (focusedOriginalPanel is not null)
+        {
+            if (!focusedOriginalPanel.Children.Contains(content))
+            {
+                var index = Math.Clamp(focusedOriginalIndex, 0, focusedOriginalPanel.Children.Count);
+                focusedOriginalPanel.Children.Insert(index, content);
+            }
+        }
+        else if (focusedOriginalContentControl is not null
+                 && focusedOriginalContentControl.Content is null)
+        {
+            focusedOriginalContentControl.Content = content;
+        }
+
+        focusedOriginalPanel = null;
+        focusedOriginalContentControl = null;
+        focusedOriginalIndex = -1;
     }
 }
