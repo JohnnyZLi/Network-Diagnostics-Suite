@@ -10,8 +10,6 @@ public sealed partial class WorkbenchShell
     private Panel? focusedWorkspaceParent;
     private Control? focusedPreviousSurface;
 
-    public event EventHandler? OverlayCloseRequested;
-
     // Compatibility name for existing callers. Major content no longer uses an
     // overlay visual at all; this simply means a focused workspace is selected.
     public bool OverlayOpen => focusedWorkspaceContent is not null;
