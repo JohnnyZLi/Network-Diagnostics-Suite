@@ -3,6 +3,7 @@ name: Adopt shared Sites menu population
 on:
   push:
     branches: ["feat/shared-web-dark-mode"]
+  workflow_dispatch:
 
 permissions:
   contents: write
