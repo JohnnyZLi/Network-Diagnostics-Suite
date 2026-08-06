@@ -87,7 +87,37 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
-    public void ReducedMotionShowsOverlayWithoutAnOpacityRamp()
+    public void HeaderlessOverlayLeavesOnlyTheReportToolbarVisible()
+    {
+        var shell = new WorkbenchShell();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = shell
+        };
+        window.Show();
+        try
+        {
+            shell.OpenOverlay(
+                "Diagnostic result",
+                new Border(),
+                maxHeight: 700,
+                showHeader: false);
+
+            var modalHeader = Assert.Single(
+                shell.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("modalHeader"));
+            Assert.False(modalHeader.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void ReducedMotionShowsSheetWithoutAnOpacityRamp()
     {
         var shell = new WorkbenchShell();
         var window = new Window
@@ -108,6 +138,37 @@ public sealed class MainWindowBootstrapTests
                 border => border.Classes.Contains("modalSheet"));
             var root = Assert.IsType<Grid>(sheet.GetVisualParent());
             Assert.Equal(1, root.Opacity);
+            Assert.Equal(1, sheet.Opacity);
+            Assert.Null(sheet.Transitions);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void NormalMotionNeverFadesTheWholeBackdrop()
+    {
+        var shell = new WorkbenchShell();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = shell
+        };
+        window.Show();
+        try
+        {
+            shell.OpenOverlay("Settings", new Border(), maxHeight: 700);
+
+            var sheet = Assert.Single(
+                shell.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("modalSheet"));
+            var root = Assert.IsType<Grid>(sheet.GetVisualParent());
+
+            Assert.Equal(1, root.Opacity);
+            Assert.NotNull(sheet.Transitions);
         }
         finally
         {
