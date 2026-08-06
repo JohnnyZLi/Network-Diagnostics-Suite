@@ -1,15 +1,21 @@
 {
   "$schema": "./contract.schema.json",
   "schemaVersion": "1.0.0",
-  "designSystemVersion": "1.8.2",
+  "designSystemVersion": "1.9.0",
   "rules": [
     {
       "id": "DS-DIST-001",
       "title": "Immutable design-system source",
       "description": "The consumer records a semantic version and immutable 40-character source commit.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#10-consumer-distribution-and-synchronization"
     },
     {
@@ -17,8 +23,15 @@
       "title": "Generated asset integrity",
       "description": "Committed shared assets and helpers match the pinned design-system source.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static", "pipeline"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "pipeline"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#10-consumer-distribution-and-synchronization"
     },
     {
@@ -26,8 +39,15 @@
       "title": "Shared global header",
       "description": "Every product route or state uses the shared global-header and identity contract.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static", "runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#7-shared-global-header"
     },
     {
@@ -35,8 +55,15 @@
       "title": "Canonical owned-site directory",
       "description": "The Sites control exposes all three canonical owned sites and the correct current state.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static", "runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#8-shared-site-controls"
     },
     {
@@ -44,8 +71,14 @@
       "title": "Sites and compact-menu keyboard contract",
       "description": "Arrow keys, Escape, close behavior, and focus restoration follow the shared controller contract.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#8-shared-site-controls"
     },
     {
@@ -53,8 +86,14 @@
       "title": "No adopted primitive fallback duplication",
       "description": "Once a shared primitive is adopted and validated, equivalent product structural declarations are removed.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#9-shared-content-references-and-primitives"
     },
     {
@@ -62,8 +101,14 @@
       "title": "Shared native-dialog shell",
       "description": "Matching native confirmation dialogs use the shared dialog structure while product logic remains local.",
       "severity": "required",
-      "appliesTo": ["network", "rolepacket"],
-      "evidence": ["static", "runtime"],
+      "appliesTo": [
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#native-dialog-contract"
     },
     {
@@ -71,8 +116,13 @@
       "title": "Dialog accessibility and recovery",
       "description": "Dialogs have accessible names and descriptions, reachable actions, cancellation, and focus restoration.",
       "severity": "required",
-      "appliesTo": ["network", "rolepacket"],
-      "evidence": ["runtime"],
+      "appliesTo": [
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#6-foundations-and-accessibility"
     },
     {
@@ -80,8 +130,14 @@
       "title": "Minimum-width containment",
       "description": "The document has no horizontal overflow at the supported 320-pixel viewport.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#12-component-states-and-responsive-behavior"
     },
     {
@@ -89,8 +145,14 @@
       "title": "Actual 200 percent browser zoom",
       "description": "Core product routes remain usable at actual 200 percent browser zoom.",
       "severity": "manual",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["manual"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "manual"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#12-component-states-and-responsive-behavior"
     },
     {
@@ -98,8 +160,14 @@
       "title": "Keyboard and focus behavior",
       "description": "Essential controls remain keyboard reachable with visible focus and expected restoration.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#6-foundations-and-accessibility"
     },
     {
@@ -107,8 +175,14 @@
       "title": "Forced colors and assistive technology",
       "description": "Core workflows receive a real forced-colors and assistive-technology review.",
       "severity": "manual",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["manual"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "manual"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#6-foundations-and-accessibility"
     },
     {
@@ -116,8 +190,14 @@
       "title": "Written error recovery",
       "description": "Meaningful errors include a written reason and a recovery action.",
       "severity": "required",
-      "appliesTo": ["network", "rolepacket"],
-      "evidence": ["static", "runtime"],
+      "appliesTo": [
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#6-foundations-and-accessibility"
     },
     {
@@ -125,8 +205,15 @@
       "title": "State does not rely on color alone",
       "description": "Status and analytical meaning remain understandable through text, labels, or shape without color alone.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static", "runtime"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#6-foundations-and-accessibility"
     },
     {
@@ -134,8 +221,14 @@
       "title": "Product ownership boundary",
       "description": "Product state, copy, workflows, measurement, storage, and application logic remain in the product repository.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#3-ownership-boundary"
     },
     {
@@ -143,8 +236,15 @@
       "title": "Immutable shared workflow pin",
       "description": "Consumer synchronization calls the reusable design-system workflow by immutable commit and keeps validation local.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["static", "pipeline"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "pipeline"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#reusable-update-workflow"
     },
     {
@@ -152,8 +252,14 @@
       "title": "Product conformance pipeline",
       "description": "Product CI runs design-system integration checks, rendered-state audits, and relevant build or application tests.",
       "severity": "required",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["pipeline"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "pipeline"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#14-governance"
     },
     {
@@ -161,9 +267,31 @@
       "title": "Performance and bundle baseline",
       "description": "The product records reviewed bundle and user-experience performance baselines.",
       "severity": "manual",
-      "appliesTo": ["portfolio", "network", "rolepacket"],
-      "evidence": ["manual"],
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "manual"
+      ],
       "source": "docs/DESIGN-SYSTEM.md#13-motion-privacy-and-performance"
+    },
+    {
+      "id": "DS-THEME-001",
+      "title": "Shared appearance preference",
+      "description": "The product supports System, Light, and Dark through the shared pre-paint theme and appearance-control contract.",
+      "severity": "required",
+      "appliesTo": [
+        "portfolio",
+        "network",
+        "rolepacket"
+      ],
+      "evidence": [
+        "static",
+        "runtime"
+      ],
+      "source": "docs/DESIGN-SYSTEM.md#theme-modes"
     }
   ]
 }

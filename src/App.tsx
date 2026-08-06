@@ -5,7 +5,7 @@ import { clearRecentResults, loadRecentResults, MAX_RECENT_RESULTS, saveRecentRe
 import { runDiagnosticTest, TestCancelledError } from "./diagnostics/run-test";
 import { fetchMetadata } from "./diagnostics/http";
 import { configuredMeasurementEndpoints, selectMeasurementEndpoint, type SelectedWebEndpoint } from "./diagnostics/endpoints";
-import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
+import { installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";
 import { InformationPanels } from "./components/InformationPanels";
 import { DeepProbePanel } from "./components/DeepProbePanel";
 import { FlowComparisonPanel } from "./components/FlowComparisonPanel";
@@ -122,6 +122,8 @@ export default function App() {
     if (!header || !siteSwitcher) return;
 
     const siteController = installSiteSwitcher(siteSwitcher, {
+      populate: true,
+      currentSite: "network",
       onBeforeOpen: () => mobileNavControllerRef.current?.close(),
       onOpenChange: setSitesOpen,
     });
@@ -272,13 +274,7 @@ export default function App() {
                   id="owned-sites-menu"
                   hidden={!sitesOpen}
                   data-site-switcher-menu
-                >
-                  {OWNED_SITES.map((site) => (
-                    <li key={site.id}>
-                      <a href={site.href} aria-current={site.id === "network" ? "page" : undefined}>{site.label}</a>
-                    </li>
-                  ))}
-                </ul>
+                />
               </div>
             </div>
           </div>
