@@ -44,9 +44,9 @@ public sealed partial class MainWindow
             CompleteRunningState();
             RenderPresentation(currentPresentation);
 
-            // The result is already saved and fully represented in memory. Open the
-            // report sheet now instead of scanning/re-rendering the entire history
-            // surface first; the library refreshes on demand when it is opened.
+            // The result is already saved and fully represented in memory. Move to
+            // the focused report workspace now instead of scanning/re-rendering the
+            // entire history surface first; the library refreshes when it is opened.
             PresentRunOutcome(report.Run.Id);
         }
         catch (OperationCanceledException)
@@ -125,7 +125,7 @@ public sealed partial class MainWindow
     {
         // ActiveRunSessionChanged already converted the fixed live tile into its
         // completed handoff state. Updating only the logical progress avoids
-        // restoring the idle test choices before the report sheet is mounted.
+        // restoring the idle test choices before the focused report view is shown.
         displayedRunProgress = 100;
     }
 
