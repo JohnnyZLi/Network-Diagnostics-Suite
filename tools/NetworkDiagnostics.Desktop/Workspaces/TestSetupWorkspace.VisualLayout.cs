@@ -72,13 +72,15 @@ public sealed partial class TestSetupWorkspace
 
     private void ApplyOverviewResponsiveLayout(double width)
     {
+        var midWidthSplit = width is >= 880 and < 960;
+        ConfigureTelemetryHeader(midWidthSplit);
         if (width >= 960) return;
 
         OverviewGrid.ColumnDefinitions.Clear();
         OverviewGrid.RowDefinitions.Clear();
         OverviewGrid.RowSpacing = 12;
 
-        if (width >= 880)
+        if (midWidthSplit)
         {
             OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(280)));
             OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
@@ -104,6 +106,37 @@ public sealed partial class TestSetupWorkspace
         SetGridPosition(TelemetryHeader, 2, 0);
         SetGridPosition(TelemetryColumn, 3, 0);
         TelemetryHeader.Margin = new Thickness(2, 10, 2, 0);
+    }
+
+    private void ConfigureTelemetryHeader(bool stacked)
+    {
+        var titleStack = TelemetryHeader.Children.OfType<StackPanel>().FirstOrDefault();
+        var rangeSurface = TelemetryHeader.Children.OfType<Border>().FirstOrDefault();
+        if (titleStack is null || rangeSurface is null) return;
+
+        TelemetryHeader.ColumnDefinitions.Clear();
+        TelemetryHeader.RowDefinitions.Clear();
+        if (stacked)
+        {
+            TelemetryHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            TelemetryHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            TelemetryHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            TelemetryHeader.RowSpacing = 8;
+            SetGridPosition(titleStack, 0, 0);
+            SetGridPosition(rangeSurface, 1, 0);
+            rangeSurface.HorizontalAlignment = HorizontalAlignment.Left;
+            rangeSurface.Margin = new Thickness(0);
+            return;
+        }
+
+        TelemetryHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        TelemetryHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        TelemetryHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        TelemetryHeader.RowSpacing = 0;
+        SetGridPosition(titleStack, 0, 0);
+        SetGridPosition(rangeSurface, 0, 1);
+        rangeSurface.HorizontalAlignment = HorizontalAlignment.Stretch;
+        rangeSurface.Margin = new Thickness(0);
     }
 
     private void PolishRangeSelector()
