@@ -6,13 +6,9 @@ public sealed partial class WorkbenchShell
 {
     protected override void OnKeyDown(KeyEventArgs eventArgs)
     {
+        // Focused report/settings surfaces are normal navigation destinations rather
+        // than dismissible modals. Escape remains available to transient UI such as
+        // the command palette; workspace navigation uses Back/Home/explicit actions.
         base.OnKeyDown(eventArgs);
-        if (eventArgs.Handled || eventArgs.Key != Key.Escape || !OverlayOpen)
-        {
-            return;
-        }
-
-        OverlayCloseRequested?.Invoke(this, EventArgs.Empty);
-        eventArgs.Handled = true;
     }
 }
