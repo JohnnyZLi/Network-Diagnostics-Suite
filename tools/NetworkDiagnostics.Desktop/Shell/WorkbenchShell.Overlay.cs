@@ -23,7 +23,7 @@ public sealed partial class WorkbenchShell
 
     public event EventHandler? OverlayCloseRequested;
 
-    public bool OverlayOpen => overlayRoot?.IsVisible == true;
+    public bool OverlayOpen => overlayRoot?.IsVisible == true && overlayRoot.IsHitTestVisible;
 
     public void EnsureOverlay()
     {
@@ -65,6 +65,7 @@ public sealed partial class WorkbenchShell
 
         overlayHost = new ContentControl
         {
+            Name = "OverlayHost",
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch
         };
@@ -79,6 +80,7 @@ public sealed partial class WorkbenchShell
 
         overlaySheet = new Border
         {
+            Name = "OverlaySheet",
             Margin = new Thickness(30),
             MaxWidth = 1180,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -90,7 +92,9 @@ public sealed partial class WorkbenchShell
 
         overlayRoot = new Grid
         {
+            Name = "OverlayRoot",
             IsVisible = false,
+            IsHitTestVisible = false,
             Opacity = 0,
             ZIndex = 50
         };
@@ -115,7 +119,12 @@ public sealed partial class WorkbenchShell
         bool stretchWidth = false)
     {
         EnsureOverlay();
-        var wasOpen = overlayRoot!.IsVisible;
+        if (TopLevel.GetTopLevel(this) is { } topLevel)
+        {
+            SetReducedMotion(topLevel.Classes.Contains("reducedMotion"));
+        }
+
+        var wasOpen = OverlayOpen;
         var generation = ++overlayTransitionGeneration;
 
         DetachFromLogicalParent(content);
@@ -129,7 +138,7 @@ public sealed partial class WorkbenchShell
         overlayHost!.Content = content;
         ApplyOverlayBounds();
 
-        overlayRoot.IsVisible = true;
+        overlayRoot!.IsVisible = true;
         overlayRoot.IsHitTestVisible = true;
         overlayRoot.Opacity = wasOpen || reducedMotion ? 1 : 0;
         inspectorRequested = false;
@@ -139,7 +148,7 @@ public sealed partial class WorkbenchShell
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (generation == overlayTransitionGeneration && overlayRoot.IsVisible)
+                if (generation == overlayTransitionGeneration && OverlayOpen)
                 {
                     overlayRoot.Opacity = 1;
                 }
@@ -157,7 +166,7 @@ public sealed partial class WorkbenchShell
 
     public void CloseOverlay()
     {
-        if (overlayRoot is null || !overlayRoot.IsVisible) return;
+        if (overlayRoot is null || !OverlayOpen) return;
         var generation = ++overlayTransitionGeneration;
         overlayRoot.IsHitTestVisible = false;
 
