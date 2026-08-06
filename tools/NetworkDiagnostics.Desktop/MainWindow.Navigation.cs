@@ -184,7 +184,8 @@ public sealed partial class MainWindow
                             reportDetailWorkspace,
                             maxWidth: 1160,
                             maxHeight: 820,
-                            stretchWidth: true);
+                            stretchWidth: true,
+                            showHeader: false);
                     }
                     break;
 
@@ -210,7 +211,8 @@ public sealed partial class MainWindow
                             reportDetailWorkspace,
                             maxWidth: 1160,
                             maxHeight: 820,
-                            stretchWidth: true);
+                            stretchWidth: true,
+                            showHeader: false);
                     }
                     break;
 
@@ -446,13 +448,10 @@ public sealed partial class MainWindow
         var previousState = currentTestState;
         var requestedState = state;
 
-        // Running and completed diagnostics are now control-center states. Keep the
-        // setup surface mounted so no legacy page can flash before the live tile or
-        // result sheet is ready.
+        // Running and completed diagnostics are control-center states. There is one
+        // mounted test surface for the entire idle -> running -> result handoff.
         currentTestState = TestViewState.Setup;
         SetupView.IsVisible = true;
-        RunningView.IsVisible = false;
-        ResultsView.IsVisible = false;
 
         if (requestedState == TestViewState.Running && previousState != TestViewState.Running)
         {
@@ -518,7 +517,7 @@ public sealed partial class MainWindow
             case RunningTestDestination:
                 workbenchShell.SetInspectorContent(
                     "Active diagnostic",
-                    "The run belongs to the application, not this page. You can inspect reports or settings and return through the active-test item.",
+                    "The live diagnostic stays in the Tests & diagnostics tile while the rest of the control center remains available.",
                     CompactStatusValue(session.Detail));
                 break;
             case TestResultDestination:
