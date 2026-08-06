@@ -129,6 +129,11 @@ public sealed partial class WorkbenchShell
 
         var wasOpen = OverlayOpen;
         var generation = ++overlayTransitionGeneration;
+        if (overlayHost!.Content is Control previous && !ReferenceEquals(previous, content))
+        {
+            overlayHost.Content = null;
+            previous.IsVisible = false;
+        }
 
         DetachFromLogicalParent(content);
         content.IsVisible = true;
@@ -138,7 +143,7 @@ public sealed partial class WorkbenchShell
             ? HorizontalAlignment.Stretch
             : HorizontalAlignment.Center;
         overlayRequestedMaxHeight = maxHeight;
-        overlayHost!.Content = content;
+        overlayHost.Content = content;
         ApplyOverlayBounds();
 
         overlayRoot!.IsVisible = true;
