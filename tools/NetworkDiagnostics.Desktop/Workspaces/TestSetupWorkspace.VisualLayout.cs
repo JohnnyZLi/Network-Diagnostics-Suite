@@ -13,6 +13,7 @@ public sealed partial class TestSetupWorkspace
     private const int MinimumTimelineSlots = 48;
     private const string SparseTimelineHintName = "SparseTimelineHint";
     private Button? sevenDaysButton;
+    private bool speedActionsPolished;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
@@ -109,21 +110,63 @@ public sealed partial class TestSetupWorkspace
 
     private void PolishSpeedActions()
     {
-        foreach (var button in this.GetVisualDescendants().OfType<Button>())
+        if (speedActionsPolished) return;
+
+        var buttons = this.GetVisualDescendants()
+            .OfType<Button>()
+            .ToDictionary(button => button.Content?.ToString() ?? string.Empty);
+        if (!buttons.TryGetValue("Run content test", out var contentButton)
+            || !buttons.TryGetValue("Run peak test", out var peakButton)
+            || !buttons.TryGetValue("Speed settings", out var settingsButton)
+            || contentButton.GetVisualParent() is not StackPanel actionPanel
+            || actionPanel.GetVisualParent() is not StackPanel speedPanel)
         {
-            switch (button.Content?.ToString())
-            {
-                case "Run content test":
-                case "Run peak test":
-                    if (!button.Classes.Contains("speedAction")) button.Classes.Add("speedAction");
-                    button.MinWidth = 126;
-                    break;
-                case "Speed settings":
-                    button.Classes.Remove("ghost");
-                    if (!button.Classes.Contains("linkAction")) button.Classes.Add("linkAction");
-                    break;
-            }
+            return;
         }
+
+        var actionIndex = speedPanel.Children.IndexOf(actionPanel);
+        if (actionIndex < 0) return;
+
+        actionPanel.Children.Remove(contentButton);
+        actionPanel.Children.Remove(peakButton);
+        actionPanel.Children.Remove(settingsButton);
+        speedPanel.Children.Remove(actionPanel);
+
+        contentButton.MinWidth = 132;
+        contentButton.Height = 36;
+        contentButton.MinHeight = 36;
+        contentButton.Padding = new Thickness(13, 0);
+        contentButton.HorizontalContentAlignment = HorizontalAlignment.Center;
+        contentButton.VerticalContentAlignment = VerticalAlignment.Center;
+
+        peakButton.MinWidth = 132;
+        peakButton.Height = 36;
+        peakButton.MinHeight = 36;
+        peakButton.Padding = new Thickness(13, 0);
+        peakButton.HorizontalContentAlignment = HorizontalAlignment.Center;
+        peakButton.VerticalContentAlignment = VerticalAlignment.Center;
+
+        settingsButton.Height = 36;
+        settingsButton.MinHeight = 36;
+        settingsButton.Padding = new Thickness(8, 0);
+        settingsButton.HorizontalContentAlignment = HorizontalAlignment.Left;
+        settingsButton.VerticalContentAlignment = VerticalAlignment.Center;
+
+        var footer = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"),
+            ColumnSpacing = 8,
+            Margin = new Thickness(0, 3, 0, 0)
+        };
+
+        Grid.SetColumn(settingsButton, 0);
+        Grid.SetColumn(contentButton, 2);
+        Grid.SetColumn(peakButton, 3);
+        footer.Children.Add(settingsButton);
+        footer.Children.Add(contentButton);
+        footer.Children.Add(peakButton);
+        speedPanel.Children.Insert(actionIndex, footer);
+        speedActionsPolished = true;
     }
 
     private void EnsureSevenDayButton()
