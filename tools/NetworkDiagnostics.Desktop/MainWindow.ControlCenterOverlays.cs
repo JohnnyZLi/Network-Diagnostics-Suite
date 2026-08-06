@@ -21,8 +21,16 @@ public sealed partial class MainWindow
         ApplyControlCenterDestination(navigationService.Current?.Destination);
     }
 
-    private void ControlCenterOverlayNavigationChanged(object? sender, NavigationChangedEventArgs eventArgs) =>
+    private void ControlCenterOverlayNavigationChanged(object? sender, NavigationChangedEventArgs eventArgs)
+    {
+        if (eventArgs.Current.Destination is SettingsDestination or ReportDetailDestination or ComparisonDestination)
+        {
+            ShowControlCenterUnderlay();
+            workbenchShell?.SelectControlCenter();
+        }
+
         Dispatcher.UIThread.Post(() => ApplyControlCenterDestination(eventArgs.Current.Destination));
+    }
 
     private void ApplyControlCenterDestination(AppDestination? destination)
     {
@@ -32,14 +40,25 @@ public sealed partial class MainWindow
         {
             case SettingsDestination settingsDestination when settingsWorkspace is not null:
                 ShowControlCenterUnderlay();
+                workbenchShell.SelectControlCenter();
                 SyncSettingsWorkspace(settingsDestination.Section);
-                workbenchShell.OpenOverlay("Settings", settingsWorkspace, 1240);
+                workbenchShell.OpenOverlay(
+                    "Settings",
+                    settingsWorkspace,
+                    maxWidth: 1100,
+                    maxHeight: 760,
+                    stretchWidth: true);
                 break;
 
             case ReportDetailDestination when reportDetailWorkspace is not null:
                 ShowControlCenterUnderlay();
                 workbenchShell.SelectControlCenter();
-                workbenchShell.OpenOverlay("Saved diagnostic", reportDetailWorkspace, 1180);
+                workbenchShell.OpenOverlay(
+                    "Saved diagnostic",
+                    reportDetailWorkspace,
+                    maxWidth: 1160,
+                    maxHeight: 820,
+                    stretchWidth: true);
                 break;
 
             case ComparisonDestination:
@@ -68,7 +87,6 @@ public sealed partial class MainWindow
         SetupView.IsVisible = true;
         RunningView.IsVisible = false;
         ResultsView.IsVisible = false;
-        SyncTestWorkspace();
     }
 
     private void ReportDetailHomeRequested(object? sender, EventArgs eventArgs)
