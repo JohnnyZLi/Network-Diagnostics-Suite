@@ -19,6 +19,7 @@ public sealed partial class TestSetupWorkspace
         InstallDiagnosticLauncher();
         DisableLegacyLayoutRefreshLoops();
         InstallTestHubLayout();
+        EnsureActiveRunTile();
         EnsureSevenDayButton();
         PolishRangeSelector();
         ApplyRenderedVisualLayout(Bounds.Width);
@@ -51,6 +52,7 @@ public sealed partial class TestSetupWorkspace
         AggregateMethodButton.FontSize = 10;
 
         ApplyTestHubResponsiveLayout(width);
+        ApplyActiveRunTileLayout(width);
         ApplyOverviewResponsiveLayout(width);
 
         // Once the profile controls have moved into the overlay, the legacy inline
