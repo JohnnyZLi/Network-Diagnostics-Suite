@@ -87,7 +87,7 @@ jobs:
           }
 
           run_command() {
-            xdotool key --clearmodifiers ctrl+k
+            xdotool key --clearmodifiers ctrl+f
             sleep 0.25
             xdotool type --delay 12 "$1"
             sleep 0.2
