@@ -124,8 +124,9 @@ public sealed class MainWindowBootstrapTests
             var second = new Border { MinHeight = 420 };
             shell.OpenOverlay("Settings", first, maxHeight: 700);
             shell.CloseOverlay();
-            shell.OpenOverlay("Diagnostic result", second, maxHeight: 820);
 
+            // The stale close callback must not clear the sheet that replaced it.
+            shell.OpenOverlay("Diagnostic result", second, maxHeight: 820);
             await Task.Delay(200);
 
             var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
