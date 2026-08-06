@@ -22,6 +22,8 @@ public sealed class ReportBrowserWorkspaceProductTests
         window.Show();
         try
         {
+            workspace.Render([]);
+
             Assert.Contains(
                 workspace.GetVisualDescendants().OfType<TextBlock>(),
                 block => string.Equals(block.Text, "Report library", StringComparison.Ordinal));
