@@ -9,6 +9,7 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 public sealed partial class ReportBrowserWorkspace
 {
     private StackPanel? headerActions;
+    private int selectionTrayLayoutMode = -1;
     private int reportTableLayoutMode = -1;
     private int polishedReportRowCount = -1;
     private Button? firstPolishedReportRow;
@@ -93,7 +94,7 @@ public sealed partial class ReportBrowserWorkspace
         headerActions ??= FindHeaderActions();
         PolishHeaderActions();
         SelectionHintBorder.IsVisible = false;
-        ApplySelectionTrayLayout(width);
+        ApplySelectionTrayLayout(width, force: true);
         ApplyReportTableResponsiveLayout(width, force: true);
     }
 
@@ -121,9 +122,12 @@ public sealed partial class ReportBrowserWorkspace
         }
     }
 
-    private void ApplySelectionTrayLayout(double width)
+    private void ApplySelectionTrayLayout(double width, bool force = false)
     {
         if (SelectionPanel.Child is not Grid grid) return;
+
+        var mode = width >= 900 ? 2 : width >= 780 ? 1 : 0;
+        if (!force && mode == selectionTrayLayoutMode) return;
 
         var selected = FindTraySection(grid, "SELECTED REPORT");
         var context = FindTraySection(grid, "CONTEXT");
@@ -133,12 +137,13 @@ public sealed partial class ReportBrowserWorkspace
             .FirstOrDefault(panel => panel.Orientation == Orientation.Horizontal);
         if (selected is null || context is null || actions is null) return;
 
+        selectionTrayLayoutMode = mode;
         if (library is not null) library.IsVisible = false;
-        SelectionPanel.Padding = width < 900 ? new Thickness(14) : new Thickness(16);
+        SelectionPanel.Padding = mode < 2 ? new Thickness(14) : new Thickness(16);
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
 
-        if (width >= 900)
+        if (mode == 2)
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.15, GridUnitType.Star)));
             grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
@@ -159,12 +164,12 @@ public sealed partial class ReportBrowserWorkspace
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        if (width >= 780) grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        if (mode == 1) grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         grid.ColumnSpacing = 0;
         grid.RowSpacing = 10;
 
         SetTrayPosition(selected, 0, 0);
-        if (width >= 780)
+        if (mode == 1)
         {
             context.IsVisible = true;
             SetTrayPosition(context, 1, 0);
