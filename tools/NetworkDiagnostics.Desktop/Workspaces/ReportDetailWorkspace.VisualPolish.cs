@@ -24,18 +24,17 @@ public sealed partial class ReportDetailWorkspace
 
     private void ApplyReportDetailPolish(double width)
     {
-        HomeButton.IsVisible = false;
         ReportBody.Margin = width < 720
             ? new Thickness(16, 16, 16, 26)
             : new Thickness(24, 18, 24, 32);
         ReportBody.MaxWidth = 1160;
         ReportBody.Spacing = width < 720 ? 13 : 15;
         ReportToolbarGrid.Margin = width < 720
-            ? new Thickness(12, 0)
-            : new Thickness(24, 0);
+            ? new Thickness(10, 0)
+            : new Thickness(18, 0);
 
-        ToolbarTitleText.IsVisible = width >= 620;
-        ToolbarMetaText.IsVisible = width >= 820;
+        ToolbarTitleText.IsVisible = width >= 700;
+        ToolbarMetaText.IsVisible = width >= 900;
 
         ApplyHeroLayout(width);
         ApplyContextLayout(width);
