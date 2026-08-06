@@ -153,6 +153,12 @@ jobs:
           run_command 'open reports'
           capture diagnostics-library-empty
 
+          # The report toolbar must expose direct Home and History routes.
+          run_command 'preview saved report'
+          capture saved-report-detail
+          xdotool key Escape
+          sleep 0.4
+
           for section in general monitoring diagnostics privacy storage developer; do
             run_command "settings ${section}"
             capture "settings-${section}"
