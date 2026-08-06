@@ -1,5 +1,7 @@
 # Shared web appearance
 
-The browser client uses the shared Web Design System System, Light, and Dark preference. The pre-paint bootstrap resolves the selected appearance before React and styles load. The Appearance group remains inside the shared Sites menu, and print behavior is unaffected by the browser preference.
+The browser client consumes Web Design System 1.9.0 from commit `730fe5fc66de8321184ab7dae22c226a97d1aeb8`.
 
-The preference changes the browser product only. Native desktop appearance remains owned by the desktop application and its separate release process.
+System, Light, and Dark resolve before React and product styles load. Appearance remains inside the shared Sites menu, follows operating-system changes while set to System, and persists across owned production domains.
+
+This preference changes the browser product only. Native desktop appearance remains owned by the desktop application and its separate release process.
