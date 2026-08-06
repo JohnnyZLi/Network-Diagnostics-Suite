@@ -122,7 +122,7 @@ public sealed partial class WorkbenchShell : UserControl
         ActiveRunProgress.Value = Math.Clamp(progress, 0, 100);
         if (visibilityChanged)
         {
-            ApplyResponsiveLayout(Bounds.Width);
+            RefreshResponsiveChrome();
         }
     }
 
@@ -132,7 +132,12 @@ public sealed partial class WorkbenchShell : UserControl
         ApplyResponsiveLayout(Bounds.Width);
     }
 
-    public void RefreshResponsiveChrome() => ApplyResponsiveLayout(Bounds.Width);
+    public void RefreshResponsiveChrome()
+    {
+        ApplyResponsiveLayout(Bounds.Width);
+        PolishHeaderUtilities();
+        PolishActiveRunLayout();
+    }
 
     public void OpenCommandPalette(IReadOnlyList<WorkbenchCommand> commands) =>
         CommandPaletteControl.Open(commands);
