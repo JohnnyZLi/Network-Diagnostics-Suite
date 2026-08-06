@@ -17,6 +17,7 @@ public sealed partial class TestSetupWorkspace
         SizeChanged += VisualLayoutSizeChanged;
         CaptureTestHubHost();
         InstallDiagnosticLauncher();
+        DisableLegacyLayoutRefreshLoops();
         InstallTestHubLayout();
         EnsureSevenDayButton();
         PolishRangeSelector();
