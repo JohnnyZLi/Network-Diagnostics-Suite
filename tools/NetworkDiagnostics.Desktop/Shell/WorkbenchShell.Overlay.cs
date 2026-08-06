@@ -174,7 +174,6 @@ public sealed partial class WorkbenchShell
     public void SelectControlCenter()
     {
         currentWorkspace = WorkspaceKind.Test;
-        SelectWorkspace(WorkspaceKind.Test);
         RenderProductContext();
         RefreshResponsiveChrome();
     }
