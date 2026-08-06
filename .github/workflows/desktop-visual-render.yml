@@ -128,6 +128,11 @@ jobs:
           sleep 1
           xdotool mousemove 70 500 click 1
 
+          # Closing and reopening must preserve the complete action footer.
+          run_command 'customize diagnostic'
+          capture configurator-dark-reopened
+          xdotool mousemove 70 500 click 1
+
           xdotool key --clearmodifiers End
           capture control-center-recent-diagnostics
           xdotool key --clearmodifiers Home
