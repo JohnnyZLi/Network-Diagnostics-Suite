@@ -54,6 +54,7 @@ public sealed partial class TestSetupWorkspace
         ApplyTestHubResponsiveLayout(width);
         ApplyActiveRunTileLayout(width);
         ApplyOverviewResponsiveLayout(width);
+        ApplyCompactScorePresentation(width);
 
         // Once the profile controls have moved into the overlay, the legacy inline
         // responsive layout must not reparent them again during a window resize.
