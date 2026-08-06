@@ -1,0 +1,133 @@
+name: Desktop memory soak
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-memory-soak.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb openbox wmctrl scrot
+
+      - name: Publish Linux desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output desktop-memory-soak/publish
+
+      - name: Run idle monitoring soak
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p desktop-memory-soak/artifacts
+          Xvfb :99 -screen 0 1440x900x24 -nolisten tcp > /tmp/memory-xvfb.log 2>&1 &
+          sleep 1
+          openbox > /tmp/memory-openbox.log 2>&1 &
+          sleep 1
+
+          desktop-memory-soak/publish/NetworkDiagnosticsDesktop > /tmp/memory-app.log 2>&1 &
+          app_pid=$!
+          echo "$app_pid" > /tmp/memory-app.pid
+
+          for attempt in {1..60}; do
+            if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
+              wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+              break
+            fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              cat /tmp/memory-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Allow startup, JIT, the first monitoring samples, and visual caches to settle.
+          sleep 60
+          scrot desktop-memory-soak/artifacts/soak-start.png
+
+          read -r baseline_rss baseline_vsz baseline_cpu < <(
+            ps -o rss=,vsz=,%cpu= -p "$app_pid" | awk '{$1=$1; print}'
+          )
+          printf 'elapsed_seconds\trss_kb\tvsz_kb\tcpu_percent\n' \
+            > desktop-memory-soak/artifacts/memory.tsv
+          printf '0\t%s\t%s\t%s\n' "$baseline_rss" "$baseline_vsz" "$baseline_cpu" \
+            >> desktop-memory-soak/artifacts/memory.tsv
+
+          peak_rss=$baseline_rss
+          final_rss=$baseline_rss
+          final_cpu=$baseline_cpu
+          for sample in {1..24}; do
+            sleep 10
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              cat /tmp/memory-app.log
+              exit 1
+            fi
+            read -r rss vsz cpu < <(ps -o rss=,vsz=,%cpu= -p "$app_pid" | awk '{$1=$1; print}')
+            elapsed=$((sample * 10))
+            printf '%s\t%s\t%s\t%s\n' "$elapsed" "$rss" "$vsz" "$cpu" \
+              >> desktop-memory-soak/artifacts/memory.tsv
+            if (( rss > peak_rss )); then peak_rss=$rss; fi
+            final_rss=$rss
+            final_cpu=$cpu
+          done
+
+          scrot desktop-memory-soak/artifacts/soak-end.png
+          growth_kb=$((final_rss - baseline_rss))
+          echo "Baseline RSS: ${baseline_rss} KB"
+          echo "Final RSS:    ${final_rss} KB"
+          echo "Peak RSS:     ${peak_rss} KB"
+          echo "Growth:       ${growth_kb} KB"
+          echo "CPU average:  ${final_cpu}%"
+
+          # A normal idle desktop process should remain far below these limits.
+          # The reported regression grew by tens of gigabytes in roughly one hour,
+          # which this four-minute settled-window check catches with ample margin.
+          if (( final_rss > 1048576 )); then
+            echo "Desktop exceeded the 1 GB idle RSS safety ceiling."
+            exit 1
+          fi
+          if (( growth_kb > 262144 )); then
+            echo "Desktop retained more than 256 MB during the monitoring soak."
+            exit 1
+          fi
+          if awk "BEGIN {exit !($final_cpu > 80)}"; then
+            echo "Desktop remained above the idle CPU safety ceiling."
+            exit 1
+          fi
+
+      - name: Upload soak evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: desktop-memory-soak
+          path: |
+            desktop-memory-soak/artifacts
+            /tmp/memory-app.log
+            /tmp/memory-openbox.log
+            /tmp/memory-xvfb.log
+          retention-days: 7
