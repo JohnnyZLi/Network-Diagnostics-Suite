@@ -11,6 +11,11 @@ public sealed partial class MainWindow
         reportDetailWorkspace.RenderPreview(ConnectionCheckFixtures.Get(0));
         ShowControlCenterUnderlay();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Saved diagnostic", reportDetailWorkspace, 1180);
+        workbenchShell.OpenOverlay(
+            "Saved diagnostic",
+            reportDetailWorkspace,
+            maxWidth: 1160,
+            maxHeight: 820,
+            stretchWidth: true);
     }
 }
