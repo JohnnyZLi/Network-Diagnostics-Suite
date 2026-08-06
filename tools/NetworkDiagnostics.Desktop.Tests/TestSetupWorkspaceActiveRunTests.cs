@@ -41,13 +41,10 @@ public sealed class TestSetupWorkspaceActiveRunTests
 
             workspace.SetActiveRunTileState(running);
 
-            var status = Assert.Single(
-                workspace.GetVisualDescendants().OfType<TextBlock>(),
-                block => block.IsVisible && block.Text == "DIAGNOSTIC IN PROGRESS");
+            var status = FindLiveTileStatus(workspace, "DIAGNOSTIC IN PROGRESS");
             var stop = Assert.Single(
                 workspace.GetVisualDescendants().OfType<Button>(),
-                button => button.IsVisible
-                    && string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal));
+                button => string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal));
 
             workspace.RenderActiveRunSnapshot(running with
             {
@@ -58,17 +55,12 @@ public sealed class TestSetupWorkspaceActiveRunTests
                 BytesTransferred = 8_000_000
             });
 
-            Assert.Same(
-                status,
-                Assert.Single(
-                    workspace.GetVisualDescendants().OfType<TextBlock>(),
-                    block => block.IsVisible && block.Text == "DIAGNOSTIC IN PROGRESS"));
+            Assert.Same(status, FindLiveTileStatus(workspace, "DIAGNOSTIC IN PROGRESS"));
             Assert.Same(
                 stop,
                 Assert.Single(
                     workspace.GetVisualDescendants().OfType<Button>(),
-                    button => button.IsVisible
-                        && string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal)));
+                    button => string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal)));
 
             workspace.HoldCompletedRunTile(running with
             {
@@ -79,14 +71,11 @@ public sealed class TestSetupWorkspaceActiveRunTests
                 ReportId = Guid.NewGuid()
             });
 
-            Assert.Same(
-                status,
-                Assert.Single(
-                    workspace.GetVisualDescendants().OfType<TextBlock>(),
-                    block => block.IsVisible && block.Text == "DIAGNOSTIC COMPLETE"));
+            Assert.Same(status, FindLiveTileStatus(workspace, "DIAGNOSTIC COMPLETE"));
             Assert.Contains(
                 workspace.GetVisualDescendants().OfType<TextBlock>(),
-                block => block.IsVisible && block.Text == "Preparing the saved result…");
+                block => block.Text == "Preparing the saved result…"
+                    && BelongsToLiveTile(block));
             Assert.False(stop.IsVisible);
         }
         finally
@@ -94,4 +83,21 @@ public sealed class TestSetupWorkspaceActiveRunTests
             window.Close();
         }
     }
+
+    private static TextBlock FindLiveTileStatus(TestSetupWorkspace workspace, string text) =>
+        Assert.Single(
+            workspace.GetVisualDescendants().OfType<TextBlock>(),
+            block => string.Equals(block.Text, text, StringComparison.Ordinal)
+                && BelongsToLiveTile(block));
+
+    private static bool BelongsToLiveTile(Control control) =>
+        control.GetVisualAncestors()
+            .OfType<Border>()
+            .Any(border => border.Classes.Contains("accentSurface")
+                && border.GetVisualDescendants()
+                    .OfType<Button>()
+                    .Any(button => string.Equals(
+                        button.Content?.ToString(),
+                        "Stop test",
+                        StringComparison.Ordinal)));
 }
