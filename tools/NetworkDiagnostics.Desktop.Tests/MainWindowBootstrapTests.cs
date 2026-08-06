@@ -68,8 +68,12 @@ public sealed class MainWindowBootstrapTests
                 maxHeight: 820,
                 stretchWidth: true);
 
-            var sheet = Assert.IsType<Border>(shell.FindControl<Border>("OverlaySheet"));
-            var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
+            var host = Assert.Single(
+                shell.GetVisualDescendants().OfType<ContentControl>(),
+                control => ReferenceEquals(control.Content, workspace));
+            var sheet = Assert.Single(
+                shell.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("modalSheet"));
 
             Assert.True(shell.OverlayOpen);
             Assert.Same(workspace, host.Content);
@@ -96,9 +100,13 @@ public sealed class MainWindowBootstrapTests
         window.Show();
         try
         {
-            shell.OpenOverlay("Settings", new Border(), maxHeight: 700);
+            var workspace = new Border();
+            shell.OpenOverlay("Settings", workspace, maxHeight: 700);
 
-            var root = Assert.IsType<Grid>(shell.FindControl<Grid>("OverlayRoot"));
+            var sheet = Assert.Single(
+                shell.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("modalSheet"));
+            var root = Assert.IsType<Grid>(sheet.GetVisualParent());
             Assert.Equal(1, root.Opacity);
         }
         finally
@@ -128,7 +136,9 @@ public sealed class MainWindowBootstrapTests
 
             await Task.Delay(200);
 
-            var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
+            var host = Assert.Single(
+                shell.GetVisualDescendants().OfType<ContentControl>(),
+                control => ReferenceEquals(control.Content, second));
             Assert.True(shell.OverlayOpen);
             Assert.Same(second, host.Content);
             Assert.False(first.IsVisible);
