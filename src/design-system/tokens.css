@@ -1,6 +1,6 @@
 /* GENERATED FILE — DO NOT EDIT.
    Source: tokens/tokens.tokens.json
-   Design-system version: 1.8.2 */
+   Design-system version: 1.9.0 */
 :root {
   --jl-color-canvas: #f2efe8;
   --jl-color-canvas-dot: rgba(23, 23, 20, 0.035);
@@ -47,6 +47,51 @@
   --jl-semantic-violet-text: #675773;
   --jl-semantic-violet-surface: #eee9f0;
   --jl-semantic-violet-border: #8e8197;
+  --jl-theme-dark-color-canvas: #171714;
+  --jl-theme-dark-color-canvas-dot: rgba(242, 239, 232, 0.055);
+  --jl-theme-dark-color-surface: #201f1b;
+  --jl-theme-dark-color-surface-muted: #292722;
+  --jl-theme-dark-color-surface-strong: #34312b;
+  --jl-theme-dark-color-surface-inverse: #f2efe8;
+  --jl-theme-dark-color-ink: #f2efe8;
+  --jl-theme-dark-color-text: #d3cec4;
+  --jl-theme-dark-color-muted: #aaa49a;
+  --jl-theme-dark-color-text-inverse: #171714;
+  --jl-theme-dark-color-muted-inverse: #5d5952;
+  --jl-theme-dark-color-rule: rgba(242, 239, 232, 0.16);
+  --jl-theme-dark-color-rule-strong: rgba(242, 239, 232, 0.28);
+  --jl-theme-dark-color-rule-inverse: rgba(23, 23, 20, 0.28);
+  --jl-theme-dark-color-overlay: rgba(0, 0, 0, 0.58);
+  --jl-theme-dark-color-accent: #d9977d;
+  --jl-theme-dark-color-accent-hover: #e3aa94;
+  --jl-theme-dark-color-accent-active: #bf6b51;
+  --jl-theme-dark-color-accent-decorative: #c97b60;
+  --jl-theme-dark-color-accent-soft: #9f553e;
+  --jl-theme-dark-color-on-accent: #171714;
+  --jl-theme-dark-color-danger-hover: #f0a29a;
+  --jl-theme-dark-color-danger-active: #dd8279;
+  --jl-theme-dark-color-placeholder: #918b82;
+  --jl-theme-dark-color-selection-background: #704536;
+  --jl-theme-dark-color-selection-text: #fffaf4;
+  --jl-theme-dark-color-skeleton: #302e29;
+  --jl-theme-dark-color-focus-ring: #e3aa94;
+  --jl-theme-dark-color-focus-gap-light: #f2efe8;
+  --jl-theme-dark-color-focus-gap-dark: #171714;
+  --jl-theme-dark-semantic-success-text: #8fd0ae;
+  --jl-theme-dark-semantic-success-surface: #183126;
+  --jl-theme-dark-semantic-success-border: #477c62;
+  --jl-theme-dark-semantic-warning-text: #e6bd74;
+  --jl-theme-dark-semantic-warning-surface: #3a2f1d;
+  --jl-theme-dark-semantic-warning-border: #8c7041;
+  --jl-theme-dark-semantic-danger-text: #f0a29a;
+  --jl-theme-dark-semantic-danger-surface: #3d2422;
+  --jl-theme-dark-semantic-danger-border: #995d57;
+  --jl-theme-dark-semantic-info-text: #9cc4e0;
+  --jl-theme-dark-semantic-info-surface: #1d2f3b;
+  --jl-theme-dark-semantic-info-border: #557a91;
+  --jl-theme-dark-semantic-violet-text: #c8b4d6;
+  --jl-theme-dark-semantic-violet-surface: #302838;
+  --jl-theme-dark-semantic-violet-border: #75647f;
   --jl-font-ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --jl-font-editorial: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --jl-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
