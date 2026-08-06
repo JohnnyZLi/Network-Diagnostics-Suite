@@ -1,23 +1,15 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class TestResultWorkspace
 {
-    private Grid? resultRoot;
-    private Grid? resultHeader;
-    private StackPanel? resultActions;
-    private Border? resultTabsSurface;
-
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
-        ResolveResultLayout();
-        InstallResultTabsSurface();
         ApplyResultVisualPolish(Bounds.Width);
         SizeChanged += ResultVisualSizeChanged;
     }
@@ -31,92 +23,93 @@ public sealed partial class TestResultWorkspace
     private void ResultVisualSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyResultVisualPolish(eventArgs.NewSize.Width);
 
-    private void ResolveResultLayout()
-    {
-        resultRoot ??= Content as Grid;
-        if (resultRoot is null) return;
-        resultHeader ??= resultRoot.Children
-            .OfType<Grid>()
-            .FirstOrDefault(grid => Grid.GetRow(grid) == 0);
-        resultActions ??= resultHeader?.Children
-            .OfType<StackPanel>()
-            .FirstOrDefault(panel => Grid.GetColumn(panel) == 2);
-    }
-
-    private void InstallResultTabsSurface()
-    {
-        if (resultTabsSurface is not null || resultRoot is null) return;
-        var tabs = resultRoot.Children
-            .OfType<Grid>()
-            .FirstOrDefault(grid => Grid.GetRow(grid) == 1);
-        if (tabs is null) return;
-
-        var margin = tabs.Margin;
-        tabs.Margin = new Thickness(0);
-        resultRoot.Children.Remove(tabs);
-        resultTabsSurface = new Border
-        {
-            Child = tabs,
-            Padding = new Thickness(3),
-            Margin = margin,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            CornerRadius = new CornerRadius(10)
-        };
-        resultTabsSurface.Classes.Add("surfaceSubtle");
-        Grid.SetRow(resultTabsSurface, 1);
-        resultRoot.Children.Add(resultTabsSurface);
-    }
-
     private void ApplyResultVisualPolish(double width)
     {
-        ResolveResultLayout();
-        if (resultRoot is null || resultHeader is null) return;
-
-        resultRoot.Margin = new Thickness(30, 24, 30, 30);
-        resultRoot.MaxWidth = 1340;
-        VerdictText.FontSize = 30;
-        VerdictText.LineHeight = 36;
-        SummaryText.MaxWidth = 820;
+        ResultRoot.Margin = width < 820
+            ? new Thickness(18, 18, 18, 24)
+            : new Thickness(28, 22, 28, 28);
+        ResultRoot.MaxWidth = 1320;
 
         foreach (var button in new[] { ReportsButton, CompareButton, ExportButton })
         {
-            button.MinHeight = 34;
-            button.Padding = new Thickness(11, 6);
+            button.MinHeight = 32;
+            button.Padding = new Thickness(9, 5);
+            button.FontSize = 9;
         }
 
-        if (resultActions is not null)
-        {
-            resultActions.Spacing = 5;
-        }
+        RunAgainButton.MinHeight = 36;
+        RunAgainButton.HorizontalAlignment = HorizontalAlignment.Stretch;
 
-        var compact = width < 1040;
-        resultHeader.RowDefinitions.Clear();
-        resultHeader.ColumnDefinitions.Clear();
-        resultHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-        resultHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        if (!compact)
+        var compactHeader = width < 1040;
+        ResultHeaderGrid.ColumnDefinitions.Clear();
+        ResultHeaderGrid.RowDefinitions.Clear();
+        if (!compactHeader)
         {
-            resultHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            resultHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            if (resultActions is not null)
-            {
-                Grid.SetColumn(resultActions, 2);
-                Grid.SetRow(resultActions, 0);
-                resultActions.Margin = new Thickness(0);
-                resultActions.HorizontalAlignment = HorizontalAlignment.Right;
-            }
+            ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(220)));
+            ResultHeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ResultActionsPanel, 1);
+            Grid.SetRow(ResultActionsPanel, 0);
+            ResultActionsPanel.Margin = new Thickness(0);
+            ResultActionsPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
         else
         {
-            resultHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            resultHeader.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            if (resultActions is not null)
-            {
-                Grid.SetColumn(resultActions, 1);
-                Grid.SetRow(resultActions, 1);
-                resultActions.Margin = new Thickness(0, 12, 0, 0);
-                resultActions.HorizontalAlignment = HorizontalAlignment.Left;
-            }
+            ResultHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            ResultHeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            ResultHeaderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(ResultActionsPanel, 0);
+            Grid.SetRow(ResultActionsPanel, 1);
+            ResultActionsPanel.Margin = new Thickness(0, 12, 0, 0);
+            ResultActionsPanel.HorizontalAlignment = HorizontalAlignment.Left;
+            ResultActionsPanel.Width = Math.Min(280, Math.Max(220, width - 36));
+        }
+
+        ConfigureTwoColumnLayout(
+            ResultSummaryGrid,
+            NextActionCard,
+            RunContextCard,
+            width >= 900,
+            1.22,
+            0.78);
+        ConfigureTwoColumnLayout(
+            EvidenceLayoutGrid,
+            MeasurementsCard,
+            EvidenceSideStack,
+            width >= 900,
+            1.12,
+            0.88);
+    }
+
+    private static void ConfigureTwoColumnLayout(
+        Grid grid,
+        Control first,
+        Control second,
+        bool wide,
+        double firstWeight,
+        double secondWeight)
+    {
+        grid.ColumnDefinitions.Clear();
+        grid.RowDefinitions.Clear();
+        if (wide)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(firstWeight, GridUnitType.Star)));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(secondWeight, GridUnitType.Star)));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(first, 0);
+            Grid.SetRow(first, 0);
+            Grid.SetColumn(second, 1);
+            Grid.SetRow(second, 0);
+        }
+        else
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetColumn(first, 0);
+            Grid.SetRow(first, 0);
+            Grid.SetColumn(second, 0);
+            Grid.SetRow(second, 1);
         }
     }
 }
