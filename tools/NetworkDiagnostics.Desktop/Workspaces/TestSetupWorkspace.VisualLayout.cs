@@ -13,14 +13,15 @@ public sealed partial class TestSetupWorkspace
     private const int MinimumTimelineSlots = 48;
     private const string SparseTimelineHintName = "SparseTimelineHint";
     private Button? sevenDaysButton;
-    private bool speedActionsPolished;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualLayoutSizeChanged;
         LayoutUpdated += RenderedLayoutUpdated;
+        CaptureTestHubHost();
         InstallDiagnosticLauncher();
+        InstallTestHubLayout();
         EnsureSevenDayButton();
         PolishRangeSelector();
         ApplyRenderedVisualLayout(Bounds.Width);
@@ -40,7 +41,7 @@ public sealed partial class TestSetupWorkspace
     {
         EnsureSevenDayButton();
         PolishRangeSelector();
-        PolishSpeedActions();
+        SyncTestHubLayout();
         NormalizeSparseTimeline(ResponsivenessTimelineGrid, colorByLatency: true);
         NormalizeSparseTimeline(ReliabilityTimelineGrid, colorByLatency: false);
         SyncSevenDaySelection();
@@ -106,71 +107,6 @@ public sealed partial class TestSetupWorkspace
             button.HorizontalContentAlignment = HorizontalAlignment.Center;
             button.VerticalContentAlignment = VerticalAlignment.Center;
         }
-    }
-
-    private void PolishSpeedActions()
-    {
-        if (speedActionsPolished) return;
-
-        var buttons = this.GetVisualDescendants().OfType<Button>().ToArray();
-        var contentButton = buttons.FirstOrDefault(button =>
-            string.Equals(button.Content?.ToString(), "Run content test", StringComparison.Ordinal));
-        var peakButton = buttons.FirstOrDefault(button =>
-            string.Equals(button.Content?.ToString(), "Run peak test", StringComparison.Ordinal));
-        var settingsButton = buttons.FirstOrDefault(button =>
-            string.Equals(button.Content?.ToString(), "Speed settings", StringComparison.Ordinal));
-        if (contentButton is null
-            || peakButton is null
-            || settingsButton is null
-            || contentButton.GetVisualParent() is not StackPanel actionPanel
-            || actionPanel.GetVisualParent() is not StackPanel speedPanel)
-        {
-            return;
-        }
-
-        var actionIndex = speedPanel.Children.IndexOf(actionPanel);
-        if (actionIndex < 0) return;
-
-        actionPanel.Children.Remove(contentButton);
-        actionPanel.Children.Remove(peakButton);
-        actionPanel.Children.Remove(settingsButton);
-        speedPanel.Children.Remove(actionPanel);
-
-        contentButton.MinWidth = 132;
-        contentButton.Height = 36;
-        contentButton.MinHeight = 36;
-        contentButton.Padding = new Thickness(13, 0);
-        contentButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-        contentButton.VerticalContentAlignment = VerticalAlignment.Center;
-
-        peakButton.MinWidth = 132;
-        peakButton.Height = 36;
-        peakButton.MinHeight = 36;
-        peakButton.Padding = new Thickness(13, 0);
-        peakButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-        peakButton.VerticalContentAlignment = VerticalAlignment.Center;
-
-        settingsButton.Height = 36;
-        settingsButton.MinHeight = 36;
-        settingsButton.Padding = new Thickness(8, 0);
-        settingsButton.HorizontalContentAlignment = HorizontalAlignment.Left;
-        settingsButton.VerticalContentAlignment = VerticalAlignment.Center;
-
-        var footer = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"),
-            ColumnSpacing = 8,
-            Margin = new Thickness(0, 3, 0, 0)
-        };
-
-        Grid.SetColumn(settingsButton, 0);
-        Grid.SetColumn(contentButton, 2);
-        Grid.SetColumn(peakButton, 3);
-        footer.Children.Add(settingsButton);
-        footer.Children.Add(contentButton);
-        footer.Children.Add(peakButton);
-        speedPanel.Children.Insert(actionIndex, footer);
-        speedActionsPolished = true;
     }
 
     private void EnsureSevenDayButton()
