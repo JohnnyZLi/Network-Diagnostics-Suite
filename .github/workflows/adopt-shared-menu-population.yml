@@ -1,0 +1,50 @@
+name: Adopt shared Sites menu population
+
+on:
+  push:
+    branches: ["feat/shared-web-dark-mode"]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/shared-web-dark-mode
+      - name: Delegate Sites menu content to the design system
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('src/App.tsx')
+          text = path.read_text()
+          text = text.replace(
+              'import { OWNED_SITES, installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";',
+              'import { installHeaderMenu, installSiteSwitcher } from "./design-system/site-controls.js";'
+          )
+          text = text.replace(
+              '    const siteController = installSiteSwitcher(siteSwitcher, {\n      onBeforeOpen: () => mobileNavControllerRef.current?.close(),',
+              '    const siteController = installSiteSwitcher(siteSwitcher, {\n      populate: true,\n      currentSite: "network",\n      onBeforeOpen: () => mobileNavControllerRef.current?.close(),'
+          )
+          old = '''                >
+                  {OWNED_SITES.map((site) => (
+                    <li key={site.id}>
+                      <a href={site.href} aria-current={site.id === "network" ? "page" : undefined}>{site.label}</a>
+                    </li>
+                  ))}
+                </ul>'''
+          new = '''                />'''
+          if old not in text:
+              raise SystemExit('React-owned Sites menu markup was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          rm .github/workflows/adopt-shared-menu-population.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Adopt shared Sites menu population"
+          git push origin HEAD:feat/shared-web-dark-mode
