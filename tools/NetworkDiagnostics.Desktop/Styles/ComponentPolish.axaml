@@ -39,7 +39,7 @@
   </Style>
 
   <Style Selector="Border.modalBackdrop">
-    <Setter Property="Background" Value="#88000000" />
+    <Setter Property="Background" Value="#18000000" />
   </Style>
   <Style Selector="Border.modalSheet">
     <Setter Property="Background" Value="{DynamicResource AppCanvasBrush}" />
