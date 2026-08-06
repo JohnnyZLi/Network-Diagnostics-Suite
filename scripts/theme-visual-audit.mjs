@@ -61,7 +61,7 @@ try {
       if (state.preference !== theme || state.theme !== theme) problems.push(`resolved ${state.preference}/${state.theme}, expected ${theme}`);
       if (!state.colorScheme.includes(theme)) problems.push(`color-scheme is ${state.colorScheme}`);
       if (state.documentWidth > state.innerWidth + 1) problems.push("horizontal overflow");
-      const bodyContrast = contrast(state.bodyColor, state.canvas);
+      const bodyContrast = contrast(state.bodyColor, state.bodyBackground);
       if (bodyContrast === null || bodyContrast < 4.5) problems.push(`body contrast is ${bodyContrast?.toFixed(2) ?? "unreadable"}`);
 
       const switcher = page.locator("[data-site-switcher-button]").first();
@@ -77,12 +77,22 @@ try {
       await menu.screenshot({ path: `${output}/network-menu-${viewportName}-${theme}.png` });
 
       const selectedButton = menu.locator(`button[data-theme-preference="${theme}"]`);
-      await selectedButton.focus();
+      const previousPreference = theme === "dark" ? "light" : "system";
+      await menu.locator(`button[data-theme-preference="${previousPreference}"]`).focus();
+      await page.keyboard.press("Tab");
       const focus = await selectedButton.evaluate((element) => {
         const style = getComputedStyle(element);
-        return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth, boxShadow: style.boxShadow };
+        return {
+          active: document.activeElement === element,
+          focusVisible: element.matches(":focus-visible"),
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+          boxShadow: style.boxShadow,
+        };
       });
-      if ((focus.outlineStyle === "none" || focus.outlineWidth === "0px") && focus.boxShadow === "none") problems.push("Appearance control has no visible focus treatment");
+      if (!focus.active || !focus.focusVisible || ((focus.outlineStyle === "none" || focus.outlineWidth === "0px") && focus.boxShadow === "none")) {
+        problems.push("Appearance control has no keyboard-visible focus treatment");
+      }
 
       const opposite = theme === "dark" ? "light" : "dark";
       await menu.locator(`button[data-theme-preference="${opposite}"]`).click();
