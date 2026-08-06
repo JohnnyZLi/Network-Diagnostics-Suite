@@ -25,32 +25,76 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
-    public void OverlayReparentsExistingWorkspaceWithoutLogicalTreeFailure()
+    public void FocusedWorkspaceSwitchesExistingSiblingWithoutReparenting()
     {
         var shell = new WorkbenchShell();
-        var originalParent = new Grid();
-        var workspace = new Border();
-        originalParent.Children.Add(workspace);
+        var controlCenter = new Border { IsVisible = true };
+        var settingsWorkspace = new Border { IsVisible = false };
+        var workspaceGrid = new Grid();
+        workspaceGrid.Children.Add(controlCenter);
+        workspaceGrid.Children.Add(settingsWorkspace);
+        shell.WorkspaceContent = workspaceGrid;
 
         var home = Assert.IsType<Button>(shell.FindControl<Button>("HomeButton"));
         var settings = Assert.IsType<Button>(shell.FindControl<Button>("SettingsToolbarButton"));
-        shell.OpenOverlay("Settings", workspace);
+
+        shell.OpenOverlay("Settings", settingsWorkspace);
 
         Assert.True(shell.OverlayOpen);
-        Assert.DoesNotContain(workspace, originalParent.Children);
+        Assert.Contains(settingsWorkspace, workspaceGrid.Children);
+        Assert.False(controlCenter.IsVisible);
+        Assert.True(settingsWorkspace.IsVisible);
         Assert.True(home.IsVisible);
         Assert.True(settings.IsVisible);
 
         shell.CloseOverlay();
+
         Assert.False(shell.OverlayOpen);
-        Assert.True(home.IsVisible);
-        Assert.True(settings.IsVisible);
+        Assert.Contains(settingsWorkspace, workspaceGrid.Children);
+        Assert.True(controlCenter.IsVisible);
+        Assert.False(settingsWorkspace.IsVisible);
     }
 
     [AvaloniaFact]
-    public void BoundedOverlayReceivesARealBodyHeightBeforeItIsShown()
+    public void FocusedWorkspaceSwitchesDirectlyBetweenDeepSurfaces()
     {
         var shell = new WorkbenchShell();
+        var controlCenter = new Border { IsVisible = true };
+        var reportWorkspace = new Border { IsVisible = false };
+        var settingsWorkspace = new Border { IsVisible = false };
+        var workspaceGrid = new Grid();
+        workspaceGrid.Children.Add(controlCenter);
+        workspaceGrid.Children.Add(reportWorkspace);
+        workspaceGrid.Children.Add(settingsWorkspace);
+        shell.WorkspaceContent = workspaceGrid;
+
+        shell.OpenOverlay("Diagnostic result", reportWorkspace);
+        Assert.False(controlCenter.IsVisible);
+        Assert.True(reportWorkspace.IsVisible);
+        Assert.False(settingsWorkspace.IsVisible);
+
+        shell.OpenOverlay("Settings", settingsWorkspace);
+        Assert.False(controlCenter.IsVisible);
+        Assert.False(reportWorkspace.IsVisible);
+        Assert.True(settingsWorkspace.IsVisible);
+
+        shell.CloseOverlay();
+        Assert.True(controlCenter.IsVisible);
+        Assert.False(reportWorkspace.IsVisible);
+        Assert.False(settingsWorkspace.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void FocusedWorkspaceCreatesNoModalBackdropOrSheetVisuals()
+    {
+        var shell = new WorkbenchShell();
+        var controlCenter = new Border { IsVisible = true };
+        var reportWorkspace = new Border { IsVisible = false };
+        var workspaceGrid = new Grid();
+        workspaceGrid.Children.Add(controlCenter);
+        workspaceGrid.Children.Add(reportWorkspace);
+        shell.WorkspaceContent = workspaceGrid;
+
         var window = new Window
         {
             Width = 1000,
@@ -60,55 +104,14 @@ public sealed class MainWindowBootstrapTests
         window.Show();
         try
         {
-            var workspace = new Border { MinHeight = 420 };
-            shell.OpenOverlay(
-                "Diagnostic result",
-                workspace,
-                maxWidth: 1160,
-                maxHeight: 820,
-                stretchWidth: true);
-
-            var host = Assert.Single(
-                shell.GetVisualDescendants().OfType<ContentControl>(),
-                control => ReferenceEquals(control.Content, workspace));
-            var sheet = Assert.Single(
-                shell.GetVisualDescendants().OfType<Border>(),
-                border => border.Classes.Contains("modalSheet"));
+            shell.OpenOverlay("Diagnostic result", reportWorkspace);
 
             Assert.True(shell.OverlayOpen);
-            Assert.Same(workspace, host.Content);
-            Assert.True(workspace.IsVisible);
-            Assert.True(sheet.Height >= 600);
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
-    [AvaloniaFact]
-    public void HeaderlessOverlayLeavesOnlyTheReportToolbarVisible()
-    {
-        var shell = new WorkbenchShell();
-        var window = new Window
-        {
-            Width = 1000,
-            Height = 760,
-            Content = shell
-        };
-        window.Show();
-        try
-        {
-            shell.OpenOverlay(
-                "Diagnostic result",
-                new Border(),
-                maxHeight: 700,
-                showHeader: false);
-
-            var modalHeader = Assert.Single(
+            Assert.Empty(
                 shell.GetVisualDescendants().OfType<Border>(),
-                border => border.Classes.Contains("modalHeader"));
-            Assert.False(modalHeader.IsVisible);
+                border => border.Classes.Contains("modalBackdrop")
+                    || border.Classes.Contains("modalSheet")
+                    || border.Classes.Contains("modalHeader"));
         }
         finally
         {
@@ -117,99 +120,45 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
-    public void ReducedMotionShowsSheetWithoutAnOpacityRamp()
+    public void FocusedWorkspaceOpenIsIdempotent()
     {
         var shell = new WorkbenchShell();
-        var window = new Window
-        {
-            Width = 1000,
-            Height = 760,
-            Content = shell
-        };
-        window.Classes.Add("reducedMotion");
-        window.Show();
-        try
-        {
-            var workspace = new Border();
-            shell.OpenOverlay("Settings", workspace, maxHeight: 700);
+        var controlCenter = new Border { IsVisible = true };
+        var reportWorkspace = new Border { IsVisible = false };
+        var workspaceGrid = new Grid();
+        workspaceGrid.Children.Add(controlCenter);
+        workspaceGrid.Children.Add(reportWorkspace);
+        shell.WorkspaceContent = workspaceGrid;
 
-            var sheet = Assert.Single(
-                shell.GetVisualDescendants().OfType<Border>(),
-                border => border.Classes.Contains("modalSheet"));
-            var root = Assert.IsType<Grid>(sheet.GetVisualParent());
-            Assert.Equal(1, root.Opacity);
-            Assert.Equal(1, sheet.Opacity);
-            Assert.Null(sheet.Transitions);
-        }
-        finally
-        {
-            window.Close();
-        }
+        shell.OpenOverlay("Diagnostic result", reportWorkspace);
+        shell.OpenOverlay("Diagnostic result", reportWorkspace);
+
+        Assert.True(shell.OverlayOpen);
+        Assert.False(controlCenter.IsVisible);
+        Assert.True(reportWorkspace.IsVisible);
+        Assert.Contains(reportWorkspace, workspaceGrid.Children);
+
+        shell.CloseOverlay();
+        Assert.True(controlCenter.IsVisible);
     }
 
     [AvaloniaFact]
-    public void NormalMotionAlsoMountsTheSheetAtomically()
+    public void MotionPreferenceDoesNotCreateASecondWorkspacePath()
     {
         var shell = new WorkbenchShell();
-        var window = new Window
-        {
-            Width = 1000,
-            Height = 760,
-            Content = shell
-        };
-        window.Show();
-        try
-        {
-            shell.OpenOverlay("Settings", new Border(), maxHeight: 700);
+        var controlCenter = new Border { IsVisible = true };
+        var settingsWorkspace = new Border { IsVisible = false };
+        var workspaceGrid = new Grid();
+        workspaceGrid.Children.Add(controlCenter);
+        workspaceGrid.Children.Add(settingsWorkspace);
+        shell.WorkspaceContent = workspaceGrid;
 
-            var sheet = Assert.Single(
-                shell.GetVisualDescendants().OfType<Border>(),
-                border => border.Classes.Contains("modalSheet"));
-            var root = Assert.IsType<Grid>(sheet.GetVisualParent());
+        shell.SetReducedMotion(true);
+        shell.OpenOverlay("Settings", settingsWorkspace);
 
-            Assert.Equal(1, root.Opacity);
-            Assert.Equal(1, sheet.Opacity);
-            Assert.Null(sheet.Transitions);
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
-    [AvaloniaFact]
-    public async Task ReopeningDuringCloseKeepsTheNewSheetMounted()
-    {
-        var shell = new WorkbenchShell();
-        var window = new Window
-        {
-            Width = 1000,
-            Height = 760,
-            Content = shell
-        };
-        window.Show();
-        try
-        {
-            var first = new Border();
-            var second = new Border { MinHeight = 420 };
-            shell.OpenOverlay("Settings", first, maxHeight: 700);
-            shell.CloseOverlay();
-            shell.OpenOverlay("Diagnostic result", second, maxHeight: 820);
-
-            await Task.Delay(200);
-
-            var host = Assert.Single(
-                shell.GetVisualDescendants().OfType<ContentControl>(),
-                control => ReferenceEquals(control.Content, second));
-            Assert.True(shell.OverlayOpen);
-            Assert.Same(second, host.Content);
-            Assert.False(first.IsVisible);
-            Assert.True(second.IsVisible);
-        }
-        finally
-        {
-            window.Close();
-        }
+        Assert.True(shell.OverlayOpen);
+        Assert.True(settingsWorkspace.IsVisible);
+        Assert.False(controlCenter.IsVisible);
     }
 
     [AvaloniaFact]
