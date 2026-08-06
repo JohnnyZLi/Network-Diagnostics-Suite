@@ -184,7 +184,7 @@ jobs:
           xdotool mousemove 12 500 click 1
           capture overview-after-settings
 
-          # Capture the result workspace in wide and compact layouts.
+          # Keep the legacy presentation fixture available for isolated result-state review.
           run_command 'preview healthy result'
           capture result-healthy-overview
           xdotool mousemove 255 215 click 1
@@ -195,10 +195,21 @@ jobs:
           wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
           sleep 0.8
 
-          # Exercise a live diagnostic over several telemetry updates. These frames
-          # verify that the header progress stays below its text and the running view
-          # remains structurally stable while values change.
+          # A just-completed result must use the same bounded report sheet as history,
+          # with current-run actions rather than replacing the whole control center.
           run_command 'open network overview'
+          run_command 'preview current result'
+          capture current-result-detail
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture current-result-detail-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          run_command 'open network overview'
+
+          # Exercise a live diagnostic over several telemetry updates. These frames
+          # verify that the Tests & diagnostics region becomes a stable live tile
+          # instead of navigating to a separate running page.
           run_command 'run selected diagnostic'
           capture running-diagnostic-live-1
           capture running-diagnostic-live-2
