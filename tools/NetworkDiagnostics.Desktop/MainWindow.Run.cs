@@ -58,8 +58,10 @@ public sealed partial class MainWindow
         }
         finally
         {
+            // Do not rebuild the test hub here. On a successful run the completed
+            // live tile must remain mounted until the report sheet is already visible;
+            // rebuilding here creates an idle-layout flash behind the handoff.
             RenderProfileSelection();
-            SyncTestWorkspace();
             RefreshWorkbenchChrome();
         }
     }
@@ -102,15 +104,15 @@ public sealed partial class MainWindow
     private void ResetRunningState()
     {
         displayedRunProgress = 0;
-        SyncTestWorkspace();
         RefreshWorkbenchChrome();
     }
 
     private void CompleteRunningState()
     {
+        // ActiveRunSessionChanged already converted the fixed live tile into its
+        // completed handoff state. Updating only the logical progress avoids
+        // restoring the idle test choices before the report sheet is mounted.
         displayedRunProgress = 100;
-        SyncTestWorkspace();
-        RefreshWorkbenchChrome();
     }
 
     private async Task<bool> ConfirmDataUseAsync(TestProfileId profile, TransferMethod method)
