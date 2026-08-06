@@ -4,7 +4,10 @@ public sealed partial class TestSetupWorkspace
 {
     public void ApplyDiagnosticConfiguratorPolishSafely()
     {
-        DetachConfiguratorControl(RunButton);
+        if (!polishedDiagnosticConfiguratorBuilt)
+        {
+            DetachConfiguratorControl(RunButton);
+        }
         ApplyDiagnosticConfiguratorPolish();
     }
 }
