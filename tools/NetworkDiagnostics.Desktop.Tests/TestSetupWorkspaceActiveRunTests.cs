@@ -43,10 +43,11 @@ public sealed class TestSetupWorkspaceActiveRunTests
 
             var status = Assert.Single(
                 workspace.GetVisualDescendants().OfType<TextBlock>(),
-                block => block.Text == "DIAGNOSTIC IN PROGRESS");
+                block => block.IsVisible && block.Text == "DIAGNOSTIC IN PROGRESS");
             var stop = Assert.Single(
                 workspace.GetVisualDescendants().OfType<Button>(),
-                button => string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal));
+                button => button.IsVisible
+                    && string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal));
 
             workspace.RenderActiveRunSnapshot(running with
             {
@@ -61,12 +62,13 @@ public sealed class TestSetupWorkspaceActiveRunTests
                 status,
                 Assert.Single(
                     workspace.GetVisualDescendants().OfType<TextBlock>(),
-                    block => block.Text == "DIAGNOSTIC IN PROGRESS"));
+                    block => block.IsVisible && block.Text == "DIAGNOSTIC IN PROGRESS"));
             Assert.Same(
                 stop,
                 Assert.Single(
                     workspace.GetVisualDescendants().OfType<Button>(),
-                    button => string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal)));
+                    button => button.IsVisible
+                        && string.Equals(button.Content?.ToString(), "Stop test", StringComparison.Ordinal)));
 
             workspace.HoldCompletedRunTile(running with
             {
@@ -81,10 +83,10 @@ public sealed class TestSetupWorkspaceActiveRunTests
                 status,
                 Assert.Single(
                     workspace.GetVisualDescendants().OfType<TextBlock>(),
-                    block => block.Text == "DIAGNOSTIC COMPLETE"));
+                    block => block.IsVisible && block.Text == "DIAGNOSTIC COMPLETE"));
             Assert.Contains(
                 workspace.GetVisualDescendants().OfType<TextBlock>(),
-                block => block.Text == "Preparing the saved result…");
+                block => block.IsVisible && block.Text == "Preparing the saved result…");
             Assert.False(stop.IsVisible);
         }
         finally
