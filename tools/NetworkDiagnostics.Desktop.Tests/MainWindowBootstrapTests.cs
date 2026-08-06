@@ -148,7 +148,7 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
-    public void NormalMotionNeverFadesTheWholeBackdrop()
+    public void NormalMotionAlsoMountsTheSheetAtomically()
     {
         var shell = new WorkbenchShell();
         var window = new Window
@@ -168,7 +168,8 @@ public sealed class MainWindowBootstrapTests
             var root = Assert.IsType<Grid>(sheet.GetVisualParent());
 
             Assert.Equal(1, root.Opacity);
-            Assert.NotNull(sheet.Transitions);
+            Assert.Equal(1, sheet.Opacity);
+            Assert.Null(sheet.Transitions);
         }
         finally
         {
