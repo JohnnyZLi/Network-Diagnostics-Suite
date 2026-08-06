@@ -12,13 +12,16 @@ public sealed partial class TestSetupWorkspace
 {
     private bool recentDiagnosticsProductFlowInstalled;
 
+    public void RenderProductControlCenter(ControlCenterSectionModel model)
+    {
+        controlCenterModel = model;
+        ApplyRecentDiagnosticsProductFlow();
+    }
+
     public void ApplyRecentDiagnosticsProductFlow()
     {
         if (!EnsureControlCenterSections())
         {
-            // RenderControlCenter may already have queued the legacy section render for
-            // this attachment. Run after that callback so the product flow owns the
-            // final visible tree rather than being overwritten one frame later.
             Dispatcher.UIThread.Post(
                 ApplyRecentDiagnosticsProductFlow,
                 DispatcherPriority.Background);
