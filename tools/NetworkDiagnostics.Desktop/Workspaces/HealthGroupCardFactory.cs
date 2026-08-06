@@ -8,12 +8,12 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 
 internal static class HealthGroupCardFactory
 {
-    public static Border Build(HealthGroupPresentation group)
+    public static Border Build(HealthGroupPresentation group, bool compact = false)
     {
         var indicator = new Border
         {
-            Width = 8,
-            Height = 8,
+            Width = compact ? 7 : 8,
+            Height = compact ? 7 : 8,
             CornerRadius = new CornerRadius(4),
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -27,14 +27,14 @@ internal static class HealthGroupCardFactory
         var title = new TextBlock
         {
             Text = group.Title,
-            FontSize = 13,
+            FontSize = compact ? 12 : 13,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         };
         var state = new TextBlock
         {
             Text = group.State,
-            FontSize = 10,
+            FontSize = compact ? 9 : 10,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -43,7 +43,7 @@ internal static class HealthGroupCardFactory
         var header = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-            ColumnSpacing = 9
+            ColumnSpacing = compact ? 8 : 9
         };
         header.Children.Add(indicator);
         Grid.SetColumn(title, 1);
@@ -54,21 +54,21 @@ internal static class HealthGroupCardFactory
         var summary = new TextBlock
         {
             Text = group.Summary,
-            FontSize = 18,
+            FontSize = compact ? 16 : 18,
             FontWeight = FontWeight.SemiBold,
-            LineHeight = 22,
+            LineHeight = compact ? 20 : 22,
             TextWrapping = TextWrapping.Wrap
         };
         var detail = new TextBlock
         {
             Text = group.Detail,
-            FontSize = 11,
-            LineHeight = 17,
+            FontSize = compact ? 10 : 11,
+            LineHeight = compact ? 15 : 17,
             TextWrapping = TextWrapping.Wrap
         };
         detail.Classes.Add("muted");
 
-        var content = new StackPanel { Spacing = 8 };
+        var content = new StackPanel { Spacing = compact ? 6 : 8 };
         content.Children.Add(header);
         content.Children.Add(summary);
         content.Children.Add(detail);
@@ -78,8 +78,8 @@ internal static class HealthGroupCardFactory
             var metricRow = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("*,*"),
-                ColumnSpacing = 12,
-                Margin = new Thickness(0, 5, 0, 0)
+                ColumnSpacing = compact ? 10 : 12,
+                Margin = new Thickness(0, compact ? 3 : 5, 0, 0)
             };
             var visibleMetrics = group.Metrics.Take(2).ToArray();
             for (var index = 0; index < visibleMetrics.Length; index++)
@@ -88,15 +88,15 @@ internal static class HealthGroupCardFactory
                 var metricLabel = new TextBlock
                 {
                     Text = metric.Label.ToUpperInvariant(),
-                    FontSize = 9,
+                    FontSize = compact ? 8 : 9,
                     FontWeight = FontWeight.SemiBold,
-                    LetterSpacing = 1.15
+                    LetterSpacing = compact ? 1 : 1.15
                 };
                 metricLabel.Classes.Add("muted");
                 var metricValue = new TextBlock
                 {
                     Text = metric.Value,
-                    FontSize = 14,
+                    FontSize = compact ? 13 : 14,
                     FontWeight = FontWeight.SemiBold,
                     Opacity = metric.WasMeasured ? 1 : 0.62
                 };
@@ -111,8 +111,8 @@ internal static class HealthGroupCardFactory
 
         var card = new Border
         {
-            MinHeight = 170,
-            Padding = new Thickness(17),
+            MinHeight = compact ? 142 : 170,
+            Padding = new Thickness(compact ? 15 : 17),
             Child = content
         };
         card.Classes.Add(group.Tone == HealthGroupTone.Attention ? "accentSurface" : "surface");
