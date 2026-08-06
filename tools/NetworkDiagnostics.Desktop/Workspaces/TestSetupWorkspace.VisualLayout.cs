@@ -51,6 +51,7 @@ public sealed partial class TestSetupWorkspace
         AggregateMethodButton.FontSize = 10;
 
         ApplyTestHubResponsiveLayout(width);
+        ApplyOverviewResponsiveLayout(width);
 
         // Once the profile controls have moved into the overlay, the legacy inline
         // responsive layout must not reparent them again during a window resize.
@@ -67,6 +68,42 @@ public sealed partial class TestSetupWorkspace
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.1, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(0.8, GridUnitType.Star)));
         DiagnosticDetailsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+    }
+
+    private void ApplyOverviewResponsiveLayout(double width)
+    {
+        if (width >= 960) return;
+
+        OverviewGrid.ColumnDefinitions.Clear();
+        OverviewGrid.RowDefinitions.Clear();
+        OverviewGrid.RowSpacing = 12;
+
+        if (width >= 880)
+        {
+            OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(280)));
+            OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            OverviewGrid.ColumnSpacing = 16;
+            SetGridPosition(DeviceHeader, 0, 0);
+            SetGridPosition(TelemetryHeader, 0, 1);
+            SetGridPosition(ScoreColumn, 1, 0);
+            SetGridPosition(TelemetryColumn, 1, 1);
+            TelemetryHeader.Margin = new Thickness(2, 0, 2, 0);
+            return;
+        }
+
+        OverviewGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        for (var index = 0; index < 4; index++)
+        {
+            OverviewGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        }
+        OverviewGrid.ColumnSpacing = 0;
+        SetGridPosition(DeviceHeader, 0, 0);
+        SetGridPosition(ScoreColumn, 1, 0);
+        SetGridPosition(TelemetryHeader, 2, 0);
+        SetGridPosition(TelemetryColumn, 3, 0);
+        TelemetryHeader.Margin = new Thickness(2, 10, 2, 0);
     }
 
     private void PolishRangeSelector()
