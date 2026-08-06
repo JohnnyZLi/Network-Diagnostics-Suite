@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         testSetupWorkspace.MethodRequested += TestSetupMethodRequested;
         testSetupWorkspace.RunRequested += TestSetupRunRequested;
         testSetupWorkspace.ActiveRunRequested += TestSetupActiveRunRequested;
+        testSetupWorkspace.ActiveRunStopRequested += TestSetupActiveRunStopRequested;
         testSetupWorkspace.SettingsRequested += TestSetupSettingsRequested;
         testSetupWorkspace.MonitorWindowRequested += TestSetupMonitorWindowRequested;
         testSetupWorkspace.MonitoringToggleRequested += TestSetupMonitoringToggleRequested;
@@ -56,6 +57,9 @@ public sealed partial class MainWindow
 
     private void TestSetupActiveRunRequested(object? sender, EventArgs eventArgs) =>
         ReturnToActiveRun();
+
+    private void TestSetupActiveRunStopRequested(object? sender, EventArgs eventArgs) =>
+        StopClicked(sender, new RoutedEventArgs());
 
     private void TestSetupSettingsRequested(object? sender, EventArgs eventArgs) =>
         NavigateToDestination(new SettingsDestination("General"));
@@ -106,11 +110,10 @@ public sealed partial class MainWindow
         var snapshot = activeRunSession.Snapshot;
         if (snapshot.IsActive)
         {
-            // Live telemetry can arrive several times per second. Only update the
-            // visible running workspace and shell chrome on this hot path. The old
-            // implementation rendered the running workspace twice and rebuilt the
-            // hidden Home and result screens for every sample, which caused visible
-            // flashing on macOS.
+            // Live telemetry updates a fixed dashboard tile and the compatibility
+            // running renderer. Neither path rebuilds hidden workspaces or the full
+            // monitoring surface, preserving the bounded-memory behavior.
+            testSetupWorkspace?.RenderActiveRunSnapshot(snapshot);
             runningTestWorkspace?.Render(snapshot, activeRunSession.Events);
             RefreshWorkbenchChrome();
             return;
@@ -140,10 +143,7 @@ public sealed partial class MainWindow
 
     private void PresentRunOutcome(Guid reportId)
     {
-        currentTestState = Models.TestViewState.Results;
-        SetupView.IsVisible = false;
-        RunningView.IsVisible = false;
-        ResultsView.IsVisible = true;
+        ShowControlCenterUnderlay();
         SyncRunResultWorkspaces();
         _ = RecordCurrentReportForMonitoringAsync();
 
@@ -191,6 +191,7 @@ public sealed partial class MainWindow
             snapshot.Detail,
             snapshot.Progress,
             CurrentNetworkExperience()));
+        testSetupWorkspace.SetActiveRunTileState(snapshot);
         testSetupWorkspace.RefreshModelDependentVisuals();
         SyncControlCenterSections();
 
