@@ -37,6 +37,7 @@ public sealed partial class MainWindow
             comparisonBaselineId,
             comparisonCandidateId,
             ReportComparisonService.AnalyzeTrend(controlCenterReports)));
+        testSetupWorkspace.ApplyRecentDiagnosticsProductFlow();
     }
 
     private void ControlCenterDiagnosticLauncherRequested(object? sender, EventArgs eventArgs)
