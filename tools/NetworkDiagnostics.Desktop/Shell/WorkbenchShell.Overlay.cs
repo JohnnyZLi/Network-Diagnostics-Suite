@@ -95,13 +95,17 @@ public sealed partial class WorkbenchShell
         string title,
         Control content,
         double maxWidth = 1180,
-        double? maxHeight = null)
+        double? maxHeight = null,
+        bool stretchWidth = false)
     {
         EnsureOverlay();
         DetachFromLogicalParent(content);
         content.IsVisible = true;
         overlayTitle!.Text = title;
         overlaySheet!.MaxWidth = maxWidth;
+        overlaySheet.HorizontalAlignment = stretchWidth
+            ? HorizontalAlignment.Stretch
+            : HorizontalAlignment.Center;
         overlaySheet.MaxHeight = maxHeight ?? double.PositiveInfinity;
         overlaySheet.VerticalAlignment = maxHeight is null
             ? VerticalAlignment.Stretch
