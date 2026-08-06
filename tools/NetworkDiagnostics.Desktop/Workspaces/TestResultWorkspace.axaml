@@ -9,7 +9,7 @@
         Margin="28,22,28,28"
         MaxWidth="1320"
         HorizontalAlignment="Stretch">
-    <Grid Name="ResultHeaderGrid" Grid.Row="0" ColumnDefinitions="*,220" ColumnSpacing="28">
+    <Grid Name="ResultHeaderGrid" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="28">
       <StackPanel Grid.Column="0" Spacing="7">
         <StackPanel Orientation="Horizontal" Spacing="9">
           <Border Name="OutcomeIndicator"
@@ -33,17 +33,20 @@
                    TextWrapping="Wrap" />
       </StackPanel>
 
-      <StackPanel Name="ResultActionsPanel" Grid.Column="1" Spacing="6" VerticalAlignment="Top">
+      <StackPanel Name="ResultActionsPanel"
+                  Grid.Column="1"
+                  Orientation="Horizontal"
+                  Spacing="4"
+                  VerticalAlignment="Top"
+                  HorizontalAlignment="Right">
+        <Button Name="ReportsButton" Classes="ghost" Content="History" Click="ReportsClicked" />
+        <Button Name="CompareButton" Classes="ghost" Content="Compare" Click="CompareClicked" />
+        <Button Name="ExportButton" Classes="ghost" Content="Export" Click="ExportClicked" />
         <Button Name="RunAgainButton"
                 Classes="primary"
                 Content="Run again"
                 Click="RunAgainClicked"
-                HorizontalAlignment="Stretch" />
-        <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Right">
-          <Button Name="ReportsButton" Classes="ghost" Content="History" Click="ReportsClicked" />
-          <Button Name="CompareButton" Classes="ghost" Content="Compare" Click="CompareClicked" />
-          <Button Name="ExportButton" Classes="ghost" Content="Export" Click="ExportClicked" />
-        </StackPanel>
+                MinWidth="104" />
       </StackPanel>
     </Grid>
 
