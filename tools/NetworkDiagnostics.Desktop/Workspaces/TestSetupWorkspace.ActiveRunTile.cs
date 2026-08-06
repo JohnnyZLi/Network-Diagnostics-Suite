@@ -247,11 +247,17 @@ public sealed partial class TestSetupWorkspace
         testHubActiveRunTile.IsVisible = true;
         activeRunLayoutApplied = true;
 
+        // Avalonia still validates attached Grid.Row/Grid.Column values for hidden
+        // children while measuring. Normalize every child before reducing the grid
+        // to one cell so a previously second-column tile cannot reference a removed
+        // definition and crash the layout pass.
+        SetGridPosition(testHubSpeedTile, 0, 0);
+        SetGridPosition(testHubDiagnosticTile, 0, 0);
+        SetGridPosition(testHubActiveRunTile, 0, 0);
         testHubTilesGrid.ColumnDefinitions.Clear();
         testHubTilesGrid.RowDefinitions.Clear();
         testHubTilesGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         testHubTilesGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        SetGridPosition(testHubActiveRunTile, 0, 0);
 
         var compactMetrics = resolvedWidth < 760;
         testHubActiveMetricsGrid.ColumnDefinitions.Clear();
