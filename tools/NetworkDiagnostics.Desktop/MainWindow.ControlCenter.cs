@@ -12,6 +12,7 @@ public sealed partial class MainWindow
     {
         if (testSetupWorkspace is null) return;
         testSetupWorkspace.DiagnosticLauncherRequested += ControlCenterDiagnosticLauncherRequested;
+        testSetupWorkspace.DiagnosticLauncherDismissRequested += ControlCenterDiagnosticLauncherDismissRequested;
         testSetupWorkspace.RecentReportRequested += ControlCenterReportRequested;
         testSetupWorkspace.RecentReportEditRequested += ControlCenterReportEditRequested;
         testSetupWorkspace.InlineBaselineRequested += ControlCenterBaselineRequested;
@@ -46,8 +47,11 @@ public sealed partial class MainWindow
         ShowControlCenterUnderlay();
         testSetupWorkspace.PrepareDiagnosticLauncherLayout();
         workbenchShell.SelectControlCenter();
-        workbenchShell.OpenOverlay("Customize diagnostic", content, 920, 760);
+        workbenchShell.OpenOverlay("Customize diagnostic", content, 920, 640);
     }
+
+    private void ControlCenterDiagnosticLauncherDismissRequested(object? sender, EventArgs eventArgs) =>
+        workbenchShell?.CloseOverlay();
 
     private void ControlCenterReportRequested(object? sender, StoredReportEventArgs eventArgs) =>
         OpenStoredReport(eventArgs.Report);
