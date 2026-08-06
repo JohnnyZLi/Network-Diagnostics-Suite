@@ -175,9 +175,14 @@ jobs:
           xdotool mousemove 255 215 click 1
           capture result-healthy-evidence
 
+          # Exercise a live diagnostic over several telemetry updates. These frames
+          # verify that the header progress stays below its text and the running view
+          # remains structurally stable while values change.
           run_command 'open network overview'
           run_command 'run selected diagnostic'
-          capture running-diagnostic
+          capture running-diagnostic-live-1
+          capture running-diagnostic-live-2
+          capture running-diagnostic-live-3
           xdotool key Escape || true
 
           run_command 'open network overview'
