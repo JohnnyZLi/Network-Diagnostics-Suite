@@ -105,7 +105,18 @@ public sealed partial class WorkbenchShell
             activeRunLayoutPolished = true;
         }
 
-        var targetWidth = Bounds.Width < 1100 ? 176d : 224d;
+        var compact = Bounds.Width < 960;
+        var showDetail = Bounds.Width >= 1260;
+        ActiveRunDetailText.IsVisible = showDetail;
+        ActiveRunPanel.Padding = compact
+            ? new Thickness(8, 4)
+            : new Thickness(10, 4);
+
+        var targetWidth = showDetail
+            ? 224d
+            : compact
+                ? 148d
+                : 176d;
         if (Math.Abs(ActiveRunPanel.Width - targetWidth) > 0.5)
         {
             ActiveRunPanel.Width = targetWidth;
