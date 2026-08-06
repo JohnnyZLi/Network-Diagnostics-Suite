@@ -1,6 +1,7 @@
 using Avalonia.Interactivity;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
+using NetworkDiagnostics.Desktop.Services;
 using NetworkDiagnostics.Desktop.Workspaces;
 
 namespace NetworkDiagnostics.Desktop;
@@ -119,7 +120,18 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Terminal states are infrequent and should refresh every dependent view.
+        if (snapshot.Status == ActiveRunStatus.Completed && snapshot.ReportId is not null)
+        {
+            // Keep the final live layout mounted until the report sheet owns the
+            // interaction. Restoring the two idle choice cards here caused a visible
+            // dashboard reflow immediately before the backdrop and result appeared.
+            testSetupWorkspace?.HoldCompletedRunTile(snapshot);
+            SyncRunResultWorkspaces();
+            RefreshWorkbenchChrome();
+            return;
+        }
+
+        // Cancelled and failed runs return to the normal test choices immediately.
         // SyncTestWorkspace already calls SyncRunResultWorkspaces, so do not invoke
         // it a second time here.
         SyncTestWorkspace();
