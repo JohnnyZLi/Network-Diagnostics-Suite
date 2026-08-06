@@ -68,7 +68,6 @@ public sealed partial class WorkbenchShell : UserControl
         ForwardButton.IsEnabled = canGoForward;
         currentWorkspace = entry.Destination.Workspace;
         RenderProductContext();
-        SelectWorkspace(currentWorkspace);
 
         if (currentWorkspace != WorkspaceKind.Test || !entry.ViewState.InspectorOpen)
         {
@@ -156,17 +155,6 @@ public sealed partial class WorkbenchShell : UserControl
     private void CommandPaletteInvoked(object? sender, CommandInvokedEventArgs eventArgs) =>
         CommandInvoked?.Invoke(this, eventArgs);
 
-    private void WorkspaceClicked(object? sender, RoutedEventArgs eventArgs)
-    {
-        if (sender is not Button { Tag: string workspaceName }
-            || !Enum.TryParse<WorkspaceKind>(workspaceName, out var workspace))
-        {
-            return;
-        }
-
-        WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(workspace));
-    }
-
     private void BreadcrumbClicked(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is Button { Tag: AppDestination destination })
@@ -203,12 +191,8 @@ public sealed partial class WorkbenchShell : UserControl
         HomeButton.MinWidth = compact ? 34 : 52;
         SettingsToolbarButton.Content = compact ? "⚙" : "Settings";
         SettingsToolbarButton.MinWidth = compact ? 34 : 58;
-        CommandToolbarButton.Content = compact ? "⌘K" : "Commands  ⌘K";
+        CommandToolbarButton.Content = compact ? "⌘F" : "Commands  ⌘F";
         InspectorToggleButton.Content = showInspector ? "Close info" : "Info";
-        TestWorkspaceLabel.Text = compact ? "Home" : "Overview";
-        ReportsWorkspaceLabel.Text = "History";
-        ComparisonsWorkspaceLabel.Text = "Compare";
-        SettingsWorkspaceLabel.Text = "Settings";
     }
 
     private void RenderProductContext()
@@ -231,26 +215,6 @@ public sealed partial class WorkbenchShell : UserControl
         };
         text.Classes.Add("shellMuted");
         BreadcrumbPanel.Children.Add(text);
-    }
-
-    private void SelectWorkspace(WorkspaceKind workspace)
-    {
-        SetSelected(TestWorkspaceButton, workspace == WorkspaceKind.Test);
-        SetSelected(ReportsWorkspaceButton, workspace == WorkspaceKind.Reports);
-        SetSelected(ComparisonsWorkspaceButton, workspace == WorkspaceKind.Comparisons);
-        SetSelected(SettingsWorkspaceButton, workspace == WorkspaceKind.Settings);
-    }
-
-    private static void SetSelected(Button button, bool selected)
-    {
-        if (selected)
-        {
-            if (!button.Classes.Contains("selected")) button.Classes.Add("selected");
-        }
-        else
-        {
-            button.Classes.Remove("selected");
-        }
     }
 
     private static (string Title, string Detail) ResolveInspectorCopy(string title, string detail)
