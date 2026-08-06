@@ -34,12 +34,19 @@ public sealed partial class MainWindow
                 progress,
                 activeRunSession.CancellationToken);
             currentReport = report;
-            await reportStore.SaveAsync(report, activeRunSession.CancellationToken);
+            var stored = await reportStore.SaveAsync(report, activeRunSession.CancellationToken);
+            selectedHistoryReport = stored;
+            comparisonBaselineReport ??= report;
+            RememberSavedReportWithoutRendering(stored);
+
             currentPresentation = DiagnosticReportPresenter.FromReport(report);
             activeRunSession.Complete(report);
             CompleteRunningState();
             RenderPresentation(currentPresentation);
-            await RefreshHistoryAsync();
+
+            // The result is already saved and fully represented in memory. Open the
+            // report sheet now instead of scanning/re-rendering the entire history
+            // surface first; the library refreshes on demand when it is opened.
             PresentRunOutcome(report.Run.Id);
         }
         catch (OperationCanceledException)
@@ -63,6 +70,15 @@ public sealed partial class MainWindow
             // during the report handoff can expose an intermediate frame on macOS.
             RenderProfileSelection();
         }
+    }
+
+    private void RememberSavedReportWithoutRendering(Services.StoredReport stored)
+    {
+        controlCenterReports = new[] { stored }
+            .Concat(controlCenterReports.Where(item => item.Report.Run.Id != stored.Report.Run.Id))
+            .OrderByDescending(item => item.Report.GeneratedAt)
+            .ToArray();
+        savedReportCount = controlCenterReports.Count;
     }
 
     private void StopClicked(object? sender, RoutedEventArgs eventArgs) =>
