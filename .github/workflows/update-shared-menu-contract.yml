@@ -1,0 +1,43 @@
+name: Update shared menu validation contract
+
+on:
+  push:
+    branches: ["feat/shared-web-dark-mode"]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/shared-web-dark-mode
+      - name: Update integration contract
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/validate-design-system-integration.mjs')
+          text = path.read_text()
+          old = '  "OWNED_SITES.map", \'site.id === "network"\', "installSiteSwitcher", "installHeaderMenu",\n'
+          new = '  "populate: true", \'currentSite: "network"\', "installSiteSwitcher", "installHeaderMenu",\n'
+          if old not in text:
+              raise SystemExit('legacy Network Sites-menu contract was not found')
+          text = text.replace(old, new, 1)
+          anchor = 'if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");\n'
+          addition = 'if (app.includes("OWNED_SITES.map") || app.includes("import { OWNED_SITES")) fail("Network repeats shared Sites menu content instead of using populate.");\n'
+          if addition not in text:
+              if anchor not in text:
+                  raise SystemExit('Network validator insertion point was not found')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text)
+          PY
+          rm .github/workflows/update-shared-menu-contract.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Update shared Sites menu validation contract"
+          git push origin HEAD:feat/shared-web-dark-mode
