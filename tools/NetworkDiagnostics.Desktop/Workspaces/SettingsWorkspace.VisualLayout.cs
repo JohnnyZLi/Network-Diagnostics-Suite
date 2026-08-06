@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -12,6 +13,7 @@ public sealed partial class SettingsWorkspace
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualSettingsSizeChanged;
         ApplyFieldSizing();
+        ApplySettingsChromePolish();
         ApplyComponentPolish();
         ApplySettingsCardLayout(Bounds.Width);
     }
@@ -24,31 +26,81 @@ public sealed partial class SettingsWorkspace
 
     private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
     {
+        ApplySettingsChromePolish();
         ApplyComponentPolish();
         ApplySettingsCardLayout(eventArgs.NewSize.Width);
     }
 
     private void ApplyFieldSizing()
     {
-        SettingsContentContainer.MaxWidth = 1160;
+        SettingsContentContainer.MaxWidth = 1020;
+        SettingsContentContainer.Margin = new Thickness(28, 24, 28, 32);
 
-        ExpectedDownloadTextBox.Width = 220;
-        ExpectedDownloadTextBox.HorizontalAlignment = HorizontalAlignment.Left;
-        ExpectedUploadTextBox.Width = 220;
-        ExpectedUploadTextBox.HorizontalAlignment = HorizontalAlignment.Left;
-        AlertThresholdTextBox.Width = 220;
+        ExpectedDownloadTextBox.Width = double.NaN;
+        ExpectedDownloadTextBox.MaxWidth = 280;
+        ExpectedDownloadTextBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        ExpectedUploadTextBox.Width = double.NaN;
+        ExpectedUploadTextBox.MaxWidth = 280;
+        ExpectedUploadTextBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        AlertThresholdTextBox.Width = double.NaN;
+        AlertThresholdTextBox.MaxWidth = 280;
         AlertThresholdTextBox.HorizontalAlignment = HorizontalAlignment.Left;
+    }
+
+    private void ApplySettingsChromePolish()
+    {
+        SectionTitleText.FontSize = 26;
+        SectionTitleText.LineHeight = 31;
+        SectionDetailText.MaxWidth = 760;
+
+        var navigationBar = SettingsRootGrid.Children
+            .OfType<Border>()
+            .FirstOrDefault(border => Grid.GetRow(border) == 0);
+        if (navigationBar is not null)
+        {
+            navigationBar.Padding = new Thickness(18, 8);
+        }
+
+        if (SettingsContentContainer.Children.OfType<StackPanel>().FirstOrDefault() is { } contentStack
+            && contentStack.Children.OfType<Grid>().FirstOrDefault() is { } sectionHeader)
+        {
+            sectionHeader.ColumnDefinitions.Clear();
+            sectionHeader.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            sectionHeader.ColumnSpacing = 0;
+            foreach (var badge in sectionHeader.Children.OfType<Border>())
+            {
+                badge.IsVisible = false;
+            }
+        }
+
+        foreach (var card in SettingsRootGrid
+                     .GetLogicalDescendants()
+                     .OfType<Border>()
+                     .Where(border => border.Classes.Contains("settingsCard")))
+        {
+            card.Padding = new Thickness(16);
+            card.CornerRadius = new CornerRadius(12);
+        }
+
+        foreach (var status in SettingsRootGrid
+                     .GetLogicalDescendants()
+                     .OfType<Border>()
+                     .Where(border => border.Classes.Contains("settingsStatus")))
+        {
+            status.Padding = new Thickness(12);
+            status.CornerRadius = new CornerRadius(10);
+        }
     }
 
     private void ApplySettingsCardLayout(double width)
     {
-        var columns = width >= 1080 ? 3 : width >= 720 ? 2 : 1;
+        var columns = width >= 760 ? 2 : 1;
         ConfigureDirectCardGrids(GeneralPanel, columns);
-        ConfigureDirectCardGrids(MonitoringPanel, Math.Min(columns, 2));
-        ConfigureDirectCardGrids(MeasurementPanel, Math.Min(columns, 2));
-        ConfigureDirectCardGrids(PrivacyPanel, Math.Min(columns, 2));
-        ConfigureDirectCardGrids(StoragePanel, Math.Min(columns, 2));
-        ConfigureDirectCardGrids(DeveloperPanel, Math.Min(columns, 2));
+        ConfigureDirectCardGrids(MonitoringPanel, columns);
+        ConfigureDirectCardGrids(MeasurementPanel, columns);
+        ConfigureDirectCardGrids(PrivacyPanel, columns);
+        ConfigureDirectCardGrids(StoragePanel, columns);
+        ConfigureDirectCardGrids(DeveloperPanel, columns);
     }
 
     private static void ConfigureDirectCardGrids(StackPanel panel, int maximumColumns)
