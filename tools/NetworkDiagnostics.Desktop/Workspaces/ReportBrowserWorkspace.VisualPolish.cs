@@ -11,6 +11,7 @@ public sealed partial class ReportBrowserWorkspace
     private StackPanel? headerActions;
     private int reportTableLayoutMode = -1;
     private int polishedReportRowCount = -1;
+    private Button? firstPolishedReportRow;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
@@ -70,7 +71,8 @@ public sealed partial class ReportBrowserWorkspace
             {
                 text.Text = "REPORTS";
             }
-            else if (string.Equals(text.Text, "Diagnostics history", StringComparison.Ordinal))
+            else if (string.Equals(text.Text, "Diagnostics history", StringComparison.Ordinal)
+                     || string.Equals(text.Text, "Report library", StringComparison.Ordinal))
             {
                 text.Text = "Report library";
                 text.FontSize = width < 820 ? 25 : 28;
@@ -180,11 +182,19 @@ public sealed partial class ReportBrowserWorkspace
     private void ApplyReportTableResponsiveLayout(double width, bool force = false)
     {
         var mode = width >= 1100 ? 2 : width >= 820 ? 1 : 0;
-        var rowCount = ReportListPanel.Children.OfType<Button>().Count();
-        if (!force && mode == reportTableLayoutMode && rowCount == polishedReportRowCount) return;
+        var rows = ReportListPanel.Children.OfType<Button>().ToArray();
+        var firstRow = rows.FirstOrDefault();
+        if (!force
+            && mode == reportTableLayoutMode
+            && rows.Length == polishedReportRowCount
+            && ReferenceEquals(firstRow, firstPolishedReportRow))
+        {
+            return;
+        }
 
         reportTableLayoutMode = mode;
-        polishedReportRowCount = rowCount;
+        polishedReportRowCount = rows.Length;
+        firstPolishedReportRow = firstRow;
 
         if (ReportTableBorder.Child is not Grid tableRoot) return;
         var headerGrid = tableRoot.Children
@@ -201,7 +211,7 @@ public sealed partial class ReportBrowserWorkspace
             if (contextHeader is not null) contextHeader.IsVisible = mode > 0;
         }
 
-        foreach (var button in ReportListPanel.Children.OfType<Button>())
+        foreach (var button in rows)
         {
             if (button.Content is not Grid rowGrid) continue;
             ConfigureReportColumns(rowGrid, mode);
