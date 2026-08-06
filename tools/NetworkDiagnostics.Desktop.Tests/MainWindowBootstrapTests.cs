@@ -48,6 +48,66 @@ public sealed class MainWindowBootstrapTests
     }
 
     [AvaloniaFact]
+    public void BoundedOverlayReceivesARealBodyHeightBeforeItIsShown()
+    {
+        var shell = new WorkbenchShell();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = shell
+        };
+        window.Show();
+        try
+        {
+            var workspace = new Border { MinHeight = 420 };
+            shell.OpenOverlay(
+                "Diagnostic result",
+                workspace,
+                maxWidth: 1160,
+                maxHeight: 820,
+                stretchWidth: true);
+
+            var sheet = Assert.IsType<Border>(shell.FindControl<Border>("OverlaySheet"));
+            var host = Assert.IsType<ContentControl>(shell.FindControl<ContentControl>("OverlayHost"));
+
+            Assert.True(shell.OverlayOpen);
+            Assert.Same(workspace, host.Content);
+            Assert.True(workspace.IsVisible);
+            Assert.True(sheet.Height >= 600);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void ReducedMotionShowsOverlayWithoutAnOpacityRamp()
+    {
+        var shell = new WorkbenchShell();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = shell
+        };
+        window.Classes.Add("reducedMotion");
+        window.Show();
+        try
+        {
+            shell.OpenOverlay("Settings", new Border(), maxHeight: 700);
+
+            var root = Assert.IsType<Grid>(shell.FindControl<Grid>("OverlayRoot"));
+            Assert.Equal(1, root.Opacity);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void HomeTestHubUsesSelectionBeforeRunAndOnePrimaryActionPerGroup()
     {
         var window = new MainWindow();
