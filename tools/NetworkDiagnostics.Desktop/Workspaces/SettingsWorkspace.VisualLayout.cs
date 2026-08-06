@@ -13,6 +13,7 @@ public sealed partial class SettingsWorkspace
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualSettingsSizeChanged;
+        ApplyContentBounds(Bounds.Width);
         ApplyFieldSizing();
         ApplySettingsChromePolish();
         ApplyComponentPolish();
@@ -27,16 +28,22 @@ public sealed partial class SettingsWorkspace
 
     private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
     {
+        ApplyContentBounds(eventArgs.NewSize.Width);
         ApplySettingsChromePolish();
         ApplyComponentPolish();
         ApplySettingsCardLayout(eventArgs.NewSize.Width);
     }
 
-    private void ApplyFieldSizing()
+    private void ApplyContentBounds(double width)
     {
         SettingsContentContainer.MaxWidth = 980;
-        SettingsContentContainer.Margin = new Thickness(26, 22, 26, 30);
+        SettingsContentContainer.Margin = width < 760
+            ? new Thickness(18, 20, 18, 28)
+            : new Thickness(26, 22, 26, 30);
+    }
 
+    private void ApplyFieldSizing()
+    {
         ExpectedDownloadTextBox.Width = double.NaN;
         ExpectedDownloadTextBox.MaxWidth = 280;
         ExpectedDownloadTextBox.HorizontalAlignment = HorizontalAlignment.Stretch;
