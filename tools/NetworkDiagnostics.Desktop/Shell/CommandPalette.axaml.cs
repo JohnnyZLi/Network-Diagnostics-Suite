@@ -40,6 +40,15 @@ public sealed partial class CommandPalette : UserControl
         ResultsPanel.Children.Clear();
     }
 
+    private void BackdropPressed(object? sender, PointerPressedEventArgs eventArgs)
+    {
+        Close();
+        eventArgs.Handled = true;
+    }
+
+    private static void PaletteSurfacePressed(object? sender, PointerPressedEventArgs eventArgs) =>
+        eventArgs.Handled = true;
+
     private void SearchChanged(object? sender, TextChangedEventArgs eventArgs)
     {
         selectedIndex = 0;
