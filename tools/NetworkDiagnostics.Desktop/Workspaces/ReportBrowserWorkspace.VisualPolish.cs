@@ -50,8 +50,11 @@ public sealed partial class ReportBrowserWorkspace
         AddSurfaceClass(ReportTableBorder);
         AddSurfaceClass(EmptyStateBorder);
         EmptyStateBorder.CornerRadius = new CornerRadius(14);
+        EmptyStateBorder.HorizontalAlignment = HorizontalAlignment.Center;
         EmptyStateBorder.VerticalAlignment = VerticalAlignment.Top;
-        EmptyStateBorder.Height = width < 900 ? 310 : 350;
+        EmptyStateBorder.MaxWidth = 920;
+        EmptyStateBorder.Width = double.NaN;
+        EmptyStateBorder.Height = width < 900 ? 300 : 330;
 
         foreach (var text in this.GetLogicalDescendants().OfType<TextBlock>())
         {
