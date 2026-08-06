@@ -49,7 +49,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid>
+  <Grid PointerPressed="BackdropPressed">
     <Border Width="620"
             Margin="0,72,0,0"
             HorizontalAlignment="Center"
@@ -57,7 +57,8 @@
             Background="{DynamicResource AppRaisedBrush}"
             BorderBrush="{DynamicResource AppBorderStrongBrush}"
             BorderThickness="1"
-            CornerRadius="12">
+            CornerRadius="12"
+            PointerPressed="PaletteSurfacePressed">
       <Grid RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Margin="16,14,16,10" Spacing="4">
           <TextBlock Classes="eyebrow" Text="COMMAND PALETTE" />
