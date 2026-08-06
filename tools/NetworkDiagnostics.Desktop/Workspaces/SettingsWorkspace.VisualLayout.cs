@@ -34,8 +34,8 @@ public sealed partial class SettingsWorkspace
 
     private void ApplyFieldSizing()
     {
-        SettingsContentContainer.MaxWidth = 1020;
-        SettingsContentContainer.Margin = new Thickness(28, 24, 28, 32);
+        SettingsContentContainer.MaxWidth = 980;
+        SettingsContentContainer.Margin = new Thickness(26, 22, 26, 30);
 
         ExpectedDownloadTextBox.Width = double.NaN;
         ExpectedDownloadTextBox.MaxWidth = 280;
@@ -51,11 +51,11 @@ public sealed partial class SettingsWorkspace
     private void ApplySettingsChromePolish()
     {
         SectionEyebrowText.HorizontalAlignment = HorizontalAlignment.Left;
-        SectionTitleText.FontSize = 26;
-        SectionTitleText.LineHeight = 31;
+        SectionTitleText.FontSize = 24;
+        SectionTitleText.LineHeight = 29;
         SectionTitleText.HorizontalAlignment = HorizontalAlignment.Left;
         SectionTitleText.TextAlignment = TextAlignment.Left;
-        SectionDetailText.MaxWidth = 760;
+        SectionDetailText.MaxWidth = 720;
         SectionDetailText.HorizontalAlignment = HorizontalAlignment.Left;
         SectionDetailText.TextAlignment = TextAlignment.Left;
 
@@ -64,7 +64,8 @@ public sealed partial class SettingsWorkspace
             .FirstOrDefault(border => Grid.GetRow(border) == 0);
         if (navigationBar is not null)
         {
-            navigationBar.Padding = new Thickness(18, 8);
+            navigationBar.Padding = new Thickness(16, 7);
+            navigationBar.Background = Brushes.Transparent;
         }
 
         if (SettingsContentContainer.Children.OfType<StackPanel>().FirstOrDefault() is { } contentStack
@@ -88,6 +89,17 @@ public sealed partial class SettingsWorkspace
             card.CornerRadius = new CornerRadius(12);
         }
 
+        // General is ordinary application preference UI, not a telemetry dashboard.
+        // Remove the extra card boxes while retaining spacing and strong controls.
+        foreach (var card in DirectCards(GeneralPanel))
+        {
+            card.Background = Brushes.Transparent;
+            card.BorderThickness = new Thickness(0);
+            card.Padding = new Thickness(4, 6);
+            card.CornerRadius = new CornerRadius(0);
+            card.BoxShadow = default;
+        }
+
         foreach (var status in SettingsRootGrid
                      .GetLogicalDescendants()
                      .OfType<Border>()
@@ -101,7 +113,7 @@ public sealed partial class SettingsWorkspace
     private void ApplySettingsCardLayout(double width)
     {
         var columns = width >= 760 ? 2 : 1;
-        ConfigureDirectCardGrids(GeneralPanel, columns);
+        ConfigureDirectCardGrids(GeneralPanel, columns, generalPreferences: true);
         ConfigureDirectCardGrids(MonitoringPanel, columns);
         ConfigureDirectCardGrids(MeasurementPanel, columns);
         ConfigureDirectCardGrids(PrivacyPanel, columns);
@@ -109,7 +121,16 @@ public sealed partial class SettingsWorkspace
         ConfigureDirectCardGrids(DeveloperPanel, columns);
     }
 
-    private static void ConfigureDirectCardGrids(StackPanel panel, int maximumColumns)
+    private static IEnumerable<Border> DirectCards(StackPanel panel) =>
+        panel.Children
+            .OfType<Grid>()
+            .SelectMany(grid => grid.Children.OfType<Border>())
+            .Where(border => border.Classes.Contains("settingsCard"));
+
+    private static void ConfigureDirectCardGrids(
+        StackPanel panel,
+        int maximumColumns,
+        bool generalPreferences = false)
     {
         foreach (var grid in panel.Children.OfType<Grid>())
         {
@@ -128,8 +149,8 @@ public sealed partial class SettingsWorkspace
             {
                 grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             }
-            grid.ColumnSpacing = 12;
-            grid.RowSpacing = 12;
+            grid.ColumnSpacing = generalPreferences ? 28 : 12;
+            grid.RowSpacing = generalPreferences ? 18 : 12;
 
             for (var index = 0; index < cards.Length; index++)
             {
