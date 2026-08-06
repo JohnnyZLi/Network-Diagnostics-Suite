@@ -11,16 +11,21 @@ public sealed partial class ReportDetailWorkspace : UserControl
 {
     private StoredReport? report;
     private bool evidenceExpanded;
+    private Button? compareButton;
+    private Button? runAgainButton;
 
     public ReportDetailWorkspace()
     {
         InitializeComponent();
         SizeChanged += WorkspaceSizeChanged;
+        EnsureContextActions();
     }
 
     public event EventHandler? HomeRequested;
 
     public event EventHandler? BackRequested;
+
+    public event EventHandler? RunAgainRequested;
 
     public event EventHandler<StoredReportEventArgs>? CompareRequested;
 
@@ -30,6 +35,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
     public void Render(StoredReport stored, ConnectionCheckPresentation presentation)
     {
+        SetCurrentRunMode(false);
         report = stored;
         ToolbarTitleText.Text = stored.ProfileName;
         ToolbarMetaText.Text = $"{stored.DisplayDate} · {stored.Report.Run.TransferMethod}";
@@ -40,8 +46,16 @@ public sealed partial class ReportDetailWorkspace : UserControl
         RenderPresentation(presentation);
     }
 
+    public void RenderCurrent(StoredReport stored, ConnectionCheckPresentation presentation)
+    {
+        Render(stored, presentation);
+        SetCurrentRunMode(true);
+        ToolbarMetaText.Text = $"Just completed · {stored.Report.Run.TransferMethod}";
+    }
+
     public void RenderPreview(ConnectionCheckPresentation presentation)
     {
+        SetCurrentRunMode(false);
         report = null;
         ToolbarTitleText.Text = "Quick";
         ToolbarMetaText.Text = "Preview data · Compare";
@@ -155,6 +169,40 @@ public sealed partial class ReportDetailWorkspace : UserControl
         }
     }
 
+    private void EnsureContextActions()
+    {
+        if (runAgainButton is not null) return;
+        var actionPanel = ReportToolbarGrid.Children
+            .OfType<StackPanel>()
+            .FirstOrDefault(panel => Grid.GetColumn(panel) == 2);
+        if (actionPanel is null) return;
+
+        compareButton = actionPanel.Children
+            .OfType<Button>()
+            .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Compare", StringComparison.Ordinal));
+        runAgainButton = new Button
+        {
+            Content = "Run again",
+            MinHeight = 32,
+            Padding = new Avalonia.Thickness(13, 5),
+            IsVisible = false
+        };
+        runAgainButton.Classes.Add("primary");
+        runAgainButton.Click += RunAgainClicked;
+        actionPanel.Children.Add(runAgainButton);
+    }
+
+    private void SetCurrentRunMode(bool currentRun)
+    {
+        EnsureContextActions();
+        if (runAgainButton is not null) runAgainButton.IsVisible = currentRun;
+        if (compareButton is null) return;
+
+        compareButton.Classes.Remove("primary");
+        compareButton.Classes.Remove("secondary");
+        compareButton.Classes.Add(currentRun ? "secondary" : "primary");
+    }
+
     private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyHealthGroupLayout(eventArgs.NewSize.Width);
 
@@ -179,6 +227,9 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
+
+    private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs) =>
+        RunAgainRequested?.Invoke(this, EventArgs.Empty);
 
     private void CompareClicked(object? sender, RoutedEventArgs eventArgs)
     {
