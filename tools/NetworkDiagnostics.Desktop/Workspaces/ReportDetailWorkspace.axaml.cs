@@ -32,16 +32,32 @@ public sealed partial class ReportDetailWorkspace : UserControl
         report = stored;
         ToolbarTitleText.Text = stored.Label ?? presentation.Verdict;
         ToolbarMetaText.Text = $"{stored.ProfileName} · {stored.DisplayDate}";
-        OutcomeLabelText.Text = presentation.Label.ToUpperInvariant();
-        VerdictText.Text = presentation.Verdict;
-        SummaryText.Text = presentation.Summary;
-        NextActionText.Text = presentation.NextAction;
         GeneratedText.Text = stored.DisplayDate;
         ProfileText.Text = stored.ProfileName;
         MethodText.Text = stored.Report.Run.TransferMethod.ToString();
         ContextText.Text = ReportComparisonService.ContextLabel(stored.Report);
-        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
+        RenderPresentation(presentation);
+    }
 
+    public void RenderPreview(ConnectionCheckPresentation presentation)
+    {
+        report = null;
+        ToolbarTitleText.Text = "Saved diagnostic preview";
+        ToolbarMetaText.Text = "Quick · preview data";
+        GeneratedText.Text = "Today · preview";
+        ProfileText.Text = "Quick";
+        MethodText.Text = "Compare";
+        ContextText.Text = "Automatic routing · first-party endpoint";
+        RenderPresentation(presentation);
+    }
+
+    private void RenderPresentation(ConnectionCheckPresentation presentation)
+    {
+        OutcomeLabelText.Text = presentation.Label.ToUpperInvariant();
+        VerdictText.Text = presentation.Verdict;
+        SummaryText.Text = presentation.Summary;
+        NextActionText.Text = presentation.NextAction;
+        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
         RenderHealthGroups(presentation);
         RenderFindings(presentation.Findings);
         RenderEvidence(presentation.TechnicalEvidence);
