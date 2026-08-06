@@ -28,8 +28,7 @@ public sealed class TestSetupWorkspaceRecentDiagnosticsTests
                 null,
                 null,
                 ReportComparisonService.AnalyzeTrend([]));
-            workspace.RenderControlCenter(model);
-            workspace.ApplyRecentDiagnosticsProductFlow();
+            workspace.RenderProductControlCenter(model);
 
             var buttons = workspace.GetVisualDescendants().OfType<Button>().ToArray();
             var compare = Assert.Single(
