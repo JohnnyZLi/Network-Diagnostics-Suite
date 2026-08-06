@@ -55,11 +55,11 @@ public sealed class MainWindowBootstrapTests
         try
         {
             var buttons = window.GetVisualDescendants().OfType<Button>().ToArray();
-            var content = Assert.Single(buttons.Where(button => button.Name == "ContentSpeedChoice"));
-            var peak = Assert.Single(buttons.Where(button => button.Name == "PeakSpeedChoice"));
-            var speedRun = Assert.Single(buttons.Where(button => button.Name == "RunSelectedSpeedTestButton"));
-            var customize = Assert.Single(buttons.Where(button => button.Name == "CustomizeDiagnosticButton"));
-            var diagnosticRun = Assert.Single(buttons.Where(button => button.Name == "RunSelectedDiagnosticButton"));
+            var content = Assert.Single(buttons, button => button.Name == "ContentSpeedChoice");
+            var peak = Assert.Single(buttons, button => button.Name == "PeakSpeedChoice");
+            var speedRun = Assert.Single(buttons, button => button.Name == "RunSelectedSpeedTestButton");
+            var customize = Assert.Single(buttons, button => button.Name == "CustomizeDiagnosticButton");
+            var diagnosticRun = Assert.Single(buttons, button => button.Name == "RunSelectedDiagnosticButton");
 
             Assert.Contains("selected", content.Classes);
             Assert.DoesNotContain("selected", peak.Classes);
