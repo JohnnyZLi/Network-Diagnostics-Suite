@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -12,7 +11,6 @@ public sealed partial class SettingsWorkspace : UserControl
     public SettingsWorkspace()
     {
         InitializeComponent();
-        SizeChanged += SettingsWorkspaceSizeChanged;
         ShowSection(currentSection);
     }
 
@@ -118,12 +116,12 @@ public sealed partial class SettingsWorkspace : UserControl
 
         var copy = currentSection switch
         {
-            "Monitoring" => ("MONITORING", "Continuous network health", "Configure lightweight sampling, content-speed cadence, score expectations, and degradation alerts."),
-            "Measurement" => ("DIAGNOSTICS", "Explicit diagnostic runs", "Configure default profiles, endpoint candidates, and optional trusted-LAN isolation."),
-            "Privacy & data" => ("PRIVACY", "Report privacy and approvals", "Control local identifiers in saved reports and remembered high-data approvals."),
-            "Storage" => ("STORAGE", "Local history and reports", "Inspect the local directory used for reports, alerts, and monitoring samples."),
-            "Developer" => ("DEVELOPER", "Presentation previews", "Exercise terminal result states without starting a network measurement."),
-            _ => ("GENERAL", "Application behavior", "Choose appearance, active interface, startup behavior, accessibility, and platform integration.")
+            "Monitoring" => ("MONITORING", "Continuous monitoring", "Configure background sampling, scheduled speed checks, score expectations, and alert thresholds."),
+            "Measurement" => ("DIAGNOSTICS", "Diagnostic defaults", "Configure new-run defaults, measurement endpoints, and optional trusted-LAN isolation."),
+            "Privacy & data" => ("PRIVACY", "Privacy and approvals", "Control local identifiers in exported data and remembered approval for high-data diagnostic runs."),
+            "Storage" => ("STORAGE", "Local data", "Review where reports, monitoring history, and alerts are stored and how data leaves the app."),
+            "Developer" => ("DEVELOPER", "Preview states", "Exercise result presentations without starting a live network measurement or writing a report."),
+            _ => ("GENERAL", "Application", "Choose appearance, measurement interface, startup behavior, live status, and accessibility preferences.")
         };
         SectionEyebrowText.Text = copy.Item1;
         SectionTitleText.Text = copy.Item2;
@@ -203,13 +201,6 @@ public sealed partial class SettingsWorkspace : UserControl
 
     private void PreviewClicked(object? sender, RoutedEventArgs eventArgs) =>
         PreviewRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(Math.Max(0, FixtureComboBox.SelectedIndex)));
-
-    private void SettingsWorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
-    {
-        SettingsContentContainer.Margin = eventArgs.NewSize.Width < 760
-            ? new Thickness(22, 24, 22, 36)
-            : new Thickness(34, 30, 34, 42);
-    }
 
     private static string NormalizeSection(string? section) => section?.Trim() switch
     {
