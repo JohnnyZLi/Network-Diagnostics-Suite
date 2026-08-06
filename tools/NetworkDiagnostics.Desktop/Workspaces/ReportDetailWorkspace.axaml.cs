@@ -66,6 +66,19 @@ public sealed partial class ReportDetailWorkspace : UserControl
         RenderPresentation(presentation);
     }
 
+    public void RenderCurrentPreview(ConnectionCheckPresentation presentation)
+    {
+        report = null;
+        ToolbarTitleText.Text = "Connection Check";
+        ToolbarMetaText.Text = "Just completed · Aggregate";
+        GeneratedText.Text = "Just now";
+        ProfileText.Text = "Connection Check";
+        MethodText.Text = "Aggregate";
+        ContextText.Text = "Automatic routing · first-party endpoint";
+        RenderPresentation(presentation);
+        SetCurrentRunMode(true);
+    }
+
     private void RenderPresentation(ConnectionCheckPresentation presentation)
     {
         OutcomeLabelText.Text = presentation.Label.ToUpperInvariant();
