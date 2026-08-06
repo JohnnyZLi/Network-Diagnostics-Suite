@@ -17,7 +17,8 @@ public sealed partial class MainWindow
             reportDetailWorkspace,
             maxWidth: 1160,
             maxHeight: 820,
-            stretchWidth: true);
+            stretchWidth: true,
+            showHeader: false);
     }
 
     private void PreviewCurrentResult()
