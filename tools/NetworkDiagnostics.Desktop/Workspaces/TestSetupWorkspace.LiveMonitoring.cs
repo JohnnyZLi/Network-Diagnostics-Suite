@@ -202,7 +202,7 @@ public sealed partial class TestSetupWorkspace
                 .Select(sample => sample.LatencyMs!.Value)
                 .OrderBy(value => value)
                 .ToArray()
-            : [];
+            : Array.Empty<double>();
         var chartCeiling = measuredLatencies.Length == 0
             ? 80d
             : Math.Max(80d, Percentile(measuredLatencies, 0.95) * 1.15);
@@ -289,7 +289,7 @@ public sealed partial class TestSetupWorkspace
         hint.Classes.Add("muted");
         Grid.SetColumn(hint, 0);
         Grid.SetColumnSpan(hint, StableTimelineSlots);
-        Panel.SetZIndex(hint, 1);
+        Avalonia.Controls.Panel.SetZIndex(hint, 1);
         grid.Children.Add(hint);
 
         var state = new TimelineGridState(bars, hint);
