@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -49,9 +50,14 @@ public sealed partial class SettingsWorkspace
 
     private void ApplySettingsChromePolish()
     {
+        SectionEyebrowText.HorizontalAlignment = HorizontalAlignment.Left;
         SectionTitleText.FontSize = 26;
         SectionTitleText.LineHeight = 31;
+        SectionTitleText.HorizontalAlignment = HorizontalAlignment.Left;
+        SectionTitleText.TextAlignment = TextAlignment.Left;
         SectionDetailText.MaxWidth = 760;
+        SectionDetailText.HorizontalAlignment = HorizontalAlignment.Left;
+        SectionDetailText.TextAlignment = TextAlignment.Left;
 
         var navigationBar = SettingsRootGrid.Children
             .OfType<Border>()
@@ -129,6 +135,15 @@ public sealed partial class SettingsWorkspace
             {
                 Grid.SetColumn(cards[index], index % columnCount);
                 Grid.SetRow(cards[index], index / columnCount);
+                Grid.SetColumnSpan(cards[index], 1);
+                Grid.SetRowSpan(cards[index], 1);
+            }
+
+            if (columnCount > 1 && cards.Length % columnCount == 1)
+            {
+                var finalCard = cards[^1];
+                Grid.SetColumn(finalCard, 0);
+                Grid.SetColumnSpan(finalCard, columnCount);
             }
         }
     }
