@@ -9,5 +9,10 @@ public sealed partial class TestSetupWorkspace
             DetachConfiguratorControl(RunButton);
         }
         ApplyDiagnosticConfiguratorPolish();
+
+        if (diagnosticLauncherContent is Avalonia.Controls.Control content)
+        {
+            content.MinHeight = 408;
+        }
     }
 }
