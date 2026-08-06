@@ -25,7 +25,6 @@ public sealed partial class MainWindow
         HideWhenNotInOverlay(comparisonWorkspace);
         HideWhenNotInOverlay(settingsWorkspace);
         TestArea.IsVisible = true;
-        currentTestState = TestViewState.Setup;
         SetupView.IsVisible = true;
     }
 
