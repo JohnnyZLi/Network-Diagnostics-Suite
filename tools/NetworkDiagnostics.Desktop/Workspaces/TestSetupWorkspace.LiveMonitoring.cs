@@ -289,7 +289,6 @@ public sealed partial class TestSetupWorkspace
         hint.Classes.Add("muted");
         Grid.SetColumn(hint, 0);
         Grid.SetColumnSpan(hint, StableTimelineSlots);
-        Avalonia.Controls.Panel.SetZIndex(hint, 1);
         grid.Children.Add(hint);
 
         var state = new TimelineGridState(bars, hint);
