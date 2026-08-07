@@ -97,6 +97,18 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
+    public void IntegerContractEnforcesBounds()
+    {
+        using var valid = JsonDocument.Parse("{\"port\":8765}");
+        using var tooLow = JsonDocument.Parse("{\"port\":80}");
+        using var stringValue = JsonDocument.Parse("{\"port\":\"8765\"}");
+
+        Assert.Equal(8765, BridgeProtocol.ParseRequiredInt(valid.RootElement, "port", 1024, 65535));
+        Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredInt(tooLow.RootElement, "port", 1024, 65535));
+        Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredInt(stringValue.RootElement, "port", 1024, 65535));
+    }
+
+    [Fact]
     public void ReportAnnotationContractParsesOptionalLabelAndTags()
     {
         using var document = JsonDocument.Parse("""
@@ -136,7 +148,7 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
-    public void AppearanceAndMonitoringPreferencesPersistAcrossStoreInstances()
+    public void AppearanceMonitoringAndAdvancedPreferencesPersistAcrossStoreInstances()
     {
         var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
         var settingsPath = Path.Combine(directory, "desktop-settings.json");
@@ -148,17 +160,60 @@ public sealed class PhotinoMigrationTests
             Assert.Equal(AppearancePreference.System, defaults.Appearance);
             Assert.True(defaults.MonitoringEnabled);
             Assert.Equal(MonitorWindow.FiveMinutes, defaults.SelectedMonitoringWindow);
+            Assert.Empty(defaults.TestOrigins);
+            Assert.Null(defaults.InterfaceId);
+            Assert.False(defaults.IncludeLocalIdentifiers);
+            Assert.Null(defaults.LanTarget);
+            Assert.Equal(8765, defaults.LanPort);
+            Assert.Equal(8, defaults.LanDurationSeconds);
+            Assert.Equal(4, defaults.LanConnections);
 
             store.SaveAppearance(AppearancePreference.Dark);
             store.SaveMonitoringEnabled(false);
             store.SaveMonitoringWindow(MonitorWindow.OneHour);
+            store.SaveAdvanced(
+                ["https://one.example/", "https://two.example/"],
+                "interface-1",
+                true,
+                "192.168.1.20",
+                9000,
+                12,
+                6);
 
             var reloaded = new PhotinoSettingsStore(settingsPath).Load();
             Assert.Equal(AppearancePreference.Dark, reloaded.Appearance);
             Assert.False(reloaded.MonitoringEnabled);
             Assert.Equal(MonitorWindow.OneHour, reloaded.SelectedMonitoringWindow);
             Assert.Equal(TimeSpan.FromSeconds(5), reloaded.ToMonitorOptions().Interval);
+            Assert.Equal(["https://one.example/", "https://two.example/"], reloaded.TestOrigins);
+            Assert.Equal("interface-1", reloaded.InterfaceId);
+            Assert.True(reloaded.IncludeLocalIdentifiers);
+            Assert.Equal("192.168.1.20", reloaded.LanTarget);
+            Assert.Equal(9000, reloaded.LanPort);
+            Assert.Equal(12, reloaded.LanDurationSeconds);
+            Assert.Equal(6, reloaded.LanConnections);
             Assert.DoesNotContain(".tmp", Directory.EnumerateFiles(directory).Single());
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AdvancedSettingsRejectInvalidEndpointCandidates()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
+        var settingsPath = Path.Combine(directory, "desktop-settings.json");
+
+        try
+        {
+            var store = new PhotinoSettingsStore(settingsPath);
+            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(
+                ["not-a-url"], null, false, null, 8765, 8, 4));
+            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(
+                Enumerable.Range(0, 9).Select(index => $"https://{index}.example/"),
+                null, false, null, 8765, 8, 4));
         }
         finally
         {
