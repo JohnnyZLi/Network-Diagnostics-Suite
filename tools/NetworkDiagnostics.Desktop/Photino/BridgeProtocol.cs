@@ -47,6 +47,38 @@ public static class BridgeProtocol
         throw new ArgumentException($"Bridge field '{propertyName}' must contain a valid report ID.", propertyName);
     }
 
+    public static string? ParseOptionalString(JsonElement payload, string propertyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        return ReadString(payload, propertyName);
+    }
+
+    public static IReadOnlyList<string> ParseStringArray(JsonElement payload, string propertyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        if (payload.ValueKind != JsonValueKind.Object
+            || !payload.TryGetProperty(propertyName, out var value)
+            || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return [];
+        }
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            throw new ArgumentException($"Bridge field '{propertyName}' must be an array of strings.", propertyName);
+        }
+
+        var values = new List<string>();
+        foreach (var item in value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                throw new ArgumentException($"Bridge field '{propertyName}' must contain only strings.", propertyName);
+            }
+            values.Add(item.GetString() ?? string.Empty);
+        }
+        return values;
+    }
+
     public static string ProfileId(TestProfileId profile) => profile switch
     {
         TestProfileId.ConnectionCheck => "connection-check",
