@@ -21,12 +21,15 @@ public sealed class PhotinoDesktopBridge : IDisposable
     ];
 
     private readonly object runGate = new();
+    private readonly object lanServerGate = new();
     private readonly PhotinoSettingsStore settingsStore;
     private readonly ReportStore reportStore;
     private readonly ContinuousMonitorService monitorService;
     private PhotinoWindow? window;
     private CancellationTokenSource? activeRun;
     private Guid activeBridgeRunId;
+    private CancellationTokenSource? lanServerCancellation;
+    private Task? lanServerTask;
     private bool disposed;
 
     public PhotinoDesktopBridge(
@@ -65,6 +68,21 @@ public sealed class PhotinoDesktopBridge : IDisposable
             activeRun?.Dispose();
             activeRun = null;
         }
+        lock (lanServerGate)
+        {
+            lanServerCancellation?.Cancel();
+        }
+        try
+        {
+            lanServerTask?.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the application exits with a LAN server active.
+        }
+        lanServerCancellation?.Dispose();
+        lanServerCancellation = null;
+        lanServerTask = null;
         monitorService.DisposeAsync().AsTask().GetAwaiter().GetResult();
         window = null;
     }
@@ -104,11 +122,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
                         appearance = BridgeProtocol.AppearanceId(settings.Appearance),
                         monitor = MonitorPayload(settings),
+                        advanced = AdvancedSettingsPayload(settings),
                         capabilities = new[]
                         {
                             "diagnostic.run",
                             "diagnostic.cancel",
                             "diagnostic.describePlan",
+                            "diagnostic.preflight",
+                            "diagnostic.interfaces",
                             "reports.list",
                             "reports.get",
                             "reports.compare",
@@ -121,7 +142,12 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "monitor.markAlertsRead",
                             "monitor.clearAlerts",
                             "settings.get",
-                            "settings.setAppearance"
+                            "settings.setAppearance",
+                            "settings.getAdvanced",
+                            "settings.setAdvanced",
+                            "lan.server.start",
+                            "lan.server.stop",
+                            "lan.server.status"
                         }
                     });
                     break;
@@ -135,6 +161,34 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         sender,
                         request.Id,
                         settingsStore.SaveAppearance(BridgeProtocol.ParseAppearance(request.Payload)));
+                    break;
+
+                case "settings.getAdvanced":
+                    SendResponse(sender, request.Id, true, AdvancedSettingsPayload(settingsStore.Load()));
+                    break;
+
+                case "settings.setAdvanced":
+                    SetAdvancedSettings(sender, request);
+                    break;
+
+                case "diagnostic.interfaces":
+                    SendInterfaces(sender, request.Id);
+                    break;
+
+                case "diagnostic.preflight":
+                    await SendPreflightAsync(sender, request);
+                    break;
+
+                case "lan.server.start":
+                    StartLanServer(sender, request);
+                    break;
+
+                case "lan.server.stop":
+                    StopLanServer(sender, request.Id);
+                    break;
+
+                case "lan.server.status":
+                    SendLanServerStatus(sender, request.Id);
                     break;
 
                 case "monitor.get":
@@ -214,6 +268,128 @@ public sealed class PhotinoDesktopBridge : IDisposable
             monitoringEnabled = settings.MonitoringEnabled,
             monitoringWindow = settings.SelectedMonitoringWindow.ContractId()
         });
+    }
+
+    private static object AdvancedSettingsPayload(PhotinoAppSettings settings) => new
+    {
+        endpointCandidates = settings.TestOrigins,
+        interfaceId = settings.InterfaceId,
+        includeLocalIdentifiers = settings.IncludeLocalIdentifiers,
+        lanTarget = settings.LanTarget,
+        lanPort = settings.LanPort,
+        lanDurationSeconds = settings.LanDurationSeconds,
+        lanConnections = settings.LanConnections
+    };
+
+    private void SetAdvancedSettings(PhotinoWindow sender, BridgeRequest request)
+    {
+        var endpointCandidates = BridgeProtocol.ParseStringArray(request.Payload, "endpointCandidates");
+        var interfaceId = BridgeProtocol.ParseOptionalString(request.Payload, "interfaceId");
+        var includeLocalIdentifiers = BridgeProtocol.ParseRequiredBool(request.Payload, "includeLocalIdentifiers");
+        var lanTarget = BridgeProtocol.ParseOptionalString(request.Payload, "lanTarget");
+        var lanPort = BridgeProtocol.ParseRequiredInt(request.Payload, "lanPort", 1024, 65535);
+        var lanDurationSeconds = BridgeProtocol.ParseRequiredInt(request.Payload, "lanDurationSeconds", 3, 30);
+        var lanConnections = BridgeProtocol.ParseRequiredInt(request.Payload, "lanConnections", 1, 16);
+
+        var settings = settingsStore.SaveAdvanced(
+            endpointCandidates,
+            interfaceId,
+            includeLocalIdentifiers,
+            lanTarget,
+            lanPort,
+            lanDurationSeconds,
+            lanConnections);
+        SendResponse(sender, request.Id, true, AdvancedSettingsPayload(settings));
+    }
+
+    private static void SendInterfaces(PhotinoWindow sender, string? requestId)
+    {
+        var interfaces = NetworkDiagnosticsRunner.ListInterfaces(includeAddresses: true)
+            .Select(item => new
+            {
+                item.Id,
+                item.Name,
+                item.Type,
+                item.OperationalStatus,
+                addresses = item.Addresses
+            })
+            .ToArray();
+        SendResponse(sender, requestId, true, interfaces);
+    }
+
+    private async Task SendPreflightAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var profile = BridgeProtocol.ParseProfile(request.Payload);
+        var method = BridgeProtocol.ParseTransferMethod(request.Payload);
+        var options = BuildRunOptions(settingsStore.Load(), profile, method);
+        var result = await NetworkDiagnosticsRunner.PreflightAsync(options);
+        SendResponse(sender, request.Id, true, result);
+    }
+
+    private void StartLanServer(PhotinoWindow sender, BridgeRequest request)
+    {
+        var port = BridgeProtocol.ParseRequiredInt(request.Payload, "port", 1024, 65535);
+        lock (lanServerGate)
+        {
+            if (lanServerTask is { IsCompleted: false })
+            {
+                throw new InvalidOperationException("The LAN throughput server is already running.");
+            }
+
+            lanServerCancellation?.Dispose();
+            lanServerCancellation = new CancellationTokenSource();
+            var cancellation = lanServerCancellation;
+            lanServerTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await NetworkDiagnosticsRunner.RunLanServerAsync(port, cancellation.Token);
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                    // Normal stop path.
+                }
+                catch (Exception error)
+                {
+                    var target = window;
+                    if (target is not null && !disposed)
+                    {
+                        SendEvent(target, "lan.server.failed", new { message = SafeMessage(error) });
+                    }
+                }
+                finally
+                {
+                    var target = window;
+                    if (target is not null && !disposed)
+                    {
+                        SendEvent(target, "lan.server.stopped", new { port });
+                    }
+                }
+            });
+        }
+        SendResponse(sender, request.Id, true, new { running = true, port });
+        SendEvent(sender, "lan.server.started", new { port });
+    }
+
+    private void StopLanServer(PhotinoWindow sender, string? requestId)
+    {
+        bool wasRunning;
+        lock (lanServerGate)
+        {
+            wasRunning = lanServerTask is { IsCompleted: false };
+            lanServerCancellation?.Cancel();
+        }
+        SendResponse(sender, requestId, true, new { stopped = wasRunning });
+    }
+
+    private void SendLanServerStatus(PhotinoWindow sender, string? requestId)
+    {
+        bool running;
+        lock (lanServerGate)
+        {
+            running = lanServerTask is { IsCompleted: false };
+        }
+        SendResponse(sender, requestId, true, new { running });
     }
 
     private async Task SetMonitoringEnabledAsync(PhotinoWindow sender, BridgeRequest request)
@@ -490,6 +666,28 @@ public sealed class PhotinoDesktopBridge : IDisposable
         });
     }
 
+    private static NativeDiagnosticRunOptions BuildRunOptions(
+        PhotinoAppSettings settings,
+        TestProfileId profile,
+        TransferMethod method)
+    {
+        var origins = settings.TestOrigins.Count == 0
+            ? new[] { new Uri("https://network.johnnyli.dev/") }
+            : settings.TestOrigins.Select(value => new Uri(value)).ToArray();
+        return new NativeDiagnosticRunOptions(
+            Profile: profile,
+            TransferMethod: method,
+            IncludeAddresses: settings.IncludeLocalIdentifiers,
+            TestOrigins: origins,
+            InterfaceId: string.IsNullOrWhiteSpace(settings.InterfaceId) ? null : settings.InterfaceId,
+            LanTarget: string.IsNullOrWhiteSpace(settings.LanTarget) ? null : settings.LanTarget,
+            LanPort: settings.LanPort,
+            LanDurationSeconds: settings.LanDurationSeconds,
+            LanConnections: settings.LanConnections,
+            ProducerApplication: "desktop-photino",
+            ProducerVersion: ApplicationVersion);
+    }
+
     private async Task StartDiagnosticAsync(PhotinoWindow sender, BridgeRequest request)
     {
         CancellationTokenSource cancellation;
@@ -511,6 +709,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         var profile = BridgeProtocol.ParseProfile(request.Payload);
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
         var plan = NetworkDiagnosticsRunner.DescribePlan(profile, method);
+        var runOptions = BuildRunOptions(settingsStore.Load(), profile, method);
 
         SendResponse(sender, request.Id, true, new
         {
@@ -537,18 +736,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         try
         {
             var report = await NetworkDiagnosticsRunner.RunAsync(
-                new NativeDiagnosticRunOptions(
-                    Profile: profile,
-                    TransferMethod: method,
-                    IncludeAddresses: false,
-                    TestOrigins: new[] { new Uri("https://network.johnnyli.dev/") },
-                    InterfaceId: null,
-                    LanTarget: null,
-                    LanPort: 8765,
-                    LanDurationSeconds: 8,
-                    LanConnections: 4,
-                    ProducerApplication: "desktop-photino",
-                    ProducerVersion: ApplicationVersion),
+                runOptions,
                 progress,
                 cancellation.Token);
 
