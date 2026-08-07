@@ -3,6 +3,7 @@ using System.Text.Json;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 using Photino.NET;
 
@@ -94,6 +95,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "diagnostic.cancel",
                             "diagnostic.describePlan",
                             "reports.list",
+                            "reports.get",
+                            "reports.compare",
                             "settings.get",
                             "settings.setAppearance"
                         }
@@ -113,6 +116,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
 
                 case "reports.list":
                     await SendReportListAsync(sender, request.Id);
+                    break;
+
+                case "reports.get":
+                    await SendReportDetailAsync(sender, request);
+                    break;
+
+                case "reports.compare":
+                    await SendReportComparisonAsync(sender, request);
                     break;
 
                 case "diagnostic.describePlan":
@@ -150,6 +161,65 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         var reports = await reportStore.ListAsync();
         SendResponse(sender, requestId, true, reports.Select(ReportSummary).ToArray());
+    }
+
+    private async Task SendReportDetailAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var reportId = BridgeProtocol.ParseRequiredGuid(request.Payload, "id");
+        var reports = await reportStore.ListAsync();
+        var stored = FindReport(reports, reportId);
+        var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
+
+        SendResponse(sender, request.Id, true, new
+        {
+            report = ReportSummary(stored),
+            context = ReportComparisonService.ContextLabel(stored.Report),
+            method = BridgeProtocol.MethodId(stored.Report.Run.TransferMethod),
+            presentation = new
+            {
+                outcome = presentation.Outcome.ToString().ToLowerInvariant(),
+                presentation.Label,
+                presentation.Verdict,
+                presentation.Summary,
+                presentation.NextAction,
+                presentation.Metrics,
+                presentation.Findings,
+                presentation.TechnicalEvidence
+            }
+        });
+    }
+
+    private async Task SendReportComparisonAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var baselineId = BridgeProtocol.ParseRequiredGuid(request.Payload, "baselineId");
+        var candidateId = BridgeProtocol.ParseRequiredGuid(request.Payload, "candidateId");
+        if (baselineId == candidateId)
+        {
+            throw new ArgumentException("Choose two different saved reports to compare.");
+        }
+
+        var reports = await reportStore.ListAsync();
+        var baseline = FindReport(reports, baselineId);
+        var candidate = FindReport(reports, candidateId);
+        var comparison = ReportComparisonService.Compare(baseline.Report, candidate.Report);
+
+        SendResponse(sender, request.Id, true, new
+        {
+            baseline = ReportSummary(baseline),
+            candidate = ReportSummary(candidate),
+            baselineContext = ReportComparisonService.ContextLabel(baseline.Report),
+            candidateContext = ReportComparisonService.ContextLabel(candidate.Report),
+            comparison.Comparable,
+            comparison.Warnings,
+            comparison.Summary,
+            comparison.Metrics
+        });
+    }
+
+    private static StoredReport FindReport(IReadOnlyList<StoredReport> reports, Guid reportId)
+    {
+        var stored = reports.FirstOrDefault(item => item.Report.Run.Id == reportId);
+        return stored ?? throw new KeyNotFoundException($"Saved report '{reportId}' was not found.");
     }
 
     private static object ReportSummary(StoredReport stored)
