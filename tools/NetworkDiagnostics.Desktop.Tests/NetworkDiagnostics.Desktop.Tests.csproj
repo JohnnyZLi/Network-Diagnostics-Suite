@@ -18,6 +18,7 @@
   <ItemGroup>
     <Compile Include="PhotinoMigrationTests.cs" />
     <Compile Include="MonitorHistoryStoreTests.cs" />
+    <Compile Include="MonitorWindowTests.cs" />
     <Compile Include="NetworkExperiencePresenterTests.cs" />
   </ItemGroup>
   <ItemGroup>
