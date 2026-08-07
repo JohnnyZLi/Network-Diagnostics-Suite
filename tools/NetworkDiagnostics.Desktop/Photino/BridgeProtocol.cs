@@ -28,6 +28,17 @@ public static class BridgeProtocol
         };
     }
 
+    public static AppearancePreference ParseAppearance(JsonElement payload)
+        => ParseAppearance(ReadString(payload, "appearance"));
+
+    public static AppearancePreference ParseAppearance(string? value)
+        => value?.Trim().ToLowerInvariant() switch
+        {
+            "light" => AppearancePreference.Light,
+            "dark" => AppearancePreference.Dark,
+            _ => AppearancePreference.System
+        };
+
     public static string ProfileId(TestProfileId profile) => profile switch
     {
         TestProfileId.ConnectionCheck => "connection-check",
@@ -42,6 +53,13 @@ public static class BridgeProtocol
         TransferMethod.Single => "single",
         TransferMethod.Aggregate => "aggregate",
         _ => "compare"
+    };
+
+    public static string AppearanceId(AppearancePreference appearance) => appearance switch
+    {
+        AppearancePreference.Light => "light",
+        AppearancePreference.Dark => "dark",
+        _ => "system"
     };
 
     private static string? ReadString(JsonElement payload, string propertyName)
