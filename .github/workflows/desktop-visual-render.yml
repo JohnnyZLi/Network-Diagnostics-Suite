@@ -121,6 +121,17 @@ jobs:
             exit 1
           fi
 
+          reports_dir="$HOME/.local/share/NetworkDiagnostics/reports"
+          test -d "$reports_dir"
+          test -f "$reports_dir/annotations.json"
+          report_count=$(find "$reports_dir" -maxdepth 1 -type f -name 'report-*.json' | wc -l)
+          if (( report_count < 1 )); then
+            echo "Connection Check completed without persisting a report."
+            find "$HOME/.local/share/NetworkDiagnostics" -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+          find "$reports_dir" -maxdepth 1 -type f -print | sort > desktop-visual/report-files.txt
+
       - name: Upload rendered states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
@@ -128,6 +139,7 @@ jobs:
           name: desktop-photino-visual-render
           path: |
             desktop-visual/screenshots
+            desktop-visual/report-files.txt
             /tmp/desktop-app.log
             /tmp/desktop-openbox.log
             /tmp/desktop-xvfb.log
