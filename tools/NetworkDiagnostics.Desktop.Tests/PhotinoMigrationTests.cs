@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NetworkDeepProbe.Planning;
+using Xunit;
 
 namespace NetworkDiagnostics.Desktop.Tests;
 
