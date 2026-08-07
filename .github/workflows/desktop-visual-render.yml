@@ -204,10 +204,11 @@ jobs:
           capture diagnostics-result-dark
 
           # A completed Content preset feeds capacity history back into the native
-          # monitor. Capture the top workbench again so the measured Capacity card is
-          # a permanent visual regression state, not just the empty placeholder.
-          xdotool mousemove --sync 80 500 click 1
-          xdotool key --clearmodifiers ctrl+home
+          # monitor. Use the semantic workbench jump rather than browser scroll state
+          # so the measured Capacity screenshot always depicts Live Network Health.
+          open_palette
+          xdotool type --delay 35 'health'
+          xdotool key --clearmodifiers Return
           sleep 1.5
           capture live-health-capacity-measured-dark
 
