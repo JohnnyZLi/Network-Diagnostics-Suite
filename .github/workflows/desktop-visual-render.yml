@@ -131,8 +131,9 @@ jobs:
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
 
-          # The Run button retains focus after completion; Tab wraps to History.
-          xdotool key --clearmodifiers Tab Return
+          # Async completion can move DOM focus. Click the known History control
+          # in the maximized 1600x1000 audit viewport instead of assuming focus.
+          xdotool mousemove --sync 1435 51 click 1
           capture saved-runs-panel
           xdotool key --clearmodifiers Escape
 
