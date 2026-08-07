@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { AdvancedPanel } from './AdvancedPanel';
+import { AdvancedDiagnostics } from './AdvancedDiagnostics';
 import { desktopBridge } from './bridge';
 import { CommandPalette, type PaletteCommand } from './CommandPalette';
+import { ContinuousDiagnostics, type MonitorSnapshot } from './ContinuousDiagnostics';
 import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
-import { MonitorPanel, type MonitorSnapshot } from './MonitorPanel';
 import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
@@ -19,9 +19,7 @@ type HostInfo = {
   monitor?: MonitorSnapshot | null;
 };
 
-type AppearanceSettings = {
-  appearance: AppearanceMode;
-};
+type AppearanceSettings = { appearance: AppearanceMode };
 
 type DiagnosticPlan = {
   profile: DiagnosticProfile;
@@ -65,31 +63,11 @@ type DiagnosticResult = {
   storedReport?: SavedReportSummary | null;
 };
 
-type DiagnosticFailure = {
-  runId: string;
-  message: string;
-  errorType: string;
-};
+type DiagnosticFailure = { runId: string; message: string; errorType: string };
+type LiveMetrics = { latencyMs: number | null; downloadMbps: number | null; uploadMbps: number | null };
+type ProfileOption = { id: DiagnosticProfile; label: string; title: string; description: string; idleCopy: string };
 
-type LiveMetrics = {
-  latencyMs: number | null;
-  downloadMbps: number | null;
-  uploadMbps: number | null;
-};
-
-type ProfileOption = {
-  id: DiagnosticProfile;
-  label: string;
-  title: string;
-  description: string;
-  idleCopy: string;
-};
-
-const emptyLiveMetrics: LiveMetrics = {
-  latencyMs: null,
-  downloadMbps: null,
-  uploadMbps: null,
-};
+const emptyLiveMetrics: LiveMetrics = { latencyMs: null, downloadMbps: null, uploadMbps: null };
 
 const profiles: ProfileOption[] = [
   {
@@ -97,7 +75,7 @@ const profiles: ProfileOption[] = [
     label: 'Connection',
     title: 'Connection Check',
     description: 'A fast baseline for responsiveness, loss, and real download and upload performance.',
-    idleCopy: 'Connection Check has the lowest transfer ceiling and keeps local interface identifiers off by default. Advanced can opt them in.',
+    idleCopy: 'Connection Check has the lowest transfer ceiling and keeps local interface identifiers off by default. Advanced diagnostics below can opt them in.',
   },
   {
     id: 'quick',
@@ -145,11 +123,9 @@ function App() {
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [monitorOpen, setMonitorOpen] = useState(false);
   const [monitorSnapshot, setMonitorSnapshot] = useState<MonitorSnapshot | null>(null);
-  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorLoading, setMonitorLoading] = useState(desktopBridge.available);
   const [monitorError, setMonitorError] = useState<string | null>(null);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
@@ -159,49 +135,54 @@ function App() {
   const appearanceRequest = useRef(0);
 
   const selectedProfile = profiles.find((item) => item.id === profile) ?? profiles[0];
-  const displayedProfile = result
-    ? profiles.find((item) => item.id === result.profile) ?? selectedProfile
-    : selectedProfile;
+  const displayedProfile = result ? profiles.find((item) => item.id === result.profile) ?? selectedProfile : selectedProfile;
 
   useEffect(() => {
     document.documentElement.dataset.theme = appearance;
   }, [appearance]);
 
   useEffect(() => {
-    if (!desktopBridge.available) return;
+    if (!desktopBridge.available) {
+      setMonitorLoading(false);
+      return;
+    }
     void desktopBridge.request<HostInfo>('app.ready')
       .then((info) => {
         setHost(info);
         setAppearance(info.appearance || 'system');
-        if (info.monitor) setMonitorSnapshot(info.monitor);
+        if (info.monitor) {
+          setMonitorSnapshot(info.monitor);
+          setMonitorLoading(false);
+        } else {
+          void loadMonitor();
+        }
       })
-      .catch((value: Error) => setError(value.message));
+      .catch((value: Error) => {
+        setError(value.message);
+        setMonitorLoading(false);
+      });
   }, []);
 
   useEffect(() => {
     if (!desktopBridge.available) return;
     setPlan(null);
-    void desktopBridge.request<DiagnosticPlan>('diagnostic.describePlan', {
-      profile,
-      method,
-    }).then(setPlan).catch((value: Error) => setError(value.message));
+    void desktopBridge.request<DiagnosticPlan>('diagnostic.describePlan', { profile, method })
+      .then(setPlan)
+      .catch((value: Error) => setError(value.message));
   }, [profile, method]);
 
   useEffect(() => {
     const removeProgress = desktopBridge.on<DiagnosticProgress>('diagnostic.progress', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
-
       setProgress(next);
       const inferred = overallProgress(next, activeMethod.current);
       highestProgress.current = Math.max(highestProgress.current, inferred);
       setProgressRatio(highestProgress.current);
-
       setLiveMetrics((current) => ({
         latencyMs: next.phase === 'idle' && next.liveLatencyMs != null ? next.liveLatencyMs : current.latencyMs,
         downloadMbps: next.phase === 'download' && next.liveMbps != null ? next.liveMbps : current.downloadMbps,
         uploadMbps: next.phase === 'upload' && next.liveMbps != null ? next.liveMbps : current.uploadMbps,
       }));
-
       if ((next.phase === 'download' || next.phase === 'upload') && next.bytesTransferred > 0) {
         const stageKey = `${next.phase}:${next.message}`;
         const prior = stageBytes.current.get(stageKey) ?? 0;
@@ -221,16 +202,10 @@ function App() {
       setMeasuredBytes((current) => next.dataUsedBytes ?? current);
       setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
       setRunning(false);
-
       if (next.storedReport) {
-        setReports((current) => [
-          next.storedReport!,
-          ...current.filter((item) => item.id !== next.storedReport!.id),
-        ]);
+        setReports((current) => [next.storedReport!, ...current.filter((item) => item.id !== next.storedReport!.id)]);
       }
-      if (next.storageError) {
-        setError(`Measurement completed, but the report could not be saved: ${next.storageError}`);
-      }
+      if (next.storageError) setError(`Measurement completed, but the report could not be saved: ${next.storageError}`);
     });
 
     const removeCancelled = desktopBridge.on<{ runId: string }>('diagnostic.cancelled', (next) => {
@@ -251,10 +226,7 @@ function App() {
       setMonitorSnapshot(next);
       setMonitorLoading(false);
     });
-
-    const removeMonitorError = desktopBridge.on<{ message: string }>('monitor.error', (next) => {
-      setMonitorError(next.message);
-    });
+    const removeMonitorError = desktopBridge.on<{ message: string }>('monitor.error', (next) => setMonitorError(next.message));
 
     return () => {
       removeProgress();
@@ -281,7 +253,6 @@ function App() {
         openHistory();
       }
     };
-
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
@@ -291,19 +262,19 @@ function App() {
     ? `${formatNumber(progress.liveMbps)} Mbps`
     : progress?.phase === 'idle' && progress.liveLatencyMs != null
       ? `${formatNumber(progress.liveLatencyMs)} ms`
-      : running
-        ? 'Measuring'
-        : result
-          ? 'Complete'
-          : 'Ready';
+      : 'Measuring';
+  const monitorScore = monitorSnapshot?.score;
+  const orbPrimary = running ? livePrimary : monitorScore != null ? String(monitorScore) : result ? 'Complete' : 'Ready';
+  const orbSecondary = running ? `${progressPercent}%` : monitorScore != null ? 'Network score' : result ? displayedProfile.title : 'Native test';
+  const orbProgress = running ? progressPercent : monitorScore ?? 0;
+  const orbBand = !running && monitorSnapshot ? `monitor-${monitorSnapshot.band}` : '';
 
   async function loadReports() {
     if (!desktopBridge.available) return;
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const savedReports = await desktopBridge.request<SavedReportSummary[]>('reports.list');
-      setReports(savedReports);
+      setReports(await desktopBridge.request<SavedReportSummary[]>('reports.list'));
     } catch (value) {
       setHistoryError(value instanceof Error ? value.message : 'Saved runs could not be read.');
     } finally {
@@ -312,8 +283,6 @@ function App() {
   }
 
   function openHistory() {
-    setMonitorOpen(false);
-    setAdvancedOpen(false);
     setHistoryOpen(true);
     void loadReports();
   }
@@ -325,23 +294,10 @@ function App() {
     try {
       setMonitorSnapshot(await desktopBridge.request<MonitorSnapshot>('monitor.get'));
     } catch (value) {
-      setMonitorError(value instanceof Error ? value.message : 'Network monitor history could not be read.');
+      setMonitorError(value instanceof Error ? value.message : 'Continuous diagnostics history could not be read.');
     } finally {
       setMonitorLoading(false);
     }
-  }
-
-  function openMonitor() {
-    setHistoryOpen(false);
-    setAdvancedOpen(false);
-    setMonitorOpen(true);
-    void loadMonitor();
-  }
-
-  function openAdvanced() {
-    setHistoryOpen(false);
-    setMonitorOpen(false);
-    setAdvancedOpen(true);
   }
 
   async function changeAppearance(next: AppearanceMode) {
@@ -349,7 +305,6 @@ function App() {
     const previous = appearance;
     setAppearance(next);
     setError(null);
-
     try {
       const saved = await desktopBridge.request<AppearanceSettings>('settings.setAppearance', { appearance: next });
       if (request === appearanceRequest.current) setAppearance(saved.appearance);
@@ -383,20 +338,10 @@ function App() {
     setLiveMetrics(emptyLiveMetrics);
     setMeasuredBytes(0);
     setProgressRatio(0);
-    setProgress({
-      runId: '',
-      phase: 'starting',
-      message: 'Preparing the measurement path…',
-      fraction: 0,
-      bytesTransferred: 0,
-    });
+    setProgress({ runId: '', phase: 'starting', message: 'Preparing the measurement path…', fraction: 0, bytesTransferred: 0 });
     setRunning(true);
-
     try {
-      const accepted = await desktopBridge.request<RunAccepted>('diagnostic.run', {
-        profile: nextProfile,
-        method: nextMethod,
-      });
+      const accepted = await desktopBridge.request<RunAccepted>('diagnostic.run', { profile: nextProfile, method: nextMethod });
       activeRunId.current = accepted.runId;
     } catch (value) {
       setRunning(false);
@@ -405,13 +350,17 @@ function App() {
     }
   }
 
+  function scrollToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function runContentSpeed() {
-    setMonitorOpen(false);
+    scrollToSection('network-diagnostics');
     void runDiagnostic('connection-check', 'aggregate');
   }
 
   function runPeakSpeed() {
-    setMonitorOpen(false);
+    scrollToSection('network-diagnostics');
     void runDiagnostic('stress', 'aggregate');
   }
 
@@ -426,12 +375,12 @@ function App() {
   const paletteCommands: PaletteCommand[] = [
     {
       id: 'workspace-monitor',
-      title: 'Open Network Monitor',
-      detail: 'Continuous score, timeline, speed checks, alerts, and exports.',
-      keywords: 'monitor health timeline content peak alerts',
+      title: 'Go to Continuous Diagnostics',
+      detail: 'Live score, timeline, speed checks, alerts, and exports on the main workbench.',
+      keywords: 'monitor health timeline content peak alerts continuous',
       priority: 1,
-      enabled: desktopBridge.available,
-      run: openMonitor,
+      enabled: true,
+      run: () => scrollToSection('continuous-diagnostics'),
     },
     {
       id: 'workspace-history',
@@ -445,12 +394,12 @@ function App() {
     },
     {
       id: 'workspace-advanced',
-      title: 'Open Advanced Diagnostics',
-      detail: 'Endpoints, interface binding, privacy, preflight, and LAN.',
+      title: 'Go to Advanced Diagnostics',
+      detail: 'Endpoints, interface binding, privacy, preflight, and LAN tools on the main workbench.',
       keywords: 'advanced endpoint interface lan privacy preflight',
       priority: 3,
-      enabled: desktopBridge.available,
-      run: openAdvanced,
+      enabled: true,
+      run: () => scrollToSection('advanced-diagnostics'),
     },
     {
       id: 'run-selected',
@@ -459,7 +408,7 @@ function App() {
       keywords: 'run start diagnostic current selected test',
       priority: 4,
       enabled: desktopBridge.available && !running,
-      run: () => { void runDiagnostic(); },
+      run: () => { scrollToSection('network-diagnostics'); void runDiagnostic(); },
     },
     {
       id: 'run-content',
@@ -472,12 +421,12 @@ function App() {
     },
     {
       id: 'open-peak',
-      title: 'Open Peak Speed Check',
-      detail: 'Review the Stress + Aggregate data warning in Network Monitor first.',
+      title: 'Review Peak Speed Check',
+      detail: 'Jump to the explicit Stress + Aggregate data warning before running Peak.',
       keywords: 'peak speed stress aggregate bandwidth capacity',
       priority: 6,
       enabled: desktopBridge.available && !running,
-      run: openMonitor,
+      run: () => scrollToSection('continuous-diagnostics'),
     },
     ...(running ? [{
       id: 'cancel-run',
@@ -495,7 +444,7 @@ function App() {
       keywords: `profile ${item.id} ${item.label}`,
       priority: 20 + index,
       enabled: !running,
-      run: () => selectProfile(item.id),
+      run: () => { selectProfile(item.id); scrollToSection('network-diagnostics'); },
     } satisfies PaletteCommand)),
     ...methods.map((item, index) => ({
       id: `method-${item.id}`,
@@ -513,10 +462,7 @@ function App() {
       <header className="product-bar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
-          <div>
-            <strong>Network Diagnostics</strong>
-            <span>Desktop</span>
-          </div>
+          <div><strong>Network Diagnostics</strong><span>Desktop</span></div>
         </div>
         <div className="product-actions">
           <div className={`host-state ${host ? 'connected' : ''}`}>
@@ -525,74 +471,35 @@ function App() {
           </div>
           <button
             type="button"
-            className={`monitor-trigger ${monitorOpen ? 'active' : ''}`}
-            aria-label="Network monitor"
-            aria-expanded={monitorOpen}
-            onClick={openMonitor}
-            disabled={!desktopBridge.available}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h3l2-6 4 11 2-5h5" /></svg>
-            <span>Monitor</span>
-            {monitorSnapshot?.score != null && <b className="monitor-trigger-score">{monitorSnapshot.score}</b>}
-            {(monitorSnapshot?.unreadAlertCount ?? 0) > 0 && <i className="monitor-trigger-alert" aria-label={`${monitorSnapshot!.unreadAlertCount} unread monitor alerts`} />}
-          </button>
-          <button
-            type="button"
             className={`history-trigger ${historyOpen ? 'active' : ''}`}
             aria-label="Saved runs"
             aria-expanded={historyOpen}
             onClick={openHistory}
             disabled={!desktopBridge.available}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 7v5l3 2" />
-              <circle cx="12" cy="12" r="8" />
-            </svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg>
             <span>History</span>
           </button>
-          <SettingsMenu
-            appearance={appearance}
-            onAppearanceChange={(next) => void changeAppearance(next)}
-            onOpenAdvanced={openAdvanced}
-            disabled={!desktopBridge.available}
-          />
+          <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} disabled={!desktopBridge.available} />
         </div>
       </header>
 
       <main>
-        <section className="intro-row">
+        <section id="network-diagnostics" className="intro-row workbench-intro">
           <div>
-            <span className="eyebrow">Diagnostics</span>
-            <h1>{selectedProfile.title}</h1>
-            <p>{selectedProfile.description}</p>
+            <span className="eyebrow">Network workbench</span>
+            <h1>Network Diagnostics</h1>
+            <p><strong>{selectedProfile.title}</strong> · {selectedProfile.description}</p>
           </div>
-          <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
+          <div className="diagnostic-controls">
             <div className="method-control" aria-label="Diagnostic profile">
               {profiles.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={profile === item.id ? 'active' : ''}
-                  onClick={() => selectProfile(item.id)}
-                  disabled={running}
-                  title={item.description}
-                >
-                  {item.label}
-                </button>
+                <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)} disabled={running} title={item.description}>{item.label}</button>
               ))}
             </div>
             <div className="method-control" aria-label="Transfer method">
               {methods.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={method === item.id ? 'active' : ''}
-                  onClick={() => setMethod(item.id)}
-                  disabled={running}
-                  title={item.detail}
-                >
-                  {item.label}
-                </button>
+                <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running} title={item.detail}>{item.label}</button>
               ))}
             </div>
           </div>
@@ -601,42 +508,35 @@ function App() {
         <section className="diagnostic-surface">
           <div className="run-panel">
             <div
-              className={`progress-orb ${running ? 'running' : ''}`}
-              style={{ '--progress': `${progressPercent * 3.6}deg` } as React.CSSProperties}
-              aria-label={`${progressPercent}% complete`}
+              className={`progress-orb ${running ? 'running' : monitorSnapshot ? `monitoring ${orbBand}` : ''}`}
+              style={{ '--progress': `${orbProgress * 3.6}deg` } as React.CSSProperties}
+              aria-label={running ? `${progressPercent}% complete` : monitorScore != null ? `Network score ${monitorScore}` : 'Diagnostic ready'}
             >
-              <div className="progress-orb-inner">
-                <span>{livePrimary}</span>
-                <small>{running ? `${progressPercent}%` : result ? displayedProfile.title : 'Native test'}</small>
-              </div>
+              <div className="progress-orb-inner"><span>{orbPrimary}</span><small>{orbSecondary}</small></div>
             </div>
 
             <div className="run-copy">
               <div className="run-status-line">
-                <span className={running ? 'pulse' : ''} aria-hidden="true" />
-                {running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Measurement complete' : 'Ready to measure'}
+                <span className={running ? 'pulse' : monitorSnapshot?.running ? 'monitor-live' : ''} aria-hidden="true" />
+                {running
+                  ? phaseLabel(progress?.phase, progress?.message)
+                  : monitorSnapshot
+                    ? `${monitorSnapshot.running ? 'Monitoring active' : 'Monitoring paused'} · ${monitorSnapshot.interfaceName} · ${monitorSnapshot.lastUpdated}`
+                    : result ? 'Measurement complete' : 'Ready to measure'}
               </div>
               <h2>{running ? progress?.message || 'Preparing the test…' : result ? `${displayedProfile.title} is ready.` : 'Measure the connection you are on now.'}</h2>
               <p>
                 {running
                   ? 'Headline measurements stay visible as the test moves between phases. The final report is assembled locally.'
                   : result
-                    ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. The headline results are ready below.`
+                    ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Continuous diagnostics keep watching the connection below.`
                     : selectedProfile.idleCopy}
               </p>
-
               <div className="actions">
                 {running ? (
-                  <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>
-                    Cancel test
-                  </button>
+                  <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>Cancel test</button>
                 ) : (
-                  <button
-                    type="button"
-                    className="primary-action"
-                    onClick={() => void runDiagnostic()}
-                    disabled={!desktopBridge.available}
-                  >
+                  <button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>
                     {result ? `Run ${selectedProfile.label.toLowerCase()} again` : `Run ${selectedProfile.label.toLowerCase()} test`}
                   </button>
                 )}
@@ -645,32 +545,28 @@ function App() {
           </div>
 
           <div className="metric-strip" aria-label="Connection metrics">
-            <Metric
-              label="Latency"
-              value={metric(result?.latencyMs ?? liveMetrics.latencyMs, 'ms')}
-              detail={running && liveMetrics.latencyMs != null ? 'Measured baseline' : 'Median latency'}
-            />
-            <Metric
-              label="Download"
-              value={metric(result?.downloadMbps ?? liveMetrics.downloadMbps, 'Mbps')}
-              detail={running && liveMetrics.downloadMbps != null ? 'Latest live sample' : 'Steady throughput'}
-            />
-            <Metric
-              label="Upload"
-              value={metric(result?.uploadMbps ?? liveMetrics.uploadMbps, 'Mbps')}
-              detail={running && liveMetrics.uploadMbps != null ? 'Latest live sample' : 'Steady throughput'}
-            />
+            <Metric label="Latency" value={metric(result?.latencyMs ?? liveMetrics.latencyMs, 'ms')} detail={running && liveMetrics.latencyMs != null ? 'Measured baseline' : 'Median latency'} />
+            <Metric label="Download" value={metric(result?.downloadMbps ?? liveMetrics.downloadMbps, 'Mbps')} detail={running && liveMetrics.downloadMbps != null ? 'Latest live sample' : 'Steady throughput'} />
+            <Metric label="Upload" value={metric(result?.uploadMbps ?? liveMetrics.uploadMbps, 'Mbps')} detail={running && liveMetrics.uploadMbps != null ? 'Latest live sample' : 'Steady throughput'} />
             <Metric label="Request loss" value={metric(result?.requestLossPercent, '%')} detail="First-party requests" />
           </div>
         </section>
 
-        <section className="detail-row">
+        <ContinuousDiagnostics
+          snapshot={monitorSnapshot}
+          loading={monitorLoading}
+          error={monitorError}
+          diagnosticRunning={running}
+          onUpdate={setMonitorSnapshot}
+          onError={setMonitorError}
+          onRunContentSpeed={runContentSpeed}
+          onRunPeakSpeed={runPeakSpeed}
+        />
+
+        <section className="detail-row workbench-evidence-row">
           <div className="plan-card">
             <span className="section-kicker">Current test plan</span>
-            <div className="plan-main">
-              <strong>{plan?.profileName || selectedProfile.title}</strong>
-              <span>{methodLabel(method)}</span>
-            </div>
+            <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(method)}</span></div>
             <div className="plan-facts">
               <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
               <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
@@ -680,24 +576,14 @@ function App() {
 
           <div className="evidence-card">
             <span className="section-kicker">Run evidence</span>
-            <div className="evidence-line">
-              <span>Profile</span>
-              <strong>{result ? displayedProfile.title : selectedProfile.title}</strong>
-            </div>
-            <div className="evidence-line">
-              <span>Phase</span>
-              <strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Complete' : 'Idle'}</strong>
-            </div>
-            <div className="evidence-line">
-              <span>Measured payload</span>
-              <strong>{formatBytes(result?.dataUsedBytes ?? measuredBytes)}</strong>
-            </div>
-            <div className="evidence-line">
-              <span>Method</span>
-              <strong>{methodLabel(method)}</strong>
-            </div>
+            <div className="evidence-line"><span>Profile</span><strong>{result ? displayedProfile.title : selectedProfile.title}</strong></div>
+            <div className="evidence-line"><span>Phase</span><strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Complete' : 'Idle'}</strong></div>
+            <div className="evidence-line"><span>Measured payload</span><strong>{formatBytes(result?.dataUsedBytes ?? measuredBytes)}</strong></div>
+            <div className="evidence-line"><span>Method</span><strong>{methodLabel(method)}</strong></div>
           </div>
         </section>
+
+        <AdvancedDiagnostics profile={profile} method={method} />
 
         {error && <div className="error-banner" role="alert">{error}</div>}
       </main>
@@ -711,61 +597,21 @@ function App() {
         onRefresh={() => void loadReports()}
       />
 
-      <MonitorPanel
-        open={monitorOpen}
-        snapshot={monitorSnapshot}
-        loading={monitorLoading}
-        error={monitorError}
-        diagnosticRunning={running}
-        onClose={() => setMonitorOpen(false)}
-        onUpdate={setMonitorSnapshot}
-        onError={setMonitorError}
-        onRunContentSpeed={runContentSpeed}
-        onRunPeakSpeed={runPeakSpeed}
-      />
-
-      <AdvancedPanel
-        open={advancedOpen}
-        profile={profile}
-        method={method}
-        onClose={() => setAdvancedOpen(false)}
-      />
-
-      <CommandPalette
-        open={paletteOpen}
-        commands={paletteCommands}
-        onClose={() => setPaletteOpen(false)}
-      />
+      <CommandPalette open={paletteOpen} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
 
-function Metric({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </div>
-  );
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>;
 }
 
 function overallProgress(progress: DiagnosticProgress, method: TransferMethod): number {
   const fraction = Math.min(1, Math.max(0, progress.fraction || 0));
   const message = progress.message.toLowerCase();
-
   if (progress.phase === 'complete') return 1;
   if (progress.phase === 'starting') return 0.01;
   if (progress.phase === 'idle') return 0.08 + fraction * 0.17;
-
   if (progress.phase === 'download') {
     if (method === 'compare') {
       if (message.includes('single')) return 0.25 + fraction * 0.15;
@@ -773,13 +619,7 @@ function overallProgress(progress: DiagnosticProgress, method: TransferMethod): 
     }
     return 0.28 + fraction * 0.34;
   }
-
-  if (progress.phase === 'upload') {
-    return method === 'compare'
-      ? 0.60 + fraction * 0.25
-      : 0.62 + fraction * 0.26;
-  }
-
+  if (progress.phase === 'upload') return method === 'compare' ? 0.60 + fraction * 0.25 : 0.62 + fraction * 0.26;
   if (progress.phase === 'diagnostics') {
     if (message.includes('selecting the measurement endpoint')) return 0.03;
     if (message.includes('latency')) return 0.08;
@@ -789,36 +629,22 @@ function overallProgress(progress: DiagnosticProgress, method: TransferMethod): 
     if (message.includes('finalizing')) return 0.88;
     return 0.90;
   }
-
   return 0.02;
 }
 
-function metric(value: number | null | undefined, unit: string): string {
-  return value == null ? '—' : `${formatNumber(value)} ${unit}`;
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: value >= 100 ? 0 : 1,
-  }).format(value);
-}
-
+function metric(value: number | null | undefined, unit: string): string { return value == null ? '—' : `${formatNumber(value)} ${unit}`; }
+function formatNumber(value: number): string { return new Intl.NumberFormat(undefined, { maximumFractionDigits: value >= 100 ? 0 : 1 }).format(value); }
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return value === 0 ? '0 MB' : '—';
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`;
   return `${(value / 1_000_000).toFixed(value >= 100_000_000 ? 0 : 1)} MB`;
 }
-
 function methodLabel(method: TransferMethod): string {
   if (method === 'single') return 'Single flow';
   if (method === 'aggregate') return 'Aggregate flows';
   return 'Single + aggregate';
 }
-
-function profileTitle(profile: DiagnosticProfile): string {
-  return profiles.find((item) => item.id === profile)?.title ?? 'Diagnostic';
-}
-
+function profileTitle(profile: DiagnosticProfile): string { return profiles.find((item) => item.id === profile)?.title ?? 'Diagnostic'; }
 function phaseLabel(phase?: string, message?: string): string {
   switch (phase) {
     case 'idle': return 'Baseline latency';
