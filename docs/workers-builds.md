@@ -14,4 +14,6 @@ The browser build runs `scripts/verify-workers-build-context.mjs` before compila
 
 The shared Web Design System is vendored at an immutable commit through `design-system.lock.json`. Long-lived desktop branches must be brought forward from `main` before they are used for browser previews so they cannot display an obsolete shared header or Sites menu.
 
+The production Worker was deliberately rebuilt from the protected `main` branch after the Web Design System 1.9.0 rollout and branch guard were merged on 2026-08-06.
+
 RolePacket has a separate deployment contract and is not governed by this document.
