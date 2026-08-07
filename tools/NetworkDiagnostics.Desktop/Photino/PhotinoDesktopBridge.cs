@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
@@ -18,6 +19,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
     private static readonly (string Name, string[] Extensions)[] ReportFileFilters =
     [
         ("Network Diagnostics reports", [".json"])
+    ];
+    private static readonly (string Name, string[] Extensions)[] MonitorSnapshotFileFilters =
+    [
+        ("Network health snapshot", [".html"])
+    ];
+    private static readonly (string Name, string[] Extensions)[] MonitorHistoryFileFilters =
+    [
+        ("Network monitoring history", [".csv"])
     ];
 
     private readonly object runGate = new();
@@ -141,6 +150,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "monitor.setWindow",
                             "monitor.markAlertsRead",
                             "monitor.clearAlerts",
+                            "monitor.exportSnapshot",
+                            "monitor.exportHistory",
                             "settings.get",
                             "settings.setAppearance",
                             "settings.getAdvanced",
@@ -211,6 +222,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 case "monitor.clearAlerts":
                     await monitorService.ClearAlertsAsync();
                     SendResponse(sender, request.Id, true, MonitorPayload(settingsStore.Load()));
+                    break;
+
+                case "monitor.exportSnapshot":
+                    await ExportMonitoringSnapshotAsync(sender, request);
+                    break;
+
+                case "monitor.exportHistory":
+                    await ExportMonitoringHistoryAsync(sender, request);
                     break;
 
                 case "reports.list":
@@ -402,6 +421,77 @@ public sealed class PhotinoDesktopBridge : IDisposable
         }
         var settings = settingsStore.SaveMonitoringWindow(MonitorWindowExtensions.Parse(contractId));
         SendResponse(sender, request.Id, true, MonitorPayload(settings));
+    }
+
+    private async Task ExportMonitoringSnapshotAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var settings = settingsStore.Load();
+        var presentation = NetworkExperiencePresenter.Build(
+            monitorService.Snapshot,
+            settings.ToMonitorOptions(),
+            settings.SelectedMonitoringWindow);
+        var fileName = $"network-health-{DateTime.Now:yyyyMMdd-HHmm}.html";
+        var destinationPath = sender.ShowSaveFile(
+            title: "Share network health snapshot",
+            defaultPath: SuggestedUserPath(fileName),
+            filters: MonitorSnapshotFileFilters);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            SendResponse(sender, request.Id, true, new { cancelled = true });
+            return;
+        }
+        if (!string.Equals(Path.GetExtension(destinationPath), ".html", StringComparison.OrdinalIgnoreCase))
+        {
+            destinationPath = Path.ChangeExtension(destinationPath, ".html");
+        }
+
+        await File.WriteAllTextAsync(
+            destinationPath,
+            MonitoringExportService.BuildShareHtml(presentation),
+            new UTF8Encoding(false),
+            CancellationToken.None);
+        SendResponse(sender, request.Id, true, new
+        {
+            cancelled = false,
+            fileName = Path.GetFileName(destinationPath)
+        });
+    }
+
+    private async Task ExportMonitoringHistoryAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var settings = settingsStore.Load();
+        var windowId = settings.SelectedMonitoringWindow.ContractId();
+        var fileName = $"network-history-{windowId}-{DateTime.Now:yyyyMMdd-HHmm}.csv";
+        var destinationPath = sender.ShowSaveFile(
+            title: "Export monitoring history",
+            defaultPath: SuggestedUserPath(fileName),
+            filters: MonitorHistoryFileFilters);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            SendResponse(sender, request.Id, true, new { cancelled = true });
+            return;
+        }
+        if (!string.Equals(Path.GetExtension(destinationPath), ".csv", StringComparison.OrdinalIgnoreCase))
+        {
+            destinationPath = Path.ChangeExtension(destinationPath, ".csv");
+        }
+
+        var csv = MonitoringExportService.BuildHistoryCsv(
+            monitorService.Snapshot,
+            settings.SelectedMonitoringWindow,
+            settings.IncludeLocalIdentifiers);
+        await File.WriteAllTextAsync(
+            destinationPath,
+            csv,
+            new UTF8Encoding(false),
+            CancellationToken.None);
+        SendResponse(sender, request.Id, true, new
+        {
+            cancelled = false,
+            fileName = Path.GetFileName(destinationPath),
+            includesLocalIdentifiers = settings.IncludeLocalIdentifiers,
+            window = windowId
+        });
     }
 
     private void MonitorSnapshotChanged(object? sender, MonitorSnapshotChangedEventArgs eventArgs)
@@ -640,6 +730,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         var profile = BridgeProtocol.ProfileId(report.Run.Profile);
         return $"network-diagnostics-{report.GeneratedAt:yyyyMMdd-HHmmss}-{profile}.json";
+    }
+
+    private static string SuggestedUserPath(string fileName)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(home)) return fileName;
+        var downloads = Path.Combine(home, "Downloads");
+        return Path.Combine(Directory.Exists(downloads) ? downloads : home, fileName);
     }
 
     private static void DescribePlan(PhotinoWindow sender, BridgeRequest request)
