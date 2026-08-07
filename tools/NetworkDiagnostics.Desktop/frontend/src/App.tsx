@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AdvancedPanel } from './AdvancedPanel';
 import { desktopBridge } from './bridge';
 import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
 import { MonitorPanel, type MonitorSnapshot } from './MonitorPanel';
@@ -147,6 +148,7 @@ function App() {
   const [monitorSnapshot, setMonitorSnapshot] = useState<MonitorSnapshot | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorError, setMonitorError] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -289,6 +291,7 @@ function App() {
 
   function openHistory() {
     setMonitorOpen(false);
+    setAdvancedOpen(false);
     setHistoryOpen(true);
     void loadReports();
   }
@@ -308,8 +311,15 @@ function App() {
 
   function openMonitor() {
     setHistoryOpen(false);
+    setAdvancedOpen(false);
     setMonitorOpen(true);
     void loadMonitor();
+  }
+
+  function openAdvanced() {
+    setHistoryOpen(false);
+    setMonitorOpen(false);
+    setAdvancedOpen(true);
   }
 
   async function changeAppearance(next: AppearanceMode) {
@@ -423,6 +433,7 @@ function App() {
           <SettingsMenu
             appearance={appearance}
             onAppearanceChange={(next) => void changeAppearance(next)}
+            onOpenAdvanced={openAdvanced}
             disabled={!desktopBridge.available}
           />
         </div>
@@ -588,6 +599,13 @@ function App() {
         onClose={() => setMonitorOpen(false)}
         onUpdate={setMonitorSnapshot}
         onError={setMonitorError}
+      />
+
+      <AdvancedPanel
+        open={advancedOpen}
+        profile={profile}
+        method={method}
+        onClose={() => setAdvancedOpen(false)}
       />
     </div>
   );
