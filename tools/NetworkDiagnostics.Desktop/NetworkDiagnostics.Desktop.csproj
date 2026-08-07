@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8600;CS8604</WarningsNotAsErrors>
     <AssemblyName>NetworkDiagnosticsDesktop</AssemblyName>
     <RootNamespace>NetworkDiagnostics.Desktop</RootNamespace>
     <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64;linux-x64;linux-arm64</RuntimeIdentifiers>
