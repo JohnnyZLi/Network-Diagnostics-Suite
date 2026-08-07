@@ -72,22 +72,18 @@
 .jl-theme-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--jl-space-1);
-  padding: var(--jl-space-1);
-  border: 1px solid var(--jl-color-rule);
-  border-radius: var(--jl-radius-md);
-  background: var(--jl-color-surface-muted);
+  gap: var(--jl-space-2);
 }
 
 .jl-theme-options button {
   min-width: 0;
   min-height: var(--jl-control-height-sm);
   padding: 0 var(--jl-space-2);
-  border: 1px solid transparent;
+  border: 1px solid var(--jl-color-rule-strong);
   border-radius: var(--jl-radius-sm);
   appearance: none;
-  background: transparent;
-  color: var(--jl-color-text);
+  background: var(--jl-color-surface-muted);
+  color: var(--jl-color-ink);
   font-family: var(--jl-font-ui);
   font-size: 0.72rem;
   font-weight: 700;
@@ -95,36 +91,23 @@
 }
 
 .jl-theme-options button:hover {
+  border-color: var(--jl-color-accent);
   background: var(--jl-color-surface-strong);
-  color: var(--jl-color-ink);
 }
 
 .jl-theme-options button[aria-pressed="true"] {
-  border-color: var(--jl-color-accent-decorative);
-  background: var(--jl-color-accent-soft);
-  background: color-mix(in srgb, var(--jl-color-accent) 70%, var(--jl-color-surface));
-  color: var(--jl-color-ink);
-}
-
-:root[data-theme="dark"] .jl-theme-options button[aria-pressed="true"] {
+  border-color: var(--jl-color-accent);
+  background: var(--jl-color-accent);
   color: var(--jl-color-on-accent);
 }
 
 .jl-theme-options button[aria-pressed="true"]:hover {
-  background: var(--jl-color-accent-soft);
-  background: color-mix(in srgb, var(--jl-color-accent) 78%, var(--jl-color-surface));
+  background: var(--jl-color-accent-hover);
 }
 
 @media (forced-colors: active) {
-  .jl-theme-options {
-    border-color: ButtonText;
-    background: Canvas;
-  }
-
   .jl-theme-options button {
-    border-color: transparent;
-    background: ButtonFace;
-    color: ButtonText;
+    border-color: ButtonText;
   }
 
   .jl-theme-options button[aria-pressed="true"] {
