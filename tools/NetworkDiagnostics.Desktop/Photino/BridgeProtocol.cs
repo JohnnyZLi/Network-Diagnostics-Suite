@@ -59,6 +59,24 @@ public static class BridgeProtocol
         throw new ArgumentException($"Bridge field '{propertyName}' must contain a boolean value.", propertyName);
     }
 
+    public static int ParseRequiredInt(JsonElement payload, string propertyName, int minimum, int maximum)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        if (minimum > maximum) throw new ArgumentOutOfRangeException(nameof(minimum));
+        if (payload.ValueKind == JsonValueKind.Object
+            && payload.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out var parsed)
+            && parsed >= minimum
+            && parsed <= maximum)
+        {
+            return parsed;
+        }
+        throw new ArgumentException(
+            $"Bridge field '{propertyName}' must be an integer between {minimum} and {maximum}.",
+            propertyName);
+    }
+
     public static string? ParseOptionalString(JsonElement payload, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
