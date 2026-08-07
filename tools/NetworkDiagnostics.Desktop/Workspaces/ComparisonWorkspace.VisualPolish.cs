@@ -53,9 +53,14 @@ public sealed partial class ComparisonWorkspace
         ResolveComparisonLayout();
         if (comparisonRoot is not null)
         {
-            comparisonRoot.Margin = new Thickness(30, 24, 30, 30);
+            var gutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+            comparisonRoot.Margin = new Thickness(
+                gutter,
+                24,
+                gutter,
+                WorkspaceLayoutMetrics.BottomInset(width));
             comparisonRoot.RowSpacing = 16;
-            comparisonRoot.MaxWidth = 1380;
+            comparisonRoot.MaxWidth = WorkspaceLayoutMetrics.ComparisonMaxWidth;
         }
 
         foreach (var text in this.GetLogicalDescendants().OfType<TextBlock>())
