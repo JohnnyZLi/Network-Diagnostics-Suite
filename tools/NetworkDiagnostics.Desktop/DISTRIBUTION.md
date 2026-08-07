@@ -11,16 +11,17 @@ The application is self-contained; the .NET runtime does not need to be installe
 - Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback.
 - Native **System / Light / Dark** appearance preference persisted in the desktop data directory.
 - Completed schema 2.0 reports are saved locally through the existing atomic report store.
+- A compact **History** panel lists saved runs with timestamp, profile, latency, download, upload, loss, transfer size, labels, and tags already present in the report.
 - Responsive Photino/WebView interface validated in dark and light themes and compact window sizes.
 
-Saved reports are already retained on disk, but the replacement history/detail interface has not yet been ported. The bridge exposes the saved-report list for that next UI slice.
+The saved-runs panel is deliberately read-only in this preview. Full report detail, comparison, import/export, and annotation editing are the next report-browser pieces to migrate.
 
 ## Not yet exposed in the replacement UI
 
 The .NET engine still contains the broader desktop diagnostics, but the following controls and views are intentionally not part of this migration preview yet:
 
 - Quick, Full, and Stress profile selection;
-- saved-report history/detail, comparison, import/export, labels, and tags;
+- saved-report detail, comparison, import/export, and label/tag editing;
 - deeper DNS/ICMP/HTTP/QUIC and content/peak diagnostic launchers;
 - LAN test controls;
 - continuous monitoring, history, and alerts;
@@ -30,7 +31,7 @@ Those features are being moved selectively from the old Avalonia application ins
 
 ## Reports and privacy
 
-Completed reports are saved under the operating system's local application-data directory. Report and annotation writes use a temporary file followed by an atomic replacement.
+Completed reports are saved under the operating system's local application-data directory. Report writes use a temporary file followed by an atomic replacement. Labels and tags are stored inside the schema 2.0 report itself when they are added.
 
 Connection Check does not include local interface identifiers. The schema reader ignores unknown optional fields, and native sections that were not measured are represented as **Not measured** rather than failures.
 
