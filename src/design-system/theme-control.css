@@ -59,21 +59,22 @@
 }
 
 .jl-settings-menu {
-  width: 64px;
+  width: var(--jl-control-height-md);
   box-sizing: border-box;
-  padding: var(--jl-space-1);
+  padding: 0;
 }
 
 .jl-theme-options {
+  width: 100%;
+  box-sizing: border-box;
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
   grid-auto-rows: calc(var(--jl-control-height-md) - var(--jl-space-1));
-  padding: var(--jl-space-1);
-  border: 1px solid var(--jl-color-rule);
-  border-color: color-mix(in srgb, var(--jl-color-rule) 65%, transparent);
-  border-radius: var(--jl-radius-md);
-  background: var(--jl-color-surface-muted);
+  padding: var(--jl-space-1) 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   isolation: isolate;
 }
 
@@ -81,8 +82,8 @@
   position: absolute;
   z-index: 0;
   top: var(--jl-space-1);
-  right: var(--jl-space-1);
-  left: var(--jl-space-1);
+  right: 2px;
+  left: 2px;
   height: calc(var(--jl-control-height-md) - var(--jl-space-1));
   border-radius: var(--jl-radius-sm);
   background: var(--jl-color-accent);
@@ -135,6 +136,12 @@
   background: var(--jl-color-accent-hover);
 }
 
+@media (max-width: 560px) {
+  .jl-settings-menu {
+    width: 40px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .jl-theme-options::before,
   .jl-theme-options button {
@@ -144,7 +151,6 @@
 
 @media (forced-colors: active) {
   .jl-theme-options {
-    border-color: ButtonText;
     background: Canvas;
   }
 
