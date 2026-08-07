@@ -90,13 +90,12 @@ function createThemeControl(document) {
   for (const preference of THEME_PREFERENCES) {
     const button = document.createElement("button");
     const label = preference[0].toUpperCase() + preference.slice(1);
-    const text = document.createElement("span");
     button.type = "button";
     button.dataset.themePreference = preference;
     button.setAttribute("aria-pressed", "false");
-    text.className = "jl-theme-option__label";
-    text.textContent = label;
-    button.append(createThemeIcon(document, preference), text);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.append(createThemeIcon(document, preference));
     group.append(button);
   }
 
