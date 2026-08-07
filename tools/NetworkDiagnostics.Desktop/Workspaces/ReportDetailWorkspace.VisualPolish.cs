@@ -236,18 +236,23 @@ public sealed partial class ReportDetailWorkspace
         {
             if (container.Child is not Grid row || row.Children.Count < 2) continue;
             row.ColumnDefinitions.Clear();
+            row.RowDefinitions.Clear();
+
             if (width >= 700)
             {
                 row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(120)));
                 row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
                 row.ColumnSpacing = 18;
+                row.RowSpacing = 0;
                 Grid.SetColumn(row.Children[0], 0);
+                Grid.SetRow(row.Children[0], 0);
                 Grid.SetColumn(row.Children[1], 1);
+                Grid.SetRow(row.Children[1], 0);
                 continue;
             }
 
             row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            row.RowDefinitions.Clear();
             row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             row.RowSpacing = 5;
