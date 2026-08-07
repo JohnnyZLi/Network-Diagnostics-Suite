@@ -242,14 +242,14 @@ requireFragments(identityStyles, [
   ".jl-header-menu-toggle", ".jl-global-header__nav.jl-header-menu--open",
   "right: var(--jl-layout-gutter);", "left: var(--jl-layout-gutter);", "@media (forced-colors: active)",
 ], "Shared header and compact-menu contract");
-const legacyHeaderGeometry = identityStyles.includes("width: 88px;")
-  && identityStyles.includes("@media (max-width: 360px)")
-  && identityStyles.includes("width: calc(100% - 16px);");
-const fittedHeaderGeometry = identityStyles.includes("grid-template-columns: 136px var(--jl-control-height-md);")
+const fittedHeaderGeometry = identityStyles.includes("grid-template-columns: 88px var(--jl-control-height-md);")
+  && identityStyles.includes(".jl-site-menu {\n  --_jl-site-menu-trigger-offset:")
+  && identityStyles.includes("width: 144px;")
+  && identityStyles.includes("grid-column: 1 / 3;")
+  && identityStyles.includes("justify-self: end;")
   && identityStyles.includes("@media (max-width: 420px)")
-  && identityStyles.includes("grid-template-columns: 116px 40px;")
-  && identityStyles.includes("width: 116px;");
-if (!legacyHeaderGeometry && !fittedHeaderGeometry) fail("Shared header geometry is neither the approved legacy nor fitted transition contract.");
+  && identityStyles.includes("grid-template-columns: 88px 40px;");
+if (!fittedHeaderGeometry) fail("Shared header geometry is not the approved compact-trigger/fitted-dropdown contract.");
 
 requireFragments(updater, [
   'import { resolveConsumerRelease } from "./design-system-consumer-release.mjs"',
