@@ -96,7 +96,7 @@ const profiles: ProfileOption[] = [
     label: 'Connection',
     title: 'Connection Check',
     description: 'A fast baseline for responsiveness, loss, and real download and upload performance.',
-    idleCopy: 'Connection Check has the lowest transfer ceiling and does not collect local interface identifiers.',
+    idleCopy: 'Connection Check has the lowest transfer ceiling and keeps local interface identifiers off by default. Advanced can opt them in.',
   },
   {
     id: 'quick',
