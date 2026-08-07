@@ -39,6 +39,48 @@ function syncThemeButtons(menu) {
   }
 }
 
+function createThemeIcon(document, preference) {
+  const namespace = "http" + "://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.classList.add("jl-theme-option__icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  if (preference === "system") {
+    const screen = document.createElementNS(namespace, "rect");
+    screen.setAttribute("x", "3");
+    screen.setAttribute("y", "4");
+    screen.setAttribute("width", "18");
+    screen.setAttribute("height", "12");
+    screen.setAttribute("rx", "2");
+    const stand = document.createElementNS(namespace, "path");
+    stand.setAttribute("d", "M8 20h8M12 16v4");
+    svg.append(screen, stand);
+    return svg;
+  }
+
+  if (preference === "light") {
+    const sun = document.createElementNS(namespace, "circle");
+    sun.setAttribute("cx", "12");
+    sun.setAttribute("cy", "12");
+    sun.setAttribute("r", "4");
+    const rays = document.createElementNS(namespace, "path");
+    rays.setAttribute("d", "M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42");
+    svg.append(sun, rays);
+    return svg;
+  }
+
+  const moon = document.createElementNS(namespace, "path");
+  moon.setAttribute("d", "M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z");
+  svg.append(moon);
+  return svg;
+}
+
 function createThemeControl(document) {
   const group = document.createElement("div");
   group.className = "jl-theme-options";
@@ -47,10 +89,14 @@ function createThemeControl(document) {
 
   for (const preference of THEME_PREFERENCES) {
     const button = document.createElement("button");
+    const label = preference[0].toUpperCase() + preference.slice(1);
+    const text = document.createElement("span");
     button.type = "button";
     button.dataset.themePreference = preference;
-    button.textContent = preference[0].toUpperCase() + preference.slice(1);
     button.setAttribute("aria-pressed", "false");
+    text.className = "jl-theme-option__label";
+    text.textContent = label;
+    button.append(createThemeIcon(document, preference), text);
     group.append(button);
   }
 
