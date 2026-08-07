@@ -230,29 +230,25 @@ jobs:
           capture saved-report-detail
 
           # Real reports can contain one or many findings. Scroll the report pane to
-          # its bottom for the visual artifact, but use its focus trap—not variable
-          # content coordinates—to reach the report actions.
+          # its bottom before targeting the native action row.
           xdotool mousemove --sync 1400 760
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # With the report-row button removed, Shift+Tab enters the dialog at its
-          # final focusable action (Compare), then walks back through Export to Edit.
-          xdotool key --clearmodifiers shift+Tab
-          xdotool key --clearmodifiers shift+Tab
-          xdotool key --clearmodifiers shift+Tab
-          xdotool key --clearmodifiers Return
+          # Exercise the real report metadata workflow against the persisted JSON.
+          # These are the native 1600x1000 hit points from the previously green gate.
+          xdotool mousemove --sync 1242 916 click 1
           capture saved-report-editor
 
-          # ReportEditor auto-focuses Label. Tab order is Label → Tags → Cancel → Save.
+          xdotool mousemove --sync 1260 325 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
-          xdotool key --clearmodifiers Tab
+
+          xdotool mousemove --sync 1260 425 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'ci, photino'
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Return
+
+          xdotool mousemove --sync 1525 956 click 1
           capture saved-report-annotated
 
           python3 - "$reports_dir" <<'PY'
