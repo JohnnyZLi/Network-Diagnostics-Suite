@@ -112,33 +112,53 @@
                   MinWidth="52"
                   ToolTip.Tip="Return to Home"
                   Click="HomeClicked" />
-          <Grid Width="24" Height="24">
-            <Border Width="24"
-                    Height="24"
-                    CornerRadius="12"
-                    Background="{DynamicResource AppAccentSoftBrush}"
-                    BorderBrush="{DynamicResource AppAccentBorderBrush}"
-                    BorderThickness="1" />
-            <Border Width="14"
-                    Height="14"
-                    CornerRadius="7"
-                    Background="{DynamicResource AppAccentBrush}"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-              <Border Width="5"
-                      Height="5"
-                      CornerRadius="3"
-                      Background="{DynamicResource AppCanvasBrush}"
+          <Grid Name="ProductIdentityGrid"
+                ColumnDefinitions="24,148"
+                ColumnSpacing="7"
+                Height="30"
+                VerticalAlignment="Center">
+            <Grid Name="ProductOrb"
+                  Grid.Column="0"
+                  Width="24"
+                  Height="24"
+                  VerticalAlignment="Center">
+              <Border Width="24"
+                      Height="24"
+                      CornerRadius="12"
+                      Background="{DynamicResource AppAccentSoftBrush}"
+                      BorderBrush="{DynamicResource AppAccentBorderBrush}"
+                      BorderThickness="1" />
+              <Border Width="14"
+                      Height="14"
+                      CornerRadius="7"
+                      Background="{DynamicResource AppAccentBrush}"
                       HorizontalAlignment="Center"
-                      VerticalAlignment="Center" />
-            </Border>
-          </Grid>
-          <StackPanel Name="ProductStack" Spacing="0" Width="148">
-            <TextBlock FontSize="11" FontWeight="SemiBold" Text="Network Diagnostics" />
-            <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="4">
-              <TextBlock Classes="shellMuted" FontSize="8" Text="Local diagnostics" />
+                      VerticalAlignment="Center">
+                <Border Width="5"
+                        Height="5"
+                        CornerRadius="3"
+                        Background="{DynamicResource AppCanvasBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+              </Border>
+            </Grid>
+            <StackPanel Name="ProductStack"
+                        Grid.Column="1"
+                        Spacing="0"
+                        Width="148"
+                        VerticalAlignment="Center">
+              <TextBlock FontSize="11"
+                         FontWeight="SemiBold"
+                         LineHeight="13"
+                         Text="Network Diagnostics" />
+              <StackPanel Name="BreadcrumbPanel" Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="shellMuted"
+                           FontSize="8"
+                           LineHeight="11"
+                           Text="Local diagnostics" />
+              </StackPanel>
             </StackPanel>
-          </StackPanel>
+          </Grid>
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
