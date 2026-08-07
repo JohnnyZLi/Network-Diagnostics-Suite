@@ -1,42 +1,38 @@
-# Network Diagnostics Desktop
+# Network Diagnostics Desktop — Photino migration preview
 
-This archive contains the native graphical application for Network Diagnostics Suite. It shares its diagnostic engine and schema 2.0 report contract with the command-line deep probe.
+This archive contains the in-progress Photino.NET rebuild of the Network Diagnostics desktop application. The native shell now uses a React + TypeScript interface while retaining the existing .NET diagnostics engine and schema 2.0 report contract.
 
 The application is self-contained; the .NET runtime does not need to be installed.
 
-## Diagnostic profiles
+## Available in this preview
 
 - **Connection Check** — lightweight first-party reachability, latency, request-loss, download, and upload measurement.
-- **Quick** — broader single-versus-aggregate throughput and loaded-responsiveness evidence.
-- **Full** — Internet measurements plus operating-system local-network, route, resolver, service, Wi-Fi, and path evidence.
-- **Stress** — sustained load and progressive connection scaling plus the Full diagnostic evidence set.
+- **Compare / Single / Aggregate** transfer modes backed by the existing native measurement engine.
+- Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback.
+- Native **System / Light / Dark** appearance preference persisted in the desktop data directory.
+- Completed schema 2.0 reports are saved locally through the existing atomic report store.
+- Responsive Photino/WebView interface validated in dark and light themes and compact window sizes.
 
-Full and Stress can transfer substantial data. The application shows the current transfer ceiling and requires confirmation before those profiles run. Remembered approval applies only to the current ceiling; a future increase asks again.
+Saved reports are already retained on disk, but the replacement history/detail interface has not yet been ported. The bridge exposes the saved-report list for that next UI slice.
 
-## Advanced native evidence
+## Not yet exposed in the replacement UI
 
-Native runs also collect low-data technical evidence that does not create a second speed-test payload:
+The .NET engine still contains the broader desktop diagnostics, but the following controls and views are intentionally not part of this migration preview yet:
 
-- independent IPv4 and IPv6 DNS, ICMP, TCP, TLS, and HTTP checks;
-- loaded-latency sampling at the default gateway, first responsive public hop, and measurement endpoint for Full and Stress;
-- captive-portal, system-proxy, tunnel-interface, local-route, public-network, ASN, edge, and IP-version change detection;
-- diagnostic-process CPU, memory pressure, interface error/discard counters, and system TCP retransmission deltas.
+- Quick, Full, and Stress profile selection;
+- saved-report history/detail, comparison, import/export, labels, and tags;
+- deeper DNS/ICMP/HTTP/QUIC and content/peak diagnostic launchers;
+- LAN test controls;
+- continuous monitoring, history, and alerts;
+- command palette and tray integration.
 
-Unavailable fields remain **Not measured**. ICMP path localization and system-wide counters are supporting evidence rather than proof of one device, provider, or flow.
+Those features are being moved selectively from the old Avalonia application instead of carrying its XAML UI architecture into the Photino rebuild.
 
-## Reports, comparison, and privacy
+## Reports and privacy
 
-Completed reports are saved under the operating system's local application-data directory. History can reopen saved reports through the same renderer used for live results. Schema 2.0 JSON reports can also be imported or exported.
+Completed reports are saved under the operating system's local application-data directory. Report and annotation writes use a temporary file followed by an atomic replacement.
 
-History can select a comparison baseline and compare another saved report. Equivalent trends require the same profile, transfer method, endpoint, interface, and transfer ceiling. Saved reports can be labeled and tagged for controlled comparisons such as Wi-Fi versus Ethernet or before versus after a router restart.
-
-Report and annotation writes use a temporary file followed by an atomic replacement. Labels and tags stay inside the local JSON report and are included only when that report is exported.
-
-The reader ignores unknown optional fields. Native sections absent from a website report are treated as **Not measured**, not failures.
-
-SSID, local addresses, gateways, resolver addresses, interface names used by host counters, and proxy addresses remain hidden from saved reports unless the user explicitly enables local identifiers in Settings. Public ASN, network, edge, protocol, and IP-version evidence remains visible because it describes the public measurement path. A custom measurement endpoint can be configured under Advanced settings.
-
-See `docs/advanced-diagnostics.md` in the source repository for measurement boundaries and limitations.
+Connection Check does not include local interface identifiers. The schema reader ignores unknown optional fields, and native sections that were not measured are represented as **Not measured** rather than failures.
 
 ## Run
 
