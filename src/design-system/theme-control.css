@@ -75,6 +75,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: var(--jl-space-1);
   border: 1px solid var(--jl-color-rule);
+  border-color: color-mix(in srgb, var(--jl-color-rule) 65%, transparent);
   border-radius: var(--jl-radius-md);
   background: var(--jl-color-surface-muted);
   isolation: isolate;
@@ -106,7 +107,7 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  min-height: var(--jl-control-height-sm);
+  min-height: calc(var(--jl-control-height-sm) - 4px);
   padding: 0 var(--jl-space-2);
   border: 0;
   border-radius: var(--jl-radius-sm);
