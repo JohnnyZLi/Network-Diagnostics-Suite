@@ -95,90 +95,95 @@ jobs:
             sleep 0.45
           }
 
-          capture network-workbench-wide
+          capture live-health-wide
 
           wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
           wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
-          capture network-workbench-1000x760
+          capture live-health-1000x760
           wmctrl -r 'Network Diagnostics' -e 0,150,100,820,700
-          capture network-workbench-820x700
+          capture live-health-820x700
 
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # Continuous diagnostics is part of the main page now. The palette command
-          # is a navigation jump rather than a side-workspace launcher.
+          # The opening state is passive health. Prove the command palette can return
+          # to that canonical section instead of treating monitoring as a workspace.
           open_palette
           capture command-palette-dark
-          xdotool type --delay 35 'monitor'
-          capture command-palette-monitor-filtered
+          xdotool type --delay 35 'health'
+          capture command-palette-health-filtered
           xdotool key --clearmodifiers Return
-          sleep 1.5
-          capture continuous-diagnostics-dark
+          sleep 1.2
+          capture live-health-dark
 
-          # Advanced diagnostics is likewise a visible workbench section rather than
-          # being hidden under Settings. Prove the keyboard navigation lands there.
+          # Active diagnostics are the second section and have their own Ready state.
+          open_palette
+          xdotool type --delay 35 'run diagnostics'
+          capture command-palette-diagnostics-filtered
+          xdotool key --clearmodifiers Return
+          sleep 1.2
+          capture diagnostics-ready-dark
+
+          # Advanced diagnostics is progressive disclosure on the same page. Jump to
+          # its summary cards, open Preflight, then use keyboard focus to invoke the
+          # first control inside the expanded tool rather than relying on its height.
           open_palette
           xdotool type --delay 35 'advanced'
           capture command-palette-advanced-filtered
           xdotool key --clearmodifiers Return
-          sleep 1.5
+          sleep 1.2
           capture advanced-diagnostics-dark
-
-          # Exercise the relocated native preflight in-place. The coordinates target
-          # the Preflight tab and its Run preflight button in the fixed 1600x1000 gate.
-          xdotool mousemove --sync 1120 608 click 1
+          xdotool mousemove --sync 1200 840 click 1
+          sleep 0.5
           capture advanced-preflight-ready-dark
-          xdotool mousemove --sync 300 755 click 1
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
           for attempt in {1..24}; do
             if grep -Fq '"payload":{"measurement":{"contractVersion":"1.1"' /tmp/desktop-app.log; then
               break
             fi
             if (( attempt == 24 )); then
               echo "Inline Advanced preflight did not return the native measurement contract."
-              tail -120 /tmp/desktop-app.log
+              tail -140 /tmp/desktop-app.log
               exit 1
             fi
             sleep 0.5
           done
           capture advanced-preflight-dark
 
-          # Settings is intentionally application preferences only. Focus an inert
-          # WebView background area before Ctrl-Home so the key scrolls the document
-          # rather than an input, then open the compact appearance popover.
+          # Settings is application configuration only. Return to the top and prove
+          # the gear opens the compact appearance popover, not diagnostic controls.
           xdotool mousemove --sync 80 500 click 1
           xdotool key --clearmodifiers ctrl+home
-          sleep 0.8
-          xdotool mousemove --sync 1085 52 click 1
+          sleep 0.7
+          xdotool mousemove --sync 1550 52 click 1
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
-          # Launch the low-data Content shortcut semantically through the palette.
-          # This should select Connection Check + Aggregate in the native host and
-          # return the viewport to the active diagnostic hero.
+          # Content is a diagnostic preset, not a monitoring feature. Run it through
+          # the command palette and assert the native Connection Check + Aggregate
+          # contract before waiting for the real persisted report.
           open_palette
           xdotool type --delay 35 'content speed'
           capture command-palette-content-filtered
           xdotool key --clearmodifiers Return
-          sleep 0.3
-          capture content-speed-running-early
+          sleep 0.35
+          capture diagnostics-running-early
           sleep 1.3
-          capture content-speed-running-later
+          capture diagnostics-running-later
 
           for attempt in {1..20}; do
             if grep -Fq '"profile":"connection-check","method":"aggregate","transferCapBytes"' /tmp/desktop-app.log; then
               break
             fi
             if (( attempt == 20 )); then
-              echo "Content shortcut did not start Connection Check + Aggregate."
+              echo "Content preset did not start Connection Check + Aggregate."
               tail -120 /tmp/desktop-app.log
               exit 1
             fi
             sleep 0.25
           done
 
-          # Transfer progress can reach 100% before final native evidence collection.
-          # Treat the persisted schema-2 report as the completion condition.
           reports_dir="$HOME/.local/share/NetworkDiagnostics/reports"
           for attempt in {1..90}; do
             if find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' -print -quit 2>/dev/null | grep -q .; then
@@ -196,7 +201,7 @@ jobs:
             sleep 1
           done
 
-          capture connection-check-complete
+          capture diagnostics-result-dark
 
           if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-app.log
@@ -216,17 +221,13 @@ jobs:
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
 
-          # History remains the one full side workspace. Its shortcut avoids coupling
-          # this gate to toolbar geometry after removing the old Monitor button.
+          # History remains the focused past-runs workspace.
           xdotool key --clearmodifiers ctrl+h
           capture saved-runs-panel
 
           xdotool mousemove --sync 1315 205 click 1
           capture saved-report-detail
 
-          # Findings vary by live run, so scroll the report pane before targeting the
-          # action row. These editor hit points are the previously proven 1600x1000
-          # coordinates for the fixed History workspace.
           xdotool mousemove --sync 1400 760
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
