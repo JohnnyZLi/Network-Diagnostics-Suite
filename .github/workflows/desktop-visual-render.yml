@@ -98,22 +98,18 @@ jobs:
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # Monitor is the first toolbar control. Open the native-backed workspace,
-          # then return focus to its trigger when Escape closes it.
-          xdotool key --clearmodifiers Tab Return
+          # WebKitGTK does not assign initial keyboard focus to the toolbar reliably.
+          # Click the stable controls in the fixed 1600x1000 audit viewport instead.
+          xdotool mousemove --sync 1346 52 click 1
           capture network-monitor-dark
           xdotool key --clearmodifiers Escape
 
-          # From the restored Monitor trigger: History, then the settings gear.
-          xdotool key --clearmodifiers Tab Tab Return
+          xdotool mousemove --sync 1565 52 click 1
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
-          # From the settings trigger: four profiles, three transfer methods, then Run.
-          for _ in {1..8}; do
-            xdotool key --clearmodifiers Tab
-          done
-          xdotool key --clearmodifiers Return
+          # Start Connection Check directly instead of depending on DOM focus order.
+          xdotool mousemove --sync 826 601 click 1
           sleep 0.2
           scrot desktop-visual/screenshots/connection-check-running-early.png
           sleep 1.3
@@ -140,13 +136,11 @@ jobs:
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
 
-          # Async completion can move DOM focus. Click the known History control
-          # in the maximized 1600x1000 audit viewport instead of assuming focus.
-          xdotool mousemove --sync 1435 51 click 1
+          # Open History through its stable toolbar position, then open the first
+          # persisted report row once the panel has rendered.
+          xdotool mousemove --sync 1479 52 click 1
           capture saved-runs-panel
 
-          # History can finish loading after focus was assigned, so click the actual
-          # first report row instead of relying on transient Tab order.
           xdotool mousemove --sync 1315 205 click 1
           capture saved-report-detail
 
@@ -157,7 +151,6 @@ jobs:
           capture saved-report-detail-bottom
 
           # Exercise the real report metadata workflow against the persisted JSON.
-          # 1240 is the center of Edit details in the 1600x1000 audit viewport.
           xdotool mousemove --sync 1240 880 click 1
           capture saved-report-editor
           xdotool key --clearmodifiers ctrl+a
