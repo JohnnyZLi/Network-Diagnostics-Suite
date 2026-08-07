@@ -8,6 +8,8 @@ on:
       - 'tools/NetworkDiagnostics.Core/**'
       - 'tools/DeepProbe/**'
       - 'contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -15,22 +17,31 @@ permissions:
 
 jobs:
   render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 35
     env:
       DISPLAY: ':99'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      GTK_THEME: 'Adwaita:dark'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
 
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install virtual desktop tools
+      - name: Install Photino Linux host and virtual desktop tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb openbox xdotool wmctrl scrot
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.0-dev \
+            xvfb openbox xdotool wmctrl scrot
 
       - name: Publish Linux desktop application
         run: |
@@ -39,8 +50,9 @@ jobs:
             --runtime linux-x64 \
             --self-contained true \
             --output desktop-visual/publish
+          test -f desktop-visual/publish/wwwroot/index.html
 
-      - name: Launch virtual desktop
+      - name: Launch Photino desktop
         run: |
           mkdir -p desktop-visual/screenshots
           Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/desktop-xvfb.log 2>&1 &
@@ -50,10 +62,10 @@ jobs:
           echo $! > /tmp/desktop-openbox.pid
           desktop-visual/publish/NetworkDiagnosticsDesktop > /tmp/desktop-app.log 2>&1 &
           echo $! > /tmp/desktop-app.pid
-          for attempt in {1..40}; do
-            if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
-              wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-              sleep 2
+          for attempt in {1..50}; do
+            if wmctrl -l | grep -q 'Network Diagnostics'; then
+              wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+              sleep 3
               exit 0
             fi
             if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
@@ -65,212 +77,48 @@ jobs:
           cat /tmp/desktop-app.log
           exit 1
 
-      - name: Capture desktop states
+      - name: Capture Photino milestone states
         shell: bash
         run: |
           set -euo pipefail
 
           capture() {
-            local name="$1"
-            sleep 0.8
-            scrot "desktop-visual/screenshots/${name}.png"
+            sleep 0.7
+            scrot "desktop-visual/screenshots/$1.png"
           }
 
-          capture_now() {
-            local name="$1"
-            scrot "desktop-visual/screenshots/${name}.png"
-          }
+          capture connection-check-wide
 
-          wait_for_window() {
-            for attempt in {1..40}; do
-              if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
-                wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-                sleep 1
-                return
-              fi
-              sleep 0.5
-            done
+          wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
+          capture connection-check-1000x760
+          wmctrl -r 'Network Diagnostics' -e 0,150,100,820,700
+          capture connection-check-820x700
+
+          wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+          sleep 1
+
+          # Compare, Single, Aggregate, then the primary Run action.
+          xdotool key --clearmodifiers Tab Tab Tab Tab Return
+          sleep 3
+          capture connection-check-running-early
+          sleep 8
+          capture connection-check-running-later
+
+          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-app.log
             exit 1
-          }
-
-          invoke_command() {
-            local query="$1"
-            xdotool key --clearmodifiers ctrl+f
-            sleep 0.25
-            xdotool type --delay 12 "$query"
-            sleep 0.2
-            xdotool key Return
-          }
-
-          run_command() {
-            invoke_command "$1"
-            sleep 0.6
-          }
-
-          capture overview-dark-wide
-
-          # Selecting a preset must update the plan and Run label without starting a test.
-          run_command 'select full diagnostic'
-          capture diagnostic-selector-full
-          run_command 'select stress diagnostic'
-          capture diagnostic-selector-stress
-          run_command 'select quick diagnostic'
-
-          # Audit every profile in the actual opened configurator.
-          run_command 'customize diagnostic'
-          xdotool mousemove 470 525 click 1
-          capture configurator-dark-quick
-          xdotool mousemove 470 595 click 1
-          capture configurator-dark-full
-          xdotool mousemove 470 665 click 1
-          capture configurator-dark-stress
-          xdotool mousemove 470 455 click 1
-          capture configurator-dark-connection
-          xdotool mousemove 470 525 click 1
-
-          # Verify the same sheet at compact desktop window sizes.
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
-          capture configurator-dark-compact
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,900,700
-          capture configurator-dark-900x700
-          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-          sleep 1
-          xdotool mousemove 70 500 click 1
-
-          # Closing and reopening must preserve the complete action footer.
-          run_command 'customize diagnostic'
-          capture configurator-dark-reopened
-          xdotool key Escape
-          sleep 0.4
-
-          xdotool key --clearmodifiers End
-          capture control-center-recent-diagnostics
-          xdotool key --clearmodifiers Home
-
-          run_command 'open comparisons'
-          xdotool key --clearmodifiers End
-          capture control-center-inline-compare
-          xdotool key --clearmodifiers Home
-
-          # Clicking the command-palette backdrop must dismiss it without another shortcut.
-          xdotool key --clearmodifiers ctrl+f
-          sleep 0.35
-          capture command-palette
-          xdotool mousemove 40 560 click 1
-          capture command-palette-dismissed
-
-          run_command 'open reports'
-          capture diagnostics-library-empty
-
-          # Saved-report chrome must stay inside a bounded sheet with persistent shell navigation.
-          run_command 'preview saved report'
-          capture saved-report-detail
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
-          capture saved-report-detail-compact
-          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-          sleep 0.8
-          run_command 'open network overview'
-
-          # Settings should open over the stable Home shell without first replacing the page.
-          for section in general monitoring diagnostics privacy storage developer; do
-            run_command "settings ${section}"
-            capture "settings-${section}"
-          done
-
-          run_command 'settings general'
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
-          capture settings-general-compact
-          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-          sleep 0.8
-          run_command 'settings general'
-          xdotool mousemove 760 470 click 1
-          capture settings-interface-dropdown
-          xdotool key Escape
-          xdotool mousemove 12 500 click 1
-          capture overview-after-settings
-
-          # Keep the legacy presentation fixture available for isolated result-state review.
-          run_command 'preview healthy result'
-          capture result-healthy-overview
-          xdotool mousemove 255 215 click 1
-          capture result-healthy-evidence
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
-          capture result-healthy-evidence-compact
-          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-          sleep 0.8
-
-          # A just-completed result must use the same bounded report sheet as history.
-          # Capture the first painted frame as well as the settled state so a transient
-          # header-only or full-page flash becomes a visual-regression failure instead
-          # of disappearing before the normal delayed screenshot.
-          run_command 'open network overview'
-          invoke_command 'preview current result'
-          sleep 0.04
-          capture_now current-result-opening-frame
-          capture current-result-detail
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
-          capture current-result-detail-compact
-          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
-          sleep 0.8
-          run_command 'open network overview'
-
-          # Exercise a live diagnostic over several telemetry updates. These frames
-          # verify that the Tests & diagnostics region becomes a stable live tile
-          # instead of navigating to a separate running page.
-          run_command 'run selected diagnostic'
-          capture running-diagnostic-live-1
-          capture running-diagnostic-live-2
-          capture running-diagnostic-live-3
-          xdotool key Escape || true
-
-          run_command 'open network overview'
-          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
-          wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,1100,800
-          capture overview-1100x800
-          wmctrl -r 'Network Diagnostics Suite' -e 0,40,40,900,700
-          capture overview-900x700
-
-          # Restart from a clean control-center destination in Light mode.
-          kill "$(cat /tmp/desktop-app.pid)" || true
-          sleep 1
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          path = Path.home() / '.local' / 'share' / 'JohnnyLi' / 'NetworkDiagnostics' / 'settings.json'
-          data = json.loads(path.read_text()) if path.exists() else {}
-          data['appearance'] = 'light'
-          data['workbench'] = None
-          path.parent.mkdir(parents=True, exist_ok=True)
-          path.write_text(json.dumps(data, indent=2))
-          PY
-          desktop-visual/publish/NetworkDiagnosticsDesktop >> /tmp/desktop-app.log 2>&1 &
-          echo $! > /tmp/desktop-app.pid
-          wait_for_window
-          run_command 'open network overview'
-          capture overview-light-wide
-          run_command 'customize diagnostic'
-          xdotool mousemove 470 525 click 1
-          capture configurator-light-quick
-          xdotool mousemove 470 665 click 1
-          capture configurator-light-stress
-
-          if grep -Ei 'exception|unhandled|fatal' /tmp/desktop-app.log; then
+          fi
+          if grep -Ei 'unhandled exception|fatal error|segmentation fault' /tmp/desktop-app.log; then
             cat /tmp/desktop-app.log
             exit 1
           fi
 
-      - name: Upload rendered desktop states
+      - name: Upload rendered states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
         with:
-          name: desktop-visual-render
+          name: desktop-photino-visual-render
           path: |
             desktop-visual/screenshots
             /tmp/desktop-app.log
