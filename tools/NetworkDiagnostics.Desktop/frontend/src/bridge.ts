@@ -2,7 +2,9 @@ export type BridgeEventName =
   | 'diagnostic.progress'
   | 'diagnostic.completed'
   | 'diagnostic.cancelled'
-  | 'diagnostic.failed';
+  | 'diagnostic.failed'
+  | 'monitor.snapshot'
+  | 'monitor.error';
 
 type BridgeResponse<T> = {
   type: 'response';
