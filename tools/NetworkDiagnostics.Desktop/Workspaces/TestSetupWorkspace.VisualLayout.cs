@@ -37,8 +37,15 @@ public sealed partial class TestSetupWorkspace
 
     private void ApplyRenderedVisualLayout(double width)
     {
-        var available = Math.Max(720, width - 48);
-        OverviewGrid.Width = Math.Min(1360, available);
+        var horizontalGutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+        var available = Math.Max(720, width - (horizontalGutter * 2));
+        OverviewGrid.Width = Math.Min(WorkspaceLayoutMetrics.ControlCenterMaxWidth, available);
+        OverviewGrid.MaxWidth = WorkspaceLayoutMetrics.ControlCenterMaxWidth;
+        OverviewGrid.Margin = new Thickness(
+            horizontalGutter,
+            22,
+            horizontalGutter,
+            WorkspaceLayoutMetrics.BottomInset(width));
 
         DiagnosticExpander.Background = Brushes.Transparent;
         DiagnosticDetailsGrid.Background = Brushes.Transparent;
