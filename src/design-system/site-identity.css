@@ -93,6 +93,9 @@
 .jl-site-switcher {
   position: relative;
   flex: none;
+  display: flex;
+  gap: var(--jl-space-2);
+  align-items: center;
   justify-self: end;
 }
 
@@ -122,7 +125,8 @@
   white-space: nowrap;
 }
 
-.jl-site-switcher__button:hover {
+.jl-site-switcher__button:hover,
+.jl-settings-button:hover {
   border-color: var(--jl-color-accent);
 }
 
@@ -137,12 +141,51 @@
   transform: translateY(-2px) rotate(45deg);
 }
 
-.jl-site-menu {
+.jl-settings-button {
+  width: var(--jl-control-height-md);
+  height: var(--jl-control-height-md);
+  min-width: var(--jl-control-height-md);
+  min-height: var(--jl-control-height-md);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--jl-color-rule-strong);
+  border-radius: var(--jl-radius-md);
+  appearance: none;
+  background: var(--jl-color-surface);
+  color: var(--jl-color-ink);
+}
+
+.jl-settings-button__icon {
+  width: var(--jl-icon-md);
+  height: var(--jl-icon-md);
+  transform: rotate(0deg);
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .jl-settings-button__icon {
+    transition: transform var(--jl-motion-base) var(--jl-motion-ease-out);
+  }
+
+  .jl-settings-button:hover .jl-settings-button__icon,
+  .jl-settings-button:focus-visible .jl-settings-button__icon {
+    transform: rotate(16deg);
+  }
+
+  .jl-settings-button[aria-expanded="true"] .jl-settings-button__icon {
+    transform: rotate(42deg);
+  }
+}
+
+.jl-site-menu,
+.jl-settings-menu {
   width: min(280px, calc(100vw - (var(--jl-layout-gutter) * 2)));
   position: absolute;
   z-index: var(--jl-z-menu);
   top: calc(100% + var(--jl-space-2));
-  right: 0;
   display: grid;
   gap: var(--jl-space-1);
   margin: 0;
@@ -153,7 +196,15 @@
   box-shadow: var(--jl-shadow-high);
   font-family: var(--jl-font-ui);
   font-size: var(--jl-type-metadata-size);
+}
+
+.jl-site-menu {
+  right: calc(var(--jl-control-height-md) + var(--jl-space-2));
   list-style: none;
+}
+
+.jl-settings-menu {
+  right: 0;
 }
 
 .jl-site-menu a {
@@ -272,9 +323,19 @@
     display: none;
   }
 
-  .jl-site-switcher__button {
+  .jl-site-switcher__button,
+  .jl-settings-button {
     height: 40px;
     min-height: 40px;
+  }
+
+  .jl-settings-button {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  .jl-site-menu {
+    right: calc(40px + var(--jl-space-2));
   }
 
   .jl-header-menu-toggle {
@@ -303,14 +364,23 @@
     gap: var(--jl-space-1);
   }
 
+  .jl-site-switcher {
+    gap: var(--jl-space-1);
+  }
+
   .jl-header-menu-toggle {
     min-width: 44px;
     padding-inline: 6px;
     font-size: 11px;
   }
 
-  .jl-site-menu {
+  .jl-site-menu,
+  .jl-settings-menu {
     width: min(280px, calc(100vw - (var(--jl-space-2) * 2)));
+  }
+
+  .jl-site-menu {
+    right: calc(40px + var(--jl-space-1));
   }
 
   .jl-global-header__nav.jl-header-menu,
@@ -322,7 +392,9 @@
 
 @media (forced-colors: active) {
   .jl-site-switcher__button,
+  .jl-settings-button,
   .jl-site-menu,
+  .jl-settings-menu,
   .jl-header-menu-toggle,
   .jl-global-header__nav.jl-header-menu--open {
     border-color: CanvasText;
