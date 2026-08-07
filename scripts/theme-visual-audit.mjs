@@ -38,6 +38,7 @@ try {
       const page = await context.newPage();
       const response = await page.goto(baseUrl, { waitUntil: "networkidle" });
       await page.locator("[data-site-switcher-button]").waitFor({ state: "visible" });
+      await page.locator("[data-settings-button]").waitFor({ state: "visible" });
       await page.screenshot({ path: `${output}/network-${viewportName}-${theme}.png`, fullPage: true });
 
       const state = await page.evaluate(() => {
@@ -54,6 +55,8 @@ try {
           bodyBackground: bodyStyle.backgroundColor,
           innerWidth: window.innerWidth,
           documentWidth: root.scrollWidth,
+          settingsButtons: document.querySelectorAll("[data-settings-button]").length,
+          settingsMenus: document.querySelectorAll("[data-settings-menu]").length,
         };
       });
       const problems = [];
@@ -61,24 +64,32 @@ try {
       if (state.preference !== theme || state.theme !== theme) problems.push(`resolved ${state.preference}/${state.theme}, expected ${theme}`);
       if (!state.colorScheme.includes(theme)) problems.push(`color-scheme is ${state.colorScheme}`);
       if (state.documentWidth > state.innerWidth + 1) problems.push("horizontal overflow");
+      if (state.settingsButtons !== 1 || state.settingsMenus !== 1) problems.push("Settings control was not installed exactly once");
       const bodyContrast = contrast(state.bodyColor, state.bodyBackground);
       if (bodyContrast === null || bodyContrast < 4.5) problems.push(`body contrast is ${bodyContrast?.toFixed(2) ?? "unreadable"}`);
 
       const switcher = page.locator("[data-site-switcher-button]").first();
+      const sitesMenu = page.locator("[data-site-switcher-menu]").first();
       await switcher.click();
-      const menu = page.locator("[data-site-switcher-menu]").first();
-      await menu.waitFor({ state: "visible" });
-      const links = await menu.locator("a[href]").count();
-      const themeButtons = await menu.locator("button[data-theme-preference]").count();
-      const selected = await menu.locator('button[data-theme-preference][aria-pressed="true"]').getAttribute("data-theme-preference");
+      await sitesMenu.waitFor({ state: "visible" });
+      const links = await sitesMenu.locator("a[href]").count();
       if (links !== 3) problems.push(`Sites menu has ${links} links`);
+      await sitesMenu.screenshot({ path: `${output}/network-sites-${viewportName}-${theme}.png` });
+
+      const settingsButton = page.locator("[data-settings-button]").first();
+      const settingsMenu = page.locator("[data-settings-menu]").first();
+      await settingsButton.click();
+      await settingsMenu.waitFor({ state: "visible" });
+      if (await sitesMenu.isVisible()) problems.push("Sites remained open when Settings opened");
+      const themeButtons = await settingsMenu.locator("button[data-theme-preference]").count();
+      const selected = await settingsMenu.locator('button[data-theme-preference][aria-pressed="true"]').getAttribute("data-theme-preference");
       if (themeButtons !== 3) problems.push(`Appearance has ${themeButtons} options`);
       if (selected !== theme) problems.push(`selected appearance is ${selected}`);
-      await menu.screenshot({ path: `${output}/network-menu-${viewportName}-${theme}.png` });
+      await settingsMenu.screenshot({ path: `${output}/network-settings-${viewportName}-${theme}.png` });
 
-      const selectedButton = menu.locator(`button[data-theme-preference="${theme}"]`);
+      const selectedButton = settingsMenu.locator(`button[data-theme-preference="${theme}"]`);
       const previousPreference = theme === "dark" ? "light" : "system";
-      await menu.locator(`button[data-theme-preference="${previousPreference}"]`).focus();
+      await settingsMenu.locator(`button[data-theme-preference="${previousPreference}"]`).focus();
       await page.keyboard.press("Tab");
       const focus = await selectedButton.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -95,15 +106,18 @@ try {
       }
 
       const opposite = theme === "dark" ? "light" : "dark";
-      await menu.locator(`button[data-theme-preference="${opposite}"]`).click();
+      await settingsMenu.locator(`button[data-theme-preference="${opposite}"]`).click();
       await page.waitForFunction((value) => document.documentElement.dataset.theme === value, opposite);
       const changed = await page.evaluate(() => ({
         preference: window.JLTheme?.getPreference(),
         theme: window.JLTheme?.getTheme(),
         stored: localStorage.getItem("jl-theme"),
         cookie: document.cookie,
+        pressed: document.querySelector('[data-theme-preference][aria-pressed="true"]')?.getAttribute("data-theme-preference"),
+        settingsOpen: document.querySelector("[data-settings-button]")?.getAttribute("aria-expanded"),
       }));
-      if (changed.preference !== opposite || changed.theme !== opposite || changed.stored !== opposite) problems.push("Appearance selection did not synchronize state");
+      if (changed.preference !== opposite || changed.theme !== opposite || changed.stored !== opposite || changed.pressed !== opposite) problems.push("Appearance selection did not synchronize state");
+      if (changed.settingsOpen !== "true") problems.push("Settings closed while choosing an appearance option");
       if (!changed.cookie.includes(`jl-theme=${opposite}`)) problems.push("Appearance preference cookie missing");
 
       const preview = page.locator(".measurement-preview").first();
