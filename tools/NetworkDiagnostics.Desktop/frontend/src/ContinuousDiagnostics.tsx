@@ -244,10 +244,7 @@ export function ContinuousDiagnostics({
           </div>
 
           {snapshot.alerts.length === 0 ? (
-            <div className="monitor-healthy-strip">
-              <span aria-hidden="true">✓</span>
-              <div><strong>No issues detected</strong><small>No outages, recoveries, network changes, or meaningful degradation are recorded in this window.</small></div>
-            </div>
+            <NoAlertSummary snapshot={snapshot} />
           ) : (
             <section className="monitor-alert-section live-alert-section">
               <div className="monitor-section-heading monitor-alert-heading">
@@ -273,6 +270,21 @@ export function ContinuousDiagnostics({
         <div className="workbench-loading monitor-error"><strong>Live network health unavailable</strong><p>{error}</p></div>
       )}
     </section>
+  );
+}
+
+function NoAlertSummary({ snapshot }: { snapshot: MonitorSnapshot }) {
+  const healthy = snapshot.band === 'excellent' || snapshot.band === 'good';
+  return (
+    <div className={`monitor-healthy-strip ${healthy ? '' : 'neutral'}`}>
+      <span aria-hidden="true">{healthy ? '✓' : '•'}</span>
+      <div>
+        <strong>{healthy ? 'No issues detected' : 'No discrete alerts recorded'}</strong>
+        <small>{healthy
+          ? 'No outages, network changes, or meaningful degradation are recorded in this window.'
+          : `No outage or network-change event is recorded, but current measurements still rate the connection ${snapshot.status.toLowerCase()}.`}</small>
+      </div>
+    </div>
   );
 }
 
