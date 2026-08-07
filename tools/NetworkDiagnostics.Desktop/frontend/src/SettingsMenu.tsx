@@ -6,12 +6,10 @@ export type AppearanceMode = 'system' | 'light' | 'dark';
 export function SettingsMenu({
   appearance,
   onAppearanceChange,
-  onOpenAdvanced,
   disabled = false,
 }: {
   appearance: AppearanceMode;
   onAppearanceChange: (appearance: AppearanceMode) => void;
-  onOpenAdvanced?: () => void;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -34,11 +32,6 @@ export function SettingsMenu({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
-
-  function openAdvanced() {
-    setOpen(false);
-    onOpenAdvanced?.();
-  }
 
   return (
     <div className="settings-menu" ref={containerRef}>
@@ -76,15 +69,6 @@ export function SettingsMenu({
               </button>
             ))}
           </div>
-          {onOpenAdvanced && (
-            <button type="button" className="settings-advanced-link" onClick={openAdvanced}>
-              <span>
-                <strong>Advanced diagnostics</strong>
-                <small>Endpoints, interfaces, privacy, and LAN</small>
-              </span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-            </button>
-          )}
         </div>
       )}
     </div>
