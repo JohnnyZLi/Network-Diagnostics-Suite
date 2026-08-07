@@ -6,6 +6,8 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class ReportDetailWorkspace
 {
+    private const double ReportContentMaxWidth = 1160;
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         base.OnAttachedToVisualTree(eventArgs);
@@ -24,12 +26,28 @@ public sealed partial class ReportDetailWorkspace
 
     private void ApplyReportDetailPolish(double width)
     {
-        ReportBody.Margin = width < 720
+        var compact = width < 720;
+        var horizontalMargin = compact ? 16d : 24d;
+
+        ReportBody.Margin = compact
             ? new Thickness(16, 16, 16, 26)
             : new Thickness(24, 18, 24, 32);
-        ReportBody.MaxWidth = 1160;
-        ReportBody.Spacing = width < 720 ? 13 : 15;
-        ReportToolbarGrid.Margin = width < 720
+        ReportBody.MaxWidth = ReportContentMaxWidth;
+
+        // A StackPanel inside a ScrollViewer is otherwise allowed to derive its
+        // desired width from whichever children are currently visible. Long raw
+        // evidence rows would therefore widen the entire report when disclosure was
+        // opened. Pin the report column to the viewport (up to the product max) so
+        // disclosure can only change height; evidence text wraps inside this width.
+        if (width > 0)
+        {
+            ReportBody.Width = Math.Max(
+                0,
+                Math.Min(ReportContentMaxWidth, width - (horizontalMargin * 2)));
+        }
+
+        ReportBody.Spacing = compact ? 13 : 15;
+        ReportToolbarGrid.Margin = compact
             ? new Thickness(10, 0)
             : new Thickness(18, 0);
 
