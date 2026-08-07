@@ -31,6 +31,10 @@ body,
   margin: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   min-height: 100vh;
   background:
@@ -51,7 +55,9 @@ button:focus-visible {
 
 .app-shell {
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 .product-bar {
@@ -514,7 +520,7 @@ h1 {
   }
 
   main {
-    width: min(100% - 44px, 720px);
+    width: min(calc(100% - 44px), 720px);
     padding-top: 42px;
   }
 
