@@ -212,7 +212,7 @@ jobs:
           sleep 1.5
           capture live-health-capacity-measured-dark
 
-          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>//null; then
             cat /tmp/desktop-app.log
             exit 1
           fi
@@ -241,9 +241,11 @@ jobs:
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # The detail view is scrolled fully to the bottom before this click, so the
-          # first action has stable geometry even when the real report has more evidence.
-          xdotool mousemove --sync 1190 880 click 1
+          # Report detail owns focus when it mounts. From that container the first
+          # two sequential controls are Technical evidence and Edit details.
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
           sleep 0.4
           capture saved-report-editor
 
