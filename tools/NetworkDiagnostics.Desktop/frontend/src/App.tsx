@@ -107,7 +107,7 @@ const profiles: ProfileOption[] = [
 ];
 
 const methods: Array<{ id: TransferMethod; label: string; detail: string }> = [
-  { id: 'compare', label: 'Compare', detail: 'Single + aggregate' },
+  { id: 'compare', label: 'Both', detail: 'Single + aggregate flows' },
   { id: 'single', label: 'Single', detail: 'One transfer flow' },
   { id: 'aggregate', label: 'Aggregate', detail: 'Parallel flows' },
 ];
@@ -474,7 +474,7 @@ function App() {
     } satisfies PaletteCommand)),
     ...methods.map((item, index) => ({
       id: `method-${item.id}`,
-      title: `Use ${item.label} Transfer`,
+      title: `Use ${item.label} measurement`,
       detail: item.detail,
       keywords: `method transfer flow ${item.id} ${item.detail}`,
       priority: 30 + index,
@@ -543,7 +543,7 @@ function App() {
             </div>
             <div className="diagnostic-selector-group method-selector-group">
               <span>Measurement method</span>
-              <div className="method-control" aria-label="Transfer method">
+              <div className="method-control" aria-label="Measurement method">
                 {methods.map((item) => (
                   <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running}>{item.label}</button>
                 ))}
@@ -586,7 +586,7 @@ function App() {
                 <div>
                   <span className="result-label">Latest diagnostic · {new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
                   <h3>{displayedProfile.title} complete</h3>
-                  <p>The latest successful measurement stays here until another diagnostic completes. Selecting another profile above only prepares the next run.</p>
+                  <p>Latest successful measurement. It stays here until the next diagnostic completes.</p>
                 </div>
                 <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={openHistory}>Open history</button><button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button></div>
               </div>
@@ -613,10 +613,10 @@ function App() {
             </div>
           )}
 
-          {(running || result) && (
+          {running && (
             <section className="detail-row diagnostic-evidence-row">
               <div className="plan-card">
-                <span className="section-kicker">{running ? 'Active test plan' : 'Next test plan'}</span>
+                <span className="section-kicker">Active test plan</span>
                 <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(method)}</span></div>
                 <div className="plan-facts">
                   <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
@@ -627,12 +627,31 @@ function App() {
 
               <div className="evidence-card">
                 <span className="section-kicker">Run evidence</span>
-                <div className="evidence-line"><span>Profile</span><strong>{running ? profileTitle(activeProfile.current) : displayedProfile.title}</strong></div>
-                <div className="evidence-line"><span>Phase</span><strong>{running ? phaseLabel(progress?.phase, progress?.message) : 'Complete'}</strong></div>
-                <div className="evidence-line"><span>Measured payload</span><strong>{formatBytes(running ? measuredBytes : result?.dataUsedBytes ?? 0)}</strong></div>
-                <div className="evidence-line"><span>Method</span><strong>{methodLabel(running ? activeMethod.current : result?.method ?? method)}</strong></div>
+                <div className="evidence-line"><span>Profile</span><strong>{profileTitle(activeProfile.current)}</strong></div>
+                <div className="evidence-line"><span>Phase</span><strong>{phaseLabel(progress?.phase, progress?.message)}</strong></div>
+                <div className="evidence-line"><span>Measured payload</span><strong>{formatBytes(measuredBytes)}</strong></div>
+                <div className="evidence-line"><span>Method</span><strong>{methodLabel(activeMethod.current)}</strong></div>
               </div>
             </section>
+          )}
+
+          {!running && result && (
+            <div className="diagnostic-result-followup">
+              <div className="next-run-summary">
+                <span>Next run</span>
+                <strong>{selectedProfile.title}</strong>
+                <small>{methodLabel(method)} · {plan ? formatBytes(plan.transferCapBytes) : '—'} max · {plan ? `${plan.downloadStages + plan.uploadStages} stages` : 'plan loading'}</small>
+              </div>
+              <details className="diagnostic-run-details">
+                <summary>Last run details</summary>
+                <div className="diagnostic-run-detail-grid">
+                  <div><span>Profile</span><strong>{displayedProfile.title}</strong></div>
+                  <div><span>Method</span><strong>{methodLabel(result.method)}</strong></div>
+                  <div><span>Payload</span><strong>{formatBytes(result.dataUsedBytes ?? 0)}</strong></div>
+                  <div><span>Report</span><strong>{result.savedLocally === false ? 'Not saved' : 'Saved locally'}</strong></div>
+                </div>
+              </details>
+            </div>
           )}
 
           {!running && (
