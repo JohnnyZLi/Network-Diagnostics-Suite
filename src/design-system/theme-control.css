@@ -73,6 +73,7 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-inline: calc(-1 * var(--jl-space-3));
   padding: var(--jl-space-1);
   border: 1px solid var(--jl-color-rule);
   border-color: color-mix(in srgb, var(--jl-color-rule) 65%, transparent);
@@ -107,7 +108,7 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  min-height: calc(var(--jl-control-height-sm) - 4px);
+  min-height: calc(var(--jl-control-height-sm) - 2px);
   padding: 0 var(--jl-space-2);
   border: 0;
   border-radius: var(--jl-radius-sm);
