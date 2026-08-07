@@ -54,6 +54,7 @@ export function AdvancedPanel({
   onClose: () => void;
 }) {
   const panelRef = useRef<HTMLElement>(null);
+  const preflightRef = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
   const [settings, setSettings] = useState<AdvancedSettings>(defaultSettings);
   const [endpointText, setEndpointText] = useState('');
@@ -224,6 +225,9 @@ export function AdvancedPanel({
       setPreflight(result);
       if (result.interfaces?.length) setInterfaces(result.interfaces);
       setNotice('Native preflight completed with the saved configuration.');
+      window.requestAnimationFrame(() => {
+        preflightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Native preflight failed.');
     } finally {
@@ -308,17 +312,20 @@ export function AdvancedPanel({
                 </div>
                 <label className="advanced-field">
                   <span>Bind diagnostic traffic</span>
-                  <select value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
-                    <option value="">Automatic routing</option>
-                    {interfaces.map((choice, index) => {
-                      const id = interfaceId(choice);
-                      if (!id) return null;
-                      return <option key={`${id}-${index}`} value={id}>{interfaceLabel(choice, id)}</option>;
-                    })}
-                    {settings.interfaceId && !interfaces.some((choice) => interfaceId(choice) === settings.interfaceId) && (
-                      <option value={settings.interfaceId}>{settings.interfaceId}</option>
-                    )}
-                  </select>
+                  <div className="advanced-select-shell">
+                    <select value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
+                      <option value="">Automatic routing</option>
+                      {interfaces.map((choice, index) => {
+                        const id = interfaceId(choice);
+                        if (!id) return null;
+                        return <option key={`${id}-${index}`} value={id}>{interfaceLabel(choice, id)}</option>;
+                      })}
+                      {settings.interfaceId && !interfaces.some((choice) => interfaceId(choice) === settings.interfaceId) && (
+                        <option value={settings.interfaceId}>{settings.interfaceId}</option>
+                      )}
+                    </select>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>
+                  </div>
                   <small>Automatic routing follows the operating system. Binding forces supported probes through the selected interface.</small>
                 </label>
 
@@ -377,7 +384,7 @@ export function AdvancedPanel({
                 </div>
               </section>
 
-              <section className="advanced-section advanced-preflight-section">
+              <section ref={preflightRef} className="advanced-section advanced-preflight-section">
                 <div className="advanced-section-heading">
                   <div><strong>Native preflight</strong><span>{profileLabel(profile)} · {methodLabel(method)}</span></div>
                   <span>{preflight ? 'Complete' : 'Not run'}</span>
