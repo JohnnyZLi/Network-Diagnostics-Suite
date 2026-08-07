@@ -39,6 +39,14 @@ public static class BridgeProtocol
             _ => AppearancePreference.System
         };
 
+    public static Guid ParseRequiredGuid(JsonElement payload, string propertyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        var value = ReadString(payload, propertyName);
+        if (Guid.TryParse(value, out var parsed)) return parsed;
+        throw new ArgumentException($"Bridge field '{propertyName}' must contain a valid report ID.", propertyName);
+    }
+
     public static string ProfileId(TestProfileId profile) => profile switch
     {
         TestProfileId.ConnectionCheck => "connection-check",
