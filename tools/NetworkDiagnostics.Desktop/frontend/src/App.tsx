@@ -537,7 +537,7 @@ function App() {
               <span>Diagnostic profile</span>
               <div className="method-control" aria-label="Diagnostic profile">
                 {profiles.map((item) => (
-                  <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)} disabled={running} title={item.description}>{item.label}</button>
+                  <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)} disabled={running}>{item.label}</button>
                 ))}
               </div>
               <small>{selectedProfile.description}</small>
@@ -546,7 +546,7 @@ function App() {
               <span>Measurement method</span>
               <div className="method-control" aria-label="Transfer method">
                 {methods.map((item) => (
-                  <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running} title={item.detail}>{item.label}</button>
+                  <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running}>{item.label}</button>
                 ))}
               </div>
               <small>{methods.find((item) => item.id === method)?.detail}</small>
@@ -589,7 +589,7 @@ function App() {
                   <h3>{displayedProfile.title} complete</h3>
                   <p>The latest successful measurement stays here until another diagnostic completes. Selecting another profile above only prepares the next run.</p>
                 </div>
-                <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={openHistory}>Open history</button><button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.label.toLowerCase()}</button></div>
+                <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={openHistory}>Open history</button><button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button></div>
               </div>
               <div className="metric-strip diagnostic-metrics" aria-label="Latest diagnostic metrics">
                 <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median latency" />
@@ -614,23 +614,6 @@ function App() {
             </div>
           )}
 
-          <div id="speed-checks" className="speed-check-section">
-            <div className="speed-check-heading"><div><strong>Speed checks</strong><span>Convenient presets using the same native diagnostic runner</span></div></div>
-            {speedNotice && <div className="speed-check-notice" role="status">{speedNotice}</div>}
-            <div className="speed-check-grid">
-              <button type="button" className="speed-check-card" disabled={running || !desktopBridge.available} onClick={runContentSpeed}>
-                <span><strong>Content speed</strong><small>Connection Check · Aggregate</small></span>
-                <p>Lower-data capacity estimate representative of normal transfers.</p>
-                <b>Run</b>
-              </button>
-              <button type="button" className={`speed-check-card ${peakConfirm ? 'confirm' : ''}`} disabled={running || !desktopBridge.available} onClick={reviewPeakSpeed}>
-                <span><strong>Peak capacity</strong><small>Stress · Aggregate</small></span>
-                <p>High-data measurement intended to approach maximum sustained throughput.</p>
-                <b>{peakConfirm ? 'Run peak' : 'Review'}</b>
-              </button>
-            </div>
-          </div>
-
           {(running || result) && (
             <section className="detail-row diagnostic-evidence-row">
               <div className="plan-card">
@@ -651,6 +634,25 @@ function App() {
                 <div className="evidence-line"><span>Method</span><strong>{methodLabel(running ? activeMethod.current : result?.method ?? method)}</strong></div>
               </div>
             </section>
+          )}
+
+          {!running && (
+            <div id="speed-checks" className="speed-check-section">
+              <div className="speed-check-heading"><div><strong>Speed checks</strong><span>Convenient presets using the same native diagnostic runner</span></div></div>
+              {speedNotice && <div className="speed-check-notice" role="status">{speedNotice}</div>}
+              <div className="speed-check-grid">
+                <button type="button" className="speed-check-card" disabled={!desktopBridge.available} onClick={runContentSpeed}>
+                  <span><strong>Content speed</strong><small>Connection Check · Aggregate</small></span>
+                  <p>Lower-data capacity estimate representative of normal transfers.</p>
+                  <b>Run</b>
+                </button>
+                <button type="button" className={`speed-check-card ${peakConfirm ? 'confirm' : ''}`} disabled={!desktopBridge.available} onClick={reviewPeakSpeed}>
+                  <span><strong>Peak capacity</strong><small>Stress · Aggregate</small></span>
+                  <p>High-data measurement intended to approach maximum sustained throughput.</p>
+                  <b>{peakConfirm ? 'Run peak' : 'Review'}</b>
+                </button>
+              </div>
+            </div>
           )}
         </section>
 
