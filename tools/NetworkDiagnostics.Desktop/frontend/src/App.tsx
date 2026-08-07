@@ -348,9 +348,12 @@ function App() {
     setError(null);
   }
 
-  async function runDiagnostic() {
-    activeProfile.current = profile;
-    activeMethod.current = method;
+  async function runDiagnostic(nextProfile: DiagnosticProfile = profile, nextMethod: TransferMethod = method) {
+    if (running) return;
+    if (nextProfile !== profile) setProfile(nextProfile);
+    if (nextMethod !== method) setMethod(nextMethod);
+    activeProfile.current = nextProfile;
+    activeMethod.current = nextMethod;
     highestProgress.current = 0;
     stageBytes.current.clear();
     setError(null);
@@ -369,8 +372,8 @@ function App() {
 
     try {
       const accepted = await desktopBridge.request<RunAccepted>('diagnostic.run', {
-        profile,
-        method,
+        profile: nextProfile,
+        method: nextMethod,
       });
       activeRunId.current = accepted.runId;
     } catch (value) {
@@ -378,6 +381,16 @@ function App() {
       setProgress(null);
       setError(value instanceof Error ? value.message : 'The diagnostic could not start.');
     }
+  }
+
+  function runContentSpeed() {
+    setMonitorOpen(false);
+    void runDiagnostic('connection-check', 'aggregate');
+  }
+
+  function runPeakSpeed() {
+    setMonitorOpen(false);
+    void runDiagnostic('stress', 'aggregate');
   }
 
   async function cancelDiagnostic() {
@@ -596,9 +609,12 @@ function App() {
         snapshot={monitorSnapshot}
         loading={monitorLoading}
         error={monitorError}
+        diagnosticRunning={running}
         onClose={() => setMonitorOpen(false)}
         onUpdate={setMonitorSnapshot}
         onError={setMonitorError}
+        onRunContentSpeed={runContentSpeed}
+        onRunPeakSpeed={runPeakSpeed}
       />
 
       <AdvancedPanel
