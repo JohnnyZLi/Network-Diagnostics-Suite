@@ -36,10 +36,13 @@ public sealed partial class SettingsWorkspace
 
     private void ApplyContentBounds(double width)
     {
-        SettingsContentContainer.MaxWidth = 1040;
-        SettingsContentContainer.Margin = width < 760
-            ? new Thickness(18, 20, 18, 28)
-            : new Thickness(28, 24, 28, 36);
+        var gutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+        SettingsContentContainer.MaxWidth = WorkspaceLayoutMetrics.SettingsMaxWidth;
+        SettingsContentContainer.Margin = new Thickness(
+            gutter,
+            width < 760 ? 20 : 24,
+            gutter,
+            WorkspaceLayoutMetrics.BottomInset(width));
     }
 
     private void ApplyFieldSizing()
@@ -73,10 +76,11 @@ public sealed partial class SettingsWorkspace
             .FirstOrDefault(border => Grid.GetRow(border) == 0);
         if (navigationBar is not null)
         {
-            var horizontalInset = width > 1080
-                ? Math.Max(20, (width - 1040) / 2 + 20)
-                : 20;
-            navigationBar.Padding = new Thickness(horizontalInset, 8);
+            var gutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+            var contentInset = width > WorkspaceLayoutMetrics.SettingsMaxWidth + (gutter * 2)
+                ? (width - WorkspaceLayoutMetrics.SettingsMaxWidth) / 2
+                : gutter;
+            navigationBar.Padding = new Thickness(contentInset, 8);
         }
 
         foreach (var card in SettingsRootGrid
