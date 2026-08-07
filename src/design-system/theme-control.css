@@ -59,7 +59,9 @@
 }
 
 .jl-settings-menu {
-  width: min(184px, calc(100vw - (var(--jl-space-2) * 2)));
+  width: 64px;
+  box-sizing: border-box;
+  padding: var(--jl-space-1);
 }
 
 .jl-theme-options {
@@ -100,34 +102,25 @@
 .jl-theme-options button {
   position: relative;
   z-index: 1;
+  width: 100%;
   min-width: 0;
   min-height: calc(var(--jl-control-height-md) - var(--jl-space-1));
-  display: grid;
-  grid-template-columns: var(--jl-icon-md) minmax(0, 1fr);
-  gap: 10px;
+  display: flex;
   align-items: center;
-  padding: 0 var(--jl-space-3);
+  justify-content: center;
+  padding: 0;
   border: 0;
   border-radius: var(--jl-radius-sm);
   appearance: none;
   background: transparent;
   color: var(--jl-color-text);
-  font-family: var(--jl-font-ui);
-  font-size: 0.78rem;
-  font-weight: 700;
   line-height: 1;
-  text-align: left;
   transition: color 120ms ease;
 }
 
 .jl-theme-option__icon {
-  width: 18px;
-  height: 18px;
-  justify-self: center;
-}
-
-.jl-theme-option__label {
-  min-width: 0;
+  width: var(--jl-icon-md);
+  height: var(--jl-icon-md);
 }
 
 .jl-theme-options button:hover {
