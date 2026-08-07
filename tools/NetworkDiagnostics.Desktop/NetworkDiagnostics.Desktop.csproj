@@ -22,6 +22,7 @@
     <Compile Include="Monitoring/MonitorModels.cs" />
     <Compile Include="Monitoring/MonitorHistoryStore.cs" />
     <Compile Include="Monitoring/ContinuousMonitorService.cs" />
+    <Compile Include="Monitoring/MonitoringExportService.cs" />
     <Compile Include="Presentation/ConnectionCheckPresentation.cs" />
     <Compile Include="Presentation/DiagnosticReportPresenter.cs" />
     <Compile Include="Presentation/NetworkExperiencePresentation.cs" />
