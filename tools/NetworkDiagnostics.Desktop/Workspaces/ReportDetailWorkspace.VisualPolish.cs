@@ -7,6 +7,7 @@ namespace NetworkDiagnostics.Desktop.Workspaces;
 public sealed partial class ReportDetailWorkspace
 {
     private const double ReportContentMaxWidth = 1160;
+    private double? disclosureLockedReportWidth;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
@@ -24,6 +25,23 @@ public sealed partial class ReportDetailWorkspace
     private void ReportDetailSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
         ApplyReportDetailPolish(eventArgs.NewSize.Width);
 
+    private void ResetReportDisclosureWidth()
+    {
+        disclosureLockedReportWidth = null;
+        ReportBody.Width = double.NaN;
+    }
+
+    private void LockReportWidthForEvidenceDisclosure()
+    {
+        if (disclosureLockedReportWidth is not null || ReportBody.Bounds.Width <= 0) return;
+
+        // Capture the report's natural collapsed width before revealing raw evidence.
+        // The evidence list is allowed to add height, but it must inherit the same
+        // horizontal geometry instead of becoming the widest child in the ScrollViewer.
+        disclosureLockedReportWidth = ReportBody.Bounds.Width;
+        ApplyReportDetailPolish(Bounds.Width);
+    }
+
     private void ApplyReportDetailPolish(double width)
     {
         var compact = width < 720;
@@ -34,16 +52,16 @@ public sealed partial class ReportDetailWorkspace
             : new Thickness(24, 18, 24, 32);
         ReportBody.MaxWidth = ReportContentMaxWidth;
 
-        // A StackPanel inside a ScrollViewer is otherwise allowed to derive its
-        // desired width from whichever children are currently visible. Long raw
-        // evidence rows would therefore widen the entire report when disclosure was
-        // opened. Pin the report column to the viewport (up to the product max) so
-        // disclosure can only change height; evidence text wraps inside this width.
-        if (width > 0)
+        if (disclosureLockedReportWidth is { } preferredWidth && width > 0)
         {
-            ReportBody.Width = Math.Max(
-                0,
-                Math.Min(ReportContentMaxWidth, width - (horizontalMargin * 2)));
+            var availableWidth = Math.Max(0, width - (horizontalMargin * 2));
+            ReportBody.Width = Math.Min(preferredWidth, availableWidth);
+        }
+        else
+        {
+            // Before disclosure, retain the existing content-sized report presentation.
+            // The first evidence expansion captures that natural width and keeps it.
+            ReportBody.Width = double.NaN;
         }
 
         ReportBody.Spacing = compact ? 13 : 15;
