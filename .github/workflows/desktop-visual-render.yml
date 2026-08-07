@@ -109,6 +109,43 @@ jobs:
 
           xdotool mousemove --sync 1565 52 click 1
           capture settings-popover-dark
+
+          # Advanced diagnostics is appended below the unchanged appearance controls
+          # in the settings popover. Open the dedicated side workspace, exercise the
+          # real native preflight path, and verify that the advanced configuration is
+          # persisted by the .NET settings store rather than only held in React state.
+          xdotool mousemove --sync 1440 220 click 1
+          sleep 1.5
+          scrot desktop-visual/screenshots/advanced-diagnostics-dark.png
+
+          # The Advanced footer is pinned to the bottom of the fixed audit viewport.
+          # Run preflight using the default first-party endpoint and automatic route.
+          xdotool mousemove --sync 1400 968 click 1
+          sleep 7
+          scrot desktop-visual/screenshots/advanced-preflight-dark.png
+
+          settings_path="$HOME/.local/share/NetworkDiagnostics/desktop-settings.json"
+          test -f "$settings_path"
+          python3 - "$settings_path" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              settings = json.load(handle)
+
+          expected = {
+              'includeLocalIdentifiers': False,
+              'lanPort': 8765,
+              'lanDurationSeconds': 8,
+              'lanConnections': 4,
+          }
+          for key, value in expected.items():
+              if settings.get(key) != value:
+                  raise SystemExit(f'Advanced setting {key} was not persisted as expected: {settings.get(key)!r}')
+          if settings.get('testOrigins') not in ([], None):
+              raise SystemExit(f'Unexpected default endpoint candidates: {settings.get("testOrigins")!r}')
+          PY
+
           xdotool key --clearmodifiers Escape
 
           # Start Connection Check directly instead of depending on DOM focus order.
