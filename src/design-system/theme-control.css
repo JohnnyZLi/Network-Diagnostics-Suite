@@ -74,7 +74,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--jl-space-1);
   padding: var(--jl-space-1);
-  border: 1px solid var(--jl-color-rule-strong);
+  border: 1px solid var(--jl-color-rule);
   border-radius: var(--jl-radius-md);
   background: var(--jl-color-surface-muted);
 }
@@ -101,12 +101,12 @@
 
 .jl-theme-options button[aria-pressed="true"] {
   border-color: var(--jl-color-accent);
-  background: var(--jl-color-accent-soft);
-  color: var(--jl-color-ink);
+  background: var(--jl-color-accent);
+  color: var(--jl-color-on-accent);
 }
 
 .jl-theme-options button[aria-pressed="true"]:hover {
-  background: var(--jl-color-accent-soft);
+  background: var(--jl-color-accent-hover);
 }
 
 @media (forced-colors: active) {
