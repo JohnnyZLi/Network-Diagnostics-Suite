@@ -274,9 +274,8 @@ export function AdvancedDiagnostics({
     <section id="advanced-diagnostics" className="workbench-section advanced-workbench" aria-labelledby="advanced-workbench-title">
       <div className="workbench-section-header advanced-workbench-header">
         <div>
-          <span className="section-kicker">Advanced diagnostics</span>
-          <h2 id="advanced-workbench-title">Specialized network tools</h2>
-          <p>Target a specific path, test the local network, or verify native readiness when the normal diagnostic workflow is not enough.</p>
+          <h2 id="advanced-workbench-title">ADVANCED DIAGNOSTICS</h2>
+          <p>Target endpoints, test the LAN, or run a native preflight.</p>
         </div>
         <div className="advanced-header-status">
           {dirty && <span className="advanced-dirty-state">Unsaved changes</span>}
