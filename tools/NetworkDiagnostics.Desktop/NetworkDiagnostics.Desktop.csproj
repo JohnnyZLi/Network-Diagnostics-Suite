@@ -19,6 +19,9 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Photino/**/*.cs" />
+    <Compile Include="Presentation/ConnectionCheckPresentation.cs" />
+    <Compile Include="Presentation/DiagnosticReportPresenter.cs" />
+    <Compile Include="Services/ReportComparisonService.cs" />
     <Compile Include="Services/ReportStore.cs" />
     <EmbeddedResource Include="Resources/**/*" />
   </ItemGroup>
