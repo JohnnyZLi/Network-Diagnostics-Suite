@@ -137,6 +137,7 @@ function App() {
   const [speedNotice, setSpeedNotice] = useState<string | null>(null);
   const [advancedStatus, setAdvancedStatus] = useState<AdvancedRuntimeStatus>(defaultAdvancedStatus);
   const [advancedResetRequest, setAdvancedResetRequest] = useState(0);
+  const [diagnosticsInView, setDiagnosticsInView] = useState(true);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -246,6 +247,17 @@ function App() {
       removeMonitorSnapshot();
       removeMonitorError();
     };
+  }, []);
+
+  useEffect(() => {
+    const diagnostics = document.getElementById('run-diagnostics');
+    if (!diagnostics || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setDiagnosticsInView(entry.isIntersecting),
+      { root: null, rootMargin: '-68px 0px -15% 0px', threshold: 0.05 },
+    );
+    observer.observe(diagnostics);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -650,7 +662,7 @@ function App() {
         />
       </main>
 
-      {running && (
+      {running && !diagnosticsInView && (
         <button type="button" className="sticky-run-status" onClick={() => scrollToSection('run-diagnostics')}>
           <span className="pulse" aria-hidden="true" />
           <strong>{profileTitle(activeProfile.current)}</strong>
