@@ -101,6 +101,7 @@ jobs:
           # Cmd/Ctrl-F is the desktop command palette, not browser Find. Exercise the
           # real WebKit keyboard path and use the palette itself to open Monitor.
           xdotool key --clearmodifiers ctrl+f
+          sleep 0.25
           capture command-palette-dark
           xdotool type --delay 35 'monitor'
           capture command-palette-monitor-filtered
@@ -215,20 +216,20 @@ jobs:
           capture saved-report-detail-bottom
 
           # Exercise the real report metadata workflow against the persisted JSON.
-          # These coordinates come from the actual 1600x1000 rendered state. Avoid
-          # WebKit focus-order assumptions for the editor inputs and save action too.
-          xdotool mousemove --sync 1241 957 click 1
+          # These coordinates come from the native 1600x1000 rendered state. The
+          # action row sits above the window edge after the aggregate Content run.
+          xdotool mousemove --sync 1190 915 click 1
           capture saved-report-editor
 
-          xdotool mousemove --sync 1260 303 click 1
+          xdotool mousemove --sync 1260 313 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
 
-          xdotool mousemove --sync 1260 404 click 1
+          xdotool mousemove --sync 1260 410 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'ci, photino'
 
-          xdotool mousemove --sync 1520 957 click 1
+          xdotool mousemove --sync 1485 943 click 1
           capture saved-report-annotated
 
           python3 - "$reports_dir" <<'PY'
