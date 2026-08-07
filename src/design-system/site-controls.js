@@ -238,7 +238,10 @@ export function installDisclosureMenu({
   const openMenu = (options = {}) => applyState(true, options);
   const toggle = () => applyState(!open);
 
-  const handleButtonClick = () => toggle();
+  const handleButtonClick = (event) => {
+    toggle();
+    if (event.detail > 0) button.blur();
+  };
   const handleButtonKeyDown = (event) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
@@ -341,7 +344,6 @@ export function installSiteSwitcher(root, options = {}) {
       sitesDisclosure.close();
       options.onBeforeOpen?.();
     },
-    onOpenChange: options.onOpenChange,
   });
 
   return {

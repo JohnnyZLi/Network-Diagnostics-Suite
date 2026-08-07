@@ -152,7 +152,7 @@
 .jl-site-switcher__button[aria-expanded="true"] {
   position: relative;
   z-index: calc(var(--jl-z-menu) + 1);
-  border-bottom-color: var(--jl-color-rule-strong);
+  border-bottom-color: transparent;
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
 }
@@ -196,7 +196,7 @@
 .jl-settings-button[aria-expanded="true"] {
   position: relative;
   z-index: calc(var(--jl-z-menu) + 1);
-  border-bottom-color: var(--jl-color-rule-strong);
+  border-bottom-color: transparent;
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
 }
@@ -470,6 +470,25 @@
     min-width: 40px;
     padding-inline: 4px;
     font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .jl-global-header__inner {
+    column-gap: 0;
+  }
+
+  .jl-site-identity {
+    font-size: 0.65625rem;
+    letter-spacing: -0.045em;
+  }
+
+  .jl-global-header__actions {
+    gap: 0;
+  }
+
+  .jl-site-switcher {
+    column-gap: 0;
   }
 }
 
