@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
@@ -56,6 +56,18 @@ type DiagnosticFailure = {
   errorType: string;
 };
 
+type LiveMetrics = {
+  latencyMs: number | null;
+  downloadMbps: number | null;
+  uploadMbps: number | null;
+};
+
+const emptyLiveMetrics: LiveMetrics = {
+  latencyMs: null,
+  downloadMbps: null,
+  uploadMbps: null,
+};
+
 const methods: Array<{ id: TransferMethod; label: string; detail: string }> = [
   { id: 'compare', label: 'Compare', detail: 'Single + aggregate' },
   { id: 'single', label: 'Single', detail: 'One transfer flow' },
@@ -67,10 +79,16 @@ function App() {
   const [method, setMethod] = useState<TransferMethod>('compare');
   const [plan, setPlan] = useState<DiagnosticPlan | null>(null);
   const [progress, setProgress] = useState<DiagnosticProgress | null>(null);
+  const [progressRatio, setProgressRatio] = useState(0);
+  const [liveMetrics, setLiveMetrics] = useState<LiveMetrics>(emptyLiveMetrics);
+  const [measuredBytes, setMeasuredBytes] = useState(0);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeRunId = useRef<string | null>(null);
+  const activeMethod = useRef<TransferMethod>('compare');
+  const highestProgress = useRef(0);
+  const stageBytes = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (!desktopBridge.available) return;
@@ -90,27 +108,50 @@ function App() {
   useEffect(() => {
     const removeProgress = desktopBridge.on<DiagnosticProgress>('diagnostic.progress', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
+
       setProgress(next);
+      const inferred = overallProgress(next, activeMethod.current);
+      highestProgress.current = Math.max(highestProgress.current, inferred);
+      setProgressRatio(highestProgress.current);
+
+      setLiveMetrics((current) => ({
+        latencyMs: next.phase === 'idle' && next.liveLatencyMs != null ? next.liveLatencyMs : current.latencyMs,
+        downloadMbps: next.phase === 'download' && next.liveMbps != null ? next.liveMbps : current.downloadMbps,
+        uploadMbps: next.phase === 'upload' && next.liveMbps != null ? next.liveMbps : current.uploadMbps,
+      }));
+
+      if ((next.phase === 'download' || next.phase === 'upload') && next.bytesTransferred > 0) {
+        const stageKey = `${next.phase}:${next.message}`;
+        const prior = stageBytes.current.get(stageKey) ?? 0;
+        if (next.bytesTransferred > prior) {
+          stageBytes.current.set(stageKey, next.bytesTransferred);
+          setMeasuredBytes([...stageBytes.current.values()].reduce((total, value) => total + value, 0));
+        }
+      }
     });
+
     const removeCompleted = desktopBridge.on<DiagnosticResult>('diagnostic.completed', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
       activeRunId.current = null;
+      highestProgress.current = 1;
+      setProgressRatio(1);
       setResult(next);
-      setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete' } : current);
+      setMeasuredBytes(next.dataUsedBytes ?? measuredBytes);
+      setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
       setRunning(false);
     });
+
     const removeCancelled = desktopBridge.on<{ runId: string }>('diagnostic.cancelled', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
       activeRunId.current = null;
       setRunning(false);
-      setProgress(null);
       setError('Connection Check was cancelled.');
     });
+
     const removeFailed = desktopBridge.on<DiagnosticFailure>('diagnostic.failed', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
       activeRunId.current = null;
       setRunning(false);
-      setProgress(null);
       setError(next.message);
     });
 
@@ -120,12 +161,12 @@ function App() {
       removeCancelled();
       removeFailed();
     };
-  }, []);
+  }, [measuredBytes]);
 
-  const progressPercent = useMemo(() => Math.round(overallProgress(progress) * 100), [progress]);
+  const progressPercent = Math.round(progressRatio * 100);
   const livePrimary = progress?.liveMbps != null
     ? `${formatNumber(progress.liveMbps)} Mbps`
-    : progress?.liveLatencyMs != null
+    : progress?.phase === 'idle' && progress.liveLatencyMs != null
       ? `${formatNumber(progress.liveLatencyMs)} ms`
       : running
         ? 'Measuring'
@@ -134,8 +175,14 @@ function App() {
           : 'Ready';
 
   async function runDiagnostic() {
+    activeMethod.current = method;
+    highestProgress.current = 0;
+    stageBytes.current.clear();
     setError(null);
     setResult(null);
+    setLiveMetrics(emptyLiveMetrics);
+    setMeasuredBytes(0);
+    setProgressRatio(0);
     setProgress({
       runId: '',
       phase: 'starting',
@@ -187,7 +234,7 @@ function App() {
           <div>
             <span className="eyebrow">Diagnostics</span>
             <h1>Connection Check</h1>
-            <p>Fast first-party measurements for latency, loss, download, and upload—without turning the screen into a table.</p>
+            <p>A fast baseline for responsiveness, loss, and real download and upload performance.</p>
           </div>
           <div className="method-control" aria-label="Transfer method">
             {methods.map((item) => (
@@ -221,29 +268,30 @@ function App() {
             <div className="run-copy">
               <div className="run-status-line">
                 <span className={running ? 'pulse' : ''} aria-hidden="true" />
-                {running ? phaseLabel(progress?.phase) : result ? 'Measurement complete' : 'Ready to measure'}
+                {running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Measurement complete' : 'Ready to measure'}
               </div>
               <h2>{running ? progress?.message || 'Preparing the test…' : result ? 'Your connection check is ready.' : 'Measure the connection you are on now.'}</h2>
               <p>
                 {running
-                  ? 'The same C# diagnostics engine used by the existing desktop and CLI is running behind this Photino shell.'
+                  ? 'Headline measurements stay visible as the test moves between phases. The final report is assembled locally.'
                   : result
-                    ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Report ${result.reportId.slice(0, 8)} is available in memory.`
+                    ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. The headline results are ready below.`
                     : 'Connection Check has the lowest transfer ceiling and does not collect local interface identifiers.'}
               </p>
 
               <div className="actions">
-                <button
-                  type="button"
-                  className="primary-action"
-                  onClick={() => void runDiagnostic()}
-                  disabled={running || !desktopBridge.available}
-                >
-                  {result ? 'Run again' : 'Run connection check'}
-                </button>
-                {running && (
+                {running ? (
                   <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>
-                    Cancel
+                    Cancel test
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => void runDiagnostic()}
+                    disabled={!desktopBridge.available}
+                  >
+                    {result ? 'Run again' : 'Run connection check'}
                   </button>
                 )}
               </div>
@@ -251,9 +299,21 @@ function App() {
           </div>
 
           <div className="metric-strip" aria-label="Connection metrics">
-            <Metric label="Latency" value={metric(result?.latencyMs ?? progress?.liveLatencyMs, 'ms')} detail="Median / live" />
-            <Metric label="Download" value={metric(result?.downloadMbps, 'Mbps')} liveValue={progress?.phase === 'download' ? metric(progress.liveMbps, 'Mbps') : undefined} detail="Steady throughput" />
-            <Metric label="Upload" value={metric(result?.uploadMbps, 'Mbps')} liveValue={progress?.phase === 'upload' ? metric(progress.liveMbps, 'Mbps') : undefined} detail="Steady throughput" />
+            <Metric
+              label="Latency"
+              value={metric(result?.latencyMs ?? liveMetrics.latencyMs, 'ms')}
+              detail={running && liveMetrics.latencyMs != null ? 'Measured baseline' : 'Median latency'}
+            />
+            <Metric
+              label="Download"
+              value={metric(result?.downloadMbps ?? liveMetrics.downloadMbps, 'Mbps')}
+              detail={running && liveMetrics.downloadMbps != null ? 'Latest live sample' : 'Steady throughput'}
+            />
+            <Metric
+              label="Upload"
+              value={metric(result?.uploadMbps ?? liveMetrics.uploadMbps, 'Mbps')}
+              detail={running && liveMetrics.uploadMbps != null ? 'Latest live sample' : 'Steady throughput'}
+            />
             <Metric label="Request loss" value={metric(result?.requestLossPercent, '%')} detail="First-party requests" />
           </div>
         </section>
@@ -268,23 +328,23 @@ function App() {
             <div className="plan-facts">
               <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
               <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
-              <span><b>Local</b> report handling</span>
+              <span><b>Local</b> report assembly</span>
             </div>
           </div>
 
           <div className="evidence-card">
-            <span className="section-kicker">Live evidence</span>
+            <span className="section-kicker">Run evidence</span>
             <div className="evidence-line">
               <span>Phase</span>
-              <strong>{running ? phaseLabel(progress?.phase) : result ? 'Complete' : 'Idle'}</strong>
+              <strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Complete' : 'Idle'}</strong>
             </div>
             <div className="evidence-line">
               <span>Measured payload</span>
-              <strong>{formatBytes(result?.dataUsedBytes ?? progress?.bytesTransferred ?? 0)}</strong>
+              <strong>{formatBytes(result?.dataUsedBytes ?? measuredBytes)}</strong>
             </div>
             <div className="evidence-line">
-              <span>Host</span>
-              <strong>{host ? `${host.platform} · ${host.architecture}` : 'Photino'}</strong>
+              <span>Method</span>
+              <strong>{methodLabel(method)}</strong>
             </div>
           </div>
         </section>
@@ -298,34 +358,54 @@ function App() {
 function Metric({
   label,
   value,
-  liveValue,
   detail,
 }: {
   label: string;
   value: string;
-  liveValue?: string;
   detail: string;
 }) {
   return (
     <div className="metric">
       <span>{label}</span>
-      <strong>{liveValue || value}</strong>
-      <small>{liveValue ? 'Live measurement' : detail}</small>
+      <strong>{value}</strong>
+      <small>{detail}</small>
     </div>
   );
 }
 
-function overallProgress(progress: DiagnosticProgress | null): number {
-  if (!progress) return 0;
+function overallProgress(progress: DiagnosticProgress, method: TransferMethod): number {
   const fraction = Math.min(1, Math.max(0, progress.fraction || 0));
-  switch (progress.phase) {
-    case 'idle': return 0.08 + fraction * 0.17;
-    case 'download': return 0.25 + fraction * 0.30;
-    case 'upload': return 0.55 + fraction * 0.30;
-    case 'diagnostics': return 0.85 + fraction * 0.12;
-    case 'complete': return 1;
-    default: return Math.min(0.08, fraction * 0.08);
+  const message = progress.message.toLowerCase();
+
+  if (progress.phase === 'complete') return 1;
+  if (progress.phase === 'starting') return 0.01;
+  if (progress.phase === 'idle') return 0.08 + fraction * 0.17;
+
+  if (progress.phase === 'download') {
+    if (method === 'compare') {
+      if (message.includes('single')) return 0.25 + fraction * 0.15;
+      if (message.includes('aggregate')) return 0.40 + fraction * 0.20;
+    }
+    return 0.28 + fraction * 0.34;
   }
+
+  if (progress.phase === 'upload') {
+    return method === 'compare'
+      ? 0.60 + fraction * 0.25
+      : 0.62 + fraction * 0.26;
+  }
+
+  if (progress.phase === 'diagnostics') {
+    if (message.includes('selecting the measurement endpoint')) return 0.03;
+    if (message.includes('latency')) return 0.08;
+    if (message.includes('single download')) return method === 'compare' ? 0.25 : 0.28;
+    if (message.includes('aggregate download')) return method === 'compare' ? 0.40 : 0.28;
+    if (message.includes('upload')) return method === 'compare' ? 0.60 : 0.62;
+    if (message.includes('finalizing')) return 0.88;
+    return 0.90;
+  }
+
+  return 0.02;
 }
 
 function metric(value: number | null | undefined, unit: string): string {
@@ -347,15 +427,22 @@ function formatBytes(value: number): string {
 function methodLabel(method: TransferMethod): string {
   if (method === 'single') return 'Single flow';
   if (method === 'aggregate') return 'Aggregate flows';
-  return 'Single + aggregate comparison';
+  return 'Single + aggregate';
 }
 
-function phaseLabel(phase?: string): string {
+function phaseLabel(phase?: string, message?: string): string {
   switch (phase) {
     case 'idle': return 'Baseline latency';
     case 'download': return 'Download measurement';
     case 'upload': return 'Upload measurement';
-    case 'diagnostics': return 'Deep diagnostics';
+    case 'diagnostics': {
+      const normalized = message?.toLowerCase() ?? '';
+      if (normalized.includes('selecting')) return 'Endpoint selection';
+      if (normalized.includes('latency')) return 'Latency checks';
+      if (normalized.includes('download')) return 'Download checks';
+      if (normalized.includes('upload')) return 'Upload checks';
+      return 'Network evidence';
+    }
     case 'complete': return 'Complete';
     case 'starting': return 'Preparing';
     default: return 'Measuring';
