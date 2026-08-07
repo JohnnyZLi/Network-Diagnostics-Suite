@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AdvancedDiagnostics } from './AdvancedDiagnostics';
+import { AdvancedDiagnostics, type AdvancedRuntimeStatus } from './AdvancedDiagnostics';
 import { desktopBridge } from './bridge';
 import { CommandPalette, type PaletteCommand } from './CommandPalette';
 import { ContinuousDiagnostics, type MonitorSnapshot } from './ContinuousDiagnostics';
@@ -68,6 +68,12 @@ type LiveMetrics = { latencyMs: number | null; downloadMbps: number | null; uplo
 type ProfileOption = { id: DiagnosticProfile; label: string; title: string; description: string; idleCopy: string };
 
 const emptyLiveMetrics: LiveMetrics = { latencyMs: null, downloadMbps: null, uploadMbps: null };
+const defaultAdvancedStatus: AdvancedRuntimeStatus = {
+  hasOverrides: false,
+  summary: 'Default routing · first-party endpoint · identifiers excluded',
+  serverRunning: false,
+  serverPort: null,
+};
 
 const profiles: ProfileOption[] = [
   {
@@ -75,28 +81,28 @@ const profiles: ProfileOption[] = [
     label: 'Connection',
     title: 'Connection Check',
     description: 'A fast baseline for responsiveness, loss, and real download and upload performance.',
-    idleCopy: 'Connection Check has the lowest transfer ceiling and keeps local interface identifiers off by default. Advanced diagnostics below can opt them in.',
+    idleCopy: 'The lowest transfer ceiling for a focused baseline before you move into a deeper diagnostic.',
   },
   {
     id: 'quick',
     label: 'Quick',
     title: 'Quick Test',
     description: 'A short native test for a broader throughput snapshot without the duration of a full run.',
-    idleCopy: 'Quick increases the measurement budget while keeping the run short enough for routine checks.',
+    idleCopy: 'A larger measurement budget than Connection Check while remaining short enough for routine investigation.',
   },
   {
     id: 'full',
     label: 'Full',
     title: 'Full Test',
-    description: 'The standard native profile for a more complete view of latency, loss, download, and upload behavior.',
-    idleCopy: 'Full uses the standard transfer budget and is the default choice when you want a representative report.',
+    description: 'The standard native profile for a more complete view of latency, loss, download, upload, and path evidence.',
+    idleCopy: 'The representative diagnostic when passive health says something is wrong and you want the complete native evidence set.',
   },
   {
     id: 'stress',
     label: 'Stress',
     title: 'Stress Test',
     description: 'A heavier native run intended to expose sustained-load behavior and less obvious connection limits.',
-    idleCopy: 'Stress uses the largest transfer budget. Run it when the extra traffic and duration are intentional.',
+    idleCopy: 'The largest transfer budget. Use it intentionally when you want sustained-load and capacity behavior.',
   },
 ];
 
@@ -127,6 +133,10 @@ function App() {
   const [monitorLoading, setMonitorLoading] = useState(desktopBridge.available);
   const [monitorError, setMonitorError] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [peakConfirm, setPeakConfirm] = useState(false);
+  const [speedNotice, setSpeedNotice] = useState<string | null>(null);
+  const [advancedStatus, setAdvancedStatus] = useState<AdvancedRuntimeStatus>(defaultAdvancedStatus);
+  const [advancedResetRequest, setAdvancedResetRequest] = useState(0);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -258,16 +268,6 @@ function App() {
   }, []);
 
   const progressPercent = Math.round(progressRatio * 100);
-  const livePrimary = progress?.liveMbps != null
-    ? `${formatNumber(progress.liveMbps)} Mbps`
-    : progress?.phase === 'idle' && progress.liveLatencyMs != null
-      ? `${formatNumber(progress.liveLatencyMs)} ms`
-      : 'Measuring';
-  const monitorScore = monitorSnapshot?.score;
-  const orbPrimary = running ? livePrimary : monitorScore != null ? String(monitorScore) : result ? 'Complete' : 'Ready';
-  const orbSecondary = running ? `${progressPercent}%` : monitorScore != null ? 'Network score' : result ? displayedProfile.title : 'Native test';
-  const orbProgress = running ? progressPercent : monitorScore ?? 0;
-  const orbBand = !running && monitorSnapshot ? `monitor-${monitorSnapshot.band}` : '';
 
   async function loadReports() {
     if (!desktopBridge.available) return;
@@ -294,7 +294,7 @@ function App() {
     try {
       setMonitorSnapshot(await desktopBridge.request<MonitorSnapshot>('monitor.get'));
     } catch (value) {
-      setMonitorError(value instanceof Error ? value.message : 'Continuous diagnostics history could not be read.');
+      setMonitorError(value instanceof Error ? value.message : 'Live network health could not be read.');
     } finally {
       setMonitorLoading(false);
     }
@@ -317,11 +317,8 @@ function App() {
   function selectProfile(next: DiagnosticProfile) {
     if (running || next === profile) return;
     setProfile(next);
-    setResult(null);
-    setProgress(null);
-    setProgressRatio(0);
-    setLiveMetrics(emptyLiveMetrics);
-    setMeasuredBytes(0);
+    setPeakConfirm(false);
+    setSpeedNotice(null);
     setError(null);
   }
 
@@ -334,7 +331,8 @@ function App() {
     highestProgress.current = 0;
     stageBytes.current.clear();
     setError(null);
-    setResult(null);
+    setSpeedNotice(null);
+    setPeakConfirm(false);
     setLiveMetrics(emptyLiveMetrics);
     setMeasuredBytes(0);
     setProgressRatio(0);
@@ -355,12 +353,19 @@ function App() {
   }
 
   function runContentSpeed() {
-    scrollToSection('network-diagnostics');
+    scrollToSection('run-diagnostics');
     void runDiagnostic('connection-check', 'aggregate');
   }
 
-  function runPeakSpeed() {
-    scrollToSection('network-diagnostics');
+  function reviewPeakSpeed() {
+    scrollToSection('speed-checks');
+    if (!peakConfirm) {
+      setPeakConfirm(true);
+      setSpeedNotice('Peak uses Stress + Aggregate and the largest transfer budget. Select Run peak again to continue.');
+      return;
+    }
+    setPeakConfirm(false);
+    setSpeedNotice(null);
     void runDiagnostic('stress', 'aggregate');
   }
 
@@ -374,13 +379,22 @@ function App() {
 
   const paletteCommands: PaletteCommand[] = [
     {
-      id: 'workspace-monitor',
-      title: 'Go to Continuous Diagnostics',
-      detail: 'Live score, timeline, speed checks, alerts, and exports on the main workbench.',
-      keywords: 'monitor health timeline content peak alerts continuous',
+      id: 'workspace-health',
+      title: 'Go to Live Network Health',
+      detail: 'Current score, passive measurements, timeline, capacity history, and alerts.',
+      keywords: 'monitor health timeline alerts continuous live network',
       priority: 1,
       enabled: true,
-      run: () => scrollToSection('continuous-diagnostics'),
+      run: () => scrollToSection('live-network-health'),
+    },
+    {
+      id: 'workspace-diagnostics',
+      title: 'Go to Run Diagnostics',
+      detail: 'Connection Check, Quick, Full, Stress, measurement methods, and speed presets.',
+      keywords: 'run diagnostics test connection quick full stress speed',
+      priority: 2,
+      enabled: true,
+      run: () => scrollToSection('run-diagnostics'),
     },
     {
       id: 'workspace-history',
@@ -388,16 +402,16 @@ function App() {
       detail: 'Browse, compare, import, export, and annotate persisted reports.',
       keywords: 'history reports saved runs compare json',
       shortcut: 'Ctrl/⌘ H',
-      priority: 2,
+      priority: 3,
       enabled: desktopBridge.available,
       run: openHistory,
     },
     {
       id: 'workspace-advanced',
       title: 'Go to Advanced Diagnostics',
-      detail: 'Endpoints, interface binding, privacy, preflight, and LAN tools on the main workbench.',
+      detail: 'Targeting, interface binding, privacy, native preflight, and LAN tools.',
       keywords: 'advanced endpoint interface lan privacy preflight',
-      priority: 3,
+      priority: 4,
       enabled: true,
       run: () => scrollToSection('advanced-diagnostics'),
     },
@@ -406,27 +420,27 @@ function App() {
       title: running ? 'Diagnostic is already running' : `Run ${selectedProfile.title}`,
       detail: `${methodLabel(method)} using the current native configuration.`,
       keywords: 'run start diagnostic current selected test',
-      priority: 4,
+      priority: 5,
       enabled: desktopBridge.available && !running,
-      run: () => { scrollToSection('network-diagnostics'); void runDiagnostic(); },
+      run: () => { scrollToSection('run-diagnostics'); void runDiagnostic(); },
     },
     {
       id: 'run-content',
       title: 'Run Content Speed Check',
       detail: 'Low-data Connection Check using aggregate transfer flow.',
-      keywords: 'content speed aggregate low data quick bandwidth',
-      priority: 5,
+      keywords: 'content speed aggregate low data bandwidth capacity',
+      priority: 6,
       enabled: desktopBridge.available && !running,
       run: runContentSpeed,
     },
     {
       id: 'open-peak',
-      title: 'Review Peak Speed Check',
-      detail: 'Jump to the explicit Stress + Aggregate data warning before running Peak.',
+      title: 'Review Peak Capacity Check',
+      detail: 'Jump to the explicit Stress + Aggregate high-data confirmation.',
       keywords: 'peak speed stress aggregate bandwidth capacity',
-      priority: 6,
+      priority: 7,
       enabled: desktopBridge.available && !running,
-      run: () => scrollToSection('continuous-diagnostics'),
+      run: () => scrollToSection('speed-checks'),
     },
     ...(running ? [{
       id: 'cancel-run',
@@ -444,7 +458,7 @@ function App() {
       keywords: `profile ${item.id} ${item.label}`,
       priority: 20 + index,
       enabled: !running,
-      run: () => { selectProfile(item.id); scrollToSection('network-diagnostics'); },
+      run: () => { selectProfile(item.id); scrollToSection('run-diagnostics'); },
     } satisfies PaletteCommand)),
     ...methods.map((item, index) => ({
       id: `method-${item.id}`,
@@ -453,7 +467,7 @@ function App() {
       keywords: `method transfer flow ${item.id} ${item.detail}`,
       priority: 30 + index,
       enabled: !running,
-      run: () => setMethod(item.id),
+      run: () => { setMethod(item.id); scrollToSection('run-diagnostics'); },
     } satisfies PaletteCommand)),
   ];
 
@@ -469,6 +483,7 @@ function App() {
             <span className="status-dot" aria-hidden="true" />
             {host ? `Native engine · ${host.architecture}` : desktopBridge.available ? 'Connecting to engine' : 'Browser preview'}
           </div>
+          {advancedStatus.serverRunning && <span className="lan-runtime-badge"><i />LAN server · :{advancedStatus.serverPort}</span>}
           <button
             type="button"
             className={`history-trigger ${historyOpen ? 'active' : ''}`}
@@ -485,108 +500,164 @@ function App() {
       </header>
 
       <main>
-        <section id="network-diagnostics" className="intro-row workbench-intro">
-          <div>
-            <span className="eyebrow">Network workbench</span>
-            <h1>Network Diagnostics</h1>
-            <p><strong>{selectedProfile.title}</strong> · {selectedProfile.description}</p>
-          </div>
-          <div className="diagnostic-controls">
-            <div className="method-control" aria-label="Diagnostic profile">
-              {profiles.map((item) => (
-                <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)} disabled={running} title={item.description}>{item.label}</button>
-              ))}
-            </div>
-            <div className="method-control" aria-label="Transfer method">
-              {methods.map((item) => (
-                <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running} title={item.detail}>{item.label}</button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="diagnostic-surface">
-          <div className="run-panel">
-            <div
-              className={`progress-orb ${running ? 'running' : monitorSnapshot ? `monitoring ${orbBand}` : ''}`}
-              style={{ '--progress': `${orbProgress * 3.6}deg` } as React.CSSProperties}
-              aria-label={running ? `${progressPercent}% complete` : monitorScore != null ? `Network score ${monitorScore}` : 'Diagnostic ready'}
-            >
-              <div className="progress-orb-inner"><span>{orbPrimary}</span><small>{orbSecondary}</small></div>
-            </div>
-
-            <div className="run-copy">
-              <div className="run-status-line">
-                <span className={running ? 'pulse' : monitorSnapshot?.running ? 'monitor-live' : ''} aria-hidden="true" />
-                {running
-                  ? phaseLabel(progress?.phase, progress?.message)
-                  : monitorSnapshot
-                    ? `${monitorSnapshot.running ? 'Monitoring active' : 'Monitoring paused'} · ${monitorSnapshot.interfaceName} · ${monitorSnapshot.lastUpdated}`
-                    : result ? 'Measurement complete' : 'Ready to measure'}
-              </div>
-              <h2>{running ? progress?.message || 'Preparing the test…' : result ? `${displayedProfile.title} is ready.` : 'Measure the connection you are on now.'}</h2>
-              <p>
-                {running
-                  ? 'Headline measurements stay visible as the test moves between phases. The final report is assembled locally.'
-                  : result
-                    ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Continuous diagnostics keep watching the connection below.`
-                    : selectedProfile.idleCopy}
-              </p>
-              <div className="actions">
-                {running ? (
-                  <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>Cancel test</button>
-                ) : (
-                  <button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>
-                    {result ? `Run ${selectedProfile.label.toLowerCase()} again` : `Run ${selectedProfile.label.toLowerCase()} test`}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="metric-strip" aria-label="Connection metrics">
-            <Metric label="Latency" value={metric(result?.latencyMs ?? liveMetrics.latencyMs, 'ms')} detail={running && liveMetrics.latencyMs != null ? 'Measured baseline' : 'Median latency'} />
-            <Metric label="Download" value={metric(result?.downloadMbps ?? liveMetrics.downloadMbps, 'Mbps')} detail={running && liveMetrics.downloadMbps != null ? 'Latest live sample' : 'Steady throughput'} />
-            <Metric label="Upload" value={metric(result?.uploadMbps ?? liveMetrics.uploadMbps, 'Mbps')} detail={running && liveMetrics.uploadMbps != null ? 'Latest live sample' : 'Steady throughput'} />
-            <Metric label="Request loss" value={metric(result?.requestLossPercent, '%')} detail="First-party requests" />
-          </div>
-        </section>
-
         <ContinuousDiagnostics
           snapshot={monitorSnapshot}
           loading={monitorLoading}
           error={monitorError}
-          diagnosticRunning={running}
           onUpdate={setMonitorSnapshot}
           onError={setMonitorError}
-          onRunContentSpeed={runContentSpeed}
-          onRunPeakSpeed={runPeakSpeed}
+          onMeasureCapacity={() => scrollToSection('speed-checks')}
         />
 
-        <section className="detail-row workbench-evidence-row">
-          <div className="plan-card">
-            <span className="section-kicker">Current test plan</span>
-            <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(method)}</span></div>
-            <div className="plan-facts">
-              <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
-              <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
-              <span><b>Local</b> report assembly</span>
+        <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
+          <div className="workbench-section-header diagnostics-header">
+            <div>
+              <span className="section-kicker">Run diagnostics</span>
+              <h2 id="run-diagnostics-title">Investigate the connection</h2>
+              <p>Run a controlled measurement when live health shows a problem or when you need evidence passive monitoring cannot collect.</p>
             </div>
           </div>
 
-          <div className="evidence-card">
-            <span className="section-kicker">Run evidence</span>
-            <div className="evidence-line"><span>Profile</span><strong>{result ? displayedProfile.title : selectedProfile.title}</strong></div>
-            <div className="evidence-line"><span>Phase</span><strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Complete' : 'Idle'}</strong></div>
-            <div className="evidence-line"><span>Measured payload</span><strong>{formatBytes(result?.dataUsedBytes ?? measuredBytes)}</strong></div>
-            <div className="evidence-line"><span>Method</span><strong>{methodLabel(method)}</strong></div>
+          {error && <div className="error-banner" role="alert">{error}</div>}
+
+          <div className="diagnostic-selector-grid">
+            <div className="diagnostic-selector-group">
+              <span>Diagnostic profile</span>
+              <div className="method-control" aria-label="Diagnostic profile">
+                {profiles.map((item) => (
+                  <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)} disabled={running} title={item.description}>{item.label}</button>
+                ))}
+              </div>
+              <small>{selectedProfile.description}</small>
+            </div>
+            <div className="diagnostic-selector-group method-selector-group">
+              <span>Measurement method</span>
+              <div className="method-control" aria-label="Transfer method">
+                {methods.map((item) => (
+                  <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running} title={item.detail}>{item.label}</button>
+                ))}
+              </div>
+              <small>{methods.find((item) => item.id === method)?.detail}</small>
+            </div>
           </div>
+
+          {advancedStatus.hasOverrides && (
+            <div className="advanced-config-banner">
+              <div><span aria-hidden="true">⚙</span><div><strong>Advanced configuration active</strong><small>{advancedStatus.summary}</small></div></div>
+              <div><button type="button" onClick={() => scrollToSection('advanced-diagnostics')}>Review</button><button type="button" onClick={() => setAdvancedResetRequest((current) => current + 1)}>Reset</button></div>
+            </div>
+          )}
+
+          {running ? (
+            <div className="diagnostic-run-state running">
+              <div className="diagnostic-run-heading">
+                <div>
+                  <div className="run-status-line"><span className="pulse" aria-hidden="true" />{phaseLabel(progress?.phase, progress?.message)}</div>
+                  <h3>{progress?.message || 'Preparing the test…'}</h3>
+                  <p>{profileTitle(activeProfile.current)} is running through the native engine while live network monitoring continues independently above.</p>
+                </div>
+                <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>Cancel test</button>
+              </div>
+              <div className="diagnostic-progress-row">
+                <div className="diagnostic-progress-track" aria-label={`${progressPercent}% complete`}><span style={{ width: `${progressPercent}%` }} /></div>
+                <strong>{progressPercent}%</strong>
+              </div>
+              <div className="metric-strip diagnostic-metrics" aria-label="Active diagnostic metrics">
+                <Metric label="Latency" value={metric(liveMetrics.latencyMs, 'ms')} detail="Measured baseline" />
+                <Metric label="Download" value={metric(liveMetrics.downloadMbps, 'Mbps')} detail="Latest live sample" />
+                <Metric label="Upload" value={metric(liveMetrics.uploadMbps, 'Mbps')} detail="Latest live sample" />
+                <Metric label="Payload" value={formatBytes(measuredBytes)} detail="Measured so far" />
+              </div>
+            </div>
+          ) : result ? (
+            <div className="diagnostic-run-state result">
+              <div className="diagnostic-run-heading">
+                <div>
+                  <span className="result-label">Latest diagnostic · {new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                  <h3>{displayedProfile.title} complete</h3>
+                  <p>The latest successful measurement stays here until another diagnostic completes. Selecting another profile above only prepares the next run.</p>
+                </div>
+                <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={openHistory}>Open history</button><button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.label.toLowerCase()}</button></div>
+              </div>
+              <div className="metric-strip diagnostic-metrics" aria-label="Latest diagnostic metrics">
+                <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median latency" />
+                <Metric label="Download" value={metric(result.downloadMbps, 'Mbps')} detail="Steady throughput" />
+                <Metric label="Upload" value={metric(result.uploadMbps, 'Mbps')} detail="Steady throughput" />
+                <Metric label="Request loss" value={metric(result.requestLossPercent, '%')} detail="First-party requests" />
+              </div>
+            </div>
+          ) : (
+            <div className="diagnostic-run-state ready">
+              <div>
+                <span className="result-label">Selected test</span>
+                <h3>{selectedProfile.title}</h3>
+                <p>{selectedProfile.idleCopy}</p>
+                <div className="diagnostic-plan-facts">
+                  <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
+                  <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
+                  <span><b>{methodLabel(method)}</b> measurement method</span>
+                </div>
+              </div>
+              <button type="button" className="primary-action diagnostic-run-button" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button>
+            </div>
+          )}
+
+          <div id="speed-checks" className="speed-check-section">
+            <div className="speed-check-heading"><div><strong>Speed checks</strong><span>Convenient presets using the same native diagnostic runner</span></div></div>
+            {speedNotice && <div className="speed-check-notice" role="status">{speedNotice}</div>}
+            <div className="speed-check-grid">
+              <button type="button" className="speed-check-card" disabled={running || !desktopBridge.available} onClick={runContentSpeed}>
+                <span><strong>Content speed</strong><small>Connection Check · Aggregate</small></span>
+                <p>Lower-data capacity estimate representative of normal transfers.</p>
+                <b>Run</b>
+              </button>
+              <button type="button" className={`speed-check-card ${peakConfirm ? 'confirm' : ''}`} disabled={running || !desktopBridge.available} onClick={reviewPeakSpeed}>
+                <span><strong>Peak capacity</strong><small>Stress · Aggregate</small></span>
+                <p>High-data measurement intended to approach maximum sustained throughput.</p>
+                <b>{peakConfirm ? 'Run peak' : 'Review'}</b>
+              </button>
+            </div>
+          </div>
+
+          {(running || result) && (
+            <section className="detail-row diagnostic-evidence-row">
+              <div className="plan-card">
+                <span className="section-kicker">{running ? 'Active test plan' : 'Next test plan'}</span>
+                <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(method)}</span></div>
+                <div className="plan-facts">
+                  <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
+                  <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
+                  <span><b>Local</b> report assembly</span>
+                </div>
+              </div>
+
+              <div className="evidence-card">
+                <span className="section-kicker">Run evidence</span>
+                <div className="evidence-line"><span>Profile</span><strong>{running ? profileTitle(activeProfile.current) : displayedProfile.title}</strong></div>
+                <div className="evidence-line"><span>Phase</span><strong>{running ? phaseLabel(progress?.phase, progress?.message) : 'Complete'}</strong></div>
+                <div className="evidence-line"><span>Measured payload</span><strong>{formatBytes(running ? measuredBytes : result?.dataUsedBytes ?? 0)}</strong></div>
+                <div className="evidence-line"><span>Method</span><strong>{methodLabel(running ? activeMethod.current : result?.method ?? method)}</strong></div>
+              </div>
+            </section>
+          )}
         </section>
 
-        <AdvancedDiagnostics profile={profile} method={method} />
-
-        {error && <div className="error-banner" role="alert">{error}</div>}
+        <AdvancedDiagnostics
+          profile={profile}
+          method={method}
+          onStatusChange={setAdvancedStatus}
+          resetRequest={advancedResetRequest}
+        />
       </main>
+
+      {running && (
+        <button type="button" className="sticky-run-status" onClick={() => scrollToSection('run-diagnostics')}>
+          <span className="pulse" aria-hidden="true" />
+          <strong>{profileTitle(activeProfile.current)}</strong>
+          <small>{phaseLabel(progress?.phase, progress?.message)} · {progressPercent}%</small>
+          <b>View</b>
+        </button>
+      )}
 
       <HistoryPanel
         open={historyOpen}
