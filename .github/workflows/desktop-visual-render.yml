@@ -151,7 +151,8 @@ jobs:
           capture saved-report-detail-bottom
 
           # Exercise the real report metadata workflow against the persisted JSON.
-          xdotool mousemove --sync 1240 880 click 1
+          # The Edit details button is stable at the bottom-left of the action row.
+          xdotool mousemove --sync 1192 918 click 1
           capture saved-report-editor
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
