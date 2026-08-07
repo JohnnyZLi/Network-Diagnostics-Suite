@@ -13,11 +13,7 @@ public sealed partial class SettingsWorkspace
     {
         base.OnAttachedToVisualTree(eventArgs);
         SizeChanged += VisualSettingsSizeChanged;
-        ApplyContentBounds(Bounds.Width);
-        ApplyFieldSizing();
-        ApplySettingsChromePolish(Bounds.Width);
-        ApplyComponentPolish();
-        ApplySettingsCardLayout(Bounds.Width);
+        ApplySettingsVisualLayout(Bounds.Width);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
@@ -26,12 +22,16 @@ public sealed partial class SettingsWorkspace
         base.OnDetachedFromVisualTree(eventArgs);
     }
 
-    private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
+    private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplySettingsVisualLayout(eventArgs.NewSize.Width);
+
+    private void ApplySettingsVisualLayout(double width)
     {
-        ApplyContentBounds(eventArgs.NewSize.Width);
-        ApplySettingsChromePolish(eventArgs.NewSize.Width);
+        ApplyContentBounds(width);
+        ApplyFieldSizing();
+        ApplySettingsChromePolish(width);
         ApplyComponentPolish();
-        ApplySettingsCardLayout(eventArgs.NewSize.Width);
+        ApplySettingsCardLayout(width);
     }
 
     private void ApplyContentBounds(double width)
