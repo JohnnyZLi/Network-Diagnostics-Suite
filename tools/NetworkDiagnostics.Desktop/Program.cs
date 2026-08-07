@@ -19,6 +19,7 @@ internal static class Program
         }
 
         Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+        ConfigureHeadlessLinuxWebKit();
 
         var server = PhotinoServer.CreateStaticFileServer(
             args,
@@ -49,5 +50,26 @@ internal static class Program
             server.StopAsync().GetAwaiter().GetResult();
             server.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
+    }
+
+    private static void ConfigureHeadlessLinuxWebKit()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        var isCi = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase);
+        var display = Environment.GetEnvironmentVariable("DISPLAY");
+        if (!isCi || string.IsNullOrWhiteSpace(display) || !display.StartsWith(':'))
+        {
+            return;
+        }
+
+        // Xvfb provides no usable DRI3 device in our GitHub Actions visual/soak jobs.
+        // WebKitGTK accelerated compositing can therefore leave resized webviews gray
+        // or partially blank even though the DOM is still responsive. Disable only in
+        // headless Linux CI; real desktop sessions keep the normal renderer.
+        Environment.SetEnvironmentVariable("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     }
 }
