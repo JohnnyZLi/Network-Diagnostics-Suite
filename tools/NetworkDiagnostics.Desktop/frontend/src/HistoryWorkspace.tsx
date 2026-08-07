@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import './history.css';
 import './report.css';
+import './report-management.css';
 
 export type SavedReportSummary = {
   id: string;
@@ -52,9 +53,20 @@ type SavedReportComparison = {
   }>;
 };
 
+type ImportReportResult = {
+  cancelled: boolean;
+  detail?: SavedReportDetail;
+};
+
+type ExportReportResult = {
+  cancelled: boolean;
+  fileName?: string;
+};
+
 type PanelView =
   | { kind: 'list' }
   | { kind: 'detail'; detail: SavedReportDetail }
+  | { kind: 'edit'; detail: SavedReportDetail }
   | { kind: 'compare-select'; baseline: SavedReportDetail }
   | { kind: 'comparison'; baseline: SavedReportDetail; comparison: SavedReportComparison };
 
@@ -78,6 +90,7 @@ export function HistoryPanel({
   const [view, setView] = useState<PanelView>({ kind: 'list' });
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState<string | null>(null);
+  const [viewNotice, setViewNotice] = useState<string | null>(null);
   closeRef.current = onClose;
 
   useEffect(() => {
@@ -85,6 +98,7 @@ export function HistoryPanel({
     setView({ kind: 'list' });
     setViewLoading(false);
     setViewError(null);
+    setViewNotice(null);
 
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
@@ -126,11 +140,12 @@ export function HistoryPanel({
   if (!open) return null;
 
   const header = headerFor(view);
-  const wide = view.kind === 'detail' || view.kind === 'comparison';
+  const wide = view.kind === 'detail' || view.kind === 'edit' || view.kind === 'comparison';
 
   async function openDetail(report: SavedReportSummary) {
     setViewLoading(true);
     setViewError(null);
+    setViewNotice(null);
     try {
       const detail = await desktopBridge.request<SavedReportDetail>('reports.get', { id: report.id });
       setView({ kind: 'detail', detail });
@@ -141,10 +156,61 @@ export function HistoryPanel({
     }
   }
 
+  async function importReport() {
+    setViewLoading(true);
+    setViewError(null);
+    setViewNotice(null);
+    try {
+      const result = await desktopBridge.request<ImportReportResult>('reports.import');
+      if (result.cancelled || !result.detail) return;
+      onRefresh();
+      setView({ kind: 'detail', detail: result.detail });
+      setViewNotice(`Imported ${displayName(result.detail.report)}.`);
+    } catch (value) {
+      setViewError(errorMessage(value, 'The report could not be imported.'));
+    } finally {
+      setViewLoading(false);
+    }
+  }
+
+  async function exportReport(detail: SavedReportDetail) {
+    setViewError(null);
+    setViewNotice(null);
+    try {
+      const result = await desktopBridge.request<ExportReportResult>('reports.export', { id: detail.report.id });
+      if (result.cancelled) return;
+      setViewNotice(`Exported ${result.fileName || 'report JSON'}.`);
+    } catch (value) {
+      setViewError(errorMessage(value, 'The report could not be exported.'));
+    }
+  }
+
+  async function saveAnnotations(detail: SavedReportDetail, label: string, tags: string[]) {
+    setViewLoading(true);
+    setViewError(null);
+    setViewNotice(null);
+    try {
+      const updated = await desktopBridge.request<SavedReportDetail>('reports.updateAnnotations', {
+        id: detail.report.id,
+        label,
+        tags,
+      });
+      onRefresh();
+      setView({ kind: 'detail', detail: updated });
+      setViewNotice('Saved report label and tags.');
+    } catch (value) {
+      setViewError(errorMessage(value, 'The report details could not be saved.'));
+      setView({ kind: 'edit', detail });
+    } finally {
+      setViewLoading(false);
+    }
+  }
+
   async function compareWith(report: SavedReportSummary, baseline: SavedReportDetail) {
     if (report.id === baseline.report.id) return;
     setViewLoading(true);
     setViewError(null);
+    setViewNotice(null);
     try {
       const comparison = await desktopBridge.request<SavedReportComparison>('reports.compare', {
         baselineId: baseline.report.id,
@@ -160,10 +226,12 @@ export function HistoryPanel({
 
   function goBack() {
     setViewError(null);
+    setViewNotice(null);
     setView((current) => {
       if (current.kind === 'comparison' || current.kind === 'compare-select') {
         return { kind: 'detail', detail: current.baseline };
       }
+      if (current.kind === 'edit') return { kind: 'detail', detail: current.detail };
       return { kind: 'list' };
     });
   }
@@ -186,7 +254,10 @@ export function HistoryPanel({
           </div>
           <div className="history-header-actions">
             {view.kind === 'list' ? (
-              <IconButton label="Refresh saved runs" onClick={onRefresh} disabled={loading} icon="refresh" />
+              <>
+                <IconButton label="Import report" onClick={() => void importReport()} icon="import" />
+                <IconButton label="Refresh saved runs" onClick={onRefresh} disabled={loading} icon="refresh" />
+              </>
             ) : (
               <IconButton label="Back" onClick={goBack} icon="back" />
             )}
@@ -197,15 +268,30 @@ export function HistoryPanel({
         {viewLoading ? (
           <LoadingView />
         ) : view.kind === 'list' ? (
-          <ReportList reports={reports} loading={loading} error={error} onRefresh={onRefresh} onOpen={(report) => void openDetail(report)} />
+          <ReportList reports={reports} loading={loading} error={error || viewError} onRefresh={onRefresh} onOpen={(report) => void openDetail(report)} />
         ) : view.kind === 'compare-select' ? (
           <CompareSelector reports={reports} baseline={view.baseline} error={viewError} onCompare={(report) => void compareWith(report, view.baseline)} />
+        ) : view.kind === 'edit' ? (
+          <ReportEditor
+            detail={view.detail}
+            error={viewError}
+            onCancel={goBack}
+            onSave={(label, tags) => void saveAnnotations(view.detail, label, tags)}
+          />
         ) : view.kind === 'detail' ? (
           <ReportDetail
             detail={view.detail}
             error={viewError}
+            notice={viewNotice}
+            onEdit={() => {
+              setViewError(null);
+              setViewNotice(null);
+              setView({ kind: 'edit', detail: view.detail });
+            }}
+            onExport={() => void exportReport(view.detail)}
             onCompare={() => {
               setViewError(null);
+              setViewNotice(null);
               setView({ kind: 'compare-select', baseline: view.detail });
             }}
           />
@@ -239,10 +325,11 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
   if (reports.length === 0) {
     return (
       <div className="history-body">
+        {error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}
         <div className="history-empty">
           <svg className="history-empty-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg>
           <strong>No saved runs yet</strong>
-          <p>Finished diagnostics will appear here automatically.</p>
+          <p>Finished diagnostics will appear here automatically, or import an existing JSON report.</p>
         </div>
       </div>
     );
@@ -250,6 +337,7 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
 
   return (
     <div className="history-body">
+      {error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}
       <div className="history-list" aria-live="polite">
         {reports.map((report) => <ReportRow key={report.id} report={report} onClick={() => onOpen(report)} />)}
       </div>
@@ -290,20 +378,30 @@ function CompareSelector({ reports, baseline, error, onCompare }: {
   );
 }
 
-function ReportDetail({ detail, error, onCompare }: {
+function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: {
   detail: SavedReportDetail;
   error: string | null;
+  notice: string | null;
+  onEdit: () => void;
+  onExport: () => void;
   onCompare: () => void;
 }) {
   const presentation = detail.presentation;
   return (
     <div className="report-body">
       {error && <div className="report-error-banner" role="alert">{error}</div>}
+      {notice && <div className="report-success-banner" role="status">{notice}</div>}
       <section className="report-verdict">
         <span className={`report-outcome ${presentation.outcome}`}>{presentation.label}</span>
         <h3>{presentation.verdict}</h3>
         <p>{presentation.summary}</p>
         <p className="report-next-action">{presentation.nextAction}</p>
+        {(detail.report.label || detail.report.tags.length > 0) && (
+          <div className="report-annotations" aria-label="Report details">
+            {detail.report.label && <span className="report-label-chip">{detail.report.label}</span>}
+            {detail.report.tags.map((tag) => <span key={tag}>{tag}</span>)}
+          </div>
+        )}
       </section>
 
       <section className="report-section">
@@ -338,9 +436,76 @@ function ReportDetail({ detail, error, onCompare }: {
       </section>
 
       <div className="report-actions">
+        <button type="button" className="report-action" onClick={onEdit}>Edit details</button>
+        <button type="button" className="report-action" onClick={onExport}>Export JSON</button>
         <button type="button" className="report-action primary" onClick={onCompare}>Compare with another run</button>
       </div>
     </div>
+  );
+}
+
+function ReportEditor({ detail, error, onCancel, onSave }: {
+  detail: SavedReportDetail;
+  error: string | null;
+  onCancel: () => void;
+  onSave: (label: string, tags: string[]) => void;
+}) {
+  const [label, setLabel] = useState(detail.report.label || '');
+  const [tagsText, setTagsText] = useState(detail.report.tags.join(', '));
+  const parsedTags = parseTags(tagsText);
+
+  return (
+    <form className="report-body report-editor" onSubmit={(event) => {
+      event.preventDefault();
+      onSave(label, parsedTags);
+    }}>
+      {error && <div className="report-error-banner" role="alert">{error}</div>}
+      <section className="report-editor-intro">
+        <h3>Organize this saved run</h3>
+        <p>Labels and tags are stored inside the local schema 2.0 report, so they remain with the JSON when it is exported.</p>
+      </section>
+
+      <label className="report-field">
+        <span>Label</span>
+        <input
+          type="text"
+          value={label}
+          maxLength={80}
+          placeholder={detail.report.profileName}
+          onChange={(event) => setLabel(event.target.value)}
+          autoFocus
+        />
+        <small>{label.length}/80 · Leave blank to use the profile name.</small>
+      </label>
+
+      <label className="report-field">
+        <span>Tags</span>
+        <input
+          type="text"
+          value={tagsText}
+          placeholder="home, wifi, evening"
+          onChange={(event) => setTagsText(event.target.value)}
+        />
+        <small>Comma-separated · up to 10 tags · each tag is stored at up to 32 characters.</small>
+      </label>
+
+      {parsedTags.length > 0 && (
+        <div className="report-tag-preview" aria-label="Tag preview">
+          {parsedTags.slice(0, 10).map((tag) => <span key={tag}>{tag.slice(0, 32)}</span>)}
+        </div>
+      )}
+
+      <div className="report-editor-context">
+        <span>Report</span>
+        <strong>{detail.report.profileName}</strong>
+        <small>{formatDateTime(detail.report.generatedAt)} · {detail.context || detail.report.profileName}</small>
+      </div>
+
+      <div className="report-actions report-editor-actions">
+        <button type="button" className="report-action" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="report-action primary">Save details</button>
+      </div>
+    </form>
   );
 }
 
@@ -427,11 +592,12 @@ function IconButton({ label, onClick, disabled = false, icon }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  icon: 'refresh' | 'back' | 'close';
+  icon: 'import' | 'refresh' | 'back' | 'close';
 }) {
   return (
-    <button type="button" className="history-icon-button" onClick={onClick} aria-label={label} disabled={disabled}>
+    <button type="button" className="history-icon-button" onClick={onClick} aria-label={label} title={label} disabled={disabled}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
+        {icon === 'import' && <><path d="M12 3v11" /><path d="m8 10 4 4 4-4" /><path d="M5 17v3h14v-3" /></>}
         {icon === 'refresh' && <><path d="M20 11a8 8 0 1 0-2.34 5.66" /><path d="M20 5v6h-6" /></>}
         {icon === 'back' && <path d="M19 12H5M11 18l-6-6 6-6" />}
         {icon === 'close' && <path d="M6 6l12 12M18 6 6 18" />}
@@ -457,6 +623,9 @@ function headerFor(view: PanelView): { kicker: string; title: string; subtitle: 
     kicker: 'Saved report', title: displayName(view.detail.report),
     subtitle: `${formatDateTime(view.detail.report.generatedAt)} · ${view.detail.context || view.detail.report.profileName}`,
   };
+  if (view.kind === 'edit') return {
+    kicker: 'Report details', title: displayName(view.detail.report), subtitle: 'Add a local label and tags without changing diagnostic measurements.',
+  };
   if (view.kind === 'compare-select') return {
     kicker: 'Compare reports', title: 'Choose another run', subtitle: 'The selected report stays as the baseline.',
   };
@@ -480,6 +649,15 @@ function errorMessage(value: unknown, fallback: string): string {
 
 function displayName(report: SavedReportSummary): string {
   return report.label || report.profileName;
+}
+
+function parseTags(value: string): string[] {
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
+    .filter((tag, index, tags) => tags.findIndex((candidate) => candidate.toLocaleLowerCase() === tag.toLocaleLowerCase()) === index)
+    .slice(0, 10);
 }
 
 function formatDateTime(value: string): string {
