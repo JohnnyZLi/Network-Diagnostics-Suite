@@ -159,9 +159,8 @@ export function ContinuousDiagnostics({
     <section id="live-network-health" className="workbench-section live-health-section" aria-labelledby="live-health-title">
       <div className="workbench-section-header live-health-header">
         <div>
-          <span className="section-kicker">Live network health</span>
-          <h1 id="live-health-title">Your network right now</h1>
-          <p>Passive monitoring answers whether the connection is healthy before you decide to run a controlled diagnostic.</p>
+          <h1 id="live-health-title">LIVE NETWORK HEALTH</h1>
+          <p>Passive monitoring shows whether the connection is healthy before you run a diagnostic.</p>
         </div>
         {snapshot && (
           <div className="live-health-actions">
