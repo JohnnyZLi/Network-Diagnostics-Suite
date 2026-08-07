@@ -47,7 +47,7 @@ public sealed partial class ReportDetailWorkspace
         var contentWidth = Math.Min(WorkspaceLayoutMetrics.ReportDetailMaxWidth, availableWidth);
         var compact = width < 720;
 
-        ReportBody.Margin = new Thickness(horizontalGutter, compact ? 18 : 24, horizontalGutter, bottomInset);
+        ReportBody.Margin = new Thickness(horizontalGutter, compact ? 20 : 26, horizontalGutter, bottomInset);
         ReportBody.MaxWidth = WorkspaceLayoutMetrics.ReportDetailMaxWidth;
         ReportBody.Width = width > 0 ? contentWidth : double.NaN;
         ReportBody.Spacing = 0;
@@ -62,21 +62,57 @@ public sealed partial class ReportDetailWorkspace
         ToolbarMetaText.IsVisible = width >= 900;
 
         VerdictText.HorizontalAlignment = HorizontalAlignment.Left;
+        VerdictText.LineHeight = compact ? 31 : 34;
         SummaryText.HorizontalAlignment = HorizontalAlignment.Left;
-        HeroContentStack.Spacing = compact ? 5 : 6;
+        SummaryText.LineHeight = compact ? 18 : 19;
+        HeroContentStack.Spacing = compact ? 6 : 8;
         HeroContentStack.VerticalAlignment = VerticalAlignment.Top;
 
-        OverviewSection.Margin = new Thickness(0, compact ? 20 : 26, 0, 0);
-        OverviewSection.Spacing = compact ? 7 : 8;
-        ReportOverviewSurface.Padding = new Thickness(compact ? 15 : 20, compact ? 14 : 18);
+        if (ReportNextActionCard.Child is StackPanel nextActionStack)
+        {
+            nextActionStack.Spacing = compact ? 6 : 8;
+        }
+        NextActionText.LineHeight = compact ? 19 : 20;
 
-        FindingsSection.Margin = new Thickness(0, compact ? 18 : 22, 0, 0);
-        FindingsSection.Spacing = compact ? 5 : 6;
-        ReportEvidenceCard.Margin = new Thickness(0, compact ? 10 : 12, 0, 0);
-        EvidenceToggleButton.Padding = new Thickness(16, compact ? 10 : 11);
+        OverviewSection.Margin = new Thickness(0, compact ? 24 : 32, 0, 0);
+        OverviewSection.Spacing = compact ? 9 : 11;
+        ReportOverviewSurface.Padding = new Thickness(compact ? 16 : 22, compact ? 16 : 21);
+        if (OverviewSection.Children.OfType<StackPanel>().FirstOrDefault() is { } overviewHeader)
+        {
+            overviewHeader.Spacing = 3;
+        }
+
+        ResponsivenessSignalText.LineHeight = compact ? 14.5 : 16;
+        ReliabilitySignalText.LineHeight = compact ? 14.5 : 16;
+        ThroughputSignalText.LineHeight = compact ? 14.5 : 16;
+        ResponsivenessMetricPanel.Margin = new Thickness(0, compact ? 10 : 13, 0, 0);
+        ReliabilityMetricPanel.Margin = new Thickness(0, compact ? 10 : 13, 0, 0);
+        ThroughputMetricPanel.Margin = new Thickness(0, compact ? 10 : 13, 0, 0);
+        SetSignalStackSpacing(ResponsivenessSignal, compact ? 5 : 6);
+        SetSignalStackSpacing(ReliabilitySignal, compact ? 5 : 6);
+        SetSignalStackSpacing(ThroughputSignal, compact ? 5 : 6);
+
+        FindingsSection.Margin = new Thickness(0, compact ? 22 : 30, 0, 0);
+        FindingsSection.Spacing = compact ? 7 : 9;
+        FindingsDetailText.LineHeight = compact ? 14 : 15;
+        if (FindingsSection.Children.OfType<StackPanel>().FirstOrDefault() is { } findingsHeader)
+        {
+            findingsHeader.Spacing = 3;
+        }
+
+        ReportEvidenceCard.Margin = new Thickness(0, compact ? 14 : 18, 0, 0);
+        EvidenceToggleButton.Padding = new Thickness(16, compact ? 11 : 12);
 
         ApplyHeroLayout(width);
         ApplySignalLayout(width);
+    }
+
+    private static void SetSignalStackSpacing(Border signal, double spacing)
+    {
+        if (signal.Child is StackPanel stack)
+        {
+            stack.Spacing = spacing;
+        }
     }
 
     private void ApplyHeroLayout(double width)
@@ -108,7 +144,7 @@ public sealed partial class ReportDetailWorkspace
         Grid.SetRow(HeroContentStack, 0);
         Grid.SetColumn(ReportNextActionCard, 0);
         Grid.SetRow(ReportNextActionCard, 1);
-        ReportNextActionCard.Margin = new Thickness(0, 13, 0, 0);
+        ReportNextActionCard.Margin = new Thickness(0, 15, 0, 0);
         ReportNextActionCard.Padding = new Thickness(14, 0, 0, 0);
         ReportNextActionCard.VerticalAlignment = VerticalAlignment.Top;
     }
@@ -151,14 +187,14 @@ public sealed partial class ReportDetailWorkspace
 
         SignalGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         SignalGrid.ColumnSpacing = 0;
-        SignalGrid.RowSpacing = 14;
+        SignalGrid.RowSpacing = 16;
         for (var index = 0; index < signals.Length; index++)
         {
             SignalGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             Grid.SetColumn(signals[index], 0);
             Grid.SetRow(signals[index], index);
             signals[index].Padding = index < signals.Length - 1
-                ? new Thickness(0, 0, 0, 14)
+                ? new Thickness(0, 0, 0, 16)
                 : new Thickness(0);
             signals[index].BorderThickness = index < signals.Length - 1
                 ? new Thickness(0, 0, 0, 1)
