@@ -86,6 +86,33 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
+    public void ReportAnnotationContractParsesOptionalLabelAndTags()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "label": "Home baseline",
+              "tags": ["wifi", "evening", "wifi"]
+            }
+            """);
+
+        Assert.Equal("Home baseline", BridgeProtocol.ParseOptionalString(document.RootElement, "label"));
+        Assert.Equal(["wifi", "evening", "wifi"], BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
+    }
+
+    [Theory]
+    [InlineData("{\"tags\":\"wifi\"}")]
+    [InlineData("{\"tags\":[\"wifi\",17]}")]
+    public void ReportAnnotationContractRejectsInvalidTags(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+
+        var error = Assert.Throws<ArgumentException>(() =>
+            BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
+
+        Assert.Contains("strings", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void MissingPayloadValuesUseLowRiskDefaults()
     {
         using var document = JsonDocument.Parse("{}");
@@ -93,6 +120,8 @@ public sealed class PhotinoMigrationTests
         Assert.Equal(TestProfileId.ConnectionCheck, BridgeProtocol.ParseProfile(document.RootElement));
         Assert.Equal(TransferMethod.Compare, BridgeProtocol.ParseTransferMethod(document.RootElement));
         Assert.Equal(AppearancePreference.System, BridgeProtocol.ParseAppearance(document.RootElement));
+        Assert.Null(BridgeProtocol.ParseOptionalString(document.RootElement, "label"));
+        Assert.Empty(BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
     }
 
     [Fact]
