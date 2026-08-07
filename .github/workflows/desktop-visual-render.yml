@@ -230,25 +230,29 @@ jobs:
           capture saved-report-detail
 
           # Real reports can contain one or many findings. Scroll the report pane to
-          # its bottom before targeting the stable management action row.
+          # its bottom for the visual artifact, but use its focus trap—not variable
+          # content coordinates—to reach the report actions.
           xdotool mousemove --sync 1400 760
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # Exercise the real report metadata workflow against the persisted JSON.
-          # Coordinates are native 1600x1000 pixels; screenshot artifacts are scaled.
-          xdotool mousemove --sync 1241 957 click 1
+          # With the report-row button removed, Shift+Tab enters the dialog at its
+          # final focusable action (Compare), then walks back through Export to Edit.
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers Return
           capture saved-report-editor
 
-          xdotool mousemove --sync 1260 325 click 1
+          # ReportEditor auto-focuses Label. Tab order is Label → Tags → Cancel → Save.
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
-
-          xdotool mousemove --sync 1260 425 click 1
+          xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'ci, photino'
-
-          xdotool mousemove --sync 1525 956 click 1
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
           capture saved-report-annotated
 
           python3 - "$reports_dir" <<'PY'
@@ -287,7 +291,7 @@ jobs:
           xdotool key --clearmodifiers Escape
 
       - name: Upload rendered states
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@b7c566a772e6b6fb58ed0dc250532a479d7789f
         if: always()
         with:
           name: desktop-photino-visual-render
