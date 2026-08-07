@@ -15,7 +15,7 @@ public sealed partial class SettingsWorkspace
         SizeChanged += VisualSettingsSizeChanged;
         ApplyContentBounds(Bounds.Width);
         ApplyFieldSizing();
-        ApplySettingsChromePolish();
+        ApplySettingsChromePolish(Bounds.Width);
         ApplyComponentPolish();
         ApplySettingsCardLayout(Bounds.Width);
     }
@@ -29,7 +29,7 @@ public sealed partial class SettingsWorkspace
     private void VisualSettingsSizeChanged(object? sender, SizeChangedEventArgs eventArgs)
     {
         ApplyContentBounds(eventArgs.NewSize.Width);
-        ApplySettingsChromePolish();
+        ApplySettingsChromePolish(eventArgs.NewSize.Width);
         ApplyComponentPolish();
         ApplySettingsCardLayout(eventArgs.NewSize.Width);
     }
@@ -55,7 +55,7 @@ public sealed partial class SettingsWorkspace
         AlertThresholdTextBox.HorizontalAlignment = HorizontalAlignment.Left;
     }
 
-    private void ApplySettingsChromePolish()
+    private void ApplySettingsChromePolish(double width)
     {
         SectionEyebrowText.HorizontalAlignment = HorizontalAlignment.Left;
         SectionTitleText.FontSize = 26;
@@ -73,7 +73,10 @@ public sealed partial class SettingsWorkspace
             .FirstOrDefault(border => Grid.GetRow(border) == 0);
         if (navigationBar is not null)
         {
-            navigationBar.Padding = new Thickness(20, 8);
+            var horizontalInset = width > 1080
+                ? Math.Max(20, (width - 1040) / 2 + 20)
+                : 20;
+            navigationBar.Padding = new Thickness(horizontalInset, 8);
         }
 
         foreach (var card in SettingsRootGrid
