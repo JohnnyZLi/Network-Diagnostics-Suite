@@ -241,18 +241,26 @@ jobs:
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          xdotool mousemove --sync 1242 916 click 1
+          # Report height varies with the evidence collected by the real diagnostic.
+          # Use focus order instead of a fixed Y coordinate to open Edit details.
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers shift+Tab
+          xdotool key --clearmodifiers Return
+          sleep 0.4
           capture saved-report-editor
 
-          xdotool mousemove --sync 1260 325 click 1
+          # The editor autofocuses Label. Stay on the keyboard path so annotation
+          # persistence does not depend on report or viewport geometry.
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
-
-          xdotool mousemove --sync 1260 425 click 1
+          xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'ci, photino'
-
-          xdotool mousemove --sync 1525 956 click 1
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
+          sleep 0.5
           capture saved-report-annotated
 
           python3 - "$reports_dir" <<'PY'
