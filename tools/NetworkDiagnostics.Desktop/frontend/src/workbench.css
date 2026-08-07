@@ -1,3 +1,53 @@
+.product-actions,
+.diagnostic-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.diagnostic-controls {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.workbench-intro > div:first-child {
+  max-width: 700px;
+}
+
+.workbench-intro p strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.progress-orb.monitoring {
+  background:
+    radial-gradient(circle at 50% 50%, var(--surface) 0 66%, transparent 67%),
+    conic-gradient(var(--good) var(--progress), rgba(255, 255, 255, 0.065) var(--progress) 360deg);
+}
+
+.progress-orb.monitoring.monitor-fair,
+.progress-orb.monitoring.monitor-degraded {
+  background:
+    radial-gradient(circle at 50% 50%, var(--surface) 0 66%, transparent 67%),
+    conic-gradient(var(--accent) var(--progress), rgba(255, 255, 255, 0.065) var(--progress) 360deg);
+}
+
+.progress-orb.monitoring.monitor-poor {
+  background:
+    radial-gradient(circle at 50% 50%, var(--surface) 0 66%, transparent 67%),
+    conic-gradient(var(--danger) var(--progress), rgba(255, 255, 255, 0.065) var(--progress) 360deg);
+}
+
+.run-status-line > span.monitor-live {
+  background: var(--good);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 9%, transparent);
+}
+
+.workbench-evidence-row {
+  padding-top: 28px;
+}
+
 .workbench-section {
   margin-top: 28px;
   padding: 28px;
@@ -294,6 +344,13 @@
   .lan-pane .advanced-server-section,
   .preflight-pane .advanced-section {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .diagnostic-controls {
+    width: 100%;
+    justify-items: stretch;
   }
 }
 
