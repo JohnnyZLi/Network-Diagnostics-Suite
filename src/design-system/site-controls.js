@@ -40,13 +40,6 @@ function syncThemeButtons(menu) {
 }
 
 function createThemeControl(document) {
-  const item = document.createElement("li");
-  item.className = "jl-theme-menu-item";
-
-  const label = document.createElement("span");
-  label.className = "jl-theme-menu-label";
-  label.textContent = "Appearance";
-
   const group = document.createElement("div");
   group.className = "jl-theme-options";
   group.setAttribute("role", "group");
@@ -61,8 +54,60 @@ function createThemeControl(document) {
     group.append(button);
   }
 
-  item.append(label, group);
-  return item;
+  return group;
+}
+
+function createSettingsIcon(document) {
+  const namespace = "http" + "://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.classList.add("jl-settings-button__icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  const gear = document.createElementNS(namespace, "path");
+  gear.setAttribute("d", "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z");
+  const hub = document.createElementNS(namespace, "circle");
+  hub.setAttribute("cx", "12");
+  hub.setAttribute("cy", "12");
+  hub.setAttribute("r", "3");
+  svg.append(gear, hub);
+  return svg;
+}
+
+function ensureSettingsControl(root, sitesButton, sitesMenu) {
+  const document = root.ownerDocument;
+  let button = root.querySelector("[data-settings-button]");
+  let menu = root.querySelector("[data-settings-menu]");
+
+  if (!(menu instanceof HTMLElement)) {
+    menu = document.createElement("div");
+    menu.className = "jl-settings-menu";
+    menu.dataset.settingsMenu = "";
+    menu.id = sitesMenu.id ? `${sitesMenu.id}-settings` : "jl-settings-menu";
+    menu.setAttribute("aria-label", "Settings");
+    menu.hidden = true;
+    menu.append(createThemeControl(document));
+    root.append(menu);
+  }
+
+  if (!(button instanceof HTMLButtonElement)) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.className = "jl-settings-button";
+    button.dataset.settingsButton = "";
+    button.setAttribute("aria-label", "Settings");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", menu.id);
+    button.append(createSettingsIcon(document));
+    sitesButton.after(button);
+  }
+
+  return { button, menu };
 }
 
 export function populateOwnedSites(menu, currentSite) {
@@ -77,8 +122,7 @@ export function populateOwnedSites(menu, currentSite) {
     item.append(link);
     return item;
   });
-  menu.replaceChildren(...siteItems, createThemeControl(document));
-  syncThemeButtons(menu);
+  menu.replaceChildren(...siteItems);
 }
 
 export function installThemeControl(menu) {
@@ -220,20 +264,51 @@ export function installDisclosureMenu({
 export function installSiteSwitcher(root, options = {}) {
   const button = root.querySelector("[data-site-switcher-button]");
   const menu = root.querySelector("[data-site-switcher-menu]");
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new TypeError("Site switcher button must be an HTMLButtonElement.");
+  }
+  requireElement(menu, "Site switcher menu");
   if (options.populate && options.currentSite) populateOwnedSites(menu, options.currentSite);
-  const theme = installThemeControl(menu);
-  const disclosure = installDisclosureMenu({
+
+  const settings = ensureSettingsControl(root, button, menu);
+  const theme = installThemeControl(settings.menu);
+  let settingsDisclosure = null;
+
+  const sitesDisclosure = installDisclosureMenu({
     root,
     button,
     menu,
     useHidden: true,
-    onBeforeOpen: options.onBeforeOpen,
+    onBeforeOpen: () => {
+      settingsDisclosure?.close();
+      options.onBeforeOpen?.();
+    },
     onOpenChange: options.onOpenChange,
   });
+
+  settingsDisclosure = installDisclosureMenu({
+    root,
+    button: settings.button,
+    menu: settings.menu,
+    useHidden: true,
+    closeOnSelect: false,
+    onBeforeOpen: () => {
+      sitesDisclosure.close();
+      options.onBeforeOpen?.();
+    },
+    onOpenChange: options.onOpenChange,
+  });
+
   return {
-    ...disclosure,
+    open: sitesDisclosure.open,
+    toggle: sitesDisclosure.toggle,
+    close(options = {}) {
+      sitesDisclosure.close(options);
+      settingsDisclosure.close();
+    },
     destroy() {
-      disclosure.destroy();
+      sitesDisclosure.destroy();
+      settingsDisclosure.destroy();
       theme.destroy();
     },
   };
