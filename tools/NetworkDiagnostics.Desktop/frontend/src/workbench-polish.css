@@ -37,6 +37,120 @@
   color: var(--accent-strong);
 }
 
+/* Capacity is an explicit measurement, not a continuously sampled health score. */
+.capacity-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.capacity-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.capacity-card-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.capacity-card-heading > div > span {
+  color: var(--faint);
+  font-size: 8.5px;
+}
+
+.capacity-card-heading > div > strong {
+  font-size: 10.5px;
+}
+
+.capacity-rating {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.capacity-rating.excellent,
+.capacity-rating.good {
+  border-color: color-mix(in srgb, var(--good) 28%, var(--line));
+  color: var(--good);
+}
+
+.capacity-rating.fair,
+.capacity-rating.degraded {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  color: var(--accent-strong);
+}
+
+.capacity-rating.poor {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+  color: var(--danger);
+}
+
+.capacity-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.capacity-values > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.capacity-values span,
+.capacity-expectations span {
+  color: var(--faint);
+  font-size: 8px;
+}
+
+.capacity-values strong {
+  overflow: hidden;
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-component-card.capacity-card > p {
+  min-height: 0;
+  margin: 10px 0 12px;
+}
+
+.capacity-card.unmeasured > p {
+  margin-top: 12px;
+}
+
+.capacity-expectations {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.capacity-expectations strong {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.capacity-card .monitor-card-action {
+  margin-top: auto;
+}
+
 /* Profile and transfer method describe one run configuration. Keep them visually
    adjacent instead of pinning method controls to the far edge of a wide window. */
 .diagnostic-selector-grid {
@@ -106,6 +220,37 @@
   white-space: nowrap;
 }
 
+/* Advanced tools disclose controls; they do not create new items. Replace the old
+   plus/minus glyph with a directional chevron that rotates with expansion state. */
+.advanced-tool-card > i {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0;
+}
+
+.advanced-tool-card > i::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transform-origin: center;
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.advanced-tool-card:hover > i,
+.advanced-tool-card.active > i {
+  color: var(--accent-strong);
+}
+
+.advanced-tool-card.active > i::before {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
 @media (max-width: 1020px) {
   .app-shell > main {
     padding-top: 90px;
@@ -140,6 +285,10 @@
   .diagnostic-run-state.ready {
     min-height: 0;
     padding: 20px;
+  }
+
+  .capacity-values {
+    grid-template-columns: 1fr;
   }
 
   .advanced-header-status {
