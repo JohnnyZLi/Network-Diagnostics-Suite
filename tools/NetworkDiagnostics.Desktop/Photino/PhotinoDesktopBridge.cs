@@ -172,7 +172,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                     break;
 
                 case "diagnostic.interfaces":
-                    SendInterfaces(sender, request.Id);
+                    SendResponse(sender, request.Id, true, NetworkDiagnosticsRunner.ListInterfaces());
                     break;
 
                 case "diagnostic.preflight":
@@ -302,27 +302,20 @@ public sealed class PhotinoDesktopBridge : IDisposable
         SendResponse(sender, request.Id, true, AdvancedSettingsPayload(settings));
     }
 
-    private static void SendInterfaces(PhotinoWindow sender, string? requestId)
-    {
-        var interfaces = NetworkDiagnosticsRunner.ListInterfaces(includeAddresses: true)
-            .Select(item => new
-            {
-                item.Id,
-                item.Name,
-                item.Type,
-                item.OperationalStatus,
-                addresses = item.Addresses
-            })
-            .ToArray();
-        SendResponse(sender, requestId, true, interfaces);
-    }
-
     private async Task SendPreflightAsync(PhotinoWindow sender, BridgeRequest request)
     {
         var profile = BridgeProtocol.ParseProfile(request.Payload);
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
-        var options = BuildRunOptions(settingsStore.Load(), profile, method);
-        var result = await NetworkDiagnosticsRunner.PreflightAsync(options);
+        var settings = settingsStore.Load();
+        var origins = settings.TestOrigins.Count == 0
+            ? new[] { new Uri("https://network.johnnyli.dev/") }
+            : settings.TestOrigins.Select(value => new Uri(value)).ToArray();
+        var result = await NetworkDiagnosticsRunner.PreflightAsync(new NativePreflightOptions(
+            Profile: profile,
+            TransferMethod: method,
+            TestOrigins: origins,
+            InterfaceId: string.IsNullOrWhiteSpace(settings.InterfaceId) ? null : settings.InterfaceId,
+            IncludeAddresses: settings.IncludeLocalIdentifiers));
         SendResponse(sender, request.Id, true, result);
     }
 
@@ -343,7 +336,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             {
                 try
                 {
-                    await NetworkDiagnosticsRunner.RunLanServerAsync(port, cancellation.Token);
+                    await NetworkDiagnosticsRunner.RunLanServerAsync(port, progress: null, cancellation.Token);
                 }
                 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
                 {
