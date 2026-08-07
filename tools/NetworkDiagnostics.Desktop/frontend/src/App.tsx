@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AdvancedPanel } from './AdvancedPanel';
 import { desktopBridge } from './bridge';
+import { CommandPalette, type PaletteCommand } from './CommandPalette';
 import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
 import { MonitorPanel, type MonitorSnapshot } from './MonitorPanel';
 import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
@@ -149,6 +150,7 @@ function App() {
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorError, setMonitorError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -262,6 +264,26 @@ function App() {
       removeMonitorSnapshot();
       removeMonitorError();
     };
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey) return;
+      const modifier = event.metaKey || event.ctrlKey;
+      if (!modifier) return;
+      const key = event.key.toLowerCase();
+      if (key === 'f') {
+        event.preventDefault();
+        setPaletteOpen(true);
+      } else if (key === 'h') {
+        event.preventDefault();
+        setPaletteOpen(false);
+        openHistory();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const progressPercent = Math.round(progressRatio * 100);
@@ -400,6 +422,91 @@ function App() {
       setError(value instanceof Error ? value.message : 'The diagnostic could not be cancelled.');
     }
   }
+
+  const paletteCommands: PaletteCommand[] = [
+    {
+      id: 'workspace-monitor',
+      title: 'Open Network Monitor',
+      detail: 'Continuous score, timeline, speed checks, alerts, and exports.',
+      keywords: 'monitor health timeline content peak alerts',
+      priority: 1,
+      enabled: desktopBridge.available,
+      run: openMonitor,
+    },
+    {
+      id: 'workspace-history',
+      title: 'Open Saved Runs',
+      detail: 'Browse, compare, import, export, and annotate persisted reports.',
+      keywords: 'history reports saved runs compare json',
+      shortcut: 'Ctrl/⌘ H',
+      priority: 2,
+      enabled: desktopBridge.available,
+      run: openHistory,
+    },
+    {
+      id: 'workspace-advanced',
+      title: 'Open Advanced Diagnostics',
+      detail: 'Endpoints, interface binding, privacy, preflight, and LAN.',
+      keywords: 'advanced endpoint interface lan privacy preflight',
+      priority: 3,
+      enabled: desktopBridge.available,
+      run: openAdvanced,
+    },
+    {
+      id: 'run-selected',
+      title: running ? 'Diagnostic is already running' : `Run ${selectedProfile.title}`,
+      detail: `${methodLabel(method)} using the current native configuration.`,
+      keywords: 'run start diagnostic current selected test',
+      priority: 4,
+      enabled: desktopBridge.available && !running,
+      run: () => { void runDiagnostic(); },
+    },
+    {
+      id: 'run-content',
+      title: 'Run Content Speed Check',
+      detail: 'Low-data Connection Check using aggregate transfer flow.',
+      keywords: 'content speed aggregate low data quick bandwidth',
+      priority: 5,
+      enabled: desktopBridge.available && !running,
+      run: runContentSpeed,
+    },
+    {
+      id: 'open-peak',
+      title: 'Open Peak Speed Check',
+      detail: 'Review the Stress + Aggregate data warning in Network Monitor first.',
+      keywords: 'peak speed stress aggregate bandwidth capacity',
+      priority: 6,
+      enabled: desktopBridge.available && !running,
+      run: openMonitor,
+    },
+    ...(running ? [{
+      id: 'cancel-run',
+      title: 'Cancel Active Diagnostic',
+      detail: 'Stop the native measurement currently in progress.',
+      keywords: 'cancel stop abort diagnostic test',
+      priority: 0,
+      enabled: true,
+      run: () => { void cancelDiagnostic(); },
+    } satisfies PaletteCommand] : []),
+    ...profiles.map((item, index) => ({
+      id: `profile-${item.id}`,
+      title: `Select ${item.title}`,
+      detail: item.description,
+      keywords: `profile ${item.id} ${item.label}`,
+      priority: 20 + index,
+      enabled: !running,
+      run: () => selectProfile(item.id),
+    } satisfies PaletteCommand)),
+    ...methods.map((item, index) => ({
+      id: `method-${item.id}`,
+      title: `Use ${item.label} Transfer`,
+      detail: item.detail,
+      keywords: `method transfer flow ${item.id} ${item.detail}`,
+      priority: 30 + index,
+      enabled: !running,
+      run: () => setMethod(item.id),
+    } satisfies PaletteCommand)),
+  ];
 
   return (
     <div className="app-shell">
@@ -622,6 +729,12 @@ function App() {
         profile={profile}
         method={method}
         onClose={() => setAdvancedOpen(false)}
+      />
+
+      <CommandPalette
+        open={paletteOpen}
+        commands={paletteCommands}
+        onClose={() => setPaletteOpen(false)}
       />
     </div>
   );
