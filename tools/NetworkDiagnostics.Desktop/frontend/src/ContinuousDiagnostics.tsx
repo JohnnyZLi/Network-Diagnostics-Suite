@@ -240,7 +240,7 @@ export function ContinuousDiagnostics({
           <div className="monitor-components live-health-components">
             <MonitorComponentCard component={snapshot.responsiveness} />
             <MonitorComponentCard component={snapshot.reliability} />
-            <MonitorComponentCard component={snapshot.speed} title="Capacity" actionLabel="Measure capacity" onAction={onMeasureCapacity} />
+            <CapacityCard component={snapshot.speed} onAction={onMeasureCapacity} />
           </div>
 
           {snapshot.alerts.length === 0 ? (
@@ -292,17 +292,49 @@ function LiveMetric({ label, value }: { label: string; value: string }) {
   return <div><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function MonitorComponentCard({ component, title, actionLabel, onAction }: { component: MonitorComponent; title?: string; actionLabel?: string; onAction?: () => void }) {
+function MonitorComponentCard({ component }: { component: MonitorComponent }) {
   return (
     <article className="monitor-component-card">
-      <div className="monitor-component-top"><div><span>{title ?? component.title}</span><strong>{component.status}</strong></div><b>{component.score ?? '—'}</b></div>
+      <div className="monitor-component-top"><div><span>{component.title}</span><strong>{component.status}</strong></div><b>{component.score ?? '—'}</b></div>
       <p>{component.summary}</p>
       {component.metrics.length > 0 && (
         <div className="monitor-component-metrics">
           {component.metrics.slice(0, 4).map((metric) => <div key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></div>)}
         </div>
       )}
-      {actionLabel && onAction && <button type="button" className="monitor-card-action" onClick={onAction}>{actionLabel}</button>}
+    </article>
+  );
+}
+
+function CapacityCard({ component, onAction }: { component: MonitorComponent; onAction: () => void }) {
+  const download = componentMetric(component, 'Content download');
+  const upload = componentMetric(component, 'Content upload');
+  const expectedDownload = componentMetric(component, 'Expected download');
+  const expectedUpload = componentMetric(component, 'Expected upload');
+  const measured = component.score != null && (download !== '—' || upload !== '—');
+
+  return (
+    <article className={`monitor-component-card capacity-card ${measured ? 'measured' : 'unmeasured'}`}>
+      <div className="capacity-card-heading">
+        <div><span>Capacity</span><strong>{measured ? 'Recent content measurement' : 'Not measured yet'}</strong></div>
+        {measured && <small className={`capacity-rating ${component.band}`}>{component.status}</small>}
+      </div>
+      {measured ? (
+        <>
+          <div className="capacity-values" aria-label="Last measured content capacity">
+            <div><span>Download</span><strong>{download}</strong></div>
+            <div><span>Upload</span><strong>{upload}</strong></div>
+          </div>
+          <p>{component.summary}</p>
+          <div className="capacity-expectations">
+            <span>Expected</span>
+            <strong>{expectedDownload} ↓ · {expectedUpload} ↑</strong>
+          </div>
+        </>
+      ) : (
+        <p>Run a lightweight content-speed measurement to establish a download and upload baseline. Passive monitoring does not continuously load the connection.</p>
+      )}
+      <button type="button" className="monitor-card-action" onClick={onAction}>{measured ? 'Measure again' : 'Measure capacity'}</button>
     </article>
   );
 }
@@ -329,10 +361,13 @@ function latestLoss(snapshot: MonitorSnapshot): string {
 }
 
 function monitorSummary(snapshot: MonitorSnapshot): string {
+  const capacity = snapshot.speed.score == null
+    ? 'Not measured'
+    : `${componentMetric(snapshot.speed, 'Content download')} down · ${componentMetric(snapshot.speed, 'Content upload')} up · ${snapshot.speed.status}`;
   return [
     `Network score: ${snapshot.score ?? 'Not enough data'} · ${snapshot.status}`,
     snapshot.summary,
-    `Responsiveness: ${snapshot.responsiveness.score ?? '—'} · Reliability: ${snapshot.reliability.score ?? '—'} · Capacity: ${snapshot.speed.score ?? '—'}`,
+    `Responsiveness: ${snapshot.responsiveness.score ?? '—'} · Reliability: ${snapshot.reliability.score ?? '—'} · Capacity: ${capacity}`,
     `Window: ${snapshot.window} · Updated: ${snapshot.lastUpdated}`,
   ].join('\n');
 }
