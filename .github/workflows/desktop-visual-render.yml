@@ -203,6 +203,14 @@ jobs:
 
           capture diagnostics-result-dark
 
+          # A completed Content preset feeds capacity history back into the native
+          # monitor. Capture the top workbench again so the measured Capacity card is
+          # a permanent visual regression state, not just the empty placeholder.
+          xdotool mousemove --sync 80 500 click 1
+          xdotool key --clearmodifiers ctrl+home
+          sleep 1.5
+          capture live-health-capacity-measured-dark
+
           if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-app.log
             exit 1
