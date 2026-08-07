@@ -14,10 +14,16 @@ public sealed class PhotinoDesktopBridge : IDisposable
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
 
     private readonly object runGate = new();
+    private readonly PhotinoSettingsStore settingsStore;
     private PhotinoWindow? window;
     private CancellationTokenSource? activeRun;
     private Guid activeBridgeRunId;
     private bool disposed;
+
+    public PhotinoDesktopBridge(PhotinoSettingsStore? settingsStore = null)
+    {
+        this.settingsStore = settingsStore ?? new PhotinoSettingsStore();
+    }
 
     public void Attach(PhotinoWindow targetWindow)
     {
@@ -26,9 +32,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
         if (window is not null) throw new InvalidOperationException("The desktop bridge is already attached.");
 
         window = targetWindow;
-        targetWindow.RegisterWebMessageReceivedHandler((sender, message) =>
+        targetWindow.RegisterWebMessageReceivedHandler((_, message) =>
         {
-            _ = HandleMessageAsync((PhotinoWindow)sender, message);
+            _ = HandleMessageAsync(targetWindow, message);
         });
     }
 
@@ -68,6 +74,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             switch (request.Method)
             {
                 case "app.ready":
+                    var settings = settingsStore.Load();
                     SendResponse(sender, request.Id, true, new
                     {
                         product = "Network Diagnostics",
@@ -75,8 +82,27 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         version = ApplicationVersion,
                         platform = Environment.OSVersion.Platform.ToString(),
                         architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
-                        capabilities = new[] { "diagnostic.run", "diagnostic.cancel", "diagnostic.describePlan" }
+                        appearance = BridgeProtocol.AppearanceId(settings.Appearance),
+                        capabilities = new[]
+                        {
+                            "diagnostic.run",
+                            "diagnostic.cancel",
+                            "diagnostic.describePlan",
+                            "settings.get",
+                            "settings.setAppearance"
+                        }
                     });
+                    break;
+
+                case "settings.get":
+                    SendSettings(sender, request.Id, settingsStore.Load());
+                    break;
+
+                case "settings.setAppearance":
+                    SendSettings(
+                        sender,
+                        request.Id,
+                        settingsStore.SaveAppearance(BridgeProtocol.ParseAppearance(request.Payload)));
                     break;
 
                 case "diagnostic.describePlan":
@@ -100,6 +126,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
         {
             SendResponse(sender, request.Id, false, null, SafeMessage(error));
         }
+    }
+
+    private static void SendSettings(PhotinoWindow sender, string? requestId, PhotinoAppSettings settings)
+    {
+        SendResponse(sender, requestId, true, new
+        {
+            appearance = BridgeProtocol.AppearanceId(settings.Appearance)
+        });
     }
 
     private static void DescribePlan(PhotinoWindow sender, BridgeRequest request)
@@ -269,7 +303,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
     private static string SafeMessage(Exception error)
     {
         var message = error.Message.Trim();
-        return string.IsNullOrWhiteSpace(message) ? "The diagnostic engine returned an error." : message;
+        return string.IsNullOrWhiteSpace(message) ? "The desktop host returned an error." : message;
     }
 
     public sealed record BridgeRequest(string? Id, string Method, JsonElement Payload);
