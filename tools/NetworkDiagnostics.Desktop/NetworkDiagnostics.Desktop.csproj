@@ -19,8 +19,12 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Photino/**/*.cs" />
+    <Compile Include="Monitoring/MonitorModels.cs" />
+    <Compile Include="Monitoring/MonitorHistoryStore.cs" />
+    <Compile Include="Monitoring/ContinuousMonitorService.cs" />
     <Compile Include="Presentation/ConnectionCheckPresentation.cs" />
     <Compile Include="Presentation/DiagnosticReportPresenter.cs" />
+    <Compile Include="Presentation/NetworkExperiencePresentation.cs" />
     <Compile Include="Services/ReportComparisonService.cs" />
     <Compile Include="Services/ReportStore.cs" />
     <EmbeddedResource Include="Resources/**/*" />
