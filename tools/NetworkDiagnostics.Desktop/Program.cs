@@ -1,7 +1,8 @@
-using Avalonia;
-using Avalonia.Fonts.Inter;
+using System.Drawing;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Planning;
+using Photino.NET;
+using Photino.NET.Server;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -17,12 +18,36 @@ internal static class Program
             return plan.DownloadStages.Count > 0 && plan.UploadStages.Count > 0 ? 0 : 1;
         }
 
-        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-    }
+        Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
-    public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace();
+        var server = PhotinoServer.CreateStaticFileServer(
+            args,
+            startPort: 8210,
+            portRange: 40,
+            webRootFolder: "wwwroot",
+            out var baseUrl);
+        server.StartAsync().GetAwaiter().GetResult();
+
+        var bridge = new PhotinoDesktopBridge();
+        try
+        {
+            var window = new PhotinoWindow()
+                .SetTitle("Network Diagnostics")
+                .SetUseOsDefaultSize(false)
+                .SetSize(new Size(1180, 800))
+                .Center()
+                .SetResizable(true);
+
+            bridge.Attach(window);
+            window.Load(baseUrl);
+            window.WaitForClose();
+            return 0;
+        }
+        finally
+        {
+            bridge.Dispose();
+            server.StopAsync().GetAwaiter().GetResult();
+            server.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
 }
