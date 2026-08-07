@@ -6,21 +6,25 @@ The application is self-contained; the .NET runtime does not need to be installe
 
 ## Available in this build
 
-- A unified **Network Diagnostics workbench** that keeps active testing, continuous network health, current evidence, and advanced native tools on one scrollable screen.
-- The main status orb shows the live network score while idle and becomes diagnostic progress while a test is running.
-- **Connection Check, Quick, Full, and Stress** diagnostic profiles backed by the native `NetworkDiagnosticsRunner`.
-- **Single, Aggregate, and Compare** transfer modes.
-- Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback.
-- Native Full/Stress evidence including interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing details, loaded-path localization, dual-stack/HTTP3 evidence, network-change detection, and host-resource evidence when supported by the platform.
-- Persisted **System / Light / Dark** appearance preference.
-- Schema 2.0 report persistence through the existing atomic report store.
-- **History** as a focused side workspace with saved-run detail, findings/evidence, comparison, JSON import/export, and persisted labels/tags.
-- Inline **Continuous diagnostics** with seven-day local history, responsiveness/reliability/speed scoring, multiple time windows, pause/resume, local alerts, and completed diagnostic throughput fed back into speed history.
-- Monitoring utilities for a lower-data **Content** speed check and higher-capacity **Peak** check.
-- Copyable network summary, self-contained HTML health snapshot export, and privacy-aware CSV monitoring-history export.
-- Inline **Advanced diagnostics** for endpoint candidates, interface binding, explicit local-identifier opt-in, LAN target/port/duration/connections, native preflight, and LAN throughput server controls.
-- **Cmd/Ctrl-F command palette** for keyboard jumps within the workbench, History, profile actions, and transfer-mode changes.
+- A single **Network Diagnostics** page organized around the current network: observe live health first, run controlled diagnostics second, and open specialized Advanced tools only when needed.
+- **Live Network Health** is the primary opening state. Its health-score orb always represents passive network health; it does not change meaning when a diagnostic starts.
+- Passive monitoring includes seven-day local history, responsiveness/reliability scoring, multiple time windows, connection timeline, pause/resume, local alerts, and a clearly labeled last-measured capacity state.
+- Copyable network summary, self-contained HTML health snapshot export, and privacy-aware CSV monitoring-history export are available from the secondary Share & export control.
+- **Run Diagnostics** owns the active-test lifecycle with distinct Ready, Running, and Latest Result states while passive monitoring continues independently.
+- **Connection Check, Quick, Full, and Stress** profiles are backed by the native `NetworkDiagnosticsRunner` with **Single, Aggregate, and Compare** transfer methods.
+- Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback stay inside the active diagnostic region rather than replacing the live-health score.
+- Lower-data **Content speed** (`Connection Check + Aggregate`) and high-data **Peak capacity** (`Stress + Aggregate`) are explicit diagnostic presets rather than additional monitoring modes.
+- The latest successful diagnostic remains available until another run completes; selecting a different profile only prepares the next run.
+- Native Full/Stress evidence includes interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing details, loaded-path localization, dual-stack/HTTP3 evidence, network-change detection, and host-resource evidence when supported by the platform.
+- Persisted nondefault Advanced configuration is surfaced beside the normal Run controls so endpoint/interface/privacy/LAN overrides never silently change a diagnostic.
+- **Advanced diagnostics** uses progressive disclosure for Targeting, LAN diagnostics, and Preflight. Only the selected specialized tool expands into detailed controls.
+- Advanced Targeting supports endpoint candidates, interface binding, and explicit local-identifier opt-in. LAN supports peer target/port/duration/connections and the native throughput server. Preflight verifies the saved native route/target configuration without starting the full throughput run.
+- Unsaved Advanced edits are explicitly labeled, and a running LAN server keeps its actual listening port visible as persistent application state.
+- Schema 2.0 reports are persisted through the existing atomic report store.
+- **History** remains a focused side workspace for saved-run detail, findings/evidence, comparison, JSON import/export, and persisted labels/tags.
 - **Settings** is limited to application preferences such as appearance; diagnostic capability is not hidden behind the gear menu.
+- **Cmd/Ctrl-F command palette** provides keyboard jumps to Live Network Health, Run Diagnostics, Advanced diagnostics, History, diagnostic profiles, transfer methods, and run/cancel actions.
+- Persisted **System / Light / Dark** appearance preference.
 - Responsive Photino/WebView interface validated in dark and light themes and compact window sizes.
 
 ## System tray
