@@ -349,6 +349,36 @@
   }
 }
 
+@media (max-width: 420px) {
+  .jl-global-header__inner {
+    width: calc(100% - 16px);
+    gap: var(--jl-space-1);
+  }
+
+  .jl-site-identity {
+    font-size: 0.875rem;
+    letter-spacing: -0.035em;
+  }
+
+  .jl-global-header__actions {
+    gap: var(--jl-space-1);
+  }
+
+  .jl-site-switcher {
+    gap: var(--jl-space-1);
+  }
+
+  .jl-header-menu-toggle {
+    min-width: 44px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .jl-site-menu {
+    right: calc(40px + var(--jl-space-1));
+  }
+}
+
 @media (max-width: 360px) {
   .jl-global-header__inner {
     width: calc(100% - 16px);
