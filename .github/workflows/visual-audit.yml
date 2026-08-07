@@ -191,7 +191,8 @@ jobs:
             const expectedInnerHeight = compact ? 68 : 82;
             const expectedOuterHeight = compact ? 82 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
-            const fittedSitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
+            const fittedSitesWidth = 88;
+            const legacySitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
             if (metrics.overflow) problems.push('document overflow');
             if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
             if (!near(metrics.headerInnerHeight, expectedInnerHeight)) problems.push(`header inner ${metrics.headerInnerHeight}, expected ${expectedInnerHeight}`);
@@ -201,7 +202,7 @@ jobs:
             } else {
               const widthAllowed = prefix === 'local'
                 ? near(metrics.sitesButton.width, fittedSitesWidth)
-                : near(metrics.sitesButton.width, fittedSitesWidth) || near(metrics.sitesButton.width, 88);
+                : near(metrics.sitesButton.width, fittedSitesWidth) || near(metrics.sitesButton.width, legacySitesWidth);
               if (!widthAllowed) problems.push(`Sites width ${metrics.sitesButton.width}`);
               if (!near(metrics.sitesButton.height, expectedButtonHeight)) problems.push(`Sites height ${metrics.sitesButton.height}, expected ${expectedButtonHeight}`);
               if (metrics.sitesButton.fontSize !== '13px') problems.push(`Sites font size ${metrics.sitesButton.fontSize}`);
@@ -219,17 +220,23 @@ jobs:
               const button = document.querySelector('.jl-site-switcher__button');
               const menu = document.querySelector('#owned-sites-menu');
               const links = [...document.querySelectorAll('#owned-sites-menu a')];
+              const menuRect = menu?.getBoundingClientRect();
               return {
                 buttonWidth: button?.getBoundingClientRect().width ?? null,
-                menuWidth: menu?.getBoundingClientRect().width ?? null,
+                menuWidth: menuRect?.width ?? null,
+                menuLeft: menuRect?.left ?? null,
+                menuRight: menuRect?.right ?? null,
+                viewportWidth: window.innerWidth,
                 linkOverflow: links.some((link) => link.scrollWidth > link.clientWidth + 1),
                 linkWrapping: links.some((link) => getComputedStyle(link).whiteSpace !== 'nowrap'),
               };
             });
             if (prefix === 'local') {
-              if (!near(sitesOpenGeometry.buttonWidth, sitesOpenGeometry.menuWidth)) problems.push('Sites extension does not match trigger width');
-              if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its attached extension');
-              if (sitesOpenGeometry.linkWrapping) problems.push('Sites label wraps in fitted attached extension');
+              if (!near(sitesOpenGeometry.buttonWidth, 88)) problems.push(`Sites trigger width ${sitesOpenGeometry.buttonWidth}`);
+              if (!near(sitesOpenGeometry.menuWidth, 144)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}`);
+              if (sitesOpenGeometry.menuLeft < -0.5 || sitesOpenGeometry.menuRight > sitesOpenGeometry.viewportWidth + 0.5) problems.push('Sites dropdown escapes the viewport');
+              if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its dropdown');
+              if (sitesOpenGeometry.linkWrapping) problems.push('Sites label wraps in fitted dropdown');
             }
             await page.screenshot({ path: `visual-audit/${prefix}-sites-open-${viewportName}.png` });
             await page.keyboard.press('Escape');
