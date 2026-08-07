@@ -26,12 +26,11 @@ jobs:
           npm ci --no-audit --no-fund
           npm run design-system:sync
           python3 .github/scripts/finalize-sites-menu-sync.py
-          rm -f .github/workflows/apply-sites-menu-sync.yml .github/scripts/finalize-sites-menu-sync.py
           git diff --check
       - name: Commit generated state
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
+          git add design-system.lock.json src/design-system scripts/design-system-consumer-release.mjs scripts/design-system-conformance-runner.mjs scripts/design-system-conformance-contract.json scripts/validate-design-system-integration.mjs
           git commit -m "Sync corrected Sites menu geometry"
           git push origin HEAD:agent/fix-sites-menu-actual
