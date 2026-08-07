@@ -166,10 +166,23 @@ body::after,
   }
 }
 
-/* The Network product name is substantially longer than the other owned-site
-   labels. Keep it complete while fitting the shared controls at 320px. */
+/* Network adds a compact Menu button ahead of the shared Sites/Settings block.
+   At the 320px pressure point, remove its local gap override and tighten only
+   the long Network labels so all controls remain inside the viewport. */
 @media (max-width: 360px) {
   .site-header .wordmark__product {
-    font-size: 0.8125rem;
+    font-size: 0.6875rem;
+  }
+
+  .site-header .header-actions {
+    gap: 0;
+  }
+
+  .site-header .jl-site-menu {
+    font-size: 10px;
+  }
+
+  .site-header .jl-site-menu a {
+    padding-inline: 2px;
   }
 }
