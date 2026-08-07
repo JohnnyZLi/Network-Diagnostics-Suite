@@ -3,6 +3,7 @@ using System.Text.Json;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Monitoring;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
 using Photino.NET;
@@ -22,6 +23,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
     private readonly object runGate = new();
     private readonly PhotinoSettingsStore settingsStore;
     private readonly ReportStore reportStore;
+    private readonly ContinuousMonitorService monitorService;
     private PhotinoWindow? window;
     private CancellationTokenSource? activeRun;
     private Guid activeBridgeRunId;
@@ -29,10 +31,14 @@ public sealed class PhotinoDesktopBridge : IDisposable
 
     public PhotinoDesktopBridge(
         PhotinoSettingsStore? settingsStore = null,
-        ReportStore? reportStore = null)
+        ReportStore? reportStore = null,
+        ContinuousMonitorService? monitorService = null)
     {
         this.settingsStore = settingsStore ?? new PhotinoSettingsStore();
         this.reportStore = reportStore ?? new ReportStore(this.settingsStore.RootDirectory);
+        this.monitorService = monitorService
+            ?? new ContinuousMonitorService(Path.Combine(this.settingsStore.RootDirectory, "monitoring"));
+        this.monitorService.SnapshotChanged += MonitorSnapshotChanged;
     }
 
     public void Attach(PhotinoWindow targetWindow)
@@ -52,12 +58,15 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        monitorService.SnapshotChanged -= MonitorSnapshotChanged;
         lock (runGate)
         {
             activeRun?.Cancel();
             activeRun?.Dispose();
             activeRun = null;
         }
+        monitorService.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        window = null;
     }
 
     private async Task HandleMessageAsync(PhotinoWindow sender, string message)
@@ -85,6 +94,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             {
                 case "app.ready":
                     var settings = settingsStore.Load();
+                    await monitorService.StartAsync(settings.ToMonitorOptions());
                     SendResponse(sender, request.Id, true, new
                     {
                         product = "Network Diagnostics",
@@ -93,6 +103,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         platform = Environment.OSVersion.Platform.ToString(),
                         architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
                         appearance = BridgeProtocol.AppearanceId(settings.Appearance),
+                        monitor = MonitorPayload(settings),
                         capabilities = new[]
                         {
                             "diagnostic.run",
@@ -104,6 +115,11 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "reports.import",
                             "reports.export",
                             "reports.updateAnnotations",
+                            "monitor.get",
+                            "monitor.setEnabled",
+                            "monitor.setWindow",
+                            "monitor.markAlertsRead",
+                            "monitor.clearAlerts",
                             "settings.get",
                             "settings.setAppearance"
                         }
@@ -119,6 +135,28 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         sender,
                         request.Id,
                         settingsStore.SaveAppearance(BridgeProtocol.ParseAppearance(request.Payload)));
+                    break;
+
+                case "monitor.get":
+                    SendResponse(sender, request.Id, true, MonitorPayload(settingsStore.Load()));
+                    break;
+
+                case "monitor.setEnabled":
+                    await SetMonitoringEnabledAsync(sender, request);
+                    break;
+
+                case "monitor.setWindow":
+                    SetMonitoringWindow(sender, request);
+                    break;
+
+                case "monitor.markAlertsRead":
+                    await monitorService.MarkAllAlertsReadAsync();
+                    SendResponse(sender, request.Id, true, MonitorPayload(settingsStore.Load()));
+                    break;
+
+                case "monitor.clearAlerts":
+                    await monitorService.ClearAlertsAsync();
+                    SendResponse(sender, request.Id, true, MonitorPayload(settingsStore.Load()));
                     break;
 
                 case "reports.list":
@@ -172,9 +210,101 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         SendResponse(sender, requestId, true, new
         {
-            appearance = BridgeProtocol.AppearanceId(settings.Appearance)
+            appearance = BridgeProtocol.AppearanceId(settings.Appearance),
+            monitoringEnabled = settings.MonitoringEnabled,
+            monitoringWindow = settings.SelectedMonitoringWindow.ContractId()
         });
     }
+
+    private async Task SetMonitoringEnabledAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var enabled = BridgeProtocol.ParseRequiredBool(request.Payload, "enabled");
+        var settings = settingsStore.SaveMonitoringEnabled(enabled);
+        await monitorService.UpdateOptionsAsync(settings.ToMonitorOptions());
+        SendResponse(sender, request.Id, true, MonitorPayload(settings));
+    }
+
+    private void SetMonitoringWindow(PhotinoWindow sender, BridgeRequest request)
+    {
+        var contractId = BridgeProtocol.ParseOptionalString(request.Payload, "window")?.Trim().ToLowerInvariant();
+        if (contractId is not ("1m" or "5m" or "1h" or "24h" or "7d"))
+        {
+            throw new ArgumentException("Monitoring window must be 1m, 5m, 1h, 24h, or 7d.");
+        }
+        var settings = settingsStore.SaveMonitoringWindow(MonitorWindowExtensions.Parse(contractId));
+        SendResponse(sender, request.Id, true, MonitorPayload(settings));
+    }
+
+    private void MonitorSnapshotChanged(object? sender, MonitorSnapshotChangedEventArgs eventArgs)
+    {
+        var target = window;
+        if (target is null || disposed) return;
+        try
+        {
+            SendEvent(target, "monitor.snapshot", MonitorPayload(settingsStore.Load()));
+        }
+        catch (Exception error) when (error is ObjectDisposedException or InvalidOperationException)
+        {
+            // The WebView may already be closing while a final monitor sample is published.
+        }
+    }
+
+    private object MonitorPayload(PhotinoAppSettings settings)
+    {
+        var presentation = NetworkExperiencePresenter.Build(
+            monitorService.Snapshot,
+            settings.ToMonitorOptions(),
+            settings.SelectedMonitoringWindow);
+        return new
+        {
+            enabled = settings.MonitoringEnabled,
+            running = monitorService.Snapshot.IsRunning,
+            window = settings.SelectedMonitoringWindow.ContractId(),
+            presentation.Score,
+            band = presentation.Band.ToString().ToLowerInvariant(),
+            presentation.Status,
+            presentation.Summary,
+            presentation.DeviceName,
+            presentation.InterfaceName,
+            presentation.LastUpdated,
+            presentation.UnreadAlertCount,
+            responsiveness = MonitorComponentPayload(presentation.Responsiveness),
+            reliability = MonitorComponentPayload(presentation.Reliability),
+            speed = MonitorComponentPayload(presentation.Speed),
+            timeline = presentation.Timeline.Select(sample => new
+            {
+                sample.Timestamp,
+                state = sample.State.ToString().ToLowerInvariant(),
+                sample.LatencyMs,
+                sample.JitterMs,
+                sample.PacketLossPercent
+            }).ToArray(),
+            alerts = presentation.Alerts.Select(alert => new
+            {
+                alert.Id,
+                alert.Timestamp,
+                kind = alert.Kind.ToString().ToLowerInvariant(),
+                severity = alert.Severity.ToString().ToLowerInvariant(),
+                alert.Title,
+                alert.Detail,
+                alert.IsRead
+            }).ToArray()
+        };
+    }
+
+    private static object MonitorComponentPayload(ExperienceComponentPresentation component) => new
+    {
+        component.Title,
+        component.Score,
+        band = component.Band.ToString().ToLowerInvariant(),
+        component.Status,
+        component.Summary,
+        metrics = component.Metrics.Select(metric => new
+        {
+            label = metric.Label,
+            value = metric.Value
+        }).ToArray()
+    };
 
     private async Task SendReportListAsync(PhotinoWindow sender, string? requestId)
     {
@@ -421,6 +551,15 @@ public sealed class PhotinoDesktopBridge : IDisposable
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
                 storageError = SafeMessage(error);
+            }
+
+            try
+            {
+                await monitorService.RecordDiagnosticAsync(report, CancellationToken.None);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
+            {
+                SendEvent(sender, "monitor.error", new { message = SafeMessage(error) });
             }
 
             var internet = report.InternetTransfer;
