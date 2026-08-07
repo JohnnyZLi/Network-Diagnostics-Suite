@@ -6,18 +6,21 @@ The application is self-contained; the .NET runtime does not need to be installe
 
 ## Available in this build
 
+- A unified **Network Diagnostics workbench** that keeps active testing, continuous network health, current evidence, and advanced native tools on one scrollable screen.
+- The main status orb shows the live network score while idle and becomes diagnostic progress while a test is running.
 - **Connection Check, Quick, Full, and Stress** diagnostic profiles backed by the native `NetworkDiagnosticsRunner`.
 - **Single, Aggregate, and Compare** transfer modes.
 - Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback.
 - Native Full/Stress evidence including interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing details, loaded-path localization, dual-stack/HTTP3 evidence, network-change detection, and host-resource evidence when supported by the platform.
 - Persisted **System / Light / Dark** appearance preference.
 - Schema 2.0 report persistence through the existing atomic report store.
-- **History** with saved-run detail, findings/evidence, comparison, JSON import/export, and persisted labels/tags.
-- Continuous **Monitor** workspace with seven-day local history, responsiveness/reliability/speed scoring, multiple time windows, pause/resume, local alerts, and completed diagnostic throughput fed back into speed history.
-- Monitor utilities for a lower-data **Content** speed check and higher-capacity **Peak** check.
+- **History** as a focused side workspace with saved-run detail, findings/evidence, comparison, JSON import/export, and persisted labels/tags.
+- Inline **Continuous diagnostics** with seven-day local history, responsiveness/reliability/speed scoring, multiple time windows, pause/resume, local alerts, and completed diagnostic throughput fed back into speed history.
+- Monitoring utilities for a lower-data **Content** speed check and higher-capacity **Peak** check.
 - Copyable network summary, self-contained HTML health snapshot export, and privacy-aware CSV monitoring-history export.
-- **Advanced** configuration for endpoint candidates, interface binding, explicit local-identifier opt-in, LAN target/port/duration/connections, native preflight, and LAN throughput server controls.
-- **Cmd/Ctrl-F command palette** for keyboard navigation, profile actions, and transfer-mode changes.
+- Inline **Advanced diagnostics** for endpoint candidates, interface binding, explicit local-identifier opt-in, LAN target/port/duration/connections, native preflight, and LAN throughput server controls.
+- **Cmd/Ctrl-F command palette** for keyboard jumps within the workbench, History, profile actions, and transfer-mode changes.
+- **Settings** is limited to application preferences such as appearance; diagnostic capability is not hidden behind the gear menu.
 - Responsive Photino/WebView interface validated in dark and light themes and compact window sizes.
 
 ## System tray
@@ -30,7 +33,7 @@ Photino does not currently provide a built-in cross-platform tray/menu abstracti
 
 Completed reports and monitoring history are stored under the operating system's local application-data directory. Report writes use a temporary file followed by an atomic replacement. Labels and tags are stored inside the schema 2.0 report itself.
 
-Local interface and network identifiers are excluded by default. They are included only when explicitly enabled in Advanced settings. Privacy-aware CSV export follows the same setting. The schema reader ignores unknown optional fields, and native sections that were not measured are represented as **Not measured** rather than failures.
+Local interface and network identifiers are excluded by default. They are included only when explicitly enabled under **Advanced diagnostics**. Privacy-aware CSV export follows the same setting. The schema reader ignores unknown optional fields, and native sections that were not measured are represented as **Not measured** rather than failures.
 
 ## Run
 
