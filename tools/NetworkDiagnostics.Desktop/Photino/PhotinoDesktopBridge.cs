@@ -3,6 +3,7 @@ using System.Text.Json;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Services;
 using Photino.NET;
 
 namespace NetworkDiagnostics.Desktop;
@@ -15,14 +16,18 @@ public sealed class PhotinoDesktopBridge : IDisposable
 
     private readonly object runGate = new();
     private readonly PhotinoSettingsStore settingsStore;
+    private readonly ReportStore reportStore;
     private PhotinoWindow? window;
     private CancellationTokenSource? activeRun;
     private Guid activeBridgeRunId;
     private bool disposed;
 
-    public PhotinoDesktopBridge(PhotinoSettingsStore? settingsStore = null)
+    public PhotinoDesktopBridge(
+        PhotinoSettingsStore? settingsStore = null,
+        ReportStore? reportStore = null)
     {
         this.settingsStore = settingsStore ?? new PhotinoSettingsStore();
+        this.reportStore = reportStore ?? new ReportStore(this.settingsStore.RootDirectory);
     }
 
     public void Attach(PhotinoWindow targetWindow)
@@ -88,6 +93,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "diagnostic.run",
                             "diagnostic.cancel",
                             "diagnostic.describePlan",
+                            "reports.list",
                             "settings.get",
                             "settings.setAppearance"
                         }
@@ -103,6 +109,10 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         sender,
                         request.Id,
                         settingsStore.SaveAppearance(BridgeProtocol.ParseAppearance(request.Payload)));
+                    break;
+
+                case "reports.list":
+                    await SendReportListAsync(sender, request.Id);
                     break;
 
                 case "diagnostic.describePlan":
@@ -134,6 +144,32 @@ public sealed class PhotinoDesktopBridge : IDisposable
         {
             appearance = BridgeProtocol.AppearanceId(settings.Appearance)
         });
+    }
+
+    private async Task SendReportListAsync(PhotinoWindow sender, string? requestId)
+    {
+        var reports = await reportStore.ListAsync();
+        SendResponse(sender, requestId, true, reports.Select(ReportSummary).ToArray());
+    }
+
+    private static object ReportSummary(StoredReport stored)
+    {
+        var internet = stored.Report.InternetTransfer;
+        return new
+        {
+            id = stored.Report.Run.Id,
+            generatedAt = stored.Report.GeneratedAt,
+            storedAt = stored.StoredAt,
+            profile = BridgeProtocol.ProfileId(stored.Report.Run.Profile),
+            profileName = stored.ProfileName,
+            label = stored.Label,
+            tags = stored.Tags,
+            latencyMs = internet?.IdleLatency.MedianMs,
+            requestLossPercent = internet?.IdleLatency.LossPercent,
+            downloadMbps = internet?.Download.SteadyMbps,
+            uploadMbps = internet?.Upload.SteadyMbps,
+            dataUsedBytes = internet?.DataUsedBytes
+        };
     }
 
     private static void DescribePlan(PhotinoWindow sender, BridgeRequest request)
@@ -215,6 +251,17 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 progress,
                 cancellation.Token);
 
+            StoredReport? stored = null;
+            string? storageError = null;
+            try
+            {
+                stored = await reportStore.SaveAsync(report, CancellationToken.None);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                storageError = SafeMessage(error);
+            }
+
             var internet = report.InternetTransfer;
             SendEvent(sender, "diagnostic.completed", new
             {
@@ -228,6 +275,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 downloadMbps = internet?.Download.SteadyMbps,
                 uploadMbps = internet?.Upload.SteadyMbps,
                 dataUsedBytes = internet?.DataUsedBytes,
+                savedLocally = stored is not null,
+                storageError,
+                storedReport = stored is null ? null : ReportSummary(stored),
                 report
             });
         }
