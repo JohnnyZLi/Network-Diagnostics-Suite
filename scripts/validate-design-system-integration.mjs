@@ -242,13 +242,14 @@ requireFragments(identityStyles, [
   ".jl-header-menu-toggle", ".jl-global-header__nav.jl-header-menu--open",
   "right: var(--jl-layout-gutter);", "left: var(--jl-layout-gutter);", "@media (forced-colors: active)",
 ], "Shared header and compact-menu contract");
-const attachedHeaderGeometry = identityStyles.includes("grid-template-columns: 88px var(--jl-control-height-md);")
-  && identityStyles.includes(".jl-site-menu {\n  width: 88px;")
+const attachedHeaderGeometry = identityStyles.includes("grid-template-columns: 104px var(--jl-control-height-md);")
+  && identityStyles.includes(".jl-site-menu {\n  width: 104px;")
   && identityStyles.includes("grid-column: 1;")
   && identityStyles.includes("justify-self: stretch;")
   && identityStyles.includes("white-space: normal;")
   && identityStyles.includes("@media (max-width: 420px)")
-  && identityStyles.includes("grid-template-columns: 88px 40px;")
+  && identityStyles.includes("grid-template-columns: 104px 40px;")
+  && identityStyles.includes("grid-template-columns: 96px 40px;")
   && !identityStyles.includes("width: 144px;")
   && !identityStyles.includes("--_jl-site-menu-trigger-offset");
 if (!attachedHeaderGeometry) fail("Shared header geometry is not the approved attached-width Sites contract.");
