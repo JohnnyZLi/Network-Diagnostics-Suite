@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Photino/**/*.cs" />
+    <Compile Include="Services/ReportStore.cs" />
     <EmbeddedResource Include="Resources/**/*" />
   </ItemGroup>
 
