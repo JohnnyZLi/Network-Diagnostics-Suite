@@ -143,6 +143,50 @@ jobs:
           # first report row instead of relying on transient Tab order.
           xdotool mousemove --sync 1315 205 click 1
           capture saved-report-detail
+
+          # Exercise the real report metadata workflow against the persisted JSON.
+          # The detail workspace is stable at this audit viewport and keeps its
+          # management actions on the bottom row.
+          xdotool mousemove --sync 1190 880 click 1
+          capture saved-report-editor
+          xdotool key --clearmodifiers ctrl+a
+          xdotool type --delay 20 'CI baseline'
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers ctrl+a
+          xdotool type --delay 20 'ci, photino'
+          xdotool key --clearmodifiers Return
+          capture saved-report-annotated
+
+          latest_report=$(find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' -print0 \
+            | xargs -0 ls -1t | head -n 1)
+          python3 - "$latest_report" <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          with open(path, encoding='utf-8') as handle:
+              document = json.load(handle)
+
+          def objects(value):
+              if isinstance(value, dict):
+                  yield value
+                  for child in value.values():
+                      yield from objects(child)
+              elif isinstance(value, list):
+                  for child in value:
+                      yield from objects(child)
+
+          found = False
+          for item in objects(document):
+              normalized = {str(key).lower(): value for key, value in item.items()}
+              if normalized.get('label') == 'CI baseline' and normalized.get('tags') == ['ci', 'photino']:
+                  found = True
+                  break
+
+          if not found:
+              raise SystemExit('Saved report metadata was not persisted to the JSON report.')
+          PY
+
           xdotool key --clearmodifiers Escape
 
       - name: Upload rendered states
