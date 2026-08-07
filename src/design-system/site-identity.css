@@ -311,20 +311,19 @@
 @media (prefers-reduced-motion: no-preference) {
   .jl-site-menu:not([hidden]),
   .jl-settings-menu:not([hidden]) {
-    transform-origin: top center;
-    animation: jl-attached-menu-lower 190ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: jl-attached-menu-reveal 190ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 }
 
-@keyframes jl-attached-menu-lower {
+@keyframes jl-attached-menu-reveal {
   from {
     opacity: 0;
-    transform: translateY(-7px) scaleY(0.97);
+    clip-path: inset(0 0 100% 0);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scaleY(1);
+    clip-path: inset(0);
   }
 }
 
