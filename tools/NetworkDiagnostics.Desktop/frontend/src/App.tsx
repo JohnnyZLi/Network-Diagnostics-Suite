@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
+import { MonitorPanel, type MonitorSnapshot } from './MonitorPanel';
 import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
@@ -13,6 +14,7 @@ type HostInfo = {
   platform: string;
   architecture: string;
   appearance: AppearanceMode;
+  monitor?: MonitorSnapshot | null;
 };
 
 type AppearanceSettings = {
@@ -141,6 +143,10 @@ function App() {
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [monitorOpen, setMonitorOpen] = useState(false);
+  const [monitorSnapshot, setMonitorSnapshot] = useState<MonitorSnapshot | null>(null);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorError, setMonitorError] = useState<string | null>(null);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -163,6 +169,7 @@ function App() {
       .then((info) => {
         setHost(info);
         setAppearance(info.appearance || 'system');
+        if (info.monitor) setMonitorSnapshot(info.monitor);
       })
       .catch((value: Error) => setError(value.message));
   }, []);
@@ -236,11 +243,22 @@ function App() {
       setError(next.message);
     });
 
+    const removeMonitorSnapshot = desktopBridge.on<MonitorSnapshot>('monitor.snapshot', (next) => {
+      setMonitorSnapshot(next);
+      setMonitorLoading(false);
+    });
+
+    const removeMonitorError = desktopBridge.on<{ message: string }>('monitor.error', (next) => {
+      setMonitorError(next.message);
+    });
+
     return () => {
       removeProgress();
       removeCompleted();
       removeCancelled();
       removeFailed();
+      removeMonitorSnapshot();
+      removeMonitorError();
     };
   }, []);
 
@@ -270,8 +288,28 @@ function App() {
   }
 
   function openHistory() {
+    setMonitorOpen(false);
     setHistoryOpen(true);
     void loadReports();
+  }
+
+  async function loadMonitor() {
+    if (!desktopBridge.available) return;
+    setMonitorLoading(true);
+    setMonitorError(null);
+    try {
+      setMonitorSnapshot(await desktopBridge.request<MonitorSnapshot>('monitor.get'));
+    } catch (value) {
+      setMonitorError(value instanceof Error ? value.message : 'Network monitor history could not be read.');
+    } finally {
+      setMonitorLoading(false);
+    }
+  }
+
+  function openMonitor() {
+    setHistoryOpen(false);
+    setMonitorOpen(true);
+    void loadMonitor();
   }
 
   async function changeAppearance(next: AppearanceMode) {
@@ -355,6 +393,19 @@ function App() {
             <span className="status-dot" aria-hidden="true" />
             {host ? `Native engine · ${host.architecture}` : desktopBridge.available ? 'Connecting to engine' : 'Browser preview'}
           </div>
+          <button
+            type="button"
+            className={`monitor-trigger ${monitorOpen ? 'active' : ''}`}
+            aria-label="Network monitor"
+            aria-expanded={monitorOpen}
+            onClick={openMonitor}
+            disabled={!desktopBridge.available}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h3l2-6 4 11 2-5h5" /></svg>
+            <span>Monitor</span>
+            {monitorSnapshot?.score != null && <b className="monitor-trigger-score">{monitorSnapshot.score}</b>}
+            {(monitorSnapshot?.unreadAlertCount ?? 0) > 0 && <i className="monitor-trigger-alert" aria-label={`${monitorSnapshot!.unreadAlertCount} unread monitor alerts`} />}
+          </button>
           <button
             type="button"
             className={`history-trigger ${historyOpen ? 'active' : ''}`}
@@ -527,6 +578,16 @@ function App() {
         error={historyError}
         onClose={() => setHistoryOpen(false)}
         onRefresh={() => void loadReports()}
+      />
+
+      <MonitorPanel
+        open={monitorOpen}
+        snapshot={monitorSnapshot}
+        loading={monitorLoading}
+        error={monitorError}
+        onClose={() => setMonitorOpen(false)}
+        onUpdate={setMonitorSnapshot}
+        onError={setMonitorError}
       />
     </div>
   );
