@@ -30,6 +30,13 @@ type MonitorAlert = {
   isRead: boolean;
 };
 
+type MonitorExportResult = {
+  cancelled: boolean;
+  fileName?: string | null;
+  includesLocalIdentifiers?: boolean;
+  window?: MonitorWindow;
+};
+
 export type MonitorSnapshot = {
   enabled: boolean;
   running: boolean;
@@ -62,27 +69,37 @@ export function MonitorPanel({
   snapshot,
   loading,
   error,
+  diagnosticRunning,
   onClose,
   onUpdate,
   onError,
+  onRunContentSpeed,
+  onRunPeakSpeed,
 }: {
   open: boolean;
   snapshot: MonitorSnapshot | null;
   loading: boolean;
   error: string | null;
+  diagnosticRunning: boolean;
   onClose: () => void;
   onUpdate: (snapshot: MonitorSnapshot) => void;
   onError: (message: string | null) => void;
+  onRunContentSpeed: () => void;
+  onRunPeakSpeed: () => void;
 }) {
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
   const [busy, setBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [peakConfirm, setPeakConfirm] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   closeRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
     setClearConfirm(false);
+    setPeakConfirm(false);
+    setNotice(null);
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -121,6 +138,7 @@ export function MonitorPanel({
 
   async function request(method: string, payload: Record<string, unknown> = {}) {
     setBusy(true);
+    setNotice(null);
     onError(null);
     try {
       const next = await desktopBridge.request<MonitorSnapshot>(method, payload);
@@ -141,6 +159,63 @@ export function MonitorPanel({
     }
     await request('monitor.clearAlerts');
     setClearConfirm(false);
+  }
+
+  async function copySummary() {
+    if (!snapshot) return;
+    setBusy(true);
+    setNotice(null);
+    onError(null);
+    try {
+      await writeClipboard(monitorSummary(snapshot));
+      setNotice('Network summary copied to the clipboard.');
+    } catch (value) {
+      onError(value instanceof Error ? value.message : 'The network summary could not be copied.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportSnapshot() {
+    setBusy(true);
+    setNotice(null);
+    onError(null);
+    try {
+      const result = await desktopBridge.request<MonitorExportResult>('monitor.exportSnapshot');
+      if (!result.cancelled) setNotice(`Snapshot exported as ${result.fileName ?? 'HTML'}.`);
+    } catch (value) {
+      onError(value instanceof Error ? value.message : 'The network snapshot could not be exported.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportHistory() {
+    setBusy(true);
+    setNotice(null);
+    onError(null);
+    try {
+      const result = await desktopBridge.request<MonitorExportResult>('monitor.exportHistory');
+      if (!result.cancelled) {
+        const privacy = result.includesLocalIdentifiers ? 'with enabled local identifiers' : 'with local identifiers redacted';
+        setNotice(`History exported as ${result.fileName ?? 'CSV'} ${privacy}.`);
+      }
+    } catch (value) {
+      onError(value instanceof Error ? value.message : 'Monitoring history could not be exported.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function runPeakSpeed() {
+    if (!peakConfirm) {
+      setPeakConfirm(true);
+      setNotice('Peak uses the Stress profile and the largest transfer budget. Select Run peak again to continue.');
+      return;
+    }
+    setPeakConfirm(false);
+    setNotice(null);
+    onRunPeakSpeed();
   }
 
   return (
@@ -164,6 +239,7 @@ export function MonitorPanel({
           ) : snapshot ? (
             <>
               {error && <div className="monitor-error" role="alert">{error}</div>}
+              {notice && <div className="monitor-notice" role="status">{notice}</div>}
               <section className="monitor-hero">
                 <div className={`monitor-score ${snapshot.band}`}>
                   <strong>{snapshot.score ?? '—'}</strong>
@@ -220,6 +296,41 @@ export function MonitorPanel({
                 <MonitorComponentCard component={snapshot.speed} />
               </section>
 
+              <section className="monitor-utility-section">
+                <div className="monitor-section-heading"><strong>Speed checks</strong><span>Feed Speed history</span></div>
+                <div className="monitor-speed-actions">
+                  <button type="button" disabled={busy || diagnosticRunning} onClick={onRunContentSpeed}>
+                    <span className="monitor-utility-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17 9 13l3 3 7-8" /><path d="M14 8h5v5" /></svg></span>
+                    <span><strong>Content</strong><small>Low-data aggregate check</small></span>
+                    <b>Run</b>
+                  </button>
+                  <button type="button" className={peakConfirm ? 'confirm' : ''} disabled={busy || diagnosticRunning} onClick={runPeakSpeed}>
+                    <span className="monitor-utility-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c2.2-4.7 5-7.3 8.3-7.8 2.7-.4 5.2.7 7.7 3.3" /><path d="M15 7h5v5" /></svg></span>
+                    <span><strong>Peak</strong><small>Stress · aggregate capacity</small></span>
+                    <b>{peakConfirm ? 'Run peak' : 'Run'}</b>
+                  </button>
+                </div>
+              </section>
+
+              <section className="monitor-export-section">
+                <div className="monitor-section-heading"><strong>Share & export</strong><span>{snapshot.window} window</span></div>
+                <div className="monitor-export-actions">
+                  <button type="button" disabled={busy} onClick={() => void copySummary()}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="2" /><path d="M15 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" /></svg>
+                    <span>Copy summary</span>
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => void exportSnapshot()}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4" /><path d="m8 8 4-4 4 4" /><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg>
+                    <span>Snapshot HTML</span>
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => void exportHistory()}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11" /><path d="m8 11 4 4 4-4" /><path d="M5 18h14" /></svg>
+                    <span>History CSV</span>
+                  </button>
+                </div>
+                <p className="monitor-export-copy">CSV exports redact local interface and network identifiers unless you explicitly enabled them in Advanced diagnostics.</p>
+              </section>
+
               <section className="monitor-alert-section">
                 <div className="monitor-section-heading monitor-alert-heading">
                   <div><strong>Alerts</strong><span>{snapshot.unreadAlertCount > 0 ? `${snapshot.unreadAlertCount} unread` : 'No unread alerts'}</span></div>
@@ -271,6 +382,32 @@ function MonitorComponentCard({ component }: { component: MonitorComponent }) {
 function focusableElements(root: HTMLElement | null): HTMLElement[] {
   if (!root) return [];
   return Array.from(root.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+}
+
+function monitorSummary(snapshot: MonitorSnapshot): string {
+  return [
+    `Network score: ${snapshot.score ?? 'Not enough data'} · ${snapshot.status}`,
+    snapshot.summary,
+    `Responsiveness: ${snapshot.responsiveness.score ?? '—'} · Reliability: ${snapshot.reliability.score ?? '—'} · Speed: ${snapshot.speed.score ?? '—'}`,
+    `Window: ${snapshot.window} · Updated: ${snapshot.lastUpdated}`,
+  ].join('\n');
+}
+
+async function writeClipboard(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand('copy');
+  textarea.remove();
+  if (!copied) throw new Error('Clipboard access is not available.');
 }
 
 function formatNumber(value: number): string {
