@@ -151,7 +151,8 @@ jobs:
           capture saved-report-detail-bottom
 
           # Exercise the real report metadata workflow against the persisted JSON.
-          xdotool mousemove --sync 1190 880 click 1
+          # 1240 is the center of Edit details in the 1600x1000 audit viewport.
+          xdotool mousemove --sync 1240 880 click 1
           capture saved-report-editor
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
@@ -161,15 +162,13 @@ jobs:
           xdotool key --clearmodifiers Return
           capture saved-report-annotated
 
-          latest_report=$(find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' -print0 \
-            | xargs -0 ls -1t | head -n 1)
-          python3 - "$latest_report" <<'PY'
+          python3 - "$reports_dir" <<'PY'
+          import glob
           import json
+          import os
           import sys
 
-          path = sys.argv[1]
-          with open(path, encoding='utf-8') as handle:
-              document = json.load(handle)
+          reports_dir = sys.argv[1]
 
           def objects(value):
               if isinstance(value, dict):
@@ -181,10 +180,15 @@ jobs:
                       yield from objects(child)
 
           found = False
-          for item in objects(document):
-              normalized = {str(key).lower(): value for key, value in item.items()}
-              if normalized.get('label') == 'CI baseline' and normalized.get('tags') == ['ci', 'photino']:
-                  found = True
+          for path in glob.glob(os.path.join(reports_dir, '*-connection-check-*.json')):
+              with open(path, encoding='utf-8') as handle:
+                  document = json.load(handle)
+              for item in objects(document):
+                  normalized = {str(key).lower(): value for key, value in item.items()}
+                  if normalized.get('label') == 'CI baseline' and normalized.get('tags') == ['ci', 'photino']:
+                      found = True
+                      break
+              if found:
                   break
 
           if not found:
