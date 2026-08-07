@@ -144,9 +144,13 @@ jobs:
           xdotool mousemove --sync 1315 205 click 1
           capture saved-report-detail
 
+          # Real reports can contain one or many findings. Scroll the report pane to
+          # its bottom before targeting the stable management action row.
+          xdotool mousemove --sync 1400 760
+          xdotool click --repeat 14 --delay 45 5
+          capture saved-report-detail-bottom
+
           # Exercise the real report metadata workflow against the persisted JSON.
-          # The detail workspace is stable at this audit viewport and keeps its
-          # management actions on the bottom row.
           xdotool mousemove --sync 1190 880 click 1
           capture saved-report-editor
           xdotool key --clearmodifiers ctrl+a
