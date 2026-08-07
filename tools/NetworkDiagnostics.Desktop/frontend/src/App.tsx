@@ -136,7 +136,7 @@ function App() {
       highestProgress.current = 1;
       setProgressRatio(1);
       setResult(next);
-      setMeasuredBytes(next.dataUsedBytes ?? measuredBytes);
+      setMeasuredBytes((current) => next.dataUsedBytes ?? current);
       setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
       setRunning(false);
     });
@@ -161,7 +161,7 @@ function App() {
       removeCancelled();
       removeFailed();
     };
-  }, [measuredBytes]);
+  }, []);
 
   const progressPercent = Math.round(progressRatio * 100);
   const livePrimary = progress?.liveMbps != null
