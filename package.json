@@ -31,6 +31,8 @@
     "probe:build:mac-x64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r osx-x64 --self-contained true --output artifacts/osx-x64",
     "probe:build:linux-x64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r linux-x64 --self-contained true --output artifacts/linux-x64",
     "probe:build:linux-arm64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r linux-arm64 --self-contained true --output artifacts/linux-arm64",
+    "desktop:web:dev": "vite --config tools/NetworkDiagnostics.Desktop/frontend/vite.config.ts",
+    "desktop:web:build": "tsc -p tools/NetworkDiagnostics.Desktop/frontend/tsconfig.json --noEmit && vite build --config tools/NetworkDiagnostics.Desktop/frontend/vite.config.ts",
     "desktop:build": "npm run desktop:build:win-x64 && npm run desktop:build:mac-arm64 && npm run desktop:build:mac-x64 && npm run desktop:build:linux-x64 && npm run desktop:build:linux-arm64",
     "desktop:build:win-x64": "dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj -c Release -r win-x64 --self-contained true --output artifacts/desktop-win-x64",
     "desktop:build:mac-arm64": "dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj -c Release -r osx-arm64 --self-contained true --output artifacts/desktop-osx-arm64",
