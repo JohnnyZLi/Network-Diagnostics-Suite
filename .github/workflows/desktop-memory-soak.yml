@@ -18,7 +18,7 @@ permissions:
 jobs:
   soak:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       DISPLAY: ':99'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
@@ -52,7 +52,7 @@ jobs:
             --output desktop-memory-soak/publish
           test -f desktop-memory-soak/publish/wwwroot/index.html
 
-      - name: Run Photino idle soak
+      - name: Run Photino process-tree idle soak
         shell: bash
         run: |
           set -euo pipefail
@@ -84,54 +84,97 @@ jobs:
             exit 1
           fi
 
-          # Let the WebKit process, JS runtime, native bridge, and first paint settle.
+          collect_tree_pids() {
+            local root_pid="$1"
+            local -a frontier=("$root_pid")
+            local -a all=("$root_pid")
+            local -a next=()
+            local parent child
+
+            while ((${#frontier[@]} > 0)); do
+              next=()
+              for parent in "${frontier[@]}"; do
+                while read -r child; do
+                  if [[ -n "$child" ]]; then
+                    next+=("$child")
+                    all+=("$child")
+                  fi
+                done < <(ps -eo pid=,ppid= | awk -v parent="$parent" '$2 == parent { print $1 }')
+              done
+              frontier=("${next[@]}")
+            done
+
+            printf '%s\n' "${all[@]}"
+          }
+
+          sample_tree() {
+            local -a pids=()
+            local pid_csv
+            mapfile -t pids < <(collect_tree_pids "$app_pid")
+            pid_csv=$(IFS=,; echo "${pids[*]}")
+            ps -o rss=,vsz=,%cpu= -p "$pid_csv" \
+              | awk -v count="${#pids[@]}" '{rss += $1; vsz += $2; cpu += $3} END {printf "%d %d %.1f %d\n", rss, vsz, cpu, count}'
+          }
+
+          snapshot_tree() {
+            local output="$1"
+            local -a pids=()
+            local pid_csv
+            mapfile -t pids < <(collect_tree_pids "$app_pid")
+            pid_csv=$(IFS=,; echo "${pids[*]}")
+            ps -o pid=,ppid=,rss=,vsz=,%cpu=,comm= -p "$pid_csv" > "$output"
+          }
+
+          # Let .NET, WebKit, the JS runtime, and native helper processes settle.
           sleep 45
           scrot desktop-memory-soak/artifacts/soak-start.png
+          snapshot_tree desktop-memory-soak/artifacts/processes-start.txt
 
-          read -r baseline_rss baseline_vsz baseline_cpu < <(
-            ps -o rss=,vsz=,%cpu= -p "$app_pid" | awk '{$1=$1; print}'
-          )
-          printf 'elapsed_seconds\trss_kb\tvsz_kb\tcpu_percent\n' \
+          read -r baseline_rss baseline_vsz baseline_cpu baseline_count < <(sample_tree)
+          printf 'elapsed_seconds\trss_kb\tvsz_kb\tcpu_percent\tprocess_count\n' \
             > desktop-memory-soak/artifacts/memory.tsv
-          printf '0\t%s\t%s\t%s\n' "$baseline_rss" "$baseline_vsz" "$baseline_cpu" \
+          printf '0\t%s\t%s\t%s\t%s\n' "$baseline_rss" "$baseline_vsz" "$baseline_cpu" "$baseline_count" \
             >> desktop-memory-soak/artifacts/memory.tsv
 
           peak_rss=$baseline_rss
           final_rss=$baseline_rss
           final_cpu=$baseline_cpu
-          for sample in {1..24}; do
+          final_count=$baseline_count
+          for sample in {1..60}; do
             sleep 10
             if ! kill -0 "$app_pid" 2>/dev/null; then
               cat /tmp/memory-app.log
               exit 1
             fi
-            read -r rss vsz cpu < <(ps -o rss=,vsz=,%cpu= -p "$app_pid" | awk '{$1=$1; print}')
+            read -r rss vsz cpu count < <(sample_tree)
             elapsed=$((sample * 10))
-            printf '%s\t%s\t%s\t%s\n' "$elapsed" "$rss" "$vsz" "$cpu" \
+            printf '%s\t%s\t%s\t%s\t%s\n' "$elapsed" "$rss" "$vsz" "$cpu" "$count" \
               >> desktop-memory-soak/artifacts/memory.tsv
             if (( rss > peak_rss )); then peak_rss=$rss; fi
             final_rss=$rss
             final_cpu=$cpu
+            final_count=$count
           done
 
+          snapshot_tree desktop-memory-soak/artifacts/processes-end.txt
           scrot desktop-memory-soak/artifacts/soak-end.png
           growth_kb=$((final_rss - baseline_rss))
-          echo "Baseline RSS: ${baseline_rss} KB"
-          echo "Final RSS:    ${final_rss} KB"
-          echo "Peak RSS:     ${peak_rss} KB"
-          echo "Growth:       ${growth_kb} KB"
-          echo "CPU sample:   ${final_cpu}%"
+          echo "Baseline process-tree RSS: ${baseline_rss} KB (${baseline_count} processes)"
+          echo "Final process-tree RSS:    ${final_rss} KB (${final_count} processes)"
+          echo "Peak process-tree RSS:     ${peak_rss} KB"
+          echo "Process-tree growth:       ${growth_kb} KB"
+          echo "Final process-tree CPU:    ${final_cpu}%"
 
-          if (( final_rss > 1048576 )); then
-            echo "Desktop exceeded the 1 GB idle RSS safety ceiling."
+          if (( final_rss > 2097152 )); then
+            echo "Photino process tree exceeded the 2 GB idle RSS safety ceiling."
             exit 1
           fi
-          if (( growth_kb > 262144 )); then
-            echo "Desktop retained more than 256 MB during the settled soak."
+          if (( growth_kb > 524288 )); then
+            echo "Photino process tree retained more than 512 MB during the settled soak."
             exit 1
           fi
           if awk "BEGIN {exit !($final_cpu > 80)}"; then
-            echo "Desktop remained above the idle CPU safety ceiling."
+            echo "Photino process tree remained above the idle CPU safety ceiling."
             exit 1
           fi
           if grep -Ei 'unhandled exception|fatal error|segmentation fault' /tmp/memory-app.log; then
