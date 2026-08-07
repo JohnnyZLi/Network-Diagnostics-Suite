@@ -14,6 +14,10 @@ public sealed class PhotinoDesktopBridge : IDisposable
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly string? ApplicationVersion =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
+    private static readonly (string Name, string[] Extensions)[] ReportFileFilters =
+    [
+        ("Network Diagnostics reports", [".json"])
+    ];
 
     private readonly object runGate = new();
     private readonly PhotinoSettingsStore settingsStore;
@@ -97,6 +101,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "reports.list",
                             "reports.get",
                             "reports.compare",
+                            "reports.import",
+                            "reports.export",
+                            "reports.updateAnnotations",
                             "settings.get",
                             "settings.setAppearance"
                         }
@@ -124,6 +131,18 @@ public sealed class PhotinoDesktopBridge : IDisposable
 
                 case "reports.compare":
                     await SendReportComparisonAsync(sender, request);
+                    break;
+
+                case "reports.import":
+                    await ImportReportAsync(sender, request);
+                    break;
+
+                case "reports.export":
+                    await ExportReportAsync(sender, request);
+                    break;
+
+                case "reports.updateAnnotations":
+                    await UpdateReportAnnotationsAsync(sender, request);
                     break;
 
                 case "diagnostic.describePlan":
@@ -168,25 +187,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         var reportId = BridgeProtocol.ParseRequiredGuid(request.Payload, "id");
         var reports = await reportStore.ListAsync();
         var stored = FindReport(reports, reportId);
-        var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
-
-        SendResponse(sender, request.Id, true, new
-        {
-            report = ReportSummary(stored),
-            context = ReportComparisonService.ContextLabel(stored.Report),
-            method = BridgeProtocol.MethodId(stored.Report.Run.TransferMethod),
-            presentation = new
-            {
-                outcome = presentation.Outcome.ToString().ToLowerInvariant(),
-                presentation.Label,
-                presentation.Verdict,
-                presentation.Summary,
-                presentation.NextAction,
-                presentation.Metrics,
-                presentation.Findings,
-                presentation.TechnicalEvidence
-            }
-        });
+        SendResponse(sender, request.Id, true, ReportDetailPayload(stored));
     }
 
     private async Task SendReportComparisonAsync(PhotinoWindow sender, BridgeRequest request)
@@ -216,10 +217,94 @@ public sealed class PhotinoDesktopBridge : IDisposable
         });
     }
 
+    private async Task ImportReportAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var paths = sender.ShowOpenFile(filters: ReportFileFilters);
+        var sourcePath = paths.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            SendResponse(sender, request.Id, true, new { cancelled = true });
+            return;
+        }
+        if (!string.Equals(Path.GetExtension(sourcePath), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("Choose a Network Diagnostics JSON report.");
+        }
+
+        var stored = await reportStore.ImportAsync(sourcePath);
+        SendResponse(sender, request.Id, true, new
+        {
+            cancelled = false,
+            detail = ReportDetailPayload(stored)
+        });
+    }
+
+    private async Task ExportReportAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var reportId = BridgeProtocol.ParseRequiredGuid(request.Payload, "id");
+        var reports = await reportStore.ListAsync();
+        var stored = FindReport(reports, reportId);
+        var suggestedPath = Path.Combine(reportStore.ReportsDirectory, SuggestedExportName(stored.Report));
+        var destinationPath = sender.ShowSaveFile(
+            title: "Export Network Diagnostics report",
+            defaultPath: suggestedPath,
+            filters: ReportFileFilters);
+
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            SendResponse(sender, request.Id, true, new { cancelled = true });
+            return;
+        }
+        if (!string.Equals(Path.GetExtension(destinationPath), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            destinationPath = Path.ChangeExtension(destinationPath, ".json");
+        }
+
+        await reportStore.ExportAsync(stored.Report, destinationPath);
+        SendResponse(sender, request.Id, true, new
+        {
+            cancelled = false,
+            fileName = Path.GetFileName(destinationPath)
+        });
+    }
+
+    private async Task UpdateReportAnnotationsAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var reportId = BridgeProtocol.ParseRequiredGuid(request.Payload, "id");
+        var label = BridgeProtocol.ParseOptionalString(request.Payload, "label");
+        var tags = BridgeProtocol.ParseStringArray(request.Payload, "tags");
+        var reports = await reportStore.ListAsync();
+        var stored = FindReport(reports, reportId);
+        var updated = await reportStore.UpdateAnnotationsAsync(stored, label, tags);
+        SendResponse(sender, request.Id, true, ReportDetailPayload(updated));
+    }
+
     private static StoredReport FindReport(IReadOnlyList<StoredReport> reports, Guid reportId)
     {
         var stored = reports.FirstOrDefault(item => item.Report.Run.Id == reportId);
         return stored ?? throw new KeyNotFoundException($"Saved report '{reportId}' was not found.");
+    }
+
+    private static object ReportDetailPayload(StoredReport stored)
+    {
+        var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
+        return new
+        {
+            report = ReportSummary(stored),
+            context = ReportComparisonService.ContextLabel(stored.Report),
+            method = BridgeProtocol.MethodId(stored.Report.Run.TransferMethod),
+            presentation = new
+            {
+                outcome = presentation.Outcome.ToString().ToLowerInvariant(),
+                presentation.Label,
+                presentation.Verdict,
+                presentation.Summary,
+                presentation.NextAction,
+                presentation.Metrics,
+                presentation.Findings,
+                presentation.TechnicalEvidence
+            }
+        };
     }
 
     private static object ReportSummary(StoredReport stored)
@@ -240,6 +325,12 @@ public sealed class PhotinoDesktopBridge : IDisposable
             uploadMbps = internet?.Upload.SteadyMbps,
             dataUsedBytes = internet?.DataUsedBytes
         };
+    }
+
+    private static string SuggestedExportName(NetworkDiagnosticsReportV2 report)
+    {
+        var profile = BridgeProtocol.ProfileId(report.Run.Profile);
+        return $"network-diagnostics-{report.GeneratedAt:yyyyMMdd-HHmmss}-{profile}.json";
     }
 
     private static void DescribePlan(PhotinoWindow sender, BridgeRequest request)
