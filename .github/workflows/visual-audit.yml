@@ -191,7 +191,7 @@ jobs:
             const expectedInnerHeight = compact ? 68 : 82;
             const expectedOuterHeight = compact ? 82 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
-            const fittedSitesWidth = 88;
+            const fittedSitesWidth = metrics.viewportWidth <= 360 ? 96 : 104;
             const legacySitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
             if (metrics.overflow) problems.push('document overflow');
             if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
@@ -202,7 +202,7 @@ jobs:
             } else {
               const widthAllowed = prefix === 'local'
                 ? near(metrics.sitesButton.width, fittedSitesWidth)
-                : near(metrics.sitesButton.width, fittedSitesWidth) || near(metrics.sitesButton.width, legacySitesWidth);
+                : near(metrics.sitesButton.width, fittedSitesWidth) || near(metrics.sitesButton.width, legacySitesWidth) || near(metrics.sitesButton.width, 88);
               if (!widthAllowed) problems.push(`Sites width ${metrics.sitesButton.width}`);
               if (!near(metrics.sitesButton.height, expectedButtonHeight)) problems.push(`Sites height ${metrics.sitesButton.height}, expected ${expectedButtonHeight}`);
               if (metrics.sitesButton.fontSize !== '13px') problems.push(`Sites font size ${metrics.sitesButton.fontSize}`);
@@ -234,8 +234,9 @@ jobs:
               };
             });
             if (prefix === 'local') {
-              if (!near(sitesOpenGeometry.buttonWidth, 88)) problems.push(`Sites trigger width ${sitesOpenGeometry.buttonWidth}`);
-              if (!near(sitesOpenGeometry.menuWidth, 88)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}`);
+              const expectedOpenSitesWidth = sitesOpenGeometry.viewportWidth <= 360 ? 96 : 104;
+              if (!near(sitesOpenGeometry.buttonWidth, expectedOpenSitesWidth)) problems.push(`Sites trigger width ${sitesOpenGeometry.buttonWidth}, expected ${expectedOpenSitesWidth}`);
+              if (!near(sitesOpenGeometry.menuWidth, expectedOpenSitesWidth)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}, expected ${expectedOpenSitesWidth}`);
               if (!near(sitesOpenGeometry.menuLeft, sitesOpenGeometry.buttonLeft) || !near(sitesOpenGeometry.menuRight, sitesOpenGeometry.buttonRight)) problems.push('Sites dropdown is not attached directly beneath its trigger');
               if (sitesOpenGeometry.menuLeft < -0.5 || sitesOpenGeometry.menuRight > sitesOpenGeometry.viewportWidth + 0.5) problems.push('Sites dropdown escapes the viewport');
               if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its attached dropdown');

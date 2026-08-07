@@ -107,7 +107,7 @@
   position: relative;
   flex: none;
   display: grid;
-  grid-template-columns: 88px var(--jl-control-height-md);
+  grid-template-columns: 104px var(--jl-control-height-md);
   grid-template-rows: var(--jl-control-height-md) auto;
   column-gap: var(--jl-space-2);
   row-gap: 0;
@@ -117,9 +117,9 @@
 }
 
 .jl-site-switcher__button {
-  width: 88px;
+  width: 104px;
   height: var(--jl-control-height-md);
-  min-width: 88px;
+  min-width: 104px;
   min-height: var(--jl-control-height-md);
   box-sizing: border-box;
   grid-column: 1;
@@ -243,7 +243,7 @@
   position: relative;
   z-index: var(--jl-z-menu);
   display: grid;
-  gap: var(--jl-space-1);
+  gap: calc(var(--jl-space-1) / 2);
   margin: 0;
   border: 1px solid var(--jl-color-rule-strong);
   border-top: 0;
@@ -254,8 +254,8 @@
 }
 
 .jl-site-menu {
-  width: 88px;
-  min-width: 88px;
+  width: 104px;
+  min-width: 104px;
   box-sizing: border-box;
   grid-column: 1;
   grid-row: 2;
@@ -278,14 +278,14 @@
 .jl-site-menu a {
   width: 100%;
   min-width: 0;
-  min-height: calc(var(--jl-control-height-md) - var(--jl-space-1));
+  min-height: calc(var(--jl-control-height-md) - 6px);
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  padding: var(--jl-space-1);
+  padding: 5px 6px;
   border-radius: var(--jl-radius-sm);
   text-decoration: none;
-  line-height: 1.2;
+  line-height: 1.15;
   overflow-wrap: normal;
   white-space: normal;
 }
@@ -416,7 +416,7 @@
 
   .jl-site-switcher {
     height: 40px;
-    grid-template-columns: 88px 40px;
+    grid-template-columns: 104px 40px;
     grid-template-rows: 40px auto;
   }
 
@@ -433,8 +433,8 @@
   }
 
   .jl-site-menu a {
-    min-height: 36px;
-    padding: 6px;
+    min-height: 34px;
+    padding: 5px 6px;
   }
 
   .jl-header-menu-toggle {
@@ -464,17 +464,17 @@
   }
 
   .jl-site-switcher {
-    grid-template-columns: 88px 40px;
+    grid-template-columns: 104px 40px;
     column-gap: calc(var(--jl-space-1) / 2);
   }
 
   .jl-site-switcher__button {
-    width: 88px;
-    min-width: 88px;
+    width: 104px;
+    min-width: 104px;
   }
 
   .jl-site-menu a {
-    padding: 4px;
+    padding: 4px 6px;
   }
 
   .jl-header-menu-toggle {
@@ -499,7 +499,14 @@
   }
 
   .jl-site-switcher {
+    grid-template-columns: 96px 40px;
     column-gap: 0;
+  }
+
+  .jl-site-switcher__button,
+  .jl-site-menu {
+    width: 96px;
+    min-width: 96px;
   }
 
 }
