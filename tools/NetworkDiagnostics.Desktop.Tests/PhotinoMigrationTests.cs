@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Monitoring;
 using Xunit;
 
 namespace NetworkDiagnostics.Desktop.Tests;
@@ -86,6 +87,16 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
+    public void BooleanContractRequiresJsonBoolean()
+    {
+        using var enabled = JsonDocument.Parse("{\"enabled\":true}");
+        using var invalid = JsonDocument.Parse("{\"enabled\":\"true\"}");
+
+        Assert.True(BridgeProtocol.ParseRequiredBool(enabled.RootElement, "enabled"));
+        Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredBool(invalid.RootElement, "enabled"));
+    }
+
+    [Fact]
     public void ReportAnnotationContractParsesOptionalLabelAndTags()
     {
         using var document = JsonDocument.Parse("""
@@ -125,7 +136,7 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
-    public void AppearancePreferencePersistsAcrossStoreInstances()
+    public void AppearanceAndMonitoringPreferencesPersistAcrossStoreInstances()
     {
         var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
         var settingsPath = Path.Combine(directory, "desktop-settings.json");
@@ -133,13 +144,20 @@ public sealed class PhotinoMigrationTests
         try
         {
             var store = new PhotinoSettingsStore(settingsPath);
-            Assert.Equal(AppearancePreference.System, store.Load().Appearance);
+            var defaults = store.Load();
+            Assert.Equal(AppearancePreference.System, defaults.Appearance);
+            Assert.True(defaults.MonitoringEnabled);
+            Assert.Equal(MonitorWindow.FiveMinutes, defaults.SelectedMonitoringWindow);
 
-            var saved = store.SaveAppearance(AppearancePreference.Dark);
-            Assert.Equal(AppearancePreference.Dark, saved.Appearance);
+            store.SaveAppearance(AppearancePreference.Dark);
+            store.SaveMonitoringEnabled(false);
+            store.SaveMonitoringWindow(MonitorWindow.OneHour);
 
             var reloaded = new PhotinoSettingsStore(settingsPath).Load();
             Assert.Equal(AppearancePreference.Dark, reloaded.Appearance);
+            Assert.False(reloaded.MonitoringEnabled);
+            Assert.Equal(MonitorWindow.OneHour, reloaded.SelectedMonitoringWindow);
+            Assert.Equal(TimeSpan.FromSeconds(5), reloaded.ToMonitorOptions().Interval);
             Assert.DoesNotContain(".tmp", Directory.EnumerateFiles(directory).Single());
         }
         finally
