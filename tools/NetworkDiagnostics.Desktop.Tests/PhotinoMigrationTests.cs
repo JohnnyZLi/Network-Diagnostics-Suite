@@ -220,4 +220,40 @@ public sealed class PhotinoMigrationTests
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
     }
+
+    [Fact]
+    public void MonitoringHistoryExportRedactsIdentifiersUnlessExplicitlyEnabled()
+    {
+        var sample = new MonitorSample(
+            DateTimeOffset.UtcNow,
+            MonitorSampleState.Responsive,
+            12.4,
+            1.2,
+            8.5,
+            32.1,
+            0,
+            "en0",
+            "private-network-signature",
+            480.5,
+            41.2,
+            true);
+        var snapshot = new MonitorSnapshot(
+            true,
+            sample.Timestamp.AddMinutes(-1),
+            sample.Timestamp,
+            [sample],
+            [],
+            "Monitoring");
+
+        var redacted = MonitoringExportService.BuildHistoryCsv(snapshot, MonitorWindow.FiveMinutes, false);
+        var identified = MonitoringExportService.BuildHistoryCsv(snapshot, MonitorWindow.FiveMinutes, true);
+
+        Assert.Contains("redacted", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("en0", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-network-signature", redacted, StringComparison.Ordinal);
+        Assert.Contains("en0", identified, StringComparison.Ordinal);
+        Assert.Contains("private-network-signature", identified, StringComparison.Ordinal);
+        Assert.Contains("480.5", identified, StringComparison.Ordinal);
+        Assert.Contains("41.2", identified, StringComparison.Ordinal);
+    }
 }
