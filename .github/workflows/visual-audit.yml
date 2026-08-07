@@ -220,23 +220,25 @@ jobs:
               const button = document.querySelector('.jl-site-switcher__button');
               const menu = document.querySelector('#owned-sites-menu');
               const links = [...document.querySelectorAll('#owned-sites-menu a')];
+              const buttonRect = button?.getBoundingClientRect();
               const menuRect = menu?.getBoundingClientRect();
               return {
-                buttonWidth: button?.getBoundingClientRect().width ?? null,
+                buttonWidth: buttonRect?.width ?? null,
+                buttonLeft: buttonRect?.left ?? null,
+                buttonRight: buttonRect?.right ?? null,
                 menuWidth: menuRect?.width ?? null,
                 menuLeft: menuRect?.left ?? null,
                 menuRight: menuRect?.right ?? null,
                 viewportWidth: window.innerWidth,
                 linkOverflow: links.some((link) => link.scrollWidth > link.clientWidth + 1),
-                linkWrapping: links.some((link) => getComputedStyle(link).whiteSpace !== 'nowrap'),
               };
             });
             if (prefix === 'local') {
               if (!near(sitesOpenGeometry.buttonWidth, 88)) problems.push(`Sites trigger width ${sitesOpenGeometry.buttonWidth}`);
-              if (!near(sitesOpenGeometry.menuWidth, 144)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}`);
+              if (!near(sitesOpenGeometry.menuWidth, 88)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}`);
+              if (!near(sitesOpenGeometry.menuLeft, sitesOpenGeometry.buttonLeft) || !near(sitesOpenGeometry.menuRight, sitesOpenGeometry.buttonRight)) problems.push('Sites dropdown is not attached directly beneath its trigger');
               if (sitesOpenGeometry.menuLeft < -0.5 || sitesOpenGeometry.menuRight > sitesOpenGeometry.viewportWidth + 0.5) problems.push('Sites dropdown escapes the viewport');
-              if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its dropdown');
-              if (sitesOpenGeometry.linkWrapping) problems.push('Sites label wraps in fitted dropdown');
+              if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its attached dropdown');
             }
             await page.screenshot({ path: `visual-audit/${prefix}-sites-open-${viewportName}.png` });
             await page.keyboard.press('Escape');
