@@ -234,20 +234,19 @@ jobs:
           capture saved-report-detail-bottom
 
           # Exercise the real report metadata workflow against the persisted JSON.
-          # These coordinates come from the native 1600x1000 rendered state. The
-          # action row sits above the window edge after the aggregate Content run.
-          xdotool mousemove --sync 1190 915 click 1
+          # Coordinates are native 1600x1000 pixels; screenshot artifacts are scaled.
+          xdotool mousemove --sync 1242 916 click 1
           capture saved-report-editor
 
-          xdotool mousemove --sync 1260 313 click 1
+          xdotool mousemove --sync 1260 325 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
 
-          xdotool mousemove --sync 1260 410 click 1
+          xdotool mousemove --sync 1260 425 click 1
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'ci, photino'
 
-          xdotool mousemove --sync 1485 943 click 1
+          xdotool mousemove --sync 1525 956 click 1
           capture saved-report-annotated
 
           python3 - "$reports_dir" <<'PY'
