@@ -23,6 +23,16 @@
   padding: 4px 14px 26px;
 }
 
+.monitor-healthy-strip.neutral {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.monitor-healthy-strip.neutral > span {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-strong);
+}
+
 .speed-check-card > span {
   grid-column: 1;
   grid-row: 1;
