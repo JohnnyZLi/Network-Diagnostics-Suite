@@ -36,10 +36,6 @@ public sealed partial class ReportBrowserWorkspace
     {
         headerActions ??= FindHeaderActions();
         PolishHeaderActions();
-
-        // Selecting a row is self-evident in a desktop table. Keeping a permanent
-        // instruction strip between filters and data made the secondary library read
-        // like an admin workflow and consumed a full row of vertical space.
         SelectionHintBorder.IsVisible = false;
         ApplySelectionTrayLayout(Bounds.Width);
         ApplyReportTableResponsiveLayout(Bounds.Width);
@@ -49,11 +45,14 @@ public sealed partial class ReportBrowserWorkspace
     {
         if (Content is Grid root)
         {
-            root.Margin = width < 820
-                ? new Thickness(22, 20, 22, 26)
-                : new Thickness(30, 24, 30, 30);
+            var gutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+            root.Margin = new Thickness(
+                gutter,
+                24,
+                gutter,
+                WorkspaceLayoutMetrics.BottomInset(width));
             root.RowSpacing = 14;
-            root.MaxWidth = 1380;
+            root.MaxWidth = WorkspaceLayoutMetrics.ReportLibraryMaxWidth;
         }
 
         AddSurfaceClass(FilterBar);
