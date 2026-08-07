@@ -179,7 +179,26 @@ jobs:
             sleep 0.25
           done
 
-          sleep 5
+          # Transfer progress can reach 100% before the native runner finishes its
+          # final evidence pass. Wait for the persisted schema-2 report instead of
+          # treating a fixed sleep or 100% orb as completion.
+          reports_dir="$HOME/.local/share/NetworkDiagnostics/reports"
+          for attempt in {1..90}; do
+            if find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' -print -quit 2>/dev/null | grep -q .; then
+              break
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            if (( attempt == 90 )); then
+              echo "Connection Check did not finish and persist a report within 90 seconds."
+              tail -160 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+
           capture connection-check-complete
 
           if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
@@ -191,7 +210,6 @@ jobs:
             exit 1
           fi
 
-          reports_dir="$HOME/.local/share/NetworkDiagnostics/reports"
           test -d "$reports_dir"
           report_count=$(find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' | wc -l)
           if (( report_count < 1 )); then
