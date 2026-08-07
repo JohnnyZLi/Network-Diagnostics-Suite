@@ -89,19 +89,25 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
 }
 
+.live-timeline-section .monitor-timeline::before,
 .live-timeline-section .monitor-timeline::after {
-  content: 'OLDER   ·   RECENT SAMPLES   ·   NOW';
   position: absolute;
-  right: 10px;
   bottom: 3px;
-  left: 10px;
   color: var(--faint);
   font-size: 6.5px;
   font-weight: 700;
   letter-spacing: .08em;
-  text-align: justify;
-  text-align-last: justify;
   pointer-events: none;
+}
+
+.live-timeline-section .monitor-timeline::before {
+  content: 'OLDER';
+  left: 10px;
+}
+
+.live-timeline-section .monitor-timeline::after {
+  content: 'NOW';
+  right: 10px;
 }
 
 /* Capacity is an explicit measurement, not a continuously sampled health score. */
