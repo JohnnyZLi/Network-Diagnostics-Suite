@@ -103,8 +103,11 @@ jobs:
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
-          # From the settings trigger: Compare, Single, Aggregate, Run.
-          xdotool key --clearmodifiers Tab Tab Tab Tab Return
+          # From the settings trigger: four profiles, three transfer methods, then Run.
+          for _ in {1..8}; do
+            xdotool key --clearmodifiers Tab
+          done
+          xdotool key --clearmodifiers Return
           sleep 0.2
           scrot desktop-visual/screenshots/connection-check-running-early.png
           sleep 1.3
@@ -135,6 +138,10 @@ jobs:
           # in the maximized 1600x1000 audit viewport instead of assuming focus.
           xdotool mousemove --sync 1435 51 click 1
           capture saved-runs-panel
+
+          # The panel focuses Refresh; then Close; then the first saved report.
+          xdotool key --clearmodifiers Tab Tab Return
+          capture saved-report-detail
           xdotool key --clearmodifiers Escape
 
       - name: Upload rendered states
