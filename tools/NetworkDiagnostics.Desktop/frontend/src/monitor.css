@@ -148,15 +148,25 @@
   padding: 24px 26px 34px;
 }
 
-.monitor-error {
+.monitor-error,
+.monitor-notice {
   margin-bottom: 18px;
   padding: 11px 13px;
-  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-  color: var(--danger);
   font-size: 10px;
   line-height: 1.5;
+}
+
+.monitor-error {
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+}
+
+.monitor-notice {
+  border: 1px solid color-mix(in srgb, var(--good) 26%, transparent);
+  background: color-mix(in srgb, var(--good) 7%, transparent);
+  color: var(--text);
 }
 
 .monitor-empty {
@@ -285,13 +295,17 @@
 
 .monitor-toggle:disabled,
 .monitor-window-control button:disabled,
-.monitor-alert-actions button:disabled {
+.monitor-alert-actions button:disabled,
+.monitor-speed-actions button:disabled,
+.monitor-export-actions button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 .monitor-window-section,
 .monitor-timeline-section,
+.monitor-utility-section,
+.monitor-export-section,
 .monitor-alert-section {
   padding: 22px 0;
   border-bottom: 1px solid var(--line);
@@ -448,6 +462,136 @@
   font-size: 8.5px;
 }
 
+.monitor-speed-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.monitor-speed-actions button {
+  min-width: 0;
+  min-height: 65px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.monitor-speed-actions button:hover:not(:disabled),
+.monitor-speed-actions button.confirm {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+.monitor-speed-actions button.confirm {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong));
+}
+
+.monitor-speed-actions button > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-speed-actions strong {
+  font-size: 10.5px;
+}
+
+.monitor-speed-actions small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-speed-actions b {
+  color: var(--muted);
+  font-size: 8.5px;
+}
+
+.monitor-utility-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+
+.monitor-utility-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitor-export-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.monitor-export-actions button {
+  min-width: 0;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitor-export-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.monitor-export-actions svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitor-export-actions span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-export-copy {
+  margin: 9px 0 0;
+  color: var(--faint);
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
 .monitor-alert-section {
   border-bottom: 0;
 }
@@ -562,11 +706,18 @@
     grid-template-columns: 100px minmax(0, 1fr);
   }
 
-  .monitor-components {
+  .monitor-components,
+  .monitor-speed-actions {
     grid-template-columns: 1fr;
   }
 
   .monitor-component-card > p {
     min-height: 0;
+  }
+}
+
+@media (max-width: 500px) {
+  .monitor-export-actions {
+    grid-template-columns: 1fr;
   }
 }
