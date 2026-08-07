@@ -212,7 +212,7 @@ jobs:
           sleep 1.5
           capture live-health-capacity-measured-dark
 
-          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>//null; then
+          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-app.log
             exit 1
           fi
