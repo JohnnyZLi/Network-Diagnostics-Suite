@@ -98,7 +98,13 @@ jobs:
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # Focus order starts with History, then the settings gear.
+          # Monitor is the first toolbar control. Open the native-backed workspace,
+          # then return focus to its trigger when Escape closes it.
+          xdotool key --clearmodifiers Tab Return
+          capture network-monitor-dark
+          xdotool key --clearmodifiers Escape
+
+          # From the restored Monitor trigger: History, then the settings gear.
           xdotool key --clearmodifiers Tab Tab Return
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
