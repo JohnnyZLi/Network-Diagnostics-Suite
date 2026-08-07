@@ -152,15 +152,11 @@
 .jl-site-switcher__button[aria-expanded="true"]:hover,
 .jl-settings-button[aria-expanded="true"]:hover {
   border-color: var(--jl-color-rule-strong);
-  border-bottom-color: transparent;
 }
 
 .jl-site-switcher__button[aria-expanded="true"] {
   position: relative;
   z-index: calc(var(--jl-z-menu) + 1);
-  border-bottom-color: transparent;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
 .jl-site-switcher__chevron,
@@ -202,9 +198,6 @@
 .jl-settings-button[aria-expanded="true"] {
   position: relative;
   z-index: calc(var(--jl-z-menu) + 1);
-  border-bottom-color: transparent;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
 .jl-site-switcher__button[aria-expanded="true"]:focus,
@@ -244,7 +237,7 @@
   z-index: var(--jl-z-menu);
   display: grid;
   gap: calc(var(--jl-space-1) / 2);
-  margin: 0;
+  margin: -2px 0 0;
   border: 1px solid var(--jl-color-rule-strong);
   border-top: 0;
   background: var(--jl-color-surface);
