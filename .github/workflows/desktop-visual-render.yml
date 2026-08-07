@@ -139,8 +139,9 @@ jobs:
           xdotool mousemove --sync 1435 51 click 1
           capture saved-runs-panel
 
-          # The panel focuses Refresh; then Close; then the first saved report.
-          xdotool key --clearmodifiers Tab Tab Return
+          # History can finish loading after focus was assigned, so click the actual
+          # first report row instead of relying on transient Tab order.
+          xdotool mousemove --sync 1315 205 click 1
           capture saved-report-detail
           xdotool key --clearmodifiers Escape
 
