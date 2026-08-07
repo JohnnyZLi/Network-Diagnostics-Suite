@@ -91,6 +91,7 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-top: 18px;
   padding: 4px 26px 26px;
 }
 
@@ -176,6 +177,43 @@
   line-height: 1.45;
 }
 
+.advanced-select-shell {
+  position: relative;
+}
+
+.advanced-select-shell select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.advanced-select-shell svg {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.advanced-field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.advanced-field input[type="number"]::-webkit-inner-spin-button,
+.advanced-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .advanced-toggle-row {
   margin-top: 14px;
   padding: 13px 14px;
@@ -199,10 +237,45 @@
 }
 
 .advanced-toggle-row input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
   width: 34px;
-  height: 18px;
-  accent-color: var(--accent);
+  height: 20px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  outline: 0;
+  background: var(--surface-soft);
   cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.advanced-toggle-row input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.advanced-toggle-row input:checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.advanced-toggle-row input:checked::after {
+  transform: translateX(14px);
+  background: var(--accent-strong);
+}
+
+.advanced-toggle-row input:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .advanced-grid {
@@ -315,6 +388,7 @@
 
 .advanced-preflight-section {
   border-bottom: 0;
+  scroll-margin-top: 18px;
 }
 
 .advanced-preflight-result {
