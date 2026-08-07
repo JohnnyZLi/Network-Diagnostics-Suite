@@ -61,12 +61,13 @@ class DesktopBridgeClient {
 
     const id = `ui-${Date.now()}-${++this.sequence}`;
     const external = window.external as unknown as PhotinoExternal;
+    const timeoutMs = requestTimeout(method);
 
     return new Promise<T>((resolve, reject) => {
       const timeout = window.setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Desktop bridge request timed out: ${method}`));
-      }, 15_000);
+      }, timeoutMs);
 
       this.pending.set(id, {
         resolve: (value) => resolve(value as T),
@@ -114,6 +115,12 @@ class DesktopBridgeClient {
     if (!bucket) return;
     for (const listener of bucket) listener(message.payload);
   }
+}
+
+function requestTimeout(method: string): number {
+  if (method.includes('import') || method.includes('export')) return 5 * 60_000;
+  if (method === 'diagnostic.preflight') return 45_000;
+  return 15_000;
 }
 
 export const desktopBridge = new DesktopBridgeClient();
