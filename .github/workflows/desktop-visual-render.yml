@@ -98,8 +98,8 @@ jobs:
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # First focusable control is the settings gear. Exercise the popover.
-          xdotool key --clearmodifiers Tab Return
+          # Focus order starts with History, then the settings gear.
+          xdotool key --clearmodifiers Tab Tab Return
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
@@ -130,6 +130,11 @@ jobs:
             exit 1
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
+
+          # The Run button retains focus after completion; Tab wraps to History.
+          xdotool key --clearmodifiers Tab Return
+          capture saved-runs-panel
+          xdotool key --clearmodifiers Escape
 
       - name: Upload rendered states
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
