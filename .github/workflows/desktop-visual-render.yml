@@ -158,9 +158,9 @@ jobs:
           xdotool mousemove --sync 1346 52 click 1
           sleep 2
           scrot desktop-visual/screenshots/network-monitor-utilities-dark.png
-          # Target the explicit Run affordance at the far-right edge of the Content
-          # card. It is more stable than the card center under WebKit text reflow.
-          xdotool mousemove --sync 1213 831 click 1
+          # Target the native 1600x1000 pixel center of the Content card's explicit
+          # Run affordance. Viewer previews are scaled and must not be used directly.
+          xdotool mousemove --sync 1260 865 click 1
           sleep 0.3
           scrot desktop-visual/screenshots/content-speed-running-early.png
           sleep 1.3
