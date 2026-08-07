@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import './history.css';
 
 export type SavedReportSummary = {
@@ -31,25 +31,72 @@ export function HistoryPanel({
   onClose: () => void;
   onRefresh: () => void;
 }) {
+  const panelRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     if (!open) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const frame = window.requestAnimationFrame(() => {
+      const first = focusableElements(panelRef.current)[0];
+      first?.focus();
+    });
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const elements = focusableElements(panelRef.current);
+      if (elements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
+
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
     <div className="history-layer" role="presentation">
-      <button className="history-backdrop" type="button" aria-label="Close saved runs" onClick={onClose} />
-      <aside className="history-panel" aria-label="Saved runs">
+      <button className="history-backdrop" type="button" aria-label="Close saved runs" onClick={onClose} tabIndex={-1} />
+      <aside
+        ref={panelRef}
+        className="history-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-title"
+      >
         <header className="history-header">
           <div>
             <span className="history-kicker">Local reports</span>
-            <h2>Saved runs</h2>
+            <h2 id="history-title">Saved runs</h2>
             <p>Completed diagnostics stored on this computer.</p>
           </div>
           <div className="history-header-actions">
@@ -153,6 +200,13 @@ function HistoryMetric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function focusableElements(root: HTMLElement | null): HTMLElement[] {
+  if (!root) return [];
+  return Array.from(root.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => !element.hasAttribute('hidden'));
 }
 
 function formatMetric(value: number | null | undefined, unit: string): string {
