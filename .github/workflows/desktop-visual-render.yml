@@ -154,14 +154,16 @@ jobs:
           xdotool mousemove --sync 1346 52 click 1
           sleep 2
           scrot desktop-visual/screenshots/network-monitor-utilities-dark.png
-          xdotool mousemove --sync 1095 831 click 1
+          # Target the explicit Run affordance at the far-right edge of the Content
+          # card. It is more stable than the card center under WebKit text reflow.
+          xdotool mousemove --sync 1213 831 click 1
           sleep 0.3
           scrot desktop-visual/screenshots/content-speed-running-early.png
           sleep 1.3
           scrot desktop-visual/screenshots/content-speed-running-later.png
 
           for attempt in {1..20}; do
-            if grep -Eq '"runId":"[^"]+".*"profile":"connection-check".*"method":"aggregate"' /tmp/desktop-app.log; then
+            if grep -Fq '"profile":"connection-check","method":"aggregate","transferCapBytes"' /tmp/desktop-app.log; then
               break
             fi
             if (( attempt == 20 )); then
