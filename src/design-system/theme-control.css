@@ -100,13 +100,19 @@
 }
 
 .jl-theme-options button[aria-pressed="true"] {
-  border-color: var(--jl-color-accent);
-  background: var(--jl-color-accent);
+  border-color: var(--jl-color-accent-decorative);
+  background: var(--jl-color-accent-soft);
+  background: color-mix(in srgb, var(--jl-color-accent) 70%, var(--jl-color-surface));
+  color: var(--jl-color-ink);
+}
+
+:root[data-theme="dark"] .jl-theme-options button[aria-pressed="true"] {
   color: var(--jl-color-on-accent);
 }
 
 .jl-theme-options button[aria-pressed="true"]:hover {
-  background: var(--jl-color-accent-hover);
+  background: var(--jl-color-accent-soft);
+  background: color-mix(in srgb, var(--jl-color-accent) 78%, var(--jl-color-surface));
 }
 
 @media (forced-colors: active) {
