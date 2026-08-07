@@ -159,6 +159,11 @@
   height: 48px;
 }
 
+.workbench-timeline-row .monitor-timeline span {
+  flex: 1 1 26px;
+  max-width: 42px;
+}
+
 .monitor-components.workbench-monitor-components {
   padding-bottom: 24px;
 }
