@@ -38,5 +38,14 @@ public sealed partial class SettingsWorkspace
             comboBox.HorizontalContentAlignment = HorizontalAlignment.Stretch;
             comboBox.VerticalContentAlignment = VerticalAlignment.Center;
         }
+
+        foreach (var textBox in SettingsRootGrid
+                     .GetLogicalDescendants()
+                     .OfType<TextBox>())
+        {
+            textBox.MinHeight = ReferenceEquals(textBox, OriginsTextBox) ? 104 : 38;
+            textBox.Padding = new Thickness(11, 7);
+            textBox.CornerRadius = new CornerRadius(9);
+        }
     }
 }
