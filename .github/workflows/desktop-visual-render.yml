@@ -98,10 +98,12 @@ jobs:
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # Cmd/Ctrl-F is the desktop command palette, not browser Find. Exercise the
-          # real WebKit keyboard path and use the palette itself to open Monitor.
+          # Give the embedded WebView explicit keyboard focus before exercising the
+          # desktop command palette. A focused top-level GTK window alone is not
+          # sufficient on WebKitGTK under Xvfb.
+          xdotool mousemove --sync 800 330 click 1
+          sleep 0.2
           xdotool key --clearmodifiers ctrl+f
-          sleep 0.25
           capture command-palette-dark
           xdotool type --delay 35 'monitor'
           capture command-palette-monitor-filtered
