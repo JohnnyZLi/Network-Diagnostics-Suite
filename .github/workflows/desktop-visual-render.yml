@@ -235,7 +235,7 @@ jobs:
 
           # Exercise the real report metadata workflow against the persisted JSON.
           # Coordinates are native 1600x1000 pixels; screenshot artifacts are scaled.
-          xdotool mousemove --sync 1242 916 click 1
+          xdotool mousemove --sync 1241 957 click 1
           capture saved-report-editor
 
           xdotool mousemove --sync 1260 325 click 1
