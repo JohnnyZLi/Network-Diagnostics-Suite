@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
+import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
 import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
@@ -54,6 +55,9 @@ type DiagnosticResult = {
   downloadMbps?: number | null;
   uploadMbps?: number | null;
   dataUsedBytes?: number | null;
+  savedLocally?: boolean;
+  storageError?: string | null;
+  storedReport?: SavedReportSummary | null;
 };
 
 type DiagnosticFailure = {
@@ -92,6 +96,10 @@ function App() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [reports, setReports] = useState<SavedReportSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const highestProgress = useRef(0);
@@ -154,6 +162,16 @@ function App() {
       setMeasuredBytes((current) => next.dataUsedBytes ?? current);
       setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
       setRunning(false);
+
+      if (next.storedReport) {
+        setReports((current) => [
+          next.storedReport!,
+          ...current.filter((item) => item.id !== next.storedReport!.id),
+        ]);
+      }
+      if (next.storageError) {
+        setError(`Measurement completed, but the report could not be saved: ${next.storageError}`);
+      }
     });
 
     const removeCancelled = desktopBridge.on<{ runId: string }>('diagnostic.cancelled', (next) => {
@@ -188,6 +206,25 @@ function App() {
         : result
           ? 'Complete'
           : 'Ready';
+
+  async function loadReports() {
+    if (!desktopBridge.available) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const savedReports = await desktopBridge.request<SavedReportSummary[]>('reports.list');
+      setReports(savedReports);
+    } catch (value) {
+      setHistoryError(value instanceof Error ? value.message : 'Saved runs could not be read.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function openHistory() {
+    setHistoryOpen(true);
+    void loadReports();
+  }
 
   async function changeAppearance(next: AppearanceMode) {
     const request = ++appearanceRequest.current;
@@ -258,6 +295,20 @@ function App() {
             <span className="status-dot" aria-hidden="true" />
             {host ? `Native engine · ${host.architecture}` : desktopBridge.available ? 'Connecting to engine' : 'Browser preview'}
           </div>
+          <button
+            type="button"
+            className={`history-trigger ${historyOpen ? 'active' : ''}`}
+            aria-label="Saved runs"
+            aria-expanded={historyOpen}
+            onClick={openHistory}
+            disabled={!desktopBridge.available}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 7v5l3 2" />
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+            <span>History</span>
+          </button>
           <SettingsMenu
             appearance={appearance}
             onAppearanceChange={(next) => void changeAppearance(next)}
@@ -388,6 +439,15 @@ function App() {
 
         {error && <div className="error-banner" role="alert">{error}</div>}
       </main>
+
+      <HistoryPanel
+        open={historyOpen}
+        reports={reports}
+        loading={historyLoading}
+        error={historyError}
+        onClose={() => setHistoryOpen(false)}
+        onRefresh={() => void loadReports()}
+      />
     </div>
   );
 }
