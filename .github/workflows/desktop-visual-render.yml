@@ -100,8 +100,11 @@ jobs:
 
           # WebKitGTK does not assign initial keyboard focus to the toolbar reliably.
           # Click the stable controls in the fixed 1600x1000 audit viewport instead.
+          # The monitor also performs a native snapshot request on open, so give the
+          # workspace enough time to mount and receive that snapshot before capture.
           xdotool mousemove --sync 1346 52 click 1
-          capture network-monitor-dark
+          sleep 2
+          scrot desktop-visual/screenshots/network-monitor-dark.png
           xdotool key --clearmodifiers Escape
 
           xdotool mousemove --sync 1565 52 click 1
