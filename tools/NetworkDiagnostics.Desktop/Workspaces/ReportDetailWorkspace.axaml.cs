@@ -162,7 +162,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
             Text = metric.Label.ToUpperInvariant(),
             FontSize = 8.5,
             FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 0.7
+            LetterSpacing = 0.7,
+            LineHeight = 11
         };
         label.Classes.Add("muted");
 
@@ -171,10 +172,11 @@ public sealed partial class ReportDetailWorkspace : UserControl
             Text = metric.Value,
             FontSize = 18,
             FontWeight = FontWeight.SemiBold,
+            LineHeight = 22,
             Opacity = metric.WasMeasured ? 1 : 0.58
         };
 
-        var stack = new StackPanel { Spacing = 2 };
+        var stack = new StackPanel { Spacing = 3 };
         stack.Children.Add(label);
         stack.Children.Add(value);
         return stack;
@@ -196,8 +198,9 @@ public sealed partial class ReportDetailWorkspace : UserControl
             {
                 Text = "No material findings were generated for this report.",
                 FontSize = 11,
+                LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Avalonia.Thickness(0, 8, 0, 4)
+                Margin = new Avalonia.Thickness(0, 10, 0, 6)
             };
             empty.Classes.Add("muted");
             FindingsPanel.Children.Add(empty);
@@ -223,8 +226,9 @@ public sealed partial class ReportDetailWorkspace : UserControl
             {
                 Text = "This report does not contain additional technical evidence.",
                 FontSize = 10.5,
+                LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Avalonia.Thickness(0, 8, 0, 8)
+                Margin = new Avalonia.Thickness(0, 10, 0, 10)
             };
             empty.Classes.Add("muted");
             EvidencePanel.Children.Add(empty);
@@ -257,6 +261,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
                 Text = item[..separator].Trim(),
                 FontSize = 9.5,
                 FontWeight = FontWeight.SemiBold,
+                LineHeight = 15,
                 TextWrapping = TextWrapping.Wrap
             };
             label.Classes.Add("muted");
@@ -266,7 +271,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
             {
                 Text = item[(separator + 1)..].Trim(),
                 FontSize = 10.5,
-                LineHeight = 16,
+                LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap
             };
             value.Classes.Add("secondary");
@@ -279,7 +284,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
             {
                 Text = item,
                 FontSize = 10.5,
-                LineHeight = 16,
+                LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap
             };
             value.Classes.Add("secondary");
@@ -288,7 +293,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
         var container = new Border
         {
-            Padding = new Avalonia.Thickness(0, 9, 0, 10),
+            Padding = new Avalonia.Thickness(0, 10, 0, 12),
             Child = row
         };
         container.Classes.Add("divider");
@@ -358,7 +363,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
             Text = finding.Label.ToUpperInvariant(),
             FontSize = 9,
             FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 0.7
+            LetterSpacing = 0.7,
+            LineHeight = 12
         };
         label.Classes.Add("eyebrow");
 
@@ -367,6 +373,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
             Text = finding.Title,
             FontSize = 12.5,
             FontWeight = FontWeight.SemiBold,
+            LineHeight = 18,
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -374,19 +381,19 @@ public sealed partial class ReportDetailWorkspace : UserControl
         {
             Text = finding.Summary,
             FontSize = 10.5,
-            LineHeight = 16,
+            LineHeight = 17,
             TextWrapping = TextWrapping.Wrap
         };
         summary.Classes.Add("secondary");
 
-        var stack = new StackPanel { Spacing = 3 };
+        var stack = new StackPanel { Spacing = 5 };
         stack.Children.Add(label);
         stack.Children.Add(title);
         stack.Children.Add(summary);
 
         var container = new Border
         {
-            Padding = new Avalonia.Thickness(0, 10, 0, 11),
+            Padding = new Avalonia.Thickness(0, 12, 0, 14),
             Child = stack
         };
         container.Classes.Add("divider");
