@@ -4,6 +4,7 @@ import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
 import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
+type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
 
 type HostInfo = {
   product: string;
@@ -19,7 +20,7 @@ type AppearanceSettings = {
 };
 
 type DiagnosticPlan = {
-  profile: string;
+  profile: DiagnosticProfile;
   profileName: string;
   method: TransferMethod;
   transferCapBytes: number;
@@ -29,7 +30,7 @@ type DiagnosticPlan = {
 
 type RunAccepted = {
   runId: string;
-  profile: string;
+  profile: DiagnosticProfile;
   method: TransferMethod;
   transferCapBytes: number;
 };
@@ -48,7 +49,7 @@ type DiagnosticResult = {
   runId: string;
   reportId: string;
   generatedAt: string;
-  profile: string;
+  profile: DiagnosticProfile;
   method: TransferMethod;
   latencyMs?: number | null;
   requestLossPercent?: number | null;
@@ -72,11 +73,50 @@ type LiveMetrics = {
   uploadMbps: number | null;
 };
 
+type ProfileOption = {
+  id: DiagnosticProfile;
+  label: string;
+  title: string;
+  description: string;
+  idleCopy: string;
+};
+
 const emptyLiveMetrics: LiveMetrics = {
   latencyMs: null,
   downloadMbps: null,
   uploadMbps: null,
 };
+
+const profiles: ProfileOption[] = [
+  {
+    id: 'connection-check',
+    label: 'Connection',
+    title: 'Connection Check',
+    description: 'A fast baseline for responsiveness, loss, and real download and upload performance.',
+    idleCopy: 'Connection Check has the lowest transfer ceiling and does not collect local interface identifiers.',
+  },
+  {
+    id: 'quick',
+    label: 'Quick',
+    title: 'Quick Test',
+    description: 'A short native test for a broader throughput snapshot without the duration of a full run.',
+    idleCopy: 'Quick increases the measurement budget while keeping the run short enough for routine checks.',
+  },
+  {
+    id: 'full',
+    label: 'Full',
+    title: 'Full Test',
+    description: 'The standard native profile for a more complete view of latency, loss, download, and upload behavior.',
+    idleCopy: 'Full uses the standard transfer budget and is the default choice when you want a representative report.',
+  },
+  {
+    id: 'stress',
+    label: 'Stress',
+    title: 'Stress Test',
+    description: 'A heavier native run intended to expose sustained-load behavior and less obvious connection limits.',
+    idleCopy: 'Stress uses the largest transfer budget. Run it when the extra traffic and duration are intentional.',
+  },
+];
 
 const methods: Array<{ id: TransferMethod; label: string; detail: string }> = [
   { id: 'compare', label: 'Compare', detail: 'Single + aggregate' },
@@ -87,6 +127,7 @@ const methods: Array<{ id: TransferMethod; label: string; detail: string }> = [
 function App() {
   const [host, setHost] = useState<HostInfo | null>(null);
   const [appearance, setAppearance] = useState<AppearanceMode>('system');
+  const [profile, setProfile] = useState<DiagnosticProfile>('connection-check');
   const [method, setMethod] = useState<TransferMethod>('compare');
   const [plan, setPlan] = useState<DiagnosticPlan | null>(null);
   const [progress, setProgress] = useState<DiagnosticProgress | null>(null);
@@ -102,9 +143,15 @@ function App() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
+  const activeProfile = useRef<DiagnosticProfile>('connection-check');
   const highestProgress = useRef(0);
   const stageBytes = useRef(new Map<string, number>());
   const appearanceRequest = useRef(0);
+
+  const selectedProfile = profiles.find((item) => item.id === profile) ?? profiles[0];
+  const displayedProfile = result
+    ? profiles.find((item) => item.id === result.profile) ?? selectedProfile
+    : selectedProfile;
 
   useEffect(() => {
     document.documentElement.dataset.theme = appearance;
@@ -122,11 +169,12 @@ function App() {
 
   useEffect(() => {
     if (!desktopBridge.available) return;
+    setPlan(null);
     void desktopBridge.request<DiagnosticPlan>('diagnostic.describePlan', {
-      profile: 'connection-check',
+      profile,
       method,
     }).then(setPlan).catch((value: Error) => setError(value.message));
-  }, [method]);
+  }, [profile, method]);
 
   useEffect(() => {
     const removeProgress = desktopBridge.on<DiagnosticProgress>('diagnostic.progress', (next) => {
@@ -178,7 +226,7 @@ function App() {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
       activeRunId.current = null;
       setRunning(false);
-      setError('Connection Check was cancelled.');
+      setError(`${profileTitle(activeProfile.current)} was cancelled.`);
     });
 
     const removeFailed = desktopBridge.on<DiagnosticFailure>('diagnostic.failed', (next) => {
@@ -241,7 +289,19 @@ function App() {
     }
   }
 
+  function selectProfile(next: DiagnosticProfile) {
+    if (running || next === profile) return;
+    setProfile(next);
+    setResult(null);
+    setProgress(null);
+    setProgressRatio(0);
+    setLiveMetrics(emptyLiveMetrics);
+    setMeasuredBytes(0);
+    setError(null);
+  }
+
   async function runDiagnostic() {
+    activeProfile.current = profile;
     activeMethod.current = method;
     highestProgress.current = 0;
     stageBytes.current.clear();
@@ -261,7 +321,7 @@ function App() {
 
     try {
       const accepted = await desktopBridge.request<RunAccepted>('diagnostic.run', {
-        profile: 'connection-check',
+        profile,
         method,
       });
       activeRunId.current = accepted.runId;
@@ -321,22 +381,38 @@ function App() {
         <section className="intro-row">
           <div>
             <span className="eyebrow">Diagnostics</span>
-            <h1>Connection Check</h1>
-            <p>A fast baseline for responsiveness, loss, and real download and upload performance.</p>
+            <h1>{selectedProfile.title}</h1>
+            <p>{selectedProfile.description}</p>
           </div>
-          <div className="method-control" aria-label="Transfer method">
-            {methods.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={method === item.id ? 'active' : ''}
-                onClick={() => setMethod(item.id)}
-                disabled={running}
-                title={item.detail}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
+            <div className="method-control" aria-label="Diagnostic profile">
+              {profiles.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={profile === item.id ? 'active' : ''}
+                  onClick={() => selectProfile(item.id)}
+                  disabled={running}
+                  title={item.description}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="method-control" aria-label="Transfer method">
+              {methods.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={method === item.id ? 'active' : ''}
+                  onClick={() => setMethod(item.id)}
+                  disabled={running}
+                  title={item.detail}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -349,7 +425,7 @@ function App() {
             >
               <div className="progress-orb-inner">
                 <span>{livePrimary}</span>
-                <small>{running ? `${progressPercent}%` : result ? 'Connection Check' : 'Native test'}</small>
+                <small>{running ? `${progressPercent}%` : result ? displayedProfile.title : 'Native test'}</small>
               </div>
             </div>
 
@@ -358,13 +434,13 @@ function App() {
                 <span className={running ? 'pulse' : ''} aria-hidden="true" />
                 {running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Measurement complete' : 'Ready to measure'}
               </div>
-              <h2>{running ? progress?.message || 'Preparing the test…' : result ? 'Your connection check is ready.' : 'Measure the connection you are on now.'}</h2>
+              <h2>{running ? progress?.message || 'Preparing the test…' : result ? `${displayedProfile.title} is ready.` : 'Measure the connection you are on now.'}</h2>
               <p>
                 {running
                   ? 'Headline measurements stay visible as the test moves between phases. The final report is assembled locally.'
                   : result
                     ? `Completed ${new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. The headline results are ready below.`
-                    : 'Connection Check has the lowest transfer ceiling and does not collect local interface identifiers.'}
+                    : selectedProfile.idleCopy}
               </p>
 
               <div className="actions">
@@ -379,7 +455,7 @@ function App() {
                     onClick={() => void runDiagnostic()}
                     disabled={!desktopBridge.available}
                   >
-                    {result ? 'Run again' : 'Run connection check'}
+                    {result ? `Run ${selectedProfile.label.toLowerCase()} again` : `Run ${selectedProfile.label.toLowerCase()} test`}
                   </button>
                 )}
               </div>
@@ -410,7 +486,7 @@ function App() {
           <div className="plan-card">
             <span className="section-kicker">Current test plan</span>
             <div className="plan-main">
-              <strong>{plan?.profileName || 'Connection Check'}</strong>
+              <strong>{plan?.profileName || selectedProfile.title}</strong>
               <span>{methodLabel(method)}</span>
             </div>
             <div className="plan-facts">
@@ -422,6 +498,10 @@ function App() {
 
           <div className="evidence-card">
             <span className="section-kicker">Run evidence</span>
+            <div className="evidence-line">
+              <span>Profile</span>
+              <strong>{result ? displayedProfile.title : selectedProfile.title}</strong>
+            </div>
             <div className="evidence-line">
               <span>Phase</span>
               <strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? 'Complete' : 'Idle'}</strong>
@@ -525,6 +605,10 @@ function methodLabel(method: TransferMethod): string {
   if (method === 'single') return 'Single flow';
   if (method === 'aggregate') return 'Aggregate flows';
   return 'Single + aggregate';
+}
+
+function profileTitle(profile: DiagnosticProfile): string {
+  return profiles.find((item) => item.id === profile)?.title ?? 'Diagnostic';
 }
 
 function phaseLabel(phase?: string, message?: string): string {
