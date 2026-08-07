@@ -283,7 +283,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             {
                 alert.Id,
                 alert.Timestamp,
-                kind = alert.Kind.ToString().ToLowerInvariant(),
+                kind = MonitorAlertKindId(alert.Kind),
                 severity = alert.Severity.ToString().ToLowerInvariant(),
                 alert.Title,
                 alert.Detail,
@@ -291,6 +291,16 @@ public sealed class PhotinoDesktopBridge : IDisposable
             }).ToArray()
         };
     }
+
+    private static string MonitorAlertKindId(MonitorAlertKind kind) => kind switch
+    {
+        MonitorAlertKind.Outage => "outage",
+        MonitorAlertKind.Recovery => "recovery",
+        MonitorAlertKind.NetworkChange => "network-change",
+        MonitorAlertKind.Degradation => "degradation",
+        MonitorAlertKind.Bandwidth => "bandwidth",
+        _ => "monitor"
+    };
 
     private static object MonitorComponentPayload(ExperienceComponentPresentation component) => new
     {
