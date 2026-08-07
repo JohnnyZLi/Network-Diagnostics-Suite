@@ -39,7 +39,8 @@
           <TextBlock Name="ToolbarMetaText"
                      Classes="muted"
                      FontSize="9.5"
-                     VerticalAlignment="Center" />
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
@@ -70,12 +71,11 @@
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
       <StackPanel Name="ReportBody"
-                  Margin="24,18,24,40"
-                  Spacing="18"
+                  Margin="24,22,24,40"
                   MaxWidth="1320"
                   HorizontalAlignment="Center">
-        <Grid Name="ReportHeroGrid" ColumnDefinitions="*,360" ColumnSpacing="34">
-          <StackPanel Grid.Column="0" Spacing="7" VerticalAlignment="Center">
+        <Grid Name="ReportHeroGrid" ColumnDefinitions="*,340" ColumnSpacing="40">
+          <StackPanel Name="HeroContentStack" Grid.Column="0" Spacing="6" VerticalAlignment="Top">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Border Name="OutcomeIndicator"
                       Width="9"
@@ -90,12 +90,14 @@
                        FontWeight="SemiBold"
                        LineHeight="33"
                        MaxWidth="820"
+                       HorizontalAlignment="Left"
                        TextWrapping="Wrap" />
             <TextBlock Name="SummaryText"
                        Classes="secondary"
                        FontSize="11.5"
                        LineHeight="18"
                        MaxWidth="860"
+                       HorizontalAlignment="Left"
                        TextWrapping="Wrap" />
           </StackPanel>
 
@@ -104,8 +106,8 @@
                   Background="Transparent"
                   BorderBrush="{DynamicResource AppAccentBrush}"
                   BorderThickness="2,0,0,0"
-                  Padding="18,2,0,2"
-                  VerticalAlignment="Center">
+                  Padding="18,0,0,0"
+                  VerticalAlignment="Top">
             <StackPanel Spacing="6">
               <TextBlock Classes="eyebrow" Text="RECOMMENDED NEXT STEP" />
               <TextBlock Name="NextActionText"
@@ -117,86 +119,61 @@
           </Border>
         </Grid>
 
-        <Grid Name="ReportContextGrid"
-              ColumnDefinitions="1.05*,0.75*,0.75*,1.65*"
-              ColumnSpacing="24"
-              RowSpacing="10"
-              Margin="0,1,0,0">
-          <StackPanel Name="GeneratedContextItem" Spacing="2">
-            <TextBlock Classes="muted" FontSize="8.5" Text="GENERATED" />
-            <TextBlock Name="GeneratedText" FontSize="10.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Name="ProfileContextItem" Grid.Column="1" Spacing="2">
-            <TextBlock Classes="muted" FontSize="8.5" Text="PROFILE" />
-            <TextBlock Name="ProfileText" FontSize="10.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Name="MethodContextItem" Grid.Column="2" Spacing="2">
-            <TextBlock Classes="muted" FontSize="8.5" Text="METHOD" />
-            <TextBlock Name="MethodText" FontSize="10.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Name="RouteContextItem" Grid.Column="3" Spacing="2">
-            <TextBlock Classes="muted" FontSize="8.5" Text="NETWORK CONTEXT" />
-            <TextBlock Name="ContextText"
-                       FontSize="10.5"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Grid>
-
-        <Border Classes="divider" />
-
-        <StackPanel Spacing="10">
+        <StackPanel Name="OverviewSection" Spacing="8" Margin="0,26,0,0">
           <StackPanel Spacing="2">
             <TextBlock Classes="eyebrow" Text="AT A GLANCE" />
-            <TextBlock FontSize="17" FontWeight="SemiBold" Text="What the test measured" />
+            <TextBlock FontSize="17" FontWeight="SemiBold" Text="Connection snapshot" />
           </StackPanel>
 
-          <Border Name="ReportOverviewSurface" Classes="surface" Padding="18,16">
-            <StackPanel Spacing="15">
-              <Grid Name="SignalGrid" ColumnDefinitions="*,*,*" ColumnSpacing="20" RowSpacing="12">
-                <Border Name="ResponsivenessSignal" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,1,0" Padding="0,0,18,0">
-                  <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                      <Border Name="ResponsivenessSignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
-                      <TextBlock FontSize="10" FontWeight="SemiBold" Text="Responsiveness" />
-                    </StackPanel>
-                    <TextBlock Name="ResponsivenessStateText" FontSize="13" FontWeight="SemiBold" />
-                    <TextBlock Name="ResponsivenessSignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+          <Border Name="ReportOverviewSurface" Classes="surface" Padding="20,18">
+            <Grid Name="SignalGrid" ColumnDefinitions="*,*,*" ColumnSpacing="22">
+              <Border Name="ResponsivenessSignal"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
+                      BorderThickness="0,0,1,0"
+                      Padding="0,0,20,0">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Border Name="ResponsivenessSignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
+                    <TextBlock FontSize="10" FontWeight="SemiBold" Text="Responsiveness" />
                   </StackPanel>
-                </Border>
+                  <TextBlock Name="ResponsivenessStateText" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Name="ResponsivenessSignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+                  <Grid Name="ResponsivenessMetricPanel" Margin="0,9,0,0" ColumnSpacing="16" />
+                </StackPanel>
+              </Border>
 
-                <Border Name="ReliabilitySignal" Grid.Column="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,1,0" Padding="0,0,18,0">
-                  <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                      <Border Name="ReliabilitySignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
-                      <TextBlock FontSize="10" FontWeight="SemiBold" Text="Reliability" />
-                    </StackPanel>
-                    <TextBlock Name="ReliabilityStateText" FontSize="13" FontWeight="SemiBold" />
-                    <TextBlock Name="ReliabilitySignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+              <Border Name="ReliabilitySignal"
+                      Grid.Column="1"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
+                      BorderThickness="0,0,1,0"
+                      Padding="0,0,20,0">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Border Name="ReliabilitySignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
+                    <TextBlock FontSize="10" FontWeight="SemiBold" Text="Reliability" />
                   </StackPanel>
-                </Border>
+                  <TextBlock Name="ReliabilityStateText" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Name="ReliabilitySignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+                  <Grid Name="ReliabilityMetricPanel" Margin="0,9,0,0" ColumnSpacing="16" />
+                </StackPanel>
+              </Border>
 
-                <Border Name="ThroughputSignal" Grid.Column="2" Padding="0">
-                  <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                      <Border Name="ThroughputSignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
-                      <TextBlock FontSize="10" FontWeight="SemiBold" Text="Throughput" />
-                    </StackPanel>
-                    <TextBlock Name="ThroughputStateText" FontSize="13" FontWeight="SemiBold" />
-                    <TextBlock Name="ThroughputSignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+              <Border Name="ThroughputSignal" Grid.Column="2">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Border Name="ThroughputSignalIndicator" Width="7" Height="7" CornerRadius="4" Classes="indicatorNeutral" VerticalAlignment="Center" />
+                    <TextBlock FontSize="10" FontWeight="SemiBold" Text="Throughput" />
                   </StackPanel>
-                </Border>
-              </Grid>
-
-              <Border Classes="divider" />
-
-              <Grid Name="MetricGrid" ColumnSpacing="22" RowSpacing="14" />
-            </StackPanel>
+                  <TextBlock Name="ThroughputStateText" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Name="ThroughputSignalText" Classes="muted" FontSize="9.5" LineHeight="14" TextWrapping="Wrap" />
+                  <Grid Name="ThroughputMetricPanel" Margin="0,9,0,0" ColumnSpacing="16" />
+                </StackPanel>
+              </Border>
+            </Grid>
           </Border>
         </StackPanel>
 
-        <StackPanel Name="FindingsSection" Spacing="8">
+        <StackPanel Name="FindingsSection" Spacing="6" Margin="0,22,0,0">
           <StackPanel Spacing="2">
             <TextBlock Classes="eyebrow" Text="FINDINGS" />
             <TextBlock Name="FindingsTitleText" FontSize="17" FontWeight="SemiBold" Text="What needs attention" />
@@ -208,13 +185,13 @@
           <StackPanel Name="FindingsPanel" />
         </StackPanel>
 
-        <Border Name="ReportEvidenceCard" Classes="surfaceSubtle" ClipToBounds="True">
+        <Border Name="ReportEvidenceCard" Classes="surfaceSubtle" ClipToBounds="True" Margin="0,12,0,0">
           <StackPanel>
             <Button Name="EvidenceToggleButton"
                     Classes="ghost"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
-                    Padding="16,12"
+                    Padding="16,11"
                     Click="EvidenceToggleClicked">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <StackPanel Spacing="2">
