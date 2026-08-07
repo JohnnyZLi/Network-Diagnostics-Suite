@@ -52,43 +52,6 @@ public sealed partial class WorkbenchShell
 
         InspectorToggleButton.Width = double.NaN;
         PolishUtilityButton(InspectorToggleButton, 44);
-        PolishProductIdentity();
-    }
-
-    private void PolishProductIdentity()
-    {
-        ProductStack.Height = 24;
-        ProductStack.Spacing = 0;
-        ProductStack.VerticalAlignment = VerticalAlignment.Center;
-
-        var productTitle = ProductStack.Children.OfType<TextBlock>().FirstOrDefault();
-        if (productTitle is not null)
-        {
-            productTitle.LineHeight = 12.5;
-            productTitle.VerticalAlignment = VerticalAlignment.Center;
-            productTitle.Margin = new Thickness(0);
-        }
-
-        BreadcrumbPanel.Height = 10.5;
-        BreadcrumbPanel.VerticalAlignment = VerticalAlignment.Center;
-        BreadcrumbPanel.Margin = new Thickness(0);
-        foreach (var item in BreadcrumbPanel.Children.OfType<TextBlock>())
-        {
-            item.LineHeight = 10;
-            item.VerticalAlignment = VerticalAlignment.Center;
-            item.Margin = new Thickness(0);
-        }
-
-        if (ProductStack.GetVisualParent() is StackPanel headerIdentityRow)
-        {
-            var productOrb = headerIdentityRow.Children
-                .OfType<Grid>()
-                .FirstOrDefault(grid => Math.Abs(grid.Width - 24) < 0.5 && Math.Abs(grid.Height - 24) < 0.5);
-            if (productOrb is not null)
-            {
-                productOrb.VerticalAlignment = VerticalAlignment.Center;
-            }
-        }
     }
 
     private void PolishActiveRunLayout()
