@@ -6,10 +6,12 @@ export type AppearanceMode = 'system' | 'light' | 'dark';
 export function SettingsMenu({
   appearance,
   onAppearanceChange,
+  onOpenAdvanced,
   disabled = false,
 }: {
   appearance: AppearanceMode;
   onAppearanceChange: (appearance: AppearanceMode) => void;
+  onOpenAdvanced?: () => void;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -33,6 +35,11 @@ export function SettingsMenu({
     };
   }, [open]);
 
+  function openAdvanced() {
+    setOpen(false);
+    onOpenAdvanced?.();
+  }
+
   return (
     <div className="settings-menu" ref={containerRef}>
       <button
@@ -51,7 +58,7 @@ export function SettingsMenu({
       </button>
 
       {open && (
-        <div className="settings-popover" role="dialog" aria-label="Appearance settings">
+        <div className="settings-popover" role="dialog" aria-label="Application settings">
           <div className="settings-copy">
             <strong>Appearance</strong>
             <span>Follow the system or keep a fixed theme.</span>
@@ -69,6 +76,15 @@ export function SettingsMenu({
               </button>
             ))}
           </div>
+          {onOpenAdvanced && (
+            <button type="button" className="settings-advanced-link" onClick={openAdvanced}>
+              <span>
+                <strong>Advanced diagnostics</strong>
+                <small>Endpoints, interfaces, privacy, and LAN</small>
+              </span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+          )}
         </div>
       )}
     </div>
