@@ -125,8 +125,10 @@ jobs:
           sleep 1.5
           capture advanced-diagnostics-dark
 
-          # Settings is intentionally application preferences only. Return to the top
-          # and open the compact appearance popover from its stable shell control.
+          # Settings is intentionally application preferences only. Focus an inert
+          # WebView background area before Ctrl-Home so the key scrolls the document
+          # rather than an input, then open the compact appearance popover.
+          xdotool mousemove --sync 80 500 click 1
           xdotool key --clearmodifiers ctrl+home
           sleep 0.8
           xdotool mousemove --sync 1085 52 click 1
