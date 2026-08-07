@@ -47,6 +47,18 @@ public static class BridgeProtocol
         throw new ArgumentException($"Bridge field '{propertyName}' must contain a valid report ID.", propertyName);
     }
 
+    public static bool ParseRequiredBool(JsonElement payload, string propertyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        if (payload.ValueKind == JsonValueKind.Object
+            && payload.TryGetProperty(propertyName, out var value)
+            && value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return value.GetBoolean();
+        }
+        throw new ArgumentException($"Bridge field '{propertyName}' must contain a boolean value.", propertyName);
+    }
+
     public static string? ParseOptionalString(JsonElement payload, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
