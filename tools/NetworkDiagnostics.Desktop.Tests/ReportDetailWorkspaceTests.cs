@@ -46,7 +46,7 @@ public sealed class ReportDetailWorkspaceTests
     }
 
     [AvaloniaFact]
-    public void TechnicalEvidenceDoesNotChangeReportColumnWidth()
+    public void TechnicalEvidenceInheritsNaturalCollapsedReportWidth()
     {
         var workspace = new ReportDetailWorkspace
         {
@@ -67,9 +67,10 @@ public sealed class ReportDetailWorkspaceTests
             var reportBody = Assert.IsType<StackPanel>(workspace.FindControl<StackPanel>("ReportBody"));
             var toggle = Assert.IsType<Button>(workspace.FindControl<Button>("EvidenceToggleButton"));
             var evidenceBody = Assert.IsType<Border>(workspace.FindControl<Border>("EvidenceBody"));
-            var collapsedWidth = reportBody.Width;
+            var collapsedWidth = reportBody.Bounds.Width;
 
-            Assert.InRange(collapsedWidth, 951, 953);
+            Assert.True(double.IsNaN(reportBody.Width));
+            Assert.True(collapsedWidth > 0);
             Assert.False(evidenceBody.IsVisible);
 
             toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
