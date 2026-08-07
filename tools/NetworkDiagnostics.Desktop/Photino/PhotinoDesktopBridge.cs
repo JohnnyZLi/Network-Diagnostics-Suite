@@ -37,7 +37,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         this.settingsStore = settingsStore ?? new PhotinoSettingsStore();
         this.reportStore = reportStore ?? new ReportStore(this.settingsStore.RootDirectory);
         this.monitorService = monitorService
-            ?? new ContinuousMonitorService(Path.Combine(this.settingsStore.RootDirectory, "monitoring"));
+            ?? new ContinuousMonitorService(this.settingsStore.RootDirectory);
         this.monitorService.SnapshotChanged += MonitorSnapshotChanged;
     }
 
