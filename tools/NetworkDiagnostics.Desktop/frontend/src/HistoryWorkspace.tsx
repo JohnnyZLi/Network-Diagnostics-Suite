@@ -386,9 +386,16 @@ function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: {
   onExport: () => void;
   onCompare: () => void;
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
   const presentation = detail.presentation;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => bodyRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [detail.report.id]);
+
   return (
-    <div className="report-body">
+    <div ref={bodyRef} className="report-body" tabIndex={-1}>
       {error && <div className="report-error-banner" role="alert">{error}</div>}
       {notice && <div className="report-success-banner" role="status">{notice}</div>}
       <section className="report-verdict">
