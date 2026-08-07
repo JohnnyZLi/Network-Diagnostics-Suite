@@ -1,0 +1,124 @@
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.settings-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.settings-trigger {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.settings-trigger svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 220ms ease;
+}
+
+.settings-trigger:hover:not(:disabled),
+.settings-trigger.active {
+  color: var(--text);
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+
+.settings-trigger:hover:not(:disabled) svg,
+.settings-trigger.active svg {
+  transform: rotate(18deg);
+}
+
+.settings-trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.settings-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(290px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.28);
+}
+
+.settings-copy {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.settings-copy strong {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.settings-copy span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.appearance-control {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.appearance-control button {
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.appearance-control button:hover {
+  color: var(--text);
+}
+
+.appearance-control button.active {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+@media (max-width: 540px) {
+  .product-actions {
+    gap: 8px;
+  }
+
+  .settings-popover {
+    position: fixed;
+    top: 58px;
+    right: 12px;
+  }
+}
