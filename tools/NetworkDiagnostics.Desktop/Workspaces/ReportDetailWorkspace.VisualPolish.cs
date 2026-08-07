@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
@@ -46,10 +48,10 @@ public sealed partial class ReportDetailWorkspace
         var availableWidth = Math.Max(0, width - (horizontalGutter * 2));
         var contentWidth = Math.Min(WorkspaceLayoutMetrics.ReportDetailMaxWidth, availableWidth);
 
-        ReportBody.Margin = new Thickness(horizontalGutter, 20, horizontalGutter, bottomInset);
+        ReportBody.Margin = new Thickness(horizontalGutter, width < 720 ? 16 : 22, horizontalGutter, bottomInset);
         ReportBody.MaxWidth = WorkspaceLayoutMetrics.ReportDetailMaxWidth;
         ReportBody.Width = width > 0 ? contentWidth : double.NaN;
-        ReportBody.Spacing = width < 720 ? 15 : 18;
+        ReportBody.Spacing = 0;
 
         ReportToolbarGrid.MaxWidth = WorkspaceLayoutMetrics.ReportDetailMaxWidth;
         ReportToolbarGrid.Width = width > 0 ? contentWidth : double.NaN;
@@ -59,6 +61,37 @@ public sealed partial class ReportDetailWorkspace
         CloseButton.IsVisible = false;
         ToolbarTitleText.IsVisible = width >= 700;
         ToolbarMetaText.IsVisible = width >= 900;
+
+        VerdictText.HorizontalAlignment = HorizontalAlignment.Left;
+        SummaryText.HorizontalAlignment = HorizontalAlignment.Left;
+        if (VerdictText.GetLogicalParent() is StackPanel heroContent)
+        {
+            heroContent.Spacing = width < 720 ? 5 : 6;
+            heroContent.VerticalAlignment = VerticalAlignment.Top;
+        }
+
+        GeneratedText.FontWeight = FontWeight.Normal;
+        ProfileText.FontWeight = FontWeight.Normal;
+        MethodText.FontWeight = FontWeight.Normal;
+        ContextText.FontWeight = FontWeight.Normal;
+
+        ReportContextGrid.Margin = new Thickness(0, width < 720 ? 12 : 16, 0, 0);
+        if (ReportBody.Children.OfType<Border>().FirstOrDefault(border => border.Classes.Contains("divider")) is { } sectionDivider)
+        {
+            sectionDivider.Margin = new Thickness(0, width < 720 ? 12 : 16, 0, 0);
+        }
+
+        if (ReportOverviewSurface.GetLogicalParent() is StackPanel atAGlanceSection)
+        {
+            atAGlanceSection.Margin = new Thickness(0, width < 720 ? 14 : 17, 0, 0);
+            atAGlanceSection.Spacing = width < 720 ? 7 : 8;
+        }
+        ReportOverviewSurface.Padding = new Thickness(width < 720 ? 15 : 18, width < 720 ? 13 : 14);
+
+        FindingsSection.Margin = new Thickness(0, width < 720 ? 15 : 18, 0, 0);
+        FindingsSection.Spacing = width < 720 ? 5 : 6;
+        ReportEvidenceCard.Margin = new Thickness(0, width < 720 ? 12 : 14, 0, 0);
+        EvidenceToggleButton.Padding = new Thickness(16, width < 720 ? 10 : 11);
 
         ApplyHeroLayout(width);
         ApplyContextLayout(width);
@@ -75,12 +108,14 @@ public sealed partial class ReportDetailWorkspace
         if (width >= 940)
         {
             ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(360)));
+            ReportHeroGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(340)));
             ReportHeroGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            ReportHeroGrid.ColumnSpacing = 34;
+            ReportHeroGrid.ColumnSpacing = 40;
             Grid.SetColumn(ReportNextActionCard, 1);
             Grid.SetRow(ReportNextActionCard, 0);
-            ReportNextActionCard.Margin = new Thickness(0);
+            ReportNextActionCard.Margin = new Thickness(0, 1, 0, 0);
+            ReportNextActionCard.Padding = new Thickness(18, 0, 0, 0);
+            ReportNextActionCard.VerticalAlignment = VerticalAlignment.Top;
             return;
         }
 
@@ -90,7 +125,9 @@ public sealed partial class ReportDetailWorkspace
         ReportHeroGrid.ColumnSpacing = 0;
         Grid.SetColumn(ReportNextActionCard, 0);
         Grid.SetRow(ReportNextActionCard, 1);
-        ReportNextActionCard.Margin = new Thickness(0, 14, 0, 0);
+        ReportNextActionCard.Margin = new Thickness(0, 12, 0, 0);
+        ReportNextActionCard.Padding = new Thickness(14, 0, 0, 0);
+        ReportNextActionCard.VerticalAlignment = VerticalAlignment.Top;
     }
 
     private void ApplyContextLayout(double width)
@@ -129,7 +166,7 @@ public sealed partial class ReportDetailWorkspace
             ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             ReportContextGrid.ColumnSpacing = 18;
-            ReportContextGrid.RowSpacing = 10;
+            ReportContextGrid.RowSpacing = 9;
             SetContextPosition(GeneratedContextItem, 0, 0);
             SetContextPosition(ProfileContextItem, 0, 1);
             SetContextPosition(MethodContextItem, 1, 0);
@@ -139,7 +176,7 @@ public sealed partial class ReportDetailWorkspace
 
         ReportContextGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
         ReportContextGrid.ColumnSpacing = 0;
-        ReportContextGrid.RowSpacing = 9;
+        ReportContextGrid.RowSpacing = 8;
         for (var index = 0; index < items.Length; index++)
         {
             ReportContextGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
@@ -190,14 +227,14 @@ public sealed partial class ReportDetailWorkspace
             Grid.SetColumn(signals[index], 0);
             Grid.SetRow(signals[index], index);
             signals[index].Padding = index < signals.Length - 1
-                ? new Thickness(0, 0, 0, 12)
+                ? new Thickness(0, 0, 0, 11)
                 : new Thickness(0);
             signals[index].BorderThickness = index < signals.Length - 1
                 ? new Thickness(0, 0, 0, 1)
                 : new Thickness(0);
         }
         SignalGrid.ColumnSpacing = 0;
-        SignalGrid.RowSpacing = 12;
+        SignalGrid.RowSpacing = 11;
     }
 
     private void ApplyMetricLayout(double width)
@@ -222,7 +259,7 @@ public sealed partial class ReportDetailWorkspace
         }
 
         MetricGrid.ColumnSpacing = width < 720 ? 16 : 22;
-        MetricGrid.RowSpacing = 14;
+        MetricGrid.RowSpacing = width < 720 ? 11 : 12;
         for (var index = 0; index < metrics.Length; index++)
         {
             Grid.SetColumn(metrics[index], index % columnCount);
@@ -237,30 +274,31 @@ public sealed partial class ReportDetailWorkspace
             if (container.Child is not Grid row || row.Children.Count < 2) continue;
             row.ColumnDefinitions.Clear();
             row.RowDefinitions.Clear();
-
             if (width >= 700)
             {
-                row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(120)));
+                row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(96)));
                 row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
                 row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-                row.ColumnSpacing = 18;
+                row.ColumnSpacing = 14;
                 row.RowSpacing = 0;
                 Grid.SetColumn(row.Children[0], 0);
                 Grid.SetRow(row.Children[0], 0);
                 Grid.SetColumn(row.Children[1], 1);
                 Grid.SetRow(row.Children[1], 0);
+                container.Padding = new Thickness(0, 9, 0, 11);
                 continue;
             }
 
             row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             row.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            row.RowSpacing = 5;
+            row.RowSpacing = 4;
             row.ColumnSpacing = 0;
             Grid.SetColumn(row.Children[0], 0);
             Grid.SetRow(row.Children[0], 0);
             Grid.SetColumn(row.Children[1], 0);
             Grid.SetRow(row.Children[1], 1);
+            container.Padding = new Thickness(0, 9, 0, 10);
         }
     }
 
