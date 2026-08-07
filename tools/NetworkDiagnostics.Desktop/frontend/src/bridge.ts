@@ -4,7 +4,10 @@ export type BridgeEventName =
   | 'diagnostic.cancelled'
   | 'diagnostic.failed'
   | 'monitor.snapshot'
-  | 'monitor.error';
+  | 'monitor.error'
+  | 'lan.server.started'
+  | 'lan.server.stopped'
+  | 'lan.server.failed';
 
 type BridgeResponse<T> = {
   type: 'response';
