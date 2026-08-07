@@ -34,11 +34,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
         SetCurrentRunMode(false);
         report = stored;
         ToolbarTitleText.Text = stored.ProfileName;
-        ToolbarMetaText.Text = $"{stored.DisplayDate} · {stored.Report.Run.TransferMethod}";
-        GeneratedText.Text = stored.DisplayDate;
-        ProfileText.Text = stored.ProfileName;
-        MethodText.Text = stored.Report.Run.TransferMethod.ToString();
-        ContextText.Text = ReportComparisonService.ContextLabel(stored.Report);
+        var context = ReportComparisonService.ContextLabel(stored.Report);
+        ToolbarMetaText.Text = $"{stored.DisplayDate} · {stored.Report.Run.TransferMethod} · {context}";
         RenderPresentation(presentation);
     }
 
@@ -46,7 +43,8 @@ public sealed partial class ReportDetailWorkspace : UserControl
     {
         Render(stored, presentation);
         SetCurrentRunMode(true);
-        ToolbarMetaText.Text = $"Just completed · {stored.Report.Run.TransferMethod}";
+        var context = ReportComparisonService.ContextLabel(stored.Report);
+        ToolbarMetaText.Text = $"Just completed · {stored.Report.Run.TransferMethod} · {context}";
     }
 
     public void RenderPreview(ConnectionCheckPresentation presentation)
@@ -54,11 +52,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
         SetCurrentRunMode(false);
         report = null;
         ToolbarTitleText.Text = "Quick";
-        ToolbarMetaText.Text = "Preview data · Compare";
-        GeneratedText.Text = "Today · preview";
-        ProfileText.Text = "Quick";
-        MethodText.Text = "Compare";
-        ContextText.Text = "Automatic routing · first-party endpoint";
+        ToolbarMetaText.Text = "Preview data · Compare · Automatic routing · first-party endpoint";
         RenderPresentation(presentation);
     }
 
@@ -66,11 +60,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
     {
         report = null;
         ToolbarTitleText.Text = "Connection Check";
-        ToolbarMetaText.Text = "Just completed · Aggregate";
-        GeneratedText.Text = "Just now";
-        ProfileText.Text = "Connection Check";
-        MethodText.Text = "Aggregate";
-        ContextText.Text = "Automatic routing · first-party endpoint";
+        ToolbarMetaText.Text = "Just completed · Aggregate · Automatic routing · first-party endpoint";
         RenderPresentation(presentation);
         SetCurrentRunMode(true);
     }
@@ -84,7 +74,6 @@ public sealed partial class ReportDetailWorkspace : UserControl
         NextActionText.Text = presentation.NextAction;
         HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
         RenderSignals(presentation);
-        RenderMetrics(presentation.Metrics);
         RenderFindings(presentation);
         RenderEvidence(presentation.TechnicalEvidence);
         SetEvidenceExpanded(false);
@@ -100,24 +89,28 @@ public sealed partial class ReportDetailWorkspace : UserControl
             groups[HealthGroupKind.Responsiveness],
             ResponsivenessSignalIndicator,
             ResponsivenessStateText,
-            ResponsivenessSignalText);
+            ResponsivenessSignalText,
+            ResponsivenessMetricPanel);
         ApplySignal(
             groups[HealthGroupKind.Reliability],
             ReliabilitySignalIndicator,
             ReliabilityStateText,
-            ReliabilitySignalText);
+            ReliabilitySignalText,
+            ReliabilityMetricPanel);
         ApplySignal(
             groups[HealthGroupKind.Throughput],
             ThroughputSignalIndicator,
             ThroughputStateText,
-            ThroughputSignalText);
+            ThroughputSignalText,
+            ThroughputMetricPanel);
     }
 
     private static void ApplySignal(
         HealthGroupPresentation group,
         Border indicator,
         TextBlock state,
-        TextBlock summary)
+        TextBlock summary,
+        Grid metricPanel)
     {
         indicator.Classes.Remove("indicatorSuccess");
         indicator.Classes.Remove("indicatorAccent");
@@ -131,51 +124,59 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
         state.Text = group.State;
         summary.Text = group.Summary;
+        RenderSignalMetrics(metricPanel, group.Metrics);
     }
 
-    private void RenderMetrics(IReadOnlyList<MetricPresentation> metrics)
+    private static void RenderSignalMetrics(Grid panel, IReadOnlyList<MetricPresentation> metrics)
     {
-        MetricGrid.Children.Clear();
-        foreach (var metric in metrics.Take(6))
+        panel.Children.Clear();
+        panel.ColumnDefinitions.Clear();
+        panel.RowDefinitions.Clear();
+
+        var visible = metrics.Where(metric => metric.WasMeasured).Take(2).ToArray();
+        if (visible.Length == 0)
         {
-            MetricGrid.Children.Add(BuildMetric(metric));
+            visible = metrics.Take(1).ToArray();
         }
-        ApplyMetricLayout(Bounds.Width);
+        if (visible.Length == 0)
+        {
+            panel.IsVisible = false;
+            return;
+        }
+
+        panel.IsVisible = true;
+        panel.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        for (var index = 0; index < visible.Length; index++)
+        {
+            panel.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            var metric = BuildSignalMetric(visible[index]);
+            Grid.SetColumn(metric, index);
+            panel.Children.Add(metric);
+        }
     }
 
-    private static Control BuildMetric(MetricPresentation metric)
+    private static Control BuildSignalMetric(MetricPresentation metric)
     {
         var label = new TextBlock
         {
             Text = metric.Label.ToUpperInvariant(),
             FontSize = 8.5,
             FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 0.8
+            LetterSpacing = 0.7
         };
         label.Classes.Add("muted");
 
         var value = new TextBlock
         {
             Text = metric.Value,
-            FontSize = 19,
+            FontSize = 18,
             FontWeight = FontWeight.SemiBold,
             Opacity = metric.WasMeasured ? 1 : 0.58
         };
 
-        var detail = new TextBlock
-        {
-            Text = metric.Detail,
-            FontSize = 9.5,
-            LineHeight = 14,
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = metric.WasMeasured ? 0.82 : 0.58
-        };
-        detail.Classes.Add("muted");
-
-        var stack = new StackPanel { Spacing = 3 };
+        var stack = new StackPanel { Spacing = 2 };
         stack.Children.Add(label);
         stack.Children.Add(value);
-        stack.Children.Add(detail);
         return stack;
     }
 
@@ -378,23 +379,15 @@ public sealed partial class ReportDetailWorkspace : UserControl
         };
         summary.Classes.Add("secondary");
 
-        var content = new StackPanel { Spacing = 3 };
-        content.Children.Add(title);
-        content.Children.Add(summary);
-
-        var row = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("120,*"),
-            ColumnSpacing = 18
-        };
-        row.Children.Add(label);
-        Grid.SetColumn(content, 1);
-        row.Children.Add(content);
+        var stack = new StackPanel { Spacing = 3 };
+        stack.Children.Add(label);
+        stack.Children.Add(title);
+        stack.Children.Add(summary);
 
         var container = new Border
         {
-            Padding = new Avalonia.Thickness(0, 11, 0, 13),
-            Child = row
+            Padding = new Avalonia.Thickness(0, 10, 0, 11),
+            Child = stack
         };
         container.Classes.Add("divider");
         return container;
