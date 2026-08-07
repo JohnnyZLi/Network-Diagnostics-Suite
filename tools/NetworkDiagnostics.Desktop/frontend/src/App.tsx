@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
+import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
 
@@ -9,6 +10,11 @@ type HostInfo = {
   version?: string | null;
   platform: string;
   architecture: string;
+  appearance: AppearanceMode;
+};
+
+type AppearanceSettings = {
+  appearance: AppearanceMode;
 };
 
 type DiagnosticPlan = {
@@ -76,6 +82,7 @@ const methods: Array<{ id: TransferMethod; label: string; detail: string }> = [
 
 function App() {
   const [host, setHost] = useState<HostInfo | null>(null);
+  const [appearance, setAppearance] = useState<AppearanceMode>('system');
   const [method, setMethod] = useState<TransferMethod>('compare');
   const [plan, setPlan] = useState<DiagnosticPlan | null>(null);
   const [progress, setProgress] = useState<DiagnosticProgress | null>(null);
@@ -89,11 +96,19 @@ function App() {
   const activeMethod = useRef<TransferMethod>('compare');
   const highestProgress = useRef(0);
   const stageBytes = useRef(new Map<string, number>());
+  const appearanceRequest = useRef(0);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = appearance;
+  }, [appearance]);
 
   useEffect(() => {
     if (!desktopBridge.available) return;
     void desktopBridge.request<HostInfo>('app.ready')
-      .then(setHost)
+      .then((info) => {
+        setHost(info);
+        setAppearance(info.appearance || 'system');
+      })
       .catch((value: Error) => setError(value.message));
   }, []);
 
@@ -174,6 +189,21 @@ function App() {
           ? 'Complete'
           : 'Ready';
 
+  async function changeAppearance(next: AppearanceMode) {
+    const request = ++appearanceRequest.current;
+    const previous = appearance;
+    setAppearance(next);
+    setError(null);
+
+    try {
+      const saved = await desktopBridge.request<AppearanceSettings>('settings.setAppearance', { appearance: next });
+      if (request === appearanceRequest.current) setAppearance(saved.appearance);
+    } catch (value) {
+      if (request === appearanceRequest.current) setAppearance(previous);
+      setError(value instanceof Error ? value.message : 'Appearance could not be saved.');
+    }
+  }
+
   async function runDiagnostic() {
     activeMethod.current = method;
     highestProgress.current = 0;
@@ -223,9 +253,16 @@ function App() {
             <span>Desktop</span>
           </div>
         </div>
-        <div className={`host-state ${host ? 'connected' : ''}`}>
-          <span className="status-dot" aria-hidden="true" />
-          {host ? `Native engine · ${host.architecture}` : desktopBridge.available ? 'Connecting to engine' : 'Browser preview'}
+        <div className="product-actions">
+          <div className={`host-state ${host ? 'connected' : ''}`}>
+            <span className="status-dot" aria-hidden="true" />
+            {host ? `Native engine · ${host.architecture}` : desktopBridge.available ? 'Connecting to engine' : 'Browser preview'}
+          </div>
+          <SettingsMenu
+            appearance={appearance}
+            onAppearanceChange={(next) => void changeAppearance(next)}
+            disabled={!desktopBridge.available}
+          />
         </div>
       </header>
 
