@@ -1,12 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.VisualTree;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
 public sealed partial class ReportDetailWorkspace
 {
-    private const double ReportContentMaxWidth = 1160;
     private double? disclosureLockedReportWidth;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
@@ -28,50 +28,37 @@ public sealed partial class ReportDetailWorkspace
     private void ResetReportDisclosureWidth()
     {
         disclosureLockedReportWidth = null;
-        ReportBody.Width = double.NaN;
+        ApplyReportDetailPolish(Bounds.Width);
     }
 
     private void LockReportWidthForEvidenceDisclosure()
     {
         if (disclosureLockedReportWidth is not null || ReportBody.Bounds.Width <= 0) return;
 
-        // Capture the report's natural collapsed width before revealing raw evidence.
-        // The evidence list is allowed to add height, but it must inherit the same
-        // horizontal geometry instead of becoming the widest child in the ScrollViewer.
         disclosureLockedReportWidth = ReportBody.Bounds.Width;
         ApplyReportDetailPolish(Bounds.Width);
     }
 
     private void ApplyReportDetailPolish(double width)
     {
-        var compact = width < 720;
-        var horizontalMargin = compact ? 16d : 24d;
+        var horizontalGutter = WorkspaceLayoutMetrics.HorizontalGutter(width);
+        var bottomInset = WorkspaceLayoutMetrics.BottomInset(width);
+        var availableWidth = Math.Max(0, width - (horizontalGutter * 2));
+        var contentWidth = Math.Min(WorkspaceLayoutMetrics.ReportDetailMaxWidth, availableWidth);
 
-        ReportBody.Margin = compact
-            ? new Thickness(16, 16, 16, 26)
-            : new Thickness(24, 18, 24, 32);
-        ReportBody.MaxWidth = ReportContentMaxWidth;
+        ReportBody.Margin = new Thickness(horizontalGutter, 18, horizontalGutter, bottomInset);
+        ReportBody.MaxWidth = WorkspaceLayoutMetrics.ReportDetailMaxWidth;
+        ReportBody.Width = width > 0 ? contentWidth : double.NaN;
+        ReportBody.Spacing = width < 720 ? 13 : 15;
 
-        if (disclosureLockedReportWidth is { } preferredWidth && width > 0)
-        {
-            var availableWidth = Math.Max(0, width - (horizontalMargin * 2));
-            ReportBody.Width = Math.Min(preferredWidth, availableWidth);
-        }
-        else
-        {
-            // Before disclosure, retain the existing content-sized report presentation.
-            // The first evidence expansion captures that natural width and keeps it.
-            ReportBody.Width = double.NaN;
-        }
+        // The toolbar and report body share one horizontal grid. This removes the
+        // large empty gutters on desktop while preserving a bounded reading width.
+        ReportToolbarGrid.MaxWidth = WorkspaceLayoutMetrics.ReportDetailMaxWidth;
+        ReportToolbarGrid.Width = width > 0 ? contentWidth : double.NaN;
+        ReportToolbarGrid.HorizontalAlignment = HorizontalAlignment.Center;
+        ReportToolbarGrid.Margin = new Thickness(0);
 
-        ReportBody.Spacing = compact ? 13 : 15;
-        ReportToolbarGrid.Margin = compact
-            ? new Thickness(10, 0)
-            : new Thickness(18, 0);
-
-        // Report detail is now a normal focused workspace under the persistent shell
-        // header. Back/Forward/Home own workspace navigation; a modal-style × no
-        // longer belongs in the report toolbar.
+        // Report detail is a normal focused workspace under the persistent shell.
         CloseButton.IsVisible = false;
         ToolbarTitleText.IsVisible = width >= 700;
         ToolbarMetaText.IsVisible = width >= 900;
