@@ -26,8 +26,12 @@ public sealed class PhotinoSettingsStore
 
     public PhotinoSettingsStore(string? settingsPath = null)
     {
-        this.settingsPath = settingsPath ?? GetDefaultSettingsPath();
+        this.settingsPath = Path.GetFullPath(settingsPath ?? GetDefaultSettingsPath());
+        RootDirectory = Path.GetDirectoryName(this.settingsPath)
+            ?? throw new InvalidOperationException("The desktop settings path does not have a parent directory.");
     }
+
+    public string RootDirectory { get; }
 
     public PhotinoAppSettings Load()
     {
@@ -42,8 +46,7 @@ public sealed class PhotinoSettingsStore
         lock (gate)
         {
             var settings = LoadCore() with { Appearance = appearance };
-            var directory = Path.GetDirectoryName(settingsPath);
-            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            Directory.CreateDirectory(RootDirectory);
 
             var document = new SettingsDocument(BridgeProtocol.AppearanceId(settings.Appearance));
             var json = JsonSerializer.Serialize(document, JsonOptions);
