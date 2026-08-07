@@ -99,7 +99,7 @@ public sealed class ReportDetailWorkspaceTests
         Assert.True(runAgain.IsVisible);
         Assert.Contains("primary", runAgain.Classes);
         Assert.Contains("secondary", compare.Classes);
-        Assert.True(close.IsVisible);
+        Assert.False(close.IsVisible);
 
         runAgain.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
