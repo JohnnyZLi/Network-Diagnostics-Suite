@@ -23,6 +23,10 @@
   padding: 4px 14px 26px;
 }
 
+.live-health-section .workbench-loading {
+  min-height: 160px;
+}
+
 .monitor-healthy-strip.neutral {
   border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
   background: color-mix(in srgb, var(--accent) 4%, transparent);
@@ -31,6 +35,37 @@
 .monitor-healthy-strip.neutral > span {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent-strong);
+}
+
+/* Profile and transfer method describe one run configuration. Keep them visually
+   adjacent instead of pinning method controls to the far edge of a wide window. */
+.diagnostic-selector-grid {
+  grid-template-columns: minmax(0, 430px) minmax(0, 330px);
+  max-width: 800px;
+  gap: 32px;
+}
+
+.method-selector-group {
+  justify-items: start;
+}
+
+.method-selector-group > span,
+.method-selector-group > small {
+  width: 100%;
+  text-align: left;
+}
+
+/* Active testing is intentionally secondary to live health. The ready state stays
+   substantial enough to explain the selected run without becoming a second hero. */
+.diagnostic-run-state.ready {
+  min-height: 160px;
+  gap: 28px;
+  padding: 22px 26px;
+}
+
+.diagnostic-plan-facts {
+  margin-top: 16px;
+  padding-top: 14px;
 }
 
 .speed-check-card > span {
@@ -75,6 +110,12 @@
   .app-shell > main {
     padding-top: 90px;
   }
+
+  .diagnostic-selector-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, .82fr);
+    max-width: none;
+    gap: 24px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -89,6 +130,16 @@
   .live-health-hero {
     min-height: 0;
     padding-top: 2px;
+  }
+
+  .diagnostic-selector-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .diagnostic-run-state.ready {
+    min-height: 0;
+    padding: 20px;
   }
 
   .advanced-header-status {
