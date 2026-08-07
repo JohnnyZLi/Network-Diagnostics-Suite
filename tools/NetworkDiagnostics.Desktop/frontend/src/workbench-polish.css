@@ -391,8 +391,8 @@
   grid-row: 2;
 }
 
-/* Saved reports are all completed runs. Give that state a quiet scan target, and
-   turn it red only when the row already exposes measured request loss. */
+/* Saved reports get a quiet scan target. Terracotta marks a stored run; red is
+   reserved for the explicit measured-loss condition already shown in the row. */
 .history-row-button {
   position: relative;
 }
@@ -405,8 +405,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--good);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 8%, transparent);
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .history-row-button:has(.history-loss)::before {
