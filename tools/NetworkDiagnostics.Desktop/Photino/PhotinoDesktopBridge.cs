@@ -467,7 +467,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         MonitorAlertKind.Recovery => "recovery",
         MonitorAlertKind.NetworkChange => "network-change",
         MonitorAlertKind.Degradation => "degradation",
-        MonitorAlertKind.Bandwidth => "bandwidth",
+        MonitorAlertKind.BandwidthChange => "bandwidth-change",
         _ => "monitor"
     };
 
