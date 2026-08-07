@@ -155,6 +155,18 @@ function ensureSettingsControl(root, sitesButton, sitesMenu) {
   return { button, menu };
 }
 
+function ensureDisclosureShell(root, button, menu, className) {
+  let shell = button.parentElement;
+  if (!(shell instanceof HTMLElement) || !shell.classList.contains(className)) {
+    shell = root.ownerDocument.createElement("div");
+    shell.className = className;
+    root.insertBefore(shell, button);
+  }
+  if (button.parentElement !== shell) shell.append(button);
+  if (menu.parentElement !== shell) shell.append(menu);
+  return shell;
+}
+
 export function populateOwnedSites(menu, currentSite) {
   requireElement(menu, "Owned-sites menu");
   const document = menu.ownerDocument;
@@ -319,6 +331,8 @@ export function installSiteSwitcher(root, options = {}) {
   if (options.populate && options.currentSite) populateOwnedSites(menu, options.currentSite);
 
   const settings = ensureSettingsControl(root, button, menu);
+  ensureDisclosureShell(root, button, menu, "jl-site-disclosure");
+  ensureDisclosureShell(root, settings.button, settings.menu, "jl-settings-disclosure");
   const theme = installThemeControl(settings.menu);
   let settingsDisclosure = null;
 

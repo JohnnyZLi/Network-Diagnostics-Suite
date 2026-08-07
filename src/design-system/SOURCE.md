@@ -4,6 +4,6 @@ Do not edit these files directly.
 
 Package: @johnnyzli/web-design-system
 Version: 1.9.0
-Source commit: c98d5faf91789b8161bfcd49171797b593b0c726
+Source commit: 463db1c74db85a0b7f268a78d302cac3ecbddf72
 
 Validate with `npm run design-system:check`.
