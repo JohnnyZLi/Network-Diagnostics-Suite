@@ -14,14 +14,17 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <PublishTrimmed>false</PublishTrimmed>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Photino/**/*.cs" />
+    <EmbeddedResource Include="Resources/**/*" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.1" />
     <PackageReference Include="Photino.NET" Version="4.0.16" />
     <PackageReference Include="Photino.NET.Server" Version="4.0.12" />
     <ProjectReference Include="../NetworkDiagnostics.Core/NetworkDiagnostics.Core.csproj" />
