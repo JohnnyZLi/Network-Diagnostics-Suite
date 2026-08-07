@@ -524,9 +524,8 @@ function App() {
         <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
           <div className="workbench-section-header diagnostics-header">
             <div>
-              <span className="section-kicker">Run diagnostics</span>
-              <h2 id="run-diagnostics-title">Investigate the connection</h2>
-              <p>Run a controlled measurement when live health shows a problem or when you need evidence passive monitoring cannot collect.</p>
+              <h2 id="run-diagnostics-title">RUN DIAGNOSTICS</h2>
+              <p>Run a controlled test when you need deeper evidence.</p>
             </div>
           </div>
 
