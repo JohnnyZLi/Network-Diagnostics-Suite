@@ -59,8 +59,10 @@ export function AdvancedDiagnostics({
   const [interfaces, setInterfaces] = useState<InterfaceChoice[]>([]);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [serverRunning, setServerRunning] = useState(false);
+  const [serverPort, setServerPort] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -79,12 +81,15 @@ export function AdvancedDiagnostics({
       desktopBridge.request<LanServerStatus>('lan.server.status'),
     ]).then(([saved, choices, server]) => {
       if (cancelled) return;
+      const activePort = server.running ? server.port ?? saved.lanPort : null;
       persistedSettings.current = saved;
       setSettings(saved);
       setEndpointText(saved.endpointCandidates.join('\n'));
       setInterfaces(choices);
       setServerRunning(server.running);
-      emitStatus(saved, server.running);
+      setServerPort(activePort);
+      setDirty(false);
+      emitStatus(saved, server.running, activePort);
     }).catch((value: Error) => {
       if (!cancelled) setError(value.message);
     }).finally(() => {
@@ -95,19 +100,22 @@ export function AdvancedDiagnostics({
   }, []);
 
   useEffect(() => {
-    const removeStarted = desktopBridge.on<{ port: number }>('lan.server.started', () => {
+    const removeStarted = desktopBridge.on<{ port: number }>('lan.server.started', (next) => {
       setServerRunning(true);
+      setServerPort(next.port);
       setNotice('LAN throughput server started.');
-      emitStatus(persistedSettings.current, true);
+      emitStatus(persistedSettings.current, true, next.port);
     });
     const removeStopped = desktopBridge.on<{ port: number }>('lan.server.stopped', () => {
       setServerRunning(false);
-      emitStatus(persistedSettings.current, false);
+      setServerPort(null);
+      emitStatus(persistedSettings.current, false, null);
     });
     const removeFailed = desktopBridge.on<{ message: string }>('lan.server.failed', (next) => {
       setServerRunning(false);
+      setServerPort(null);
       setError(next.message);
-      emitStatus(persistedSettings.current, false);
+      emitStatus(persistedSettings.current, false, null);
     });
     return () => {
       removeStarted();
@@ -122,12 +130,13 @@ export function AdvancedDiagnostics({
     void resetToDefaults();
   }, [resetRequest, loading]);
 
-  function emitStatus(saved: AdvancedSettings, running: boolean) {
-    onStatusChange?.(runtimeStatus(saved, running));
+  function emitStatus(saved: AdvancedSettings, running: boolean, activePort: number | null) {
+    onStatusChange?.(runtimeStatus(saved, running, activePort));
   }
 
   function patchSettings<K extends keyof AdvancedSettings>(key: K, value: AdvancedSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
+    setDirty(true);
     setNotice(null);
   }
 
@@ -170,7 +179,8 @@ export function AdvancedDiagnostics({
     persistedSettings.current = next;
     setSettings(next);
     setEndpointText(next.endpointCandidates.join('\n'));
-    emitStatus(next, serverRunning);
+    setDirty(false);
+    emitStatus(next, serverRunning, serverPort);
     return next;
   }
 
@@ -197,8 +207,11 @@ export function AdvancedDiagnostics({
       setSettings(next);
       setEndpointText(next.endpointCandidates.join('\n'));
       setPreflight(null);
-      emitStatus(next, serverRunning);
-      setNotice('Advanced run configuration reset to defaults.');
+      setDirty(false);
+      emitStatus(next, serverRunning, serverPort);
+      setNotice(serverRunning
+        ? `Advanced run configuration reset. The LAN server is still listening on :${serverPort ?? settings.lanPort}.`
+        : 'Advanced run configuration reset to defaults.');
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Advanced configuration could not be reset.');
     } finally {
@@ -234,17 +247,16 @@ export function AdvancedDiagnostics({
       if (serverRunning) {
         await desktopBridge.request<{ stopped: boolean }>('lan.server.stop');
         setServerRunning(false);
-        emitStatus(persistedSettings.current, false);
+        setServerPort(null);
+        emitStatus(persistedSettings.current, false, null);
         setNotice('LAN throughput server stopped.');
       } else {
-        const validationError = validate();
-        if (validationError) {
-          setError(validationError);
-          return;
-        }
-        const started = await desktopBridge.request<LanServerStart>('lan.server.start', { port: settings.lanPort });
+        const saved = await persist();
+        if (!saved) return;
+        const started = await desktopBridge.request<LanServerStart>('lan.server.start', { port: saved.lanPort });
         setServerRunning(started.running);
-        emitStatus(persistedSettings.current, started.running);
+        setServerPort(started.running ? started.port : null);
+        emitStatus(saved, started.running, started.running ? started.port : null);
         setNotice(`LAN throughput server listening on port ${started.port}.`);
       }
     } catch (value) {
@@ -256,6 +268,7 @@ export function AdvancedDiagnostics({
 
   const endpoint = preflight ? firstUrl(preflight.measurement) : null;
   const measuredInterface = preflight ? findString(preflight.measurement, ['interfaceName', 'interfaceId', 'interface']) : null;
+  const displayedServerPort = serverPort ?? settings.lanPort;
 
   return (
     <section id="advanced-diagnostics" className="workbench-section advanced-workbench" aria-labelledby="advanced-workbench-title">
@@ -265,7 +278,10 @@ export function AdvancedDiagnostics({
           <h2 id="advanced-workbench-title">Specialized network tools</h2>
           <p>Target a specific path, test the local network, or verify native readiness when the normal diagnostic workflow is not enough.</p>
         </div>
-        {serverRunning && <span className="advanced-server-state running"><i />LAN server · :{settings.lanPort}</span>}
+        <div className="advanced-header-status">
+          {dirty && <span className="advanced-dirty-state">Unsaved changes</span>}
+          {serverRunning && <span className="advanced-server-state running"><i />LAN server · :{displayedServerPort}</span>}
+        </div>
       </div>
 
       {error && <div className="advanced-error" role="alert">{error}</div>}
@@ -286,7 +302,7 @@ export function AdvancedDiagnostics({
             <AdvancedToolCard
               title="LAN diagnostics"
               description="Local peer throughput and native server testing."
-              status={serverRunning ? `Server listening on :${settings.lanPort}` : settings.lanTarget?.trim() ? 'LAN peer configured' : 'Not configured'}
+              status={serverRunning ? `Server listening on :${displayedServerPort}` : settings.lanTarget?.trim() ? 'LAN peer configured' : 'Not configured'}
               active={tool === 'lan'}
               onClick={() => setTool((current) => current === 'lan' ? null : 'lan')}
             />
@@ -308,7 +324,7 @@ export function AdvancedDiagnostics({
                 </div>
                 <label className="advanced-field">
                   <span>Endpoint candidates</span>
-                  <textarea value={endpointText} rows={3} spellCheck={false} placeholder="https://network.johnnyli.dev/" onChange={(event) => { setEndpointText(event.target.value); setNotice(null); }} />
+                  <textarea value={endpointText} rows={3} spellCheck={false} placeholder="https://network.johnnyli.dev/" onChange={(event) => { setEndpointText(event.target.value); setDirty(true); setNotice(null); }} />
                   <small>One HTTP(S) origin per line. Leave blank to use the built-in first-party endpoint.</small>
                 </label>
               </section>
@@ -366,10 +382,10 @@ export function AdvancedDiagnostics({
               <section className="advanced-section advanced-server-section">
                 <div className="advanced-section-heading">
                   <div><strong>LAN throughput server</strong><span>Native listener for another device</span></div>
-                  <span className={`advanced-server-state ${serverRunning ? 'running' : ''}`}><i />{serverRunning ? 'Listening' : 'Stopped'}</span>
+                  <span className={`advanced-server-state ${serverRunning ? 'running' : ''}`}><i />{serverRunning ? `Listening · :${displayedServerPort}` : 'Stopped'}</span>
                 </div>
                 <div className="advanced-server-card">
-                  <div><strong>TCP port {settings.lanPort}</strong><p>Start a local native listener, then point another Network Diagnostics client at this machine.</p></div>
+                  <div><strong>{serverRunning ? `Listening on TCP ${displayedServerPort}` : `TCP port ${settings.lanPort}`}</strong><p>Start a local native listener, then point another Network Diagnostics client at this machine.</p></div>
                   <button type="button" disabled={busy} className={serverRunning ? 'stop' : ''} onClick={() => void toggleLanServer()}>{serverRunning ? 'Stop server' : 'Start server'}</button>
                 </div>
               </section>
@@ -413,7 +429,7 @@ function AdvancedToolCard({ title, description, status, active, onClick }: { tit
   );
 }
 
-function runtimeStatus(settings: AdvancedSettings, serverRunning: boolean): AdvancedRuntimeStatus {
+function runtimeStatus(settings: AdvancedSettings, serverRunning: boolean, serverPort: number | null): AdvancedRuntimeStatus {
   const parts: string[] = [];
   if (settings.interfaceId) parts.push(settings.interfaceId);
   if (settings.endpointCandidates.length > 0) parts.push(`${settings.endpointCandidates.length} custom endpoint${settings.endpointCandidates.length === 1 ? '' : 's'}`);
@@ -423,7 +439,7 @@ function runtimeStatus(settings: AdvancedSettings, serverRunning: boolean): Adva
     hasOverrides: parts.length > 0,
     summary: parts.length > 0 ? parts.join(' · ') : 'Default routing · first-party endpoint · identifiers excluded',
     serverRunning,
-    serverPort: serverRunning ? settings.lanPort : null,
+    serverPort: serverRunning ? serverPort : null,
   };
 }
 
