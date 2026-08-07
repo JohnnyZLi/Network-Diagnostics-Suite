@@ -2,6 +2,18 @@
   overflow-x: visible;
 }
 
+.product-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 32;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.app-shell > main {
+  padding-top: 96px;
+}
+
 .live-health-header {
   margin-bottom: 20px;
 }
@@ -49,7 +61,17 @@
   white-space: nowrap;
 }
 
+@media (max-width: 1020px) {
+  .app-shell > main {
+    padding-top: 90px;
+  }
+}
+
 @media (max-width: 720px) {
+  .app-shell > main {
+    padding-top: 86px;
+  }
+
   .live-health-header {
     margin-bottom: 16px;
   }
