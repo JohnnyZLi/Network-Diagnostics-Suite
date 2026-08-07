@@ -78,6 +78,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
     private void RenderPresentation(ConnectionCheckPresentation presentation)
     {
+        ResetReportDisclosureWidth();
         OutcomeLabelText.Text = presentation.Label.ToUpperInvariant();
         VerdictText.Text = presentation.Verdict;
         SummaryText.Text = presentation.Summary;
@@ -201,6 +202,11 @@ public sealed partial class ReportDetailWorkspace : UserControl
 
     private void SetEvidenceExpanded(bool expanded)
     {
+        if (expanded)
+        {
+            LockReportWidthForEvidenceDisclosure();
+        }
+
         evidenceExpanded = expanded;
         EvidenceBody.IsVisible = expanded;
         EvidenceToggleLabelText.Text = expanded ? "Hide details" : "Show details";
