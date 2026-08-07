@@ -61,6 +61,31 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
+    public void ReportIdContractParsesGuidPayloads()
+    {
+        var expected = Guid.NewGuid();
+        using var document = JsonDocument.Parse($$"""{"id":"{{expected}}"}""");
+
+        var reportId = BridgeProtocol.ParseRequiredGuid(document.RootElement, "id");
+
+        Assert.Equal(expected, reportId);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"id\":\"not-a-guid\"}")]
+    [InlineData("{\"id\":17}")]
+    public void ReportIdContractRejectsInvalidPayloads(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+
+        var error = Assert.Throws<ArgumentException>(() =>
+            BridgeProtocol.ParseRequiredGuid(document.RootElement, "id"));
+
+        Assert.Contains("valid report ID", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void MissingPayloadValuesUseLowRiskDefaults()
     {
         using var document = JsonDocument.Parse("{}");
