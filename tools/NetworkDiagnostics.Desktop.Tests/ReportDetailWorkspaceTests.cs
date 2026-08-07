@@ -46,6 +46,44 @@ public sealed class ReportDetailWorkspaceTests
     }
 
     [AvaloniaFact]
+    public void TechnicalEvidenceDoesNotChangeReportColumnWidth()
+    {
+        var workspace = new ReportDetailWorkspace
+        {
+            Width = 1000,
+            Height = 760
+        };
+        workspace.RenderCurrentPreview(ConnectionCheckFixtures.Get(1));
+
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 760,
+            Content = workspace
+        };
+        window.Show();
+        try
+        {
+            var reportBody = Assert.IsType<StackPanel>(workspace.FindControl<StackPanel>("ReportBody"));
+            var toggle = Assert.IsType<Button>(workspace.FindControl<Button>("EvidenceToggleButton"));
+            var evidenceBody = Assert.IsType<Border>(workspace.FindControl<Border>("EvidenceBody"));
+            var collapsedWidth = reportBody.Width;
+
+            Assert.InRange(collapsedWidth, 951, 953);
+            Assert.False(evidenceBody.IsVisible);
+
+            toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            Assert.True(evidenceBody.IsVisible);
+            Assert.Equal(collapsedWidth, reportBody.Width);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void CurrentResultModeUsesTheSameToolbarWithRunAgainAsPrimary()
     {
         var workspace = new ReportDetailWorkspace();
