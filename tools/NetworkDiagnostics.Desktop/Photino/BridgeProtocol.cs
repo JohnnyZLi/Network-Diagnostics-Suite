@@ -28,6 +28,17 @@ public static class BridgeProtocol
         };
     }
 
+    public static DownloadPathPreference ParseDownloadPath(JsonElement payload)
+    {
+        var value = ReadString(payload, "downloadPath")?.Trim().ToLowerInvariant();
+        return value switch
+        {
+            "direct-r2" or "r2-direct" => DownloadPathPreference.DirectR2,
+            "worker" or "worker-stream" => DownloadPathPreference.Worker,
+            _ => DownloadPathPreference.Automatic
+        };
+    }
+
     public static AppearancePreference ParseAppearance(JsonElement payload)
         => ParseAppearance(ReadString(payload, "appearance"));
 
@@ -145,6 +156,13 @@ public static class BridgeProtocol
         TransferMethod.Single => "single",
         TransferMethod.Aggregate => "aggregate",
         _ => "compare"
+    };
+
+    public static string DownloadPathId(DownloadPathPreference path) => path switch
+    {
+        DownloadPathPreference.DirectR2 => "direct-r2",
+        DownloadPathPreference.Worker => "worker",
+        _ => "automatic"
     };
 
     public static string AppearanceId(AppearancePreference appearance) => appearance switch
