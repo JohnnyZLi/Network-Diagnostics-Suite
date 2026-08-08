@@ -42,10 +42,13 @@ internal static class Program
             if (OperatingSystem.IsMacOS())
             {
                 // Photino raises WindowCreated before AppKit is guaranteed to have a
-                // key/main window. Apply immediately when possible, then retry on the
-                // first focus event when keyWindow is authoritative.
+                // key/main window. Apply immediately when possible, then retry when
+                // focus or layout changes so AppKit cannot snap the traffic lights back
+                // to the conventional title-bar position.
                 window.WindowCreatedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
                 window.WindowFocusInHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+                window.WindowSizeChangedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+                MacWindowChrome.RegisterNativeMessageHandler(window);
             }
 
             bridge.Attach(window);
