@@ -1,0 +1,16 @@
+/* Final wide-screen geometry: keep readable prose constrained inside components, but
+   let data surfaces use the space that remains beside the 520px History inspector. */
+@media (min-width: 1500px) {
+  .app-shell.history-docked main {
+    width: min(1330px, calc(100% - 590px));
+    margin-left: 48px;
+    margin-right: 542px;
+  }
+
+  :root[data-platform="macos"] .app-shell.history-docked > main {
+    right: 520px;
+    width: auto;
+    margin: 0;
+    padding-inline: max(36px, calc((100vw - 520px - 1330px) / 2));
+  }
+}
