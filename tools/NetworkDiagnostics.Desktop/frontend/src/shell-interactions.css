@@ -6,6 +6,13 @@
   will-change: background-color, border-color, box-shadow, color;
 }
 
+/* The native traffic lights move eight points inward on macOS. Move the web-owned
+   brand by the same amount so the gap between the controls and product identity
+   stays unchanged while the outside padding becomes Chrome-like. */
+:root[data-platform="macos"] .product-bar {
+  padding-left: 90px;
+}
+
 .history-trigger {
   transition:
     background-color 160ms ease,
@@ -201,6 +208,12 @@
 @keyframes history-backdrop-enter {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@media (max-width: 720px) {
+  :root[data-platform="macos"] .product-bar {
+    padding-left: 86px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
