@@ -128,7 +128,7 @@ export function CommandPalette({
               aria-selected={index === selected}
               className={`${index === selected ? 'selected' : ''} ${command.enabled === false ? 'disabled' : ''}`}
               disabled={command.enabled === false}
-              onMouseEnter={() => setSelected(index)}
+              onPointerMove={() => setSelected(index)}
               onClick={() => invoke(command)}
             >
               <span className="command-palette-copy">
