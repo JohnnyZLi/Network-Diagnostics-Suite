@@ -53,11 +53,11 @@
   --jl-theme-dark-color-surface-muted: #2b2923;
   --jl-theme-dark-color-surface-strong: #39352e;
   --jl-theme-dark-color-surface-inverse: #261d19;
-  --jl-theme-dark-color-ink: #f4f0e8;
-  --jl-theme-dark-color-text: #d9d3c9;
-  --jl-theme-dark-color-muted: #aaa399;
-  --jl-theme-dark-color-text-inverse: #f2efe8;
-  --jl-theme-dark-color-muted-inverse: #c5beb3;
+  --jl-theme-dark-color-ink: #efe7db;
+  --jl-theme-dark-color-text: #d6cec1;
+  --jl-theme-dark-color-muted: #a79f94;
+  --jl-theme-dark-color-text-inverse: #efe7db;
+  --jl-theme-dark-color-muted-inverse: #bfb6aa;
   --jl-theme-dark-color-rule: rgba(242, 239, 232, 0.18);
   --jl-theme-dark-color-rule-strong: rgba(242, 239, 232, 0.32);
   --jl-theme-dark-color-rule-inverse: rgba(242, 239, 232, 0.24);
