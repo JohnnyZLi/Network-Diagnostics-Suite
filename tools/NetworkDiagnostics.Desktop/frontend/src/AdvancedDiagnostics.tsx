@@ -5,7 +5,7 @@ import './workbench.css';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
 type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
-type AdvancedTool = 'targeting' | 'lan' | 'preflight';
+type AdvancedTool = 'configuration' | 'lan';
 
 type AdvancedSettings = {
   endpointCandidates: string[];
@@ -50,7 +50,7 @@ export function AdvancedDiagnostics({
   onStatusChange?: (status: AdvancedRuntimeStatus) => void;
   resetRequest?: number;
 }) {
-  const preflightRef = useRef<HTMLElement>(null);
+  const preflightRef = useRef<HTMLDivElement>(null);
   const persistedSettings = useRef<AdvancedSettings>(defaultSettings);
   const handledResetRequest = useRef(0);
   const [tool, setTool] = useState<AdvancedTool | null>(null);
@@ -74,7 +74,6 @@ export function AdvancedDiagnostics({
     let cancelled = false;
     setLoading(true);
     setError(null);
-
     void Promise.all([
       desktopBridge.request<AdvancedSettings>('settings.getAdvanced'),
       desktopBridge.request<InterfaceChoice[]>('diagnostic.interfaces'),
@@ -95,7 +94,6 @@ export function AdvancedDiagnostics({
     }).finally(() => {
       if (!cancelled) setLoading(false);
     });
-
     return () => { cancelled = true; };
   }, []);
 
@@ -117,11 +115,7 @@ export function AdvancedDiagnostics({
       setError(next.message);
       emitStatus(persistedSettings.current, false, null);
     });
-    return () => {
-      removeStarted();
-      removeStopped();
-      removeFailed();
-    };
+    return () => { removeStarted(); removeStopped(); removeFailed(); };
   }, []);
 
   useEffect(() => {
@@ -189,7 +183,7 @@ export function AdvancedDiagnostics({
     setError(null);
     setNotice(null);
     try {
-      if (await persist()) setNotice('Advanced configuration saved locally.');
+      if (await persist()) setNotice('Test configuration saved locally.');
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Advanced configuration could not be saved.');
     } finally {
@@ -210,8 +204,8 @@ export function AdvancedDiagnostics({
       setDirty(false);
       emitStatus(next, serverRunning, serverPort);
       setNotice(serverRunning
-        ? `Advanced run configuration reset. The LAN server is still listening on :${serverPort ?? settings.lanPort}.`
-        : 'Advanced run configuration reset to defaults.');
+        ? `Run configuration reset. The LAN server is still listening on :${serverPort ?? settings.lanPort}.`
+        : 'Advanced configuration reset to defaults.');
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Advanced configuration could not be reset.');
     } finally {
@@ -230,7 +224,7 @@ export function AdvancedDiagnostics({
       setPreflight(result);
       if (result.interfaces?.length) setInterfaces(result.interfaces);
       setNotice('Native preflight completed with the saved configuration.');
-      setTool('preflight');
+      setTool('configuration');
       window.requestAnimationFrame(() => preflightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Native preflight failed.');
@@ -275,7 +269,7 @@ export function AdvancedDiagnostics({
       <div className="workbench-section-header advanced-workbench-header">
         <div>
           <h2 id="advanced-workbench-title">ADVANCED DIAGNOSTICS</h2>
-          <p>Target endpoints, test the LAN, or run a native preflight.</p>
+          <p>Configure how native diagnostics reach the network, validate that setup, or use dedicated LAN tools.</p>
         </div>
         <div className="advanced-header-status">
           {dirty && <span className="advanced-dirty-state">Unsaved changes</span>}
@@ -290,117 +284,60 @@ export function AdvancedDiagnostics({
         <div className="workbench-loading"><span className="advanced-loader" /><strong>Reading native configuration</strong><p>Settings and interface choices stay on this computer.</p></div>
       ) : (
         <>
-          <div className="advanced-tool-grid" aria-label="Advanced diagnostic tools">
+          <div className="advanced-tool-grid advanced-tool-grid-two" aria-label="Advanced diagnostic tools">
             <AdvancedToolCard
-              title="Targeting"
-              description="Endpoints, interface binding, and report privacy."
+              title="Test configuration"
+              description="Endpoints, interface binding, report privacy, and native preflight."
               status={targetingSummary(persistedSettings.current)}
-              active={tool === 'targeting'}
-              onClick={() => setTool((current) => current === 'targeting' ? null : 'targeting')}
+              active={tool === 'configuration'}
+              onClick={() => setTool((current) => current === 'configuration' ? null : 'configuration')}
             />
             <AdvancedToolCard
-              title="LAN diagnostics"
+              title="LAN tools"
               description="Local peer throughput and native server testing."
               status={serverRunning ? `Server listening on :${displayedServerPort}` : settings.lanTarget?.trim() ? 'LAN peer configured' : 'Not configured'}
               active={tool === 'lan'}
               onClick={() => setTool((current) => current === 'lan' ? null : 'lan')}
             />
-            <AdvancedToolCard
-              title="Preflight"
-              description="Verify route, endpoint, interface, and test readiness."
-              status={preflight ? 'Last preflight complete' : `${profileLabel(profile)} · ${methodLabel(method)}`}
-              active={tool === 'preflight'}
-              onClick={() => setTool((current) => current === 'preflight' ? null : 'preflight')}
-            />
           </div>
 
-          {tool === 'targeting' && (
+          {tool === 'configuration' && (
             <div className="advanced-workbench-pane targeting-pane">
-              <section className="advanced-section">
-                <div className="advanced-section-heading">
-                  <div><strong>Measurement endpoints</strong><span>Ordered candidates · maximum 8</span></div>
-                  <span>{normalizedEndpoints().length} configured</span>
-                </div>
-                <label className="advanced-field">
-                  <span>Endpoint candidates</span>
-                  <textarea value={endpointText} rows={3} spellCheck={false} placeholder="https://network.johnnyli.dev/" onChange={(event) => { setEndpointText(event.target.value); setDirty(true); setNotice(null); }} />
-                  <small>One HTTP(S) origin per line. Leave blank to use the built-in first-party endpoint.</small>
-                </label>
-              </section>
+              <div className="advanced-config-layout">
+                <section className="advanced-section">
+                  <div className="advanced-section-heading"><div><strong>Measurement endpoints</strong><span>Ordered candidates · maximum 8</span></div><span>{normalizedEndpoints().length} configured</span></div>
+                  <label className="advanced-field"><span>Endpoint candidates</span><textarea value={endpointText} rows={4} spellCheck={false} placeholder="https://network.johnnyli.dev/" onChange={(event) => { setEndpointText(event.target.value); setDirty(true); setNotice(null); }} /><small>One HTTP(S) origin per line. Leave blank to use the built-in first-party endpoint.</small></label>
+                </section>
 
-              <section className="advanced-section">
-                <div className="advanced-section-heading">
-                  <div><strong>Network interface</strong><span>Optional native binding</span></div>
-                  <span>{interfaces.length} detected</span>
-                </div>
-                <label className="advanced-field">
-                  <span>Bind diagnostic traffic</span>
-                  <div className="advanced-select-shell">
-                    <select value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
-                      <option value="">Automatic routing</option>
-                      {interfaces.map((choice, index) => {
-                        const id = interfaceId(choice);
-                        if (!id) return null;
-                        return <option key={`${id}-${index}`} value={id}>{interfaceLabel(choice, id)}</option>;
-                      })}
-                      {settings.interfaceId && !interfaces.some((choice) => interfaceId(choice) === settings.interfaceId) && <option value={settings.interfaceId}>{settings.interfaceId}</option>}
-                    </select>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>
-                  </div>
-                  <small>Automatic routing follows the operating system. Binding forces supported probes through the selected interface.</small>
-                </label>
-
-                <label className="advanced-toggle-row">
-                  <span><strong>Include local identifiers</strong><small>Allow local interface addresses and related identifiers in native measurement context and saved reports.</small></span>
-                  <input type="checkbox" checked={settings.includeLocalIdentifiers} onChange={(event) => patchSettings('includeLocalIdentifiers', event.target.checked)} />
-                </label>
-              </section>
-              <div className="advanced-pane-actions"><button type="button" className="advanced-primary" disabled={busy} onClick={() => void save()}>{busy ? 'Working…' : 'Save targeting'}</button></div>
-            </div>
-          )}
-
-          {tool === 'lan' && (
-            <div className="advanced-workbench-pane lan-pane">
-              <section className="advanced-section">
-                <div className="advanced-section-heading">
-                  <div><strong>LAN throughput client</strong><span>Optional peer measurement</span></div>
-                  <span>{settings.lanTarget?.trim() ? 'Configured' : 'Off'}</span>
-                </div>
-                <div className="advanced-grid two">
-                  <label className="advanced-field wide">
-                    <span>LAN target</span>
-                    <input value={settings.lanTarget ?? ''} spellCheck={false} placeholder="192.168.1.50" onChange={(event) => patchSettings('lanTarget', event.target.value || null)} />
-                    <small>Hostname or local IP of another Network Diagnostics LAN server. Leave blank to skip LAN throughput.</small>
+                <section className="advanced-section">
+                  <div className="advanced-section-heading"><div><strong>Network interface</strong><span>Optional native binding</span></div><span>{interfaces.length} detected</span></div>
+                  <label className="advanced-field">
+                    <span>Bind diagnostic traffic</span>
+                    <div className="advanced-select-shell">
+                      <select value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
+                        <option value="">Automatic routing</option>
+                        {interfaces.map((choice, index) => {
+                          const id = interfaceId(choice);
+                          if (!id) return null;
+                          return <option key={`${id}-${index}`} value={id}>{interfaceLabel(choice, id)}</option>;
+                        })}
+                        {settings.interfaceId && !interfaces.some((choice) => interfaceId(choice) === settings.interfaceId) && <option value={settings.interfaceId}>{settings.interfaceId}</option>}
+                      </select>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>
+                    </div>
+                    <small>Automatic routing follows the operating system. Binding forces supported probes through the selected interface.</small>
                   </label>
-                  <label className="advanced-field"><span>Port</span><input type="number" min={1024} max={65535} value={settings.lanPort} onChange={(event) => patchSettings('lanPort', Number(event.target.value))} /></label>
-                  <label className="advanced-field"><span>Duration</span><div className="advanced-input-unit"><input type="number" min={3} max={30} value={settings.lanDurationSeconds} onChange={(event) => patchSettings('lanDurationSeconds', Number(event.target.value))} /><span>sec</span></div></label>
-                  <label className="advanced-field"><span>Connections</span><input type="number" min={1} max={16} value={settings.lanConnections} onChange={(event) => patchSettings('lanConnections', Number(event.target.value))} /></label>
-                </div>
-              </section>
+                  <label className="advanced-toggle-row"><span><strong>Include local identifiers</strong><small>Allow local interface addresses and related identifiers in native measurement context and saved reports.</small></span><input type="checkbox" checked={settings.includeLocalIdentifiers} onChange={(event) => patchSettings('includeLocalIdentifiers', event.target.checked)} /></label>
+                </section>
+              </div>
 
-              <section className="advanced-section advanced-server-section">
-                <div className="advanced-section-heading">
-                  <div><strong>LAN throughput server</strong><span>Native listener for another device</span></div>
-                  <span className={`advanced-server-state ${serverRunning ? 'running' : ''}`}><i />{serverRunning ? `Listening · :${displayedServerPort}` : 'Stopped'}</span>
+              <section ref={preflightRef} className="advanced-section advanced-preflight-section embedded-preflight">
+                <div className="advanced-section-heading"><div><strong>Validate setup</strong><span>Native preflight · {profileLabel(profile)} · {methodLabel(method)}</span></div><span>{preflight ? 'Last check complete' : 'Not run'}</span></div>
+                <p className="advanced-muted">Verify endpoint selection, routing, and interface binding without starting the full throughput run.</p>
+                <div className="advanced-preflight-actions">
+                  <button type="button" className="advanced-primary" disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Working…' : 'Save configuration'}</button>
+                  <button type="button" className="advanced-secondary advanced-run-preflight" disabled={busy} onClick={() => void runPreflight()}>{busy ? 'Working…' : dirty ? 'Save & run preflight' : 'Run preflight'}</button>
                 </div>
-                <div className="advanced-server-card">
-                  <div><strong>{serverRunning ? `Listening on TCP ${displayedServerPort}` : `TCP port ${settings.lanPort}`}</strong><p>Start a local native listener, then point another Network Diagnostics client at this machine.</p></div>
-                  <button type="button" disabled={busy} className={serverRunning ? 'stop' : ''} onClick={() => void toggleLanServer()}>{serverRunning ? 'Stop server' : 'Start server'}</button>
-                </div>
-              </section>
-              <div className="advanced-pane-actions"><button type="button" className="advanced-primary" disabled={busy} onClick={() => void save()}>{busy ? 'Working…' : 'Save LAN settings'}</button></div>
-            </div>
-          )}
-
-          {tool === 'preflight' && (
-            <div ref={preflightRef as React.RefObject<HTMLDivElement>} className="advanced-workbench-pane preflight-pane">
-              <section className="advanced-section advanced-preflight-section">
-                <div className="advanced-section-heading">
-                  <div><strong>Native preflight</strong><span>{profileLabel(profile)} · {methodLabel(method)}</span></div>
-                  <span>{preflight ? 'Complete' : 'Not run'}</span>
-                </div>
-                <p className="advanced-muted">Apply the saved endpoint and interface configuration and inspect native target selection without starting the full throughput run.</p>
-                <button type="button" className="advanced-secondary advanced-run-preflight" disabled={busy} onClick={() => void runPreflight()}>{busy ? 'Working…' : 'Run preflight'}</button>
                 {preflight && (
                   <div className="advanced-preflight-result workbench-preflight-result">
                     <div><span>Endpoint</span><strong>{endpoint ?? 'Native selection complete'}</strong></div>
@@ -412,6 +349,26 @@ export function AdvancedDiagnostics({
               </section>
             </div>
           )}
+
+          {tool === 'lan' && (
+            <div className="advanced-workbench-pane lan-pane">
+              <section className="advanced-section">
+                <div className="advanced-section-heading"><div><strong>LAN throughput client</strong><span>Optional peer measurement</span></div><span>{settings.lanTarget?.trim() ? 'Configured' : 'Off'}</span></div>
+                <div className="advanced-grid two">
+                  <label className="advanced-field wide"><span>LAN target</span><input value={settings.lanTarget ?? ''} spellCheck={false} placeholder="192.168.1.50" onChange={(event) => patchSettings('lanTarget', event.target.value || null)} /><small>Hostname or local IP of another Network Diagnostics LAN server. Leave blank to skip LAN throughput.</small></label>
+                  <label className="advanced-field"><span>Port</span><input type="number" min={1024} max={65535} value={settings.lanPort} onChange={(event) => patchSettings('lanPort', Number(event.target.value))} /></label>
+                  <label className="advanced-field"><span>Duration</span><div className="advanced-input-unit"><input type="number" min={3} max={30} value={settings.lanDurationSeconds} onChange={(event) => patchSettings('lanDurationSeconds', Number(event.target.value))} /><span>sec</span></div></label>
+                  <label className="advanced-field"><span>Connections</span><input type="number" min={1} max={16} value={settings.lanConnections} onChange={(event) => patchSettings('lanConnections', Number(event.target.value))} /></label>
+                </div>
+              </section>
+
+              <section className="advanced-section advanced-server-section">
+                <div className="advanced-section-heading"><div><strong>LAN throughput server</strong><span>Native listener for another device</span></div><span className={`advanced-server-state ${serverRunning ? 'running' : ''}`}><i />{serverRunning ? `Listening · :${displayedServerPort}` : 'Stopped'}</span></div>
+                <div className="advanced-server-card"><div><strong>{serverRunning ? `Listening on TCP ${displayedServerPort}` : `TCP port ${settings.lanPort}`}</strong><p>Start a local native listener, then point another Network Diagnostics client at this machine.</p></div><button type="button" disabled={busy} className={serverRunning ? 'stop' : ''} onClick={() => void toggleLanServer()}>{serverRunning ? 'Stop server' : dirty ? 'Save & start server' : 'Start server'}</button></div>
+              </section>
+              <div className="advanced-pane-actions"><button type="button" className="advanced-primary" disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Working…' : 'Save LAN settings'}</button></div>
+            </div>
+          )}
         </>
       )}
     </section>
@@ -419,13 +376,7 @@ export function AdvancedDiagnostics({
 }
 
 function AdvancedToolCard({ title, description, status, active, onClick }: { title: string; description: string; status: string; active: boolean; onClick: () => void }) {
-  return (
-    <button type="button" className={`advanced-tool-card ${active ? 'active' : ''}`} aria-expanded={active} onClick={onClick}>
-      <span><strong>{title}</strong><small>{description}</small></span>
-      <b>{status}</b>
-      <i aria-hidden="true">{active ? '−' : '+'}</i>
-    </button>
-  );
+  return <button type="button" className={`advanced-tool-card ${active ? 'active' : ''}`} aria-expanded={active} onClick={onClick}><span><strong>{title}</strong><small>{description}</small></span><b>{status}</b><i aria-hidden="true">{active ? '−' : '+'}</i></button>;
 }
 
 function runtimeStatus(settings: AdvancedSettings, serverRunning: boolean, serverPort: number | null): AdvancedRuntimeStatus {
@@ -434,12 +385,7 @@ function runtimeStatus(settings: AdvancedSettings, serverRunning: boolean, serve
   if (settings.endpointCandidates.length > 0) parts.push(`${settings.endpointCandidates.length} custom endpoint${settings.endpointCandidates.length === 1 ? '' : 's'}`);
   if (settings.includeLocalIdentifiers) parts.push('identifiers included');
   if (settings.lanTarget?.trim()) parts.push('LAN peer configured');
-  return {
-    hasOverrides: parts.length > 0,
-    summary: parts.length > 0 ? parts.join(' · ') : 'Default routing · first-party endpoint · identifiers excluded',
-    serverRunning,
-    serverPort: serverRunning ? serverPort : null,
-  };
+  return { hasOverrides: parts.length > 0, summary: parts.length > 0 ? parts.join(' · ') : 'Default routing · first-party endpoint · identifiers excluded', serverRunning, serverPort: serverRunning ? serverPort : null };
 }
 
 function targetingSummary(settings: AdvancedSettings): string {
@@ -451,33 +397,16 @@ function targetingSummary(settings: AdvancedSettings): string {
 }
 
 function interfaceId(choice: InterfaceChoice): string | null { return stringValue(choice, ['id', 'interfaceId', 'adapterId', 'name']); }
-function interfaceLabel(choice: InterfaceChoice, fallback: string): string {
-  const name = stringValue(choice, ['displayName', 'name', 'description', 'interfaceName']);
-  const type = stringValue(choice, ['type', 'interfaceType']);
-  return [name ?? fallback, type].filter(Boolean).join(' · ');
-}
-function stringValue(record: Record<string, unknown>, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'string' && value.trim()) return value;
-  }
-  return null;
-}
+function interfaceLabel(choice: InterfaceChoice, fallback: string): string { const name = stringValue(choice, ['displayName', 'name', 'description', 'interfaceName']); const type = stringValue(choice, ['type', 'interfaceType']); return [name ?? fallback, type].filter(Boolean).join(' · '); }
+function stringValue(record: Record<string, unknown>, keys: string[]): string | null { for (const key of keys) { const value = record[key]; if (typeof value === 'string' && value.trim()) return value; } return null; }
 function findString(value: unknown, keys: string[]): string | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as Record<string, unknown>;
   const direct = stringValue(record, keys);
   if (direct) return direct;
   for (const child of Object.values(record)) {
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        const found = findString(item, keys);
-        if (found) return found;
-      }
-    } else if (child && typeof child === 'object') {
-      const found = findString(child, keys);
-      if (found) return found;
-    }
+    if (Array.isArray(child)) { for (const item of child) { const found = findString(item, keys); if (found) return found; } }
+    else if (child && typeof child === 'object') { const found = findString(child, keys); if (found) return found; }
   }
   return null;
 }
@@ -485,30 +414,10 @@ function firstUrl(value: unknown): string | null {
   if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value;
   if (!value || typeof value !== 'object') return null;
   for (const child of Object.values(value as Record<string, unknown>)) {
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        const found = firstUrl(item);
-        if (found) return found;
-      }
-    } else {
-      const found = firstUrl(child);
-      if (found) return found;
-    }
+    if (Array.isArray(child)) { for (const item of child) { const found = firstUrl(item); if (found) return found; } }
+    else { const found = firstUrl(child); if (found) return found; }
   }
   return null;
 }
-function profileLabel(profile: DiagnosticProfile): string {
-  switch (profile) {
-    case 'connection-check': return 'Connection Check';
-    case 'quick': return 'Quick';
-    case 'full': return 'Full';
-    case 'stress': return 'Stress';
-  }
-}
-function methodLabel(method: TransferMethod): string {
-  switch (method) {
-    case 'single': return 'Single flow';
-    case 'aggregate': return 'Aggregate flows';
-    case 'compare': return 'Single + aggregate';
-  }
-}
+function profileLabel(profile: DiagnosticProfile): string { switch (profile) { case 'connection-check': return 'Connection Check'; case 'quick': return 'Quick'; case 'full': return 'Full'; case 'stress': return 'Stress'; } }
+function methodLabel(method: TransferMethod): string { switch (method) { case 'single': return 'Single flow'; case 'aggregate': return 'Aggregate flows'; case 'compare': return 'Single + aggregate'; } }
