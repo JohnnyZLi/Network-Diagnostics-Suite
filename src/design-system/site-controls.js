@@ -321,6 +321,62 @@ export function installDisclosureMenu({
   };
 }
 
+function installHeaderDisclosureExit(root) {
+  const header = root.closest(".jl-global-header, .jl-site-header");
+  const inner = header?.querySelector(".jl-global-header__inner");
+  const window = root.ownerDocument.defaultView;
+  let timer = null;
+  let animationEndHandler = null;
+  let sequence = 0;
+
+  const hasOpenDisclosure = () => root.querySelector(
+    '[data-site-switcher-button][aria-expanded="true"], [data-settings-button][aria-expanded="true"]',
+  ) !== null;
+
+  const clearExit = () => {
+    if (timer !== null && window) window.clearTimeout(timer);
+    timer = null;
+    if (animationEndHandler && inner instanceof HTMLElement) inner.removeEventListener("animationend", animationEndHandler);
+    animationEndHandler = null;
+    if (header instanceof HTMLElement) {
+      header.removeAttribute("data-jl-header-disclosure-exit");
+      header.style.removeProperty("--_jl-header-disclosure-exit-y");
+    }
+  };
+
+  const cancel = () => { sequence += 1; clearExit(); };
+
+  const beginExit = () => {
+    if (!(header instanceof HTMLElement) || !(inner instanceof HTMLElement) || !window || hasOpenDisclosure()) { clearExit(); return; }
+    const naturalRect = header.getBoundingClientRect();
+    const fixedRect = inner.getBoundingClientRect();
+    const distance = Math.min(fixedRect.height, Math.max(0, -naturalRect.top));
+    if (distance < 1) { clearExit(); return; }
+    header.style.setProperty("--_jl-header-disclosure-exit-y", `${-distance}px`);
+    header.setAttribute("data-jl-header-disclosure-exit", "");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { queueMicrotask(clearExit); return; }
+    const currentSequence = ++sequence;
+    animationEndHandler = (event) => {
+      if (event.animationName !== "jl-header-disclosure-exit" || currentSequence !== sequence) return;
+      clearExit();
+    };
+    inner.addEventListener("animationend", animationEndHandler);
+    timer = window.setTimeout(() => { if (currentSequence === sequence) clearExit(); }, 260);
+  };
+
+  const sync = (open) => {
+    if (open) { cancel(); return; }
+    const currentSequence = ++sequence;
+    queueMicrotask(() => {
+      if (currentSequence !== sequence) return;
+      if (hasOpenDisclosure()) { clearExit(); return; }
+      beginExit();
+    });
+  };
+
+  return { cancel, sync, destroy: cancel };
+}
+
 export function installSiteSwitcher(root, options = {}) {
   const button = root.querySelector("[data-site-switcher-button]");
   const menu = root.querySelector("[data-site-switcher-menu]");
@@ -334,6 +390,7 @@ export function installSiteSwitcher(root, options = {}) {
   ensureDisclosureShell(root, button, menu, "jl-site-disclosure");
   ensureDisclosureShell(root, settings.button, settings.menu, "jl-settings-disclosure");
   const theme = installThemeControl(settings.menu);
+  const headerExit = installHeaderDisclosureExit(root);
   let settingsDisclosure = null;
 
   const sitesDisclosure = installDisclosureMenu({
@@ -342,10 +399,14 @@ export function installSiteSwitcher(root, options = {}) {
     menu,
     useHidden: true,
     onBeforeOpen: () => {
+      headerExit.cancel();
       settingsDisclosure?.close();
       options.onBeforeOpen?.();
     },
-    onOpenChange: options.onOpenChange,
+    onOpenChange: (open) => {
+      headerExit.sync(open);
+      options.onOpenChange?.(open);
+    },
   });
 
   settingsDisclosure = installDisclosureMenu({
@@ -355,9 +416,11 @@ export function installSiteSwitcher(root, options = {}) {
     useHidden: true,
     closeOnSelect: false,
     onBeforeOpen: () => {
+      headerExit.cancel();
       sitesDisclosure.close();
       options.onBeforeOpen?.();
     },
+    onOpenChange: headerExit.sync,
   });
 
   return {
@@ -371,6 +434,7 @@ export function installSiteSwitcher(root, options = {}) {
       sitesDisclosure.destroy();
       settingsDisclosure.destroy();
       theme.destroy();
+      headerExit.destroy();
     },
   };
 }
