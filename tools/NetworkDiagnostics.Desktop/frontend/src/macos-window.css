@@ -44,44 +44,13 @@
   display: none;
 }
 
-/* The persistent brand orb mirrors passive Live Network Health instead of acting
-   as decoration. Gray means no current score/paused, green is good/excellent,
-   terracotta is fair/degraded, and red is poor. */
-:root[data-platform="macos"] .brand-mark {
-  background: var(--faint);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--faint) 10%, transparent);
-  transition: background 180ms ease, box-shadow 180ms ease;
-}
-
-:root[data-platform="macos"] .app-shell:has(.health-score-orb.excellent) .brand-mark,
-:root[data-platform="macos"] .app-shell:has(.health-score-orb.good) .brand-mark {
-  background: var(--good);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--good) 11%, transparent);
-}
-
-:root[data-platform="macos"] .app-shell:has(.health-score-orb.fair) .brand-mark,
-:root[data-platform="macos"] .app-shell:has(.health-score-orb.degraded) .brand-mark {
-  background: var(--accent-strong);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-:root[data-platform="macos"] .app-shell:has(.health-score-orb.poor) .brand-mark {
-  background: var(--danger);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 11%, transparent);
-}
-
-:root[data-platform="macos"] .app-shell:has(.live-health-actions .monitor-state:not(.running)) .brand-mark {
-  background: var(--faint);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--faint) 10%, transparent);
-}
-
 :root[data-platform="macos"] .app-shell > main {
   padding-top: 84px;
 }
 
-/* With full-size AppKit content, fixed overlays otherwise begin underneath the
-   traffic lights. Keep History below the unified toolbar so it behaves like a
-   side workspace rather than a sheet pasted over the window chrome. */
+/* Full-size AppKit content moves the WebView origin into the native title bar.
+   History should still behave as a side workspace belonging to the app body, not
+   as a sheet pasted over the traffic lights and toolbar. */
 :root[data-platform="macos"] .history-layer {
   top: 54px;
   bottom: 0;
@@ -99,7 +68,7 @@
   border-top: 1px solid var(--line-strong);
   border-top-left-radius: 12px;
   box-shadow: -22px 8px 58px rgba(0, 0, 0, 0.2);
-  animation-duration: 210ms;
+  animation: mac-history-enter 220ms cubic-bezier(.18, .78, .2, 1) both;
 }
 
 :root[data-platform="macos"] .history-header {
@@ -109,6 +78,17 @@
 
 :root[data-platform="macos"] .history-list {
   padding-inline: 24px;
+}
+
+@keyframes mac-history-enter {
+  from {
+    transform: translateX(28px);
+    opacity: .72;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 720px) {
