@@ -1,0 +1,179 @@
+/* Photino/WebKit uses a native system popup for <select>, which does not match the
+   desktop workbench. Keep the React-controlled select as the source of truth but
+   render the actual picker with the app's own anchored listbox. */
+
+.interface-row select[aria-label="Network interface"] {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 34px 0 10px !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 8px !important;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--surface) !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--faint) 50%),
+    linear-gradient(135deg, var(--faint) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 16px) 13px,
+    calc(100% - 11px) 13px !important;
+  background-repeat: no-repeat !important;
+  background-size: 5px 5px, 5px 5px !important;
+  color: var(--text) !important;
+  font: inherit;
+  font-size: 11px !important;
+  font-weight: 680 !important;
+  line-height: 1;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.interface-row select[aria-label="Network interface"]:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line-strong)) !important;
+  background-color: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%) !important;
+}
+
+.interface-row select[aria-label="Network interface"]:focus-visible,
+.interface-row select[aria-label="Network interface"].app-select-open {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line-strong)) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.interface-row select[aria-label="Network interface"].app-select-open {
+  background-image:
+    linear-gradient(135deg, transparent 50%, var(--accent) 50%),
+    linear-gradient(45deg, var(--accent) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 16px) 12px,
+    calc(100% - 11px) 12px !important;
+}
+
+.interface-row select[aria-label="Network interface"]:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.app-select-menu {
+  position: fixed;
+  z-index: 240;
+  display: grid;
+  gap: 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .28), 0 2px 8px rgba(0, 0, 0, .16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  animation: app-select-enter 90ms ease-out;
+}
+
+.app-select-menu.open-above {
+  transform-origin: bottom center;
+}
+
+.app-select-option {
+  width: 100%;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px 0 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-select-option.automatic {
+  margin-bottom: 3px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 7px 7px 3px 3px;
+}
+
+.app-select-option:hover,
+.app-select-option.active {
+  background: color-mix(in srgb, var(--surface-soft) 76%, var(--accent) 8%);
+}
+
+.app-select-option.selected {
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+}
+
+.app-select-option.selected.active,
+.app-select-option.selected:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+
+.app-select-check {
+  width: 18px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+.app-select-primary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 720;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-select-secondary {
+  max-width: 138px;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes app-select-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-2px) scale(.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-select-menu {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-select-menu {
+    border-radius: 9px;
+  }
+
+  .app-select-option {
+    min-height: 38px;
+  }
+
+  .app-select-secondary {
+    max-width: 110px;
+  }
+}
