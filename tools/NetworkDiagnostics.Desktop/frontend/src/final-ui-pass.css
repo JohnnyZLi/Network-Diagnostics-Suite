@@ -132,6 +132,8 @@
   content: '';
   width: 6px;
   height: 6px;
+  display: block;
+  justify-self: end;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg) translate(-1px, -1px);
