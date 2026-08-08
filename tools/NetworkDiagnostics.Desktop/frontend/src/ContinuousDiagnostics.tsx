@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import './monitor.css';
 import './workbench.css';
@@ -118,7 +118,6 @@ export function ContinuousDiagnostics({
   onMeasurePeakCapacity: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [clearConfirm, setClearConfirm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>('latency');
 
@@ -136,15 +135,6 @@ export function ContinuousDiagnostics({
     } finally {
       setBusy(false);
     }
-  }
-
-  async function clearAlerts() {
-    if (!clearConfirm) {
-      setClearConfirm(true);
-      return;
-    }
-    await request('monitor.clearAlerts');
-    setClearConfirm(false);
   }
 
   async function copySummary() {
@@ -336,29 +326,6 @@ export function ContinuousDiagnostics({
             <MonitorComponentCard component={snapshot.reliability} />
             <CapacityCard component={snapshot.speed} onAction={onMeasureCapacity} onPeakAction={onMeasurePeakCapacity} />
           </div>
-
-          {snapshot.alerts.length === 0 ? (
-            <NoAlertSummary snapshot={snapshot} />
-          ) : (
-            <section className="monitor-alert-section live-alert-section">
-              <div className="monitor-section-heading monitor-alert-heading">
-                <div><strong>Issues & alerts</strong><span>{snapshot.unreadAlertCount > 0 ? `${snapshot.unreadAlertCount} unread` : `${snapshot.alerts.length} recorded`}</span></div>
-                <div className="monitor-alert-actions">
-                  {snapshot.unreadAlertCount > 0 && <button type="button" disabled={busy} onClick={() => void request('monitor.markAlertsRead')}>Mark read</button>}
-                  <button type="button" disabled={busy} className={clearConfirm ? 'confirm' : ''} onClick={() => void clearAlerts()}>{clearConfirm ? 'Confirm clear' : 'Clear'}</button>
-                </div>
-              </div>
-              <div className="monitor-alert-list compact">
-                {snapshot.alerts.slice(0, 3).map((alert) => (
-                  <article key={alert.id} className={`monitor-alert ${alert.severity} ${alert.isRead ? 'read' : ''}`}>
-                    <span>{formatTime(alert.timestamp)} · {labelize(alert.kind)}</span>
-                    <strong>{alert.title}</strong>
-                    <p>{alert.detail}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
         </>
       ) : (
         <div className="workbench-loading monitor-error"><strong>Live network health unavailable</strong><p>{error}</p></div>
@@ -368,15 +335,34 @@ export function ContinuousDiagnostics({
 }
 
 function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSample[]; window: MonitorWindow; metric: TimelineMetric }) {
-  const width = 1000;
-  const height = 230;
-  const left = 62;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [size, setSize] = useState({ width: 1000, height: 230 });
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const update = () => setSize({
+      width: Math.max(560, Math.round(svg.clientWidth || 1000)),
+      height: Math.max(190, Math.round(svg.clientHeight || 230)),
+    });
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    const observer = new ResizeObserver(update);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+
+  const { width, height } = size;
+  const left = width < 760 ? 52 : 58;
   const right = 18;
   const top = 18;
-  const plotBottom = 154;
-  const stateTop = 178;
+  const plotBottom = height - 76;
+  const stateTop = height - 52;
   const stateHeight = 13;
-  const timeY = 216;
+  const timeY = height - 14;
   const plotWidth = width - left - right;
   const plotHeight = plotBottom - top;
   const timestamps = samples.map((sample) => Date.parse(sample.timestamp));
@@ -418,31 +404,42 @@ function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSa
 
   const stateBlockWidth = samples.length <= 1
     ? 14
-    : Math.max(5, Math.min(22, (plotWidth / Math.max(1, samples.length)) * .62));
-  const yTicks = [scaleMax, scaleMax / 2, 0];
+    : Math.max(5, Math.min(20, (plotWidth / Math.max(1, samples.length)) * .58));
+  const yTicks = [scaleMax, scaleMax * .67, scaleMax * .33, 0];
+  const timeTickCount = width >= 1200 ? 5 : 3;
   const timeTicks = sparse
     ? sparseTimeTicks(samples, timestamps, left, plotWidth)
-    : [
-        { x: left, value: startTime },
-        { x: left + plotWidth / 2, value: startTime + duration / 2 },
-        { x: left + plotWidth, value: latestTime },
-      ];
+    : Array.from({ length: timeTickCount }, (_, index) => {
+        const ratio = index / (timeTickCount - 1);
+        return { x: left + plotWidth * ratio, value: startTime + duration * ratio };
+      });
 
   return (
     <div className="timeline-chart-frame">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${timelineMetricLabel(metric)} over the selected monitoring window`}>
-        <text x="12" y="17" className="timeline-lane-label">{timelineMetricLabel(metric)}</text>
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${timelineMetricLabel(metric)} over the selected monitoring window`}>
         {yTicks.map((tick, index) => {
-          const y = top + (index / 2) * plotHeight;
+          const y = top + (index / (yTicks.length - 1)) * plotHeight;
           return (
             <g key={`${tick}-${index}`}>
-              <line x1={left} x2={width - right} y1={y} y2={y} className={`timeline-grid-line ${index === 2 ? 'major' : ''}`} />
+              <line x1={left} x2={width - right} y1={y} y2={y} className={`timeline-grid-line ${index === yTicks.length - 1 ? 'major' : ''}`} />
               <text x={left - 10} y={y + 3.5} textAnchor="end" className="timeline-axis-label">{formatTimelineAxis(tick, metric)}</text>
             </g>
           );
         })}
+
+        {timeTicks.map((tick, index) => (
+          <g key={`time-${tick.value}-${index}`}>
+            {index > 0 && index < timeTicks.length - 1 && <line x1={tick.x} x2={tick.x} y1={top} y2={stateTop + stateHeight} className="timeline-time-grid" />}
+            <text
+              x={tick.x}
+              y={timeY}
+              textAnchor={index === 0 ? 'start' : index === timeTicks.length - 1 ? 'end' : 'middle'}
+              className="timeline-time-label"
+            >{formatTimelineTime(tick.value, window)}</text>
+          </g>
+        ))}
+
         <line x1={left} x2={width - right} y1={stateTop + stateHeight / 2} y2={stateTop + stateHeight / 2} className="timeline-state-baseline" />
-        <text x="12" y={stateTop + 10} className="timeline-lane-label">State</text>
 
         {points.filter((point) => point.sample.state === 'unresponsive').map((point, index) => (
           <line key={`outage-${index}`} x1={point.x} x2={point.x} y1={top} y2={stateTop + stateHeight} className="timeline-outage-marker" />
@@ -464,16 +461,6 @@ function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSa
             {point.y != null && <circle cx={point.x} cy={point.y} r="4.8" className={`timeline-point ${point.sample.state}`} />}
             {point.y != null && point.sample.diagnosticLoad && <circle cx={point.x} cy={point.y} r="8" className="timeline-diagnostic-ring" />}
           </g>
-        ))}
-
-        {timeTicks.map((tick, index) => (
-          <text
-            key={`${tick.value}-${index}`}
-            x={tick.x}
-            y={timeY}
-            textAnchor={index === 0 ? 'start' : index === timeTicks.length - 1 ? 'end' : 'middle'}
-            className="timeline-time-label"
-          >{formatTimelineTime(tick.value, window)}</text>
         ))}
       </svg>
       {sparse && <span className="timeline-sparse-note">Sparse baseline · sample spacing expanded for readability</span>}
@@ -551,21 +538,6 @@ function timelineTooltip(sample: MonitorTimelineSample): string {
   parts.push(`${formatNumber(sample.packetLossPercent)}% loss`);
   if (sample.diagnosticLoad) parts.push('controlled diagnostic load');
   return parts.join(' · ');
-}
-
-function NoAlertSummary({ snapshot }: { snapshot: MonitorSnapshot }) {
-  const healthy = snapshot.band === 'excellent' || snapshot.band === 'good';
-  return (
-    <div className={`monitor-healthy-strip ${healthy ? '' : 'neutral'}`}>
-      <span aria-hidden="true">{healthy ? '✓' : '•'}</span>
-      <div>
-        <strong>{healthy ? 'No issues detected' : 'No discrete alerts recorded'}</strong>
-        <small>{healthy
-          ? 'No outages, network changes, or meaningful degradation are recorded in this window.'
-          : `No outage or network-change event is recorded, but current measurements still rate the connection ${snapshot.status.toLowerCase()}.`}</small>
-      </div>
-    </div>
-  );
 }
 
 function LiveMetric({ label, value }: { label: string; value: string }) {
