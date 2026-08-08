@@ -52,6 +52,18 @@ internal static class MacWindowChrome
             SendVoidBool(window, "setTitlebarAppearsTransparent:", true);
             SendVoidNUInt(window, "setTitleVisibility:", HiddenTitleVisibility);
             SendVoidBool(window, "setMovableByWindowBackground:", true);
+
+            // WindowCreated can arrive before AppKit has completed the first title-bar
+            // layout. Force the native view tree through its pending layout/display work
+            // before reading standardWindowButton frame origins. We intentionally wait
+            // until the NSWindow is visible before caching those origins so a provisional
+            // creation-time frame can never become the permanent baseline.
+            var contentView = SendObject(window, "contentView");
+            if (contentView != IntPtr.Zero)
+            {
+                SendVoid(contentView, "layoutSubtreeIfNeeded");
+            }
+            SendVoid(window, "displayIfNeeded");
             CenterTrafficLights(window);
             return true;
         }
@@ -133,12 +145,30 @@ internal static class MacWindowChrome
         }
 
         // Photino currently owns one app window. Use the newest AppKit window as the
-        // creation-time fallback; the focus callback below retries against keyWindow.
+        // creation-time fallback; focus/size callbacks retry against keyWindow later.
         return SendObjectNUInt(windows, "objectAtIndex:", count - 1);
     }
 
     private static void CenterTrafficLights(IntPtr window)
     {
+        // AppKit may still be laying out the title bar while WindowCreated is firing.
+        // Do not establish a baseline until the real NSWindow is visible; Program also
+        // performs one post-Load synchronization on the UI thread for the first frame.
+        if (!SendBool(window, "isVisible"))
+        {
+            return;
+        }
+
+        var closeButton = SendObjectNUInt(window, "standardWindowButton:", 0);
+        if (closeButton != IntPtr.Zero)
+        {
+            var buttonContainer = SendObject(closeButton, "superview");
+            if (buttonContainer != IntPtr.Zero)
+            {
+                SendVoid(buttonContainer, "layoutSubtreeIfNeeded");
+            }
+        }
+
         // Full-size content keeps AppKit's standard controls at the conventional title-
         // bar origin. The unified toolbar is taller and uses a more generous leading
         // inset, so preserve the real controls while moving the group eight points right
@@ -188,8 +218,14 @@ internal static class MacWindowChrome
     private static nuint SendNUInt(IntPtr receiver, string selector) =>
         objc_msgSend_NUInt(receiver, sel_registerName(selector));
 
+    private static bool SendBool(IntPtr receiver, string selector) =>
+        objc_msgSend_Bool(receiver, sel_registerName(selector));
+
     private static NativePoint SendPoint(IntPtr receiver, string selector) =>
         objc_msgSend_Point(receiver, sel_registerName(selector));
+
+    private static void SendVoid(IntPtr receiver, string selector) =>
+        objc_msgSend_Void(receiver, sel_registerName(selector));
 
     private static void SendVoidNUInt(IntPtr receiver, string selector, nuint value) =>
         objc_msgSend_Void_NUInt(receiver, sel_registerName(selector), value);
@@ -232,7 +268,14 @@ internal static class MacWindowChrome
     private static extern nuint objc_msgSend_NUInt(IntPtr receiver, IntPtr selector);
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool objc_msgSend_Bool(IntPtr receiver, IntPtr selector);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern NativePoint objc_msgSend_Point(IntPtr receiver, IntPtr selector);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_Void(IntPtr receiver, IntPtr selector);
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_Void_NUInt(IntPtr receiver, IntPtr selector, nuint value);
