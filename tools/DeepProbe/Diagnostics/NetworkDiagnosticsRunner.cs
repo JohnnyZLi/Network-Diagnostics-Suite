@@ -33,7 +33,8 @@ public sealed record NativePreflightOptions(
 
 public sealed record NativePreflightResult(
     MeasurementContextReport Measurement,
-    IReadOnlyList<NetworkInterfaceChoice> Interfaces);
+    IReadOnlyList<NetworkInterfaceChoice> Interfaces,
+    NativeDownloadPathStatus DownloadPath);
 
 public sealed record NativeRunProgress(
     string Phase,
@@ -75,7 +76,11 @@ public static class NetworkDiagnosticsRunner
             "network-diagnostics-native",
             FullDiagnosticRunner.Capabilities(probeOptions),
             cancellationToken);
-        return new NativePreflightResult(preflight.Measurement, ListInterfaces());
+        var downloadPath = await InternetTransferProbe.ProbeDownloadPathAsync(
+            preflight.EndpointSelection.Selected.Origin,
+            options.DownloadPath,
+            cancellationToken);
+        return new NativePreflightResult(preflight.Measurement, ListInterfaces(), downloadPath);
     }
 
     public static async Task<NetworkDiagnosticsReportV2> RunAsync(
