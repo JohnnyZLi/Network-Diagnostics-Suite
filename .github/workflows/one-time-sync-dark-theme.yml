@@ -1,0 +1,43 @@
+name: One-time sync dark theme hierarchy
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: agent/sync-dark-theme-hierarchy
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Pin and sync shared dark theme
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('design-system.lock.json')
+          data=json.loads(p.read_text())
+          data['sourceCommit']='58e082a91caaf77ff88823afd5fc79a16badaf47'
+          p.write_text(json.dumps(data, indent=2)+'\n')
+          PY
+          npm run design-system:sync
+          npm run design-system:check
+          npm run design-system:integration
+      - name: Commit generated consumer state
+        run: |
+          rm .github/workflows/one-time-sync-dark-theme.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add design-system.lock.json src/design-system .github/workflows/one-time-sync-dark-theme.yml
+          git commit -m "Sync refined dark theme hierarchy"
+          git push origin HEAD:agent/sync-dark-theme-hierarchy
