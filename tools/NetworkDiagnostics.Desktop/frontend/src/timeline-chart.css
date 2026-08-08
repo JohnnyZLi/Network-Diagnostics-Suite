@@ -110,9 +110,11 @@
   font-weight: 620;
 }
 
+/* The selected metric is already named in the control immediately above the plot.
+   Suppress in-plot lane labels so they cannot collide with the top Y-axis value on
+   compact or WebKit-rendered canvases. */
 .timeline-lane-label {
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .timeline-series-line {
