@@ -25,10 +25,15 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
+          sha='58e082a91caaf77ff88823afd5fc79a16badaf47'
           p=Path('design-system.lock.json')
           data=json.loads(p.read_text())
-          data['sourceCommit']='58e082a91caaf77ff88823afd5fc79a16badaf47'
+          data['sourceCommit']=sha
           p.write_text(json.dumps(data, indent=2)+'\n')
+          source=Path('src/design-system/SOURCE.md')
+          text=source.read_text()
+          text=text.replace('Source commit: 463db1c74db85a0b7f268a78d302cac3ecbddf72', f'Source commit: {sha}')
+          source.write_text(text)
           PY
           npm run design-system:sync
           npm run design-system:check
