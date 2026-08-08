@@ -3,6 +3,7 @@
 :root[data-platform="macos"] .product-bar {
   min-height: 54px;
   padding: 0 26px 0 82px;
+  user-select: none;
 }
 
 :root[data-platform="macos"] .product-bar .brand,
