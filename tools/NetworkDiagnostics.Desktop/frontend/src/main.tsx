@@ -13,6 +13,7 @@ import './ux-macos-wide.css';
 import './ux-native-outcomes.css';
 import './ux-readability.css';
 import './ux-final-layout.css';
+import './timeline-chart.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
@@ -37,8 +38,20 @@ createRoot(rootElement).render(
 );
 
 // Transfer topology is a normal run-time choice on the desktop canvas, not hidden
-// progressive disclosure. Keep the existing details semantics/tests while presenting
-// the control as expanded from the first rendered frame onward.
-requestAnimationFrame(() => {
-  rootElement.querySelector<HTMLDetailsElement>('.diagnostic-options')?.setAttribute('open', '');
-});
+// progressive disclosure. React's concurrent render is not guaranteed to commit the
+// details element before the first animation frame, so observe the root until the
+// control exists and then lock it open. The summary itself is non-interactive in CSS.
+function exposeDiagnosticOptions(): boolean {
+  const options = rootElement.querySelector<HTMLDetailsElement>('.diagnostic-options');
+  if (!options) return false;
+  options.open = true;
+  return true;
+}
+
+if (!exposeDiagnosticOptions()) {
+  const observer = new MutationObserver(() => {
+    if (exposeDiagnosticOptions()) observer.disconnect();
+  });
+  observer.observe(rootElement, { childList: true, subtree: true });
+  window.setTimeout(() => observer.disconnect(), 5000);
+}
