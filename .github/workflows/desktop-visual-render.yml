@@ -94,6 +94,13 @@ jobs:
             sleep 0.45
           }
 
+          navigate_palette() {
+            open_palette
+            xdotool type --delay 30 "$1"
+            xdotool key --clearmodifiers Return
+            sleep 0.8
+          }
+
           capture live-health-wide
 
           wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
@@ -120,6 +127,34 @@ jobs:
           xdotool key --clearmodifiers Return
           sleep 1.2
           capture diagnostics-ready-dark
+
+          # The diagnostics surface is intentionally dense. Audit the compact layout
+          # and the maximum Stress plan instead of only the lightest profile.
+          wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics' -e 0,100,70,1000,840
+          capture diagnostics-ready-1000x840-dark
+          wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          navigate_palette 'select stress'
+          capture diagnostics-stress-ready-dark
+          navigate_palette 'use worker download path'
+          capture diagnostics-stress-worker-path-dark
+          navigate_palette 'select connection'
+          navigate_palette 'use automatic download path'
+
+          # Normal Run Diagnostics preflight now carries actual R2/Worker availability
+          # in addition to endpoint, network, edge, latency, and interface data.
+          for attempt in {1..24}; do
+            if grep -Fq '"downloadPath":{"requestedPath":"automatic"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 24 )); then
+              echo "Run Diagnostics preflight did not return download-path status."
+              tail -180 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.5
+          done
 
           # Advanced has two real concepts: Test configuration and LAN tools.
           open_palette
@@ -166,6 +201,7 @@ jobs:
           capture command-palette-capacity-filtered
           xdotool key --clearmodifiers Return
           sleep 0.35
+          navigate_palette 'run diagnostics'
           capture diagnostics-running-early
           sleep 1.3
           capture diagnostics-running-later
@@ -199,13 +235,48 @@ jobs:
             sleep 1
           done
 
+          navigate_palette 'run diagnostics'
           capture diagnostics-result-dark
 
+          # Automatic must record the requested and actual delivery path rather than
+          # presenting the selector as a decorative control.
+          for attempt in {1..20}; do
+            if grep -Fq '"downloadDelivery":{"requestedPath":"automatic"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 20 )); then
+              echo "Automatic run did not record download delivery data."
+              tail -180 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.25
+          done
+
+          # Worker is a second real execution path. Run the same lightweight profile
+          # through it and verify the completed report says Worker was actually used.
+          navigate_palette 'use worker download path'
+          capture diagnostics-worker-ready-dark
+          navigate_palette 'run connection check'
+          for attempt in {1..90}; do
+            if grep -Fq '"downloadDelivery":{"requestedPath":"worker","selectedPath":"worker"' /tmp/desktop-app.log; then
+              break
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            if (( attempt == 90 )); then
+              echo "Worker Connection Check did not complete through the Worker path."
+              tail -220 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          navigate_palette 'run diagnostics'
+          capture diagnostics-worker-result-dark
+
           # The completed report must feed capacity history and stay linked from Health.
-          open_palette
-          xdotool type --delay 35 'health'
-          xdotool key --clearmodifiers Return
-          sleep 1.5
+          navigate_palette 'health'
           capture live-health-capacity-measured-dark
 
           # Issues & alerts is a first-class top-bar workspace rather than a long inline
@@ -231,8 +302,8 @@ jobs:
 
           test -d "$reports_dir"
           report_count=$(find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' | wc -l)
-          if (( report_count < 1 )); then
-            echo "Connection Check completed without persisting a report."
+          if (( report_count < 2 )); then
+            echo "Both Automatic and Worker Connection Checks were expected to persist reports."
             find "$HOME/.local/share/NetworkDiagnostics" -maxdepth 3 -type f -print || true
             exit 1
           fi
