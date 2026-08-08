@@ -1,0 +1,48 @@
+name: One-time sync creamier dark neutrals
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.head_ref == 'agent/sync-creamier-dark-neutrals'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Advance shared design-system pin
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          sha = '45b70e02c9ef1f7c9a6f915069950cdd620cfef1'
+          lock_path = Path('design-system.lock.json')
+          lock = json.loads(lock_path.read_text())
+          lock['sourceCommit'] = sha
+          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
+          source = Path('src/design-system/SOURCE.md')
+          text = source.read_text()
+          import re
+          text = re.sub(r'Source commit: [0-9a-f]{40}', f'Source commit: {sha}', text)
+          source.write_text(text)
+          PY
+          npm run design-system:sync
+          npm run design-system:check
+          npm run design-system:integration
+      - name: Commit synced assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-time-sync-creamier-dark-neutrals.yml
+          git add design-system.lock.json src/design-system
+          git commit -m "Sync creamier dark neutral tokens"
+          git push
