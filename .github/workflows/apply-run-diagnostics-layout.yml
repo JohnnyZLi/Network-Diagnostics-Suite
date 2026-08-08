@@ -1,0 +1,40 @@
+name: Apply Run Diagnostics structure patch
+
+on:
+  push:
+    branches:
+      - agent/desktop-photino-rebuild
+    paths:
+      - .github/workflows/apply-run-diagnostics-layout.yml
+      - tools/NetworkDiagnostics.Desktop/frontend/App.run-details.patch
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Apply Run Diagnostics structure patch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: agent/desktop-photino-rebuild
+          fetch-depth: 0
+
+      - name: Apply launcher structure patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check tools/NetworkDiagnostics.Desktop/frontend/App.run-details.patch
+          git apply tools/NetworkDiagnostics.Desktop/frontend/App.run-details.patch
+
+      - name: Commit patched App.tsx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/NetworkDiagnostics.Desktop/frontend/src/App.tsx
+          git commit -m 'Rebuild Run Diagnostics control surface [skip ci]'
+          git push origin HEAD:agent/desktop-photino-rebuild
