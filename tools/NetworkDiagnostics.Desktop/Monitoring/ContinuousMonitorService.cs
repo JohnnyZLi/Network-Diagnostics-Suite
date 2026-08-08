@@ -21,6 +21,7 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
     private DateTimeOffset? startedAt;
     private DateTimeOffset? lastContentSpeedDueRaised;
     private bool loaded;
+    private volatile bool diagnosticActivity;
 
     public ContinuousMonitorService(string rootDirectory, HttpMessageHandler? handler = null)
     {
@@ -35,6 +36,12 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
     public event EventHandler<MonitorContentSpeedDueEventArgs>? ContentSpeedDue;
 
     public MonitorSnapshot Snapshot { get; private set; } = MonitorSnapshot.Stopped;
+
+    public void SetDiagnosticActivity(bool active)
+    {
+        diagnosticActivity = active;
+        Publish(IsRunning, active ? "Monitoring is active during controlled diagnostic load" : Snapshot.StatusMessage);
+    }
 
     public async Task StartAsync(MonitorOptions nextOptions, CancellationToken cancellationToken = default)
     {
@@ -178,17 +185,27 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
             if (activeOptions is null || !activeOptions.Enabled) break;
 
             var sample = await ProbeAsync(activeOptions, cancellationToken);
+            if (diagnosticActivity)
+            {
+                sample = sample with { IsDiagnosticLoad = true };
+            }
+
             var previous = samples
-                .Where(item => !item.IsSpeedMeasurement)
+                .Where(item => !item.IsSpeedMeasurement && !item.IsDiagnosticLoad)
                 .OrderByDescending(item => item.Timestamp)
                 .FirstOrDefault();
             var previousScore = CurrentFiveMinuteScore(activeOptions);
 
             await AddSampleAsync(sample, cancellationToken);
-            await DetectTransitionAlertsAsync(previous, sample, previousScore, activeOptions, cancellationToken);
-            Publish(true, sample.State == MonitorSampleState.Unresponsive
-                ? "Endpoint is currently unreachable"
-                : "Monitoring is active");
+            if (!sample.IsDiagnosticLoad)
+            {
+                await DetectTransitionAlertsAsync(previous, sample, previousScore, activeOptions, cancellationToken);
+            }
+            Publish(true, sample.IsDiagnosticLoad
+                ? "Monitoring is active during controlled diagnostic load"
+                : sample.State == MonitorSampleState.Unresponsive
+                    ? "Endpoint is currently unreachable"
+                    : "Monitoring is active");
             RaiseContentSpeedDueIfNeeded(activeOptions);
 
             try
@@ -242,7 +259,7 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
         }
 
         var recentLatency = samples
-            .Where(item => !item.IsSpeedMeasurement && item.LatencyMs is not null)
+            .Where(item => !item.IsSpeedMeasurement && !item.IsDiagnosticLoad && item.LatencyMs is not null)
             .OrderByDescending(item => item.Timestamp)
             .Take(5)
             .Select(item => item.LatencyMs!.Value)
@@ -285,6 +302,8 @@ public sealed class ContinuousMonitorService : IAsyncDisposable
         MonitorOptions activeOptions,
         CancellationToken cancellationToken)
     {
+        if (current.IsDiagnosticLoad) return;
+
         if (previous is not null)
         {
             if (previous.State != MonitorSampleState.Unresponsive
