@@ -56,7 +56,7 @@ body::after,
 .site-header .wordmark {
   grid-column: 1;
   gap: 10px;
-  align-items: baseline;
+  align-items: center;
   color: var(--jl-color-ink);
   font-family: var(--jl-font-ui);
   font-size: 1.125rem;
@@ -68,7 +68,7 @@ body::after,
 
 .site-header .wordmark__product {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   color: var(--jl-color-muted);
   font-weight: 650;
   white-space: nowrap;
