@@ -27,6 +27,16 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run design-system:update
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          lock = json.loads(Path("design-system.lock.json").read_text(encoding="utf-8"))
+          path = Path("src/design-system/SOURCE.md")
+          text = path.read_text(encoding="utf-8")
+          text = re.sub(r"Source commit: [0-9a-f]+", f"Source commit: {lock['sourceCommit']}", text, count=1)
+          text = re.sub(r"Version: \d+\.\d+\.\d+", f"Version: {lock['version']}", text, count=1)
+          path.write_text(text, encoding="utf-8")
+          PY
       - name: Synchronize and pre-commit validate
         run: |
           npm run design-system:sync
