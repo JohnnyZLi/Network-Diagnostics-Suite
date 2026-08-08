@@ -37,14 +37,14 @@ public static class DiagnosticReportPresenter
             ConnectionCheckOutcome.Problematic => actionable.Any(item => item.Severity == "critical")
                 ? "Significant problem detected"
                 : "Problem detected",
-            ConnectionCheckOutcome.Inconclusive => hasSectionFailure ? "Completed with partial evidence" : "Result is inconclusive",
+            ConnectionCheckOutcome.Inconclusive => hasSectionFailure ? "Completed with partial data" : "Result is inconclusive",
             ConnectionCheckOutcome.Unavailable => "Partially measured",
             _ => "Test did not complete"
         };
         var verdict = outcome switch
         {
             ConnectionCheckOutcome.Healthy => $"{profileName} completed without an obvious problem.",
-            ConnectionCheckOutcome.Problematic => $"{profileName} found evidence worth investigating.",
+            ConnectionCheckOutcome.Problematic => $"{profileName} found a problem worth investigating.",
             ConnectionCheckOutcome.Inconclusive when hasSectionFailure => $"{profileName} preserved its completed Internet measurements.",
             ConnectionCheckOutcome.Inconclusive => $"{profileName} found a weak or inconsistent signal.",
             ConnectionCheckOutcome.Unavailable => $"{profileName} did not contain supported performance measurements.",
@@ -70,7 +70,7 @@ public static class DiagnosticReportPresenter
                 new FindingPresentation(
                     "Measurement",
                     "No supported finding was available",
-                    "The report remains available in Technical evidence for manual inspection.")
+                    "The report remains available in Technical data for manual inspection.")
             ];
         }
 
@@ -143,38 +143,48 @@ public static class DiagnosticReportPresenter
 
     private static IReadOnlyList<MetricPresentation> Metrics(NetworkDiagnosticsReportV2 report)
     {
-        if (report.InternetTransfer is { } internet)
-        {
-            return
-            [
-                new("Latency", Milliseconds(internet.IdleLatency.MedianMs), "Median first-party HTTP latency", internet.IdleLatency.MedianMs is not null),
-                new("Request loss", Percent(internet.IdleLatency.LossPercent), $"{internet.IdleLatency.Received} of {internet.IdleLatency.Sent} responses"),
-                new("Download", Megabits(internet.Download.SteadyMbps), internet.Download.Qualification),
-                new("Upload", Megabits(internet.Upload.SteadyMbps), internet.Upload.Qualification)
-            ];
-        }
-
-        if (report.DeepDiagnostics is { } deep)
-        {
-            var fastestDns = deep.DnsResolvers
-                .Where(item => item.MedianMs is not null)
-                .OrderBy(item => item.MedianMs)
-                .FirstOrDefault();
-            return
-            [
-                new("Gateway", Milliseconds(deep.GatewayPing?.Statistics.MedianMs), "Local gateway median", deep.GatewayPing?.Statistics.MedianMs is not null),
-                new("Internet", Milliseconds(deep.InternetPing.Statistics.MedianMs), "Public target median", deep.InternetPing.Statistics.MedianMs is not null),
-                new("DNS", Milliseconds(fastestDns?.MedianMs), fastestDns is null ? "Not measured" : $"Fastest · {fastestDns.Name}", fastestDns is not null),
-                new("Wi-Fi", deep.Wifi?.SignalPercent is int signal ? $"{signal}%" : "Not measured", "Operating-system signal estimate", deep.Wifi?.SignalPercent is not null)
-            ];
-        }
+        var internet = report.InternetTransfer;
+        var deep = report.DeepDiagnostics;
+        var measurement = report.Measurement;
+        var single = internet?.FlowMeasurements.FirstOrDefault(item => item.Strategy == TransferStrategy.Single);
+        var aggregate = internet?.FlowMeasurements.FirstOrDefault(item => item.Strategy == TransferStrategy.Aggregate);
+        var fastestDns = deep?.DnsResolvers
+            .Where(item => item.MedianMs is not null)
+            .OrderBy(item => item.MedianMs)
+            .FirstOrDefault();
+        var reachableServices = deep?.ServiceEndpoints.Count(item => item.Reachable);
+        var totalServices = deep?.ServiceEndpoints.Count;
+        var traceHops = deep?.TraceRoute.Hops.Count;
+        var preflight = measurement?.SelectedEndpoint.PreflightLatencyMs;
+        var retransmission = report.HostResources?.TcpRetransmissionPercent;
 
         return
         [
-            new("Latency", "Not measured", "No supported latency section", false),
-            new("Request loss", "Not measured", "No supported reliability section", false),
-            new("Download", "Not measured", "No supported transfer section", false),
-            new("Upload", "Not measured", "No supported transfer section", false)
+            new("Latency", Milliseconds(internet?.IdleLatency.MedianMs), "Median first-party HTTP latency", internet?.IdleLatency.MedianMs is not null),
+            new("Jitter", Milliseconds(internet?.IdleLatency.JitterMs), "Idle HTTP latency variation", internet?.IdleLatency.JitterMs is not null),
+            new("Request loss", internet is null ? "Not measured" : Percent(internet.IdleLatency.LossPercent), internet is null ? "No Internet transfer section" : $"{internet.IdleLatency.Received} of {internet.IdleLatency.Sent} responses", internet is not null),
+            new("Download", internet is null ? "Not measured" : Megabits(internet.Download.SteadyMbps), internet?.Download.Qualification ?? "No transfer measurement", internet is not null),
+            new("Download peak", internet is null ? "Not measured" : Megabits(internet.Download.PeakMbps), "Highest observed download interval", internet is not null),
+            new("Download stability", internet is null ? "Not measured" : Percent(internet.Download.StabilityPercent), "Steady-rate consistency", internet is not null),
+            new("Loaded download", Milliseconds(internet?.DownloadLatency.IncreaseMs), "Latency increase while downloading", internet?.DownloadLatency.IncreaseMs is not null),
+            new("Upload", internet is null ? "Not measured" : Megabits(internet.Upload.SteadyMbps), internet?.Upload.Qualification ?? "No transfer measurement", internet is not null),
+            new("Loaded upload", Milliseconds(internet?.UploadLatency.IncreaseMs), "Latency increase while uploading", internet?.UploadLatency.IncreaseMs is not null),
+            new("Data used", internet is null ? "Not measured" : FormatBytes(internet.DataUsedBytes), "Measured transfer payload", internet is not null),
+            new("Single-flow download", single?.Download is null ? "Not measured" : Megabits(single.Download.SteadyMbps), single?.Download is null ? "Selected topology did not measure a single flow" : "One connection", single?.Download is not null),
+            new("Aggregate download", aggregate?.Download is null ? "Not measured" : Megabits(aggregate.Download.SteadyMbps), aggregate?.Download is null ? "Selected topology did not measure parallel flows" : $"{aggregate.Connections} parallel connections", aggregate?.Download is not null),
+            new("Endpoint preflight", Milliseconds(preflight), measurement is null ? "No endpoint preflight data" : $"{measurement.SelectedEndpoint.Name} · {measurement.SelectedEndpoint.Provider}", preflight is not null),
+            new("HTTP/3", measurement?.Http3 is null ? "Not measured" : measurement.Http3.Supported ? "Available" : "Unavailable", "Exact-version protocol probe", measurement?.Http3?.Attempted == true),
+            new("Gateway", Milliseconds(deep?.GatewayPing?.Statistics.MedianMs), "Default gateway median", deep?.GatewayPing?.Statistics.MedianMs is not null),
+            new("Internet ICMP", Milliseconds(deep?.InternetPing.Statistics.MedianMs), "Public target median", deep?.InternetPing.Statistics.MedianMs is not null),
+            new("DNS", Milliseconds(fastestDns?.MedianMs), fastestDns is null ? "Not measured" : $"Fastest · {fastestDns.Name}", fastestDns is not null),
+            new("Path MTU", deep?.PathMtu.EstimatedIpv4Mtu is int mtu ? $"{mtu} bytes" : "Not measured", deep?.PathMtu.Status ?? "No path MTU measurement", deep?.PathMtu.EstimatedIpv4Mtu is not null),
+            new("Service reachability", reachableServices is null || totalServices is null ? "Not measured" : $"{reachableServices}/{totalServices}", "Common TLS endpoints reachable", reachableServices is not null),
+            new("Traceroute", traceHops is null ? "Not measured" : $"{traceHops} hops", deep?.TraceRoute.ReachedDestination == true ? "Destination reached" : deep is null ? "No traceroute measurement" : "Destination not reached", traceHops is not null),
+            new("Wi-Fi signal", deep?.Wifi?.SignalPercent is int signal ? $"{signal}%" : "Not measured", "Operating-system signal estimate", deep?.Wifi?.SignalPercent is not null),
+            new("LAN download", deep?.LocalLink is null ? "Not measured" : Megabits(deep.LocalLink.DownloadMbps), deep?.LocalLink is null ? "No LAN peer configured" : $"{deep.LocalLink.Concurrency} parallel streams", deep?.LocalLink is not null),
+            new("LAN upload", deep?.LocalLink is null ? "Not measured" : Megabits(deep.LocalLink.UploadMbps), deep?.LocalLink is null ? "No LAN peer configured" : $"{deep.LocalLink.Concurrency} parallel streams", deep?.LocalLink is not null),
+            new("Process CPU", report.HostResources is null ? "Not measured" : Percent(report.HostResources.ProcessCpuPercent), "Diagnostic process CPU share", report.HostResources is not null),
+            new("TCP retransmission", retransmission is null ? "Not measured" : Percent(retransmission.Value), retransmission is null ? "Operating-system counter unavailable" : $"{report.HostResources!.TcpSegmentsRetransmitted} of {report.HostResources.TcpSegmentsSent} sent segments", retransmission is not null)
         ];
     }
 
@@ -182,7 +192,7 @@ public static class DiagnosticReportPresenter
         NetworkDiagnosticsReportV2 report,
         IReadOnlyList<DiagnosticFinding> findings)
     {
-        var evidence = new List<string>
+        var data = new List<string>
         {
             $"Report ID: {report.Run.Id}",
             $"Profile: {DesktopSettingsId(report.Run.Profile)}",
@@ -193,81 +203,88 @@ public static class DiagnosticReportPresenter
         };
         if (report.Annotations is { } annotations)
         {
-            if (!string.IsNullOrWhiteSpace(annotations.Label)) evidence.Add($"Report label: {annotations.Label}");
-            if (annotations.Tags.Count > 0) evidence.Add($"Report tags: {string.Join(", ", annotations.Tags)}");
+            if (!string.IsNullOrWhiteSpace(annotations.Label)) data.Add($"Report label: {annotations.Label}");
+            if (annotations.Tags.Count > 0) data.Add($"Report tags: {string.Join(", ", annotations.Tags)}");
         }
         if (report.InternetTransfer is { } internet)
         {
-            evidence.Add($"Measured payload: {FormatBytes(internet.DataUsedBytes)}");
-            evidence.Add($"Endpoint origin: {internet.Origin}");
+            data.Add($"Measured payload: {FormatBytes(internet.DataUsedBytes)}");
+            data.Add($"Endpoint origin: {internet.Origin}");
+            if (internet.DownloadDelivery is { } delivery)
+            {
+                data.Add($"Download path: requested {UserDownloadPath(delivery.RequestedPath)} · actual {UserDownloadPath(delivery.SelectedPath)}");
+                data.Add($"R2 status: {UserStatus(delivery.R2ProbeStatus)} · R2 requests {delivery.R2Requests} · Worker requests {delivery.WorkerRequests}");
+                data.Add($"Download requests: {delivery.RequestsCompleted} of {delivery.RequestsStarted} completed");
+                if (!string.IsNullOrWhiteSpace(delivery.FallbackReason)) data.Add($"Download fallback: {delivery.FallbackReason}");
+            }
         }
         if (report.Measurement is { } measurement)
         {
-            evidence.Add($"Selected endpoint: {measurement.SelectedEndpoint.Name} · {measurement.SelectedEndpoint.Provider}");
-            evidence.Add($"Endpoint selection: {measurement.SelectedEndpoint.SelectionReason}");
+            data.Add($"Selected endpoint: {measurement.SelectedEndpoint.Name} · {measurement.SelectedEndpoint.Provider}");
+            data.Add($"Endpoint selection: {measurement.SelectedEndpoint.SelectionReason}");
             if (measurement.SelectedEndpoint.PreflightLatencyMs is { } preflight)
             {
-                evidence.Add($"Endpoint preflight median: {preflight.ToString("0.0", CultureInfo.InvariantCulture)} ms");
+                data.Add($"Endpoint preflight median: {preflight.ToString("0.0", CultureInfo.InvariantCulture)} ms");
             }
-            evidence.Add($"Capabilities: {string.Join(", ", measurement.Capabilities)}");
+            data.Add($"Capabilities: {string.Join(", ", measurement.Capabilities.Select(UserCapabilityLabel))}");
         }
         if (report.DualStack is { } dualStack)
         {
-            evidence.Add($"Address-family probe: {dualStack.Status} · preferred {dualStack.PreferredFamily}");
-            evidence.Add($"Dual-stack DNS: {Milliseconds(dualStack.DnsResolutionMs)} · {dualStack.Ipv4AddressCount} IPv4 · {dualStack.Ipv6AddressCount} IPv6 addresses");
+            data.Add($"Address-family probe: {dualStack.Status} · preferred {dualStack.PreferredFamily}");
+            data.Add($"Dual-stack DNS: {Milliseconds(dualStack.DnsResolutionMs)} · {dualStack.Ipv4AddressCount} IPv4 · {dualStack.Ipv6AddressCount} IPv6 addresses");
             if (dualStack.ParallelConnectWinner is { } winner)
             {
-                evidence.Add($"Parallel family winner: {winner} · difference {Milliseconds(dualStack.ParallelConnectDifferenceMs)}");
+                data.Add($"Parallel family winner: {winner} · difference {Milliseconds(dualStack.ParallelConnectDifferenceMs)}");
             }
-            evidence.Add($"IPv4: {FamilyEvidence(dualStack.Ipv4)}");
-            evidence.Add($"IPv6: {FamilyEvidence(dualStack.Ipv6)}");
-            if (dualStack.Nat64Suspected) evidence.Add("NAT64/DNS64: suspected from the resolved IPv6 prefix");
+            data.Add($"IPv4: {FamilyEvidence(dualStack.Ipv4)}");
+            data.Add($"IPv6: {FamilyEvidence(dualStack.Ipv6)}");
+            if (dualStack.Nat64Suspected) data.Add("NAT64/DNS64: suspected from the resolved IPv6 prefix");
         }
         if (report.LoadLocalization is { } localization)
         {
-            evidence.Add($"Loaded path localization: {localization.Status} · {localization.LikelyBoundary ?? "no clear boundary"}");
-            evidence.Add($"Loaded path summary: {localization.Summary}");
+            data.Add($"Loaded path localization: {localization.Status} · {localization.LikelyBoundary ?? "no clear boundary"}");
+            data.Add($"Loaded path summary: {localization.Summary}");
             foreach (var target in localization.Targets)
             {
-                evidence.Add($"{target.Label}: idle {Milliseconds(target.Idle.MedianMs)} · download {Milliseconds(target.Download.MedianMs)} · upload {Milliseconds(target.Upload.MedianMs)}");
+                data.Add($"{target.Label}: idle {Milliseconds(target.Idle.MedianMs)} · download {Milliseconds(target.Download.MedianMs)} · upload {Milliseconds(target.Upload.MedianMs)}");
             }
         }
         if (report.NetworkChange is { } networkChange)
         {
-            evidence.Add($"Network state: {(networkChange.Changed ? "changed during run" : "stable during run")}");
-            evidence.Add($"Captive portal: {(networkChange.CaptivePortalSuspected ? "suspected" : "not detected")}");
-            if (networkChange.Before.Proxy is { } proxy) evidence.Add($"System proxy: {proxy}");
+            data.Add($"Network state: {(networkChange.Changed ? "changed during run" : "stable during run")}");
+            data.Add($"Captive portal: {(networkChange.CaptivePortalSuspected ? "suspected" : "not detected")}");
+            if (networkChange.Before.Proxy is { } proxy) data.Add($"System proxy: {proxy}");
             if (networkChange.Before.TunnelInterfaces.Count > 0)
             {
-                evidence.Add($"Tunnel interfaces: {string.Join(", ", networkChange.Before.TunnelInterfaces)}");
+                data.Add($"Tunnel interfaces: {string.Join(", ", networkChange.Before.TunnelInterfaces)}");
             }
             if (networkChange.PublicNetworkBefore is { } before)
             {
-                evidence.Add($"Public path before: {PublicNetworkEvidence(before)}");
+                data.Add($"Public path before: {PublicNetworkEvidence(before)}");
             }
             if (networkChange.PublicNetworkAfter is { } after)
             {
-                evidence.Add($"Public path after: {PublicNetworkEvidence(after)}");
+                data.Add($"Public path after: {PublicNetworkEvidence(after)}");
             }
-            foreach (var change in networkChange.Changes) evidence.Add($"Network change: {change}");
+            foreach (var change in networkChange.Changes) data.Add($"Network change: {change}");
         }
         if (report.HostResources is { } resources)
         {
-            evidence.Add($"Diagnostic process CPU: {Percent(resources.ProcessCpuPercent)}");
-            evidence.Add($"Peak working set: {FormatBytes(resources.PeakWorkingSetBytes)}");
+            data.Add($"Diagnostic process CPU: {Percent(resources.ProcessCpuPercent)}");
+            data.Add($"Peak working set: {FormatBytes(resources.PeakWorkingSetBytes)}");
             if (resources.TcpRetransmissionPercent is { } retransmission)
             {
-                evidence.Add($"TCP retransmissions: {resources.TcpSegmentsRetransmitted} of {resources.TcpSegmentsSent} sent segments · {Percent(retransmission)}");
+                data.Add($"TCP retransmissions: {resources.TcpSegmentsRetransmitted} of {resources.TcpSegmentsSent} sent segments · {Percent(retransmission)}");
             }
             var memoryPressure = MemoryPressurePercent(resources);
-            if (memoryPressure is not null) evidence.Add($"Runtime-reported memory pressure: {Percent(memoryPressure.Value)} of high-load threshold");
+            if (memoryPressure is not null) data.Add($"Runtime-reported memory pressure: {Percent(memoryPressure.Value)} of high-load threshold");
             foreach (var item in resources.Interfaces.Where(HasCounterIssue))
             {
-                evidence.Add($"{item.Name} counters: errors {item.IncomingErrors + item.OutgoingErrors} · discards {item.IncomingDiscards + item.OutgoingDiscards}");
+                data.Add($"{item.Name} counters: errors {item.IncomingErrors + item.OutgoingErrors} · discards {item.IncomingDiscards + item.OutgoingDiscards}");
             }
         }
-        evidence.Add($"Findings: {findings.Count}");
-        return evidence;
+        data.Add($"Findings: {findings.Count}");
+        return data;
     }
 
     private static bool HasCounterIssue(InterfaceCounterDelta item) =>
@@ -317,10 +334,25 @@ public static class DiagnosticReportPresenter
     private static string NextHealthyAction(TestProfileId profile) => profile switch
     {
         TestProfileId.ConnectionCheck => "Run Quick when you want a broader performance snapshot.",
-        TestProfileId.Quick => "Save this report as a baseline, or run Full when you need local-path evidence.",
+        TestProfileId.Quick => "Save this report as a baseline, or run Full when you need local-path data.",
         TestProfileId.Standard => "Save this report and compare it with another Full run if the issue returns.",
         _ => "Save this Stress report as a baseline before changing network conditions."
     };
+
+    private static string UserCapabilityLabel(string value) =>
+        value.Replace("-evidence", "-data", StringComparison.OrdinalIgnoreCase);
+
+    private static string UserDownloadPath(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "direct-r2" => "Direct R2",
+        "worker" => "Worker",
+        "mixed" => "R2 to Worker",
+        "automatic" => "Automatic",
+        _ => value
+    };
+
+    private static string UserStatus(string value) =>
+        string.Join(' ', value.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
 
     private static int SeverityRank(string severity) => severity switch
     {
