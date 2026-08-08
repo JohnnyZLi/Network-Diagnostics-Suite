@@ -4,6 +4,7 @@ import './monitor.css';
 import './workbench.css';
 
 export type MonitorWindow = '1m' | '5m' | '1h' | '24h' | '7d';
+type TimelineMetric = 'latency' | 'jitter' | 'loss';
 
 type MonitorMetric = { label: string; value: string };
 type MonitorComponent = {
@@ -77,6 +78,20 @@ const windows: Array<{ id: MonitorWindow; label: string }> = [
   { id: '7d', label: '7 days' },
 ];
 
+const timelineMetrics: Array<{ id: TimelineMetric; label: string }> = [
+  { id: 'latency', label: 'Latency' },
+  { id: 'jitter', label: 'Jitter' },
+  { id: 'loss', label: 'Loss' },
+];
+
+const windowDurationMs: Record<MonitorWindow, number> = {
+  '1m': 60_000,
+  '5m': 5 * 60_000,
+  '1h': 60 * 60_000,
+  '24h': 24 * 60 * 60_000,
+  '7d': 7 * 24 * 60 * 60_000,
+};
+
 export function ContinuousDiagnostics({
   snapshot,
   loading,
@@ -105,6 +120,7 @@ export function ContinuousDiagnostics({
   const [busy, setBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>('latency');
 
   async function request(method: string, payload: Record<string, unknown> = {}) {
     setBusy(true);
@@ -179,6 +195,7 @@ export function ContinuousDiagnostics({
 
   const range = snapshot ? timelineSummary(snapshot.timeline) : null;
   const recommendation = snapshot ? healthRecommendation(snapshot) : null;
+  const latestTimelineValue = snapshot ? latestMetricValue(snapshot.timeline, timelineMetric) : null;
 
   return (
     <section id="live-network-health" className="workbench-section live-health-section" aria-labelledby="live-health-title">
@@ -260,7 +277,7 @@ export function ContinuousDiagnostics({
 
           <div className="live-timeline-section">
             <div className="live-timeline-heading">
-              <div><strong>Connection timeline</strong><span>{snapshot.timeline.length} samples · response state</span></div>
+              <div><strong>Connection timeline</strong><span>{snapshot.timeline.length} samples · latency, jitter, loss & response state</span></div>
               <div className="monitor-window-control" aria-label="Monitoring history window">
                 {windows.map((item) => (
                   <button
@@ -273,16 +290,43 @@ export function ContinuousDiagnostics({
                 ))}
               </div>
             </div>
-            {range && <div className="timeline-range-summary"><strong>{range.samples} samples</strong><span>{range.degraded} degraded</span><span>{range.outages} outages</span><span>{range.worstLatency}</span>{range.diagnosticLoad > 0 && <span>{range.diagnosticLoad} under diagnostic load</span>}</div>}
+            {range && (
+              <div className="timeline-range-summary">
+                <strong>{range.samples} samples</strong>
+                <span>{range.degraded} degraded</span>
+                <span>{range.outages} outages</span>
+                <span>{range.worstLatency}</span>
+                <span>{range.worstJitter}</span>
+                <span>{range.worstLoss}</span>
+                {range.diagnosticLoad > 0 && <span>{range.diagnosticLoad} under diagnostic load</span>}
+              </div>
+            )}
             {snapshot.timeline.length > 0 ? (
-              <div className="monitor-timeline" aria-label="Connection state timeline">
-                {snapshot.timeline.map((sample, index) => (
-                  <span
-                    key={`${sample.timestamp}-${index}`}
-                    className={`${sample.state}${sample.diagnosticLoad ? ' diagnostic-load' : ''}`}
-                    title={`${formatTime(sample.timestamp)} · ${sample.diagnosticLoad ? 'diagnostic load' : sample.state}${sample.latencyMs == null ? '' : ` · ${formatNumber(sample.latencyMs)} ms`}`}
-                  />
-                ))}
+              <div className="timeline-analysis">
+                <div className="timeline-chart-toolbar">
+                  <div className="timeline-metric-control" aria-label="Timeline metric">
+                    {timelineMetrics.map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={timelineMetric === item.id ? 'active' : ''}
+                        aria-pressed={timelineMetric === item.id}
+                        onClick={() => setTimelineMetric(item.id)}
+                      >{item.label}</button>
+                    ))}
+                  </div>
+                  <div className="timeline-chart-reading">
+                    <span>Latest {timelineMetricLabel(timelineMetric).toLowerCase()}</span>
+                    <strong>{formatTimelineValue(latestTimelineValue, timelineMetric)}</strong>
+                  </div>
+                </div>
+                <TimelineChart samples={snapshot.timeline} window={snapshot.window} metric={timelineMetric} />
+                <div className="timeline-chart-legend" aria-label="Timeline state legend">
+                  <span className="responsive"><i />Responsive</span>
+                  <span className="laggy"><i />Laggy</span>
+                  <span className="unresponsive"><i />Unresponsive</span>
+                  <span className="diagnostic"><i />Diagnostic load</span>
+                </div>
               </div>
             ) : <p className="monitor-muted">The first heartbeat sample will appear after the native monitor reaches its endpoint.</p>}
           </div>
@@ -321,6 +365,192 @@ export function ContinuousDiagnostics({
       )}
     </section>
   );
+}
+
+function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSample[]; window: MonitorWindow; metric: TimelineMetric }) {
+  const width = 1000;
+  const height = 230;
+  const left = 62;
+  const right = 18;
+  const top = 18;
+  const plotBottom = 154;
+  const stateTop = 178;
+  const stateHeight = 13;
+  const timeY = 216;
+  const plotWidth = width - left - right;
+  const plotHeight = plotBottom - top;
+  const timestamps = samples.map((sample) => Date.parse(sample.timestamp));
+  const validTimes = timestamps.filter(Number.isFinite);
+  const latestTime = validTimes.length > 0 ? Math.max(...validTimes) : Date.now();
+  const duration = windowDurationMs[window];
+  const startTime = latestTime - duration;
+  const sparse = samples.length < 8;
+  const values = samples.map((sample) => timelineMetricValue(sample, metric));
+  const finiteValues = values.filter((value): value is number => value != null && Number.isFinite(value));
+  const scaleMax = timelineScaleMax(metric, finiteValues);
+
+  const xFor = (index: number) => {
+    if (sparse) {
+      if (samples.length <= 1) return left + plotWidth;
+      return left + (index / (samples.length - 1)) * plotWidth;
+    }
+    const timestamp = timestamps[index];
+    if (!Number.isFinite(timestamp)) return left + (index / Math.max(1, samples.length - 1)) * plotWidth;
+    const ratio = Math.max(0, Math.min(1, (timestamp - startTime) / duration));
+    return left + ratio * plotWidth;
+  };
+
+  const yFor = (value: number) => top + (1 - Math.max(0, Math.min(1, value / scaleMax))) * plotHeight;
+  let path = '';
+  let penDown = false;
+  const points = samples.map((sample, index) => {
+    const value = values[index];
+    const x = xFor(index);
+    const y = value == null ? null : yFor(value);
+    if (y == null) {
+      penDown = false;
+    } else {
+      path += `${penDown ? ' L' : ' M'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      penDown = true;
+    }
+    return { sample, value, x, y };
+  });
+
+  const stateBlockWidth = samples.length <= 1
+    ? 14
+    : Math.max(5, Math.min(22, (plotWidth / Math.max(1, samples.length)) * .62));
+  const yTicks = [scaleMax, scaleMax / 2, 0];
+  const timeTicks = sparse
+    ? sparseTimeTicks(samples, timestamps, left, plotWidth)
+    : [
+        { x: left, value: startTime },
+        { x: left + plotWidth / 2, value: startTime + duration / 2 },
+        { x: left + plotWidth, value: latestTime },
+      ];
+
+  return (
+    <div className="timeline-chart-frame">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${timelineMetricLabel(metric)} over the selected monitoring window`}>
+        <text x="12" y="17" className="timeline-lane-label">{timelineMetricLabel(metric)}</text>
+        {yTicks.map((tick, index) => {
+          const y = top + (index / 2) * plotHeight;
+          return (
+            <g key={`${tick}-${index}`}>
+              <line x1={left} x2={width - right} y1={y} y2={y} className={`timeline-grid-line ${index === 2 ? 'major' : ''}`} />
+              <text x={left - 10} y={y + 3.5} textAnchor="end" className="timeline-axis-label">{formatTimelineAxis(tick, metric)}</text>
+            </g>
+          );
+        })}
+        <line x1={left} x2={width - right} y1={stateTop + stateHeight / 2} y2={stateTop + stateHeight / 2} className="timeline-state-baseline" />
+        <text x="12" y={stateTop + 10} className="timeline-lane-label">State</text>
+
+        {points.filter((point) => point.sample.state === 'unresponsive').map((point, index) => (
+          <line key={`outage-${index}`} x1={point.x} x2={point.x} y1={top} y2={stateTop + stateHeight} className="timeline-outage-marker" />
+        ))}
+
+        {path && <path d={path} className="timeline-series-line" />}
+
+        {points.map((point, index) => (
+          <g key={`${point.sample.timestamp}-${index}`} className="timeline-point-group">
+            <title>{timelineTooltip(point.sample)}</title>
+            <rect
+              x={point.x - stateBlockWidth / 2}
+              y={stateTop}
+              width={stateBlockWidth}
+              height={stateHeight}
+              rx={Math.min(4, stateBlockWidth / 2)}
+              className={`timeline-state-block ${point.sample.state}`}
+            />
+            {point.y != null && <circle cx={point.x} cy={point.y} r="4.8" className={`timeline-point ${point.sample.state}`} />}
+            {point.y != null && point.sample.diagnosticLoad && <circle cx={point.x} cy={point.y} r="8" className="timeline-diagnostic-ring" />}
+          </g>
+        ))}
+
+        {timeTicks.map((tick, index) => (
+          <text
+            key={`${tick.value}-${index}`}
+            x={tick.x}
+            y={timeY}
+            textAnchor={index === 0 ? 'start' : index === timeTicks.length - 1 ? 'end' : 'middle'}
+            className="timeline-time-label"
+          >{formatTimelineTime(tick.value, window)}</text>
+        ))}
+      </svg>
+      {sparse && <span className="timeline-sparse-note">Sparse baseline · sample spacing expanded for readability</span>}
+    </div>
+  );
+}
+
+function sparseTimeTicks(samples: MonitorTimelineSample[], timestamps: number[], left: number, plotWidth: number) {
+  if (samples.length === 1) {
+    const value = Number.isFinite(timestamps[0]) ? timestamps[0] : Date.now();
+    return [{ x: left + plotWidth, value }];
+  }
+  const indices = [...new Set([0, Math.floor((samples.length - 1) / 2), samples.length - 1])];
+  return indices.map((index) => ({
+    x: left + (index / Math.max(1, samples.length - 1)) * plotWidth,
+    value: Number.isFinite(timestamps[index]) ? timestamps[index] : Date.now(),
+  }));
+}
+
+function timelineMetricValue(sample: MonitorTimelineSample, metric: TimelineMetric): number | null {
+  if (metric === 'latency') return sample.latencyMs ?? null;
+  if (metric === 'jitter') return sample.jitterMs ?? null;
+  return Number.isFinite(sample.packetLossPercent) ? sample.packetLossPercent : null;
+}
+
+function latestMetricValue(samples: MonitorTimelineSample[], metric: TimelineMetric): number | null {
+  for (let index = samples.length - 1; index >= 0; index--) {
+    const value = timelineMetricValue(samples[index], metric);
+    if (value != null && Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function timelineScaleMax(metric: TimelineMetric, values: number[]): number {
+  const maximum = values.length > 0 ? Math.max(...values) : 0;
+  if (metric === 'loss') {
+    const step = maximum <= 5 ? 1 : maximum <= 25 ? 5 : 10;
+    return Math.min(100, Math.max(1, Math.ceil(maximum / step) * step));
+  }
+  if (metric === 'jitter') {
+    const step = maximum <= 50 ? 10 : maximum <= 150 ? 25 : 50;
+    return Math.max(20, Math.ceil(maximum / step) * step);
+  }
+  const step = maximum <= 100 ? 25 : maximum <= 300 ? 50 : 100;
+  return Math.max(50, Math.ceil(maximum / step) * step);
+}
+
+function timelineMetricLabel(metric: TimelineMetric): string {
+  if (metric === 'jitter') return 'Jitter';
+  if (metric === 'loss') return 'Packet loss';
+  return 'Latency';
+}
+
+function formatTimelineValue(value: number | null, metric: TimelineMetric): string {
+  if (value == null) return 'Not measured';
+  return metric === 'loss' ? `${formatNumber(value)}%` : `${formatNumber(value)} ms`;
+}
+
+function formatTimelineAxis(value: number, metric: TimelineMetric): string {
+  return metric === 'loss' ? `${formatNumber(value)}%` : `${formatNumber(value)} ms`;
+}
+
+function formatTimelineTime(value: number, window: MonitorWindow): string {
+  const date = new Date(value);
+  if (window === '7d' || window === '24h') {
+    return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric' });
+  }
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+function timelineTooltip(sample: MonitorTimelineSample): string {
+  const parts = [formatTime(sample.timestamp), labelize(sample.state)];
+  if (sample.latencyMs != null) parts.push(`${formatNumber(sample.latencyMs)} ms latency`);
+  if (sample.jitterMs != null) parts.push(`${formatNumber(sample.jitterMs)} ms jitter`);
+  parts.push(`${formatNumber(sample.packetLossPercent)}% loss`);
+  if (sample.diagnosticLoad) parts.push('controlled diagnostic load');
+  return parts.join(' · ');
 }
 
 function NoAlertSummary({ snapshot }: { snapshot: MonitorSnapshot }) {
@@ -425,13 +655,19 @@ function timelineSummary(samples: MonitorTimelineSample[]) {
   const outages = samples.filter((sample) => sample.state === 'unresponsive').length;
   const diagnosticLoad = samples.filter((sample) => sample.diagnosticLoad).length;
   const latencies = samples.flatMap((sample) => sample.latencyMs == null ? [] : [sample.latencyMs]);
-  const worst = latencies.length > 0 ? Math.max(...latencies) : null;
+  const jitters = samples.flatMap((sample) => sample.jitterMs == null ? [] : [sample.jitterMs]);
+  const losses = samples.map((sample) => sample.packetLossPercent).filter(Number.isFinite);
+  const worstLatency = latencies.length > 0 ? Math.max(...latencies) : null;
+  const worstJitter = jitters.length > 0 ? Math.max(...jitters) : null;
+  const worstLoss = losses.length > 0 ? Math.max(...losses) : null;
   return {
     samples: samples.length,
     degraded,
     outages,
     diagnosticLoad,
-    worstLatency: worst == null ? 'No latency sample' : `${formatNumber(worst)} ms worst latency`,
+    worstLatency: worstLatency == null ? 'No latency sample' : `${formatNumber(worstLatency)} ms max latency`,
+    worstJitter: worstJitter == null ? 'No jitter sample' : `${formatNumber(worstJitter)} ms max jitter`,
+    worstLoss: worstLoss == null ? 'No loss sample' : `${formatNumber(worstLoss)}% max loss`,
   };
 }
 
