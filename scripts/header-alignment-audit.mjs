@@ -32,9 +32,9 @@ try {
       const actions = document.querySelector(".jl-global-header__actions");
       if (![header, identity, owner, separator, product, actions].every((element) => element instanceof HTMLElement)) return null;
 
-      const rect = (element) => element.getBoundingClientRect();
       const centerY = (element) => {
-        const box = rect(element);
+        const box = element.getBoundingClientRect();
+        if (box.width <= 0 || box.height <= 0 || getComputedStyle(element).display === "none") return null;
         return box.top + box.height / 2;
       };
       return {
@@ -48,7 +48,7 @@ try {
       };
     });
 
-    if (!geometry) {
+    if (!geometry || geometry.headerCenter === null || geometry.identityCenter === null || geometry.actionsCenter === null) {
       problems.push(`${name}: header geometry could not be measured.`);
       await context.close();
       continue;
@@ -60,6 +60,7 @@ try {
       ["separator", geometry.separatorCenter],
       ["Network Diagnostics", geometry.productCenter],
     ]) {
+      if (center === null) continue;
       if (Math.abs(center - geometry.actionsCenter) > tolerance) {
         problems.push(`${name}: ${label} is vertically offset from the header controls by ${Math.abs(center - geometry.actionsCenter).toFixed(2)}px.`);
       }
