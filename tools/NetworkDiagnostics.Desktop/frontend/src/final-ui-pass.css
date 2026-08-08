@@ -1,9 +1,8 @@
 /* Final layout corrections for the Photino workbench.
-   Keep diagnostics decision-first, reserve chart annotations their own space,
-   and let active work replace setup controls instead of stacking beneath them. */
+   The desktop diagnostic surface is intentionally information-rich: controls stay
+   direct, the native plan is visible before launch, and measurements are organized
+   instead of being hidden. */
 
-/* Sparse-history copy is explanatory metadata, not plot content. Give it a footer
-   row so it can never collide with the final timestamp. */
 .timeline-sparse-note {
   position: static;
   display: block;
@@ -16,8 +15,6 @@
   pointer-events: none;
 }
 
-/* RUN DIAGNOSTICS is one decision surface. Profile is primary; topology stays
-   visually secondary, but it must remain directly selectable. */
 .diagnostics-workbench .diagnostics-header {
   margin-bottom: 18px;
 }
@@ -26,251 +23,316 @@
   display: none;
 }
 
-.diagnostics-workbench .diagnostic-selector-grid {
-  width: 100%;
-  max-width: none;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  padding: 0;
+.diagnostic-launcher {
   overflow: hidden;
   border: 1px solid var(--line);
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  border-radius: 16px 16px 0 0;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
 }
 
-.diagnostics-workbench .diagnostic-selector-group {
-  min-width: 0;
-  min-height: 0;
+.diagnostic-profile-control {
   display: grid;
-  align-content: start;
   gap: 10px;
-  padding: 18px 20px 15px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  padding: 18px 20px 16px;
 }
 
-.diagnostics-workbench .diagnostic-selector-group > span {
-  display: none;
+.diagnostic-control-label,
+.diagnostic-info-heading > span,
+.result-section-heading > span {
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 850;
+  letter-spacing: .11em;
+  line-height: 1.25;
+  text-transform: uppercase;
 }
 
-.diagnostics-workbench .diagnostic-selector-group > small {
-  min-height: 0;
+.diagnostic-profile-control > p {
+  max-width: 980px;
   margin: 0;
-  overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 
-.diagnostics-workbench .diagnostic-selector-group .method-control {
+.diagnostics-workbench .method-control {
   width: 100%;
   max-width: none;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
+}
+
+.diagnostics-workbench .profile-control {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.diagnostics-workbench .method-control.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 520px);
 }
 
 .diagnostics-workbench .method-control button {
   min-width: 0;
   min-height: 42px;
   height: 42px;
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: 12.5px;
-}
-
-/* Test topology is secondary, not hidden. The native details element remains in
-   the markup for compatibility, but the three topology choices are always exposed
-   so Both / Single / Aggregate are one-click decisions on every platform. */
-.diagnostics-workbench .diagnostic-options {
-  min-width: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--surface-soft) 32%, transparent);
-}
-
-.diagnostics-workbench .diagnostic-options > summary {
-  min-height: 39px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin: 0;
-  padding: 10px 20px 4px;
-  color: var(--muted);
-  font-size: 11.5px;
   font-weight: 700;
-  line-height: 1.3;
-  cursor: default;
-  list-style: none;
-  user-select: none;
-  pointer-events: none;
 }
 
-.diagnostics-workbench .diagnostic-options > summary::-webkit-details-marker {
-  display: none;
+.diagnostic-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
 }
 
-.diagnostics-workbench .diagnostic-options > summary span:last-child {
+.diagnostic-choice-group {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(170px, .72fr) minmax(300px, 1.28fr);
+  align-items: center;
+  gap: 18px;
+  padding: 15px 20px;
+}
+
+.diagnostic-choice-group + .diagnostic-choice-group {
+  border-left: 1px solid var(--line);
+}
+
+.diagnostic-choice-group > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.diagnostic-choice-group > div:first-child small {
   overflow: hidden;
   color: var(--faint);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostic-information-grid {
+  display: grid;
+  grid-template-columns: minmax(270px, .83fr) minmax(295px, .92fr) minmax(390px, 1.25fr);
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-soft) 30%, transparent);
+}
+
+.diagnostic-info-card {
+  min-width: 0;
+  padding: 18px 20px 19px;
+}
+
+.diagnostic-info-card + .diagnostic-info-card {
+  border-left: 1px solid var(--line);
+}
+
+.diagnostic-info-heading,
+.result-section-heading {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.diagnostic-info-heading > strong,
+.result-section-heading > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.diagnostics-workbench .diagnostic-options > summary::after {
-  display: none !important;
-}
-
-.diagnostics-workbench .diagnostic-options[open] > summary {
-  border-bottom: 0;
+.text-action {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
   color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body,
-.diagnostics-workbench .diagnostic-options[open] > .diagnostic-options-body {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 640px);
-  align-items: center;
-  gap: 24px;
-  padding: 6px 20px 16px;
+.text-action:hover:not(:disabled),
+.text-action:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  color: var(--text);
 }
 
-.diagnostics-workbench .diagnostic-options-copy {
-  display: block;
-  max-width: 720px;
-  color: var(--faint);
-  font-size: 11px;
-  font-weight: 550;
-  line-height: 1.45;
+.text-action:disabled {
+  opacity: .55;
+  cursor: default;
 }
 
-.diagnostics-workbench .diagnostic-options .method-control {
-  width: 100%;
-  max-width: none;
+.diagnostic-data-list {
+  margin: 0;
+  padding: 0;
+}
+
+.diagnostic-data-row {
+  min-width: 0;
+  min-height: 34px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
 }
 
-/* Ready is the pre-run information surface. Keep the profile decision above, then
-   show the operational context the user needs before committing to the run. */
+.diagnostic-data-row:first-child {
+  border-top: 0;
+}
+
+.diagnostic-data-row dt,
+.diagnostic-data-row dd {
+  min-width: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.diagnostic-data-row dt {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 560;
+}
+
+.diagnostic-data-row dd {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 720;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interface-row dd {
+  width: min(220px, 100%);
+}
+
+.interface-row select {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 10.8px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+
+.diagnostic-path-note,
+.diagnostic-path-error {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.diagnostic-path-error {
+  color: var(--danger);
+}
+
+.data-collection-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 22px;
+}
+
+.data-collection-group {
+  min-width: 0;
+}
+
+.data-collection-group > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font-size: 9.8px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.data-collection-group ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-collection-group li {
+  position: relative;
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 10.8px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.data-collection-group li::before {
+  content: '';
+  position: absolute;
+  top: .56em;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 70%, var(--muted));
+}
+
 .diagnostics-workbench .diagnostic-run-state.ready {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
   margin: 0;
-  padding: 18px 20px 19px;
-  border-radius: 0 0 14px 14px;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  padding: 14px 20px 15px;
+  border-radius: 0 0 16px 16px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
 }
 
 .diagnostics-workbench .diagnostic-run-state.ready > div:first-child {
   min-width: 0;
-  display: grid;
-  gap: 7px;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .result-label {
-  display: block;
-  margin: 0;
-  color: var(--faint);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  line-height: 1.3;
-  text-transform: uppercase;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready h3 {
-  display: block;
-  margin: 0;
-  color: var(--text);
-  font-size: 17px;
-  line-height: 1.2;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready > div:first-child > p {
-  display: block;
-  max-width: 900px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
-  min-width: 0;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px 22px;
-  margin: 5px 0 0;
-  padding: 0;
-  border: 0;
+  gap: 5px 12px;
 }
 
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span {
-  min-width: 0;
-  display: inline;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--faint);
-  font-size: 11px;
+.diagnostics-workbench .diagnostic-run-state.ready > div:first-child > strong {
+  color: var(--text);
+  font-size: 12.5px;
   line-height: 1.35;
-  white-space: nowrap;
 }
 
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span:nth-child(3) {
-  display: inline;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts b {
-  display: inline;
-  margin: 0 4px 0 0;
-  color: var(--text);
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: inherit;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  margin-top: 2px;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary span {
+.diagnostics-workbench .diagnostic-run-state.ready > div:first-child > span {
   color: var(--faint);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary strong {
-  color: var(--muted);
   font-size: 11px;
-  font-weight: 650;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .diagnostics-workbench .diagnostic-run-button {
@@ -283,93 +345,303 @@
   white-space: nowrap;
 }
 
-/* Active work owns the section. Disabled setup controls add no information and
-   make the run feel like a panel stacked under a form, so remove them while running. */
-.diagnostics-workbench:has(.diagnostic-run-state.running) .diagnostic-selector-grid {
+.diagnostics-workbench:has(.high-data-confirm) .diagnostic-run-state.ready {
   display: none;
 }
 
-.diagnostics-workbench:has(.diagnostic-run-state.running) .diagnostic-run-state.running {
+.high-data-confirm {
+  border-radius: 0 0 16px 16px !important;
+}
+
+.diagnostic-running-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.running {
   margin-top: 0;
 }
 
-/* Once a result exists, setup becomes a separate next-run control rather than part
-   of the result card. Keep it compact so the latest verdict remains dominant. */
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-grid {
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+.diagnostic-run-data-row {
+  margin-top: 0 !important;
+}
+
+.data-card {
+  min-width: 0;
+  padding: 17px 18px;
+  border: 1px solid var(--line);
   border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-group {
-  padding-block: 13px 11px;
+.data-line {
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
 }
 
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-group > small {
+.data-line:nth-child(2) {
+  margin-top: 8px;
+  border-top: 0;
+}
+
+.data-line span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.data-line strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 720;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download-delivery-panel,
+.result-measurements,
+.result-technical-data {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-soft) 45%, transparent);
+}
+
+.download-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+
+.download-delivery-grid > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  background: var(--surface);
+}
+
+.download-delivery-grid span {
+  color: var(--faint);
+  font-size: 9.8px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.download-delivery-grid strong {
+  overflow: hidden;
+  color: var(--text);
   font-size: 11.5px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-options > summary {
-  min-height: 36px;
-  padding-top: 8px;
+.download-delivery-panel > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 10.8px;
+  line-height: 1.45;
 }
 
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-options:not([open]) > .diagnostic-options-body,
-.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-options[open] > .diagnostic-options-body {
-  padding-bottom: 13px;
+.result-measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
 }
 
-@media (max-width: 1100px) {
-  .diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body,
-  .diagnostics-workbench .diagnostic-options[open] > .diagnostic-options-body {
+.result-measurement {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 78px;
+  padding: 11px 12px;
+  background: var(--surface);
+}
+
+.result-measurement > span {
+  color: var(--faint);
+  font-size: 9.8px;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.result-measurement > strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.result-measurement > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.result-measurement.not-measured {
+  opacity: .56;
+}
+
+.result-technical-data {
+  padding: 0;
+  overflow: hidden;
+}
+
+.result-technical-data > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.result-technical-data[open] > summary {
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.result-technical-data ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 14px 18px 16px 34px;
+}
+
+.result-technical-data li {
+  color: var(--muted);
+  font-size: 10.8px;
+  line-height: 1.4;
+}
+
+/* Old diagnostics markup is no longer part of the product surface. Make sure
+   inherited rules cannot reserve space if stale cached markup appears briefly. */
+.diagnostics-workbench .diagnostic-selector-grid,
+.diagnostics-workbench .diagnostic-options,
+.diagnostics-workbench .diagnostic-evidence-summary,
+.diagnostics-workbench .diagnostic-evidence-row,
+.diagnostics-workbench .evidence-card {
+  min-height: 0;
+}
+
+@media (max-width: 1500px) {
+  .diagnostic-information-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .data-collected-card {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    border-left: 0 !important;
+  }
+
+  .data-collection-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .diagnostic-choice-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+  }
+
+  .diagnostic-choice-group + .diagnostic-choice-group {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .result-measurement-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 980px) {
-  .diagnostics-workbench .diagnostic-selector-group > small {
-    white-space: normal;
+  .diagnostic-information-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-info-card + .diagnostic-info-card,
+  .data-collected-card {
+    grid-column: auto;
+    border-top: 1px solid var(--line);
+    border-left: 0 !important;
+  }
+
+  .data-collection-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .diagnostics-workbench .diagnostic-run-state.ready {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
 
   .diagnostics-workbench .diagnostic-run-button {
     width: 100%;
   }
+
+  .download-delivery-grid,
+  .result-measurement-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
-  .diagnostics-workbench .diagnostic-selector-group {
-    padding: 14px;
-  }
-
-  .diagnostics-workbench .diagnostic-selector-group .method-control {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .diagnostics-workbench .diagnostic-options > summary {
+  .diagnostic-profile-control,
+  .diagnostic-choice-group,
+  .diagnostic-info-card {
     padding-inline: 14px;
   }
 
-  .diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body,
-  .diagnostics-workbench .diagnostic-options[open] > .diagnostic-options-body {
-    padding: 6px 14px 14px;
+  .diagnostics-workbench .profile-control {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .diagnostics-workbench .diagnostic-options .method-control {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .diagnostic-choice-group {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .diagnostics-workbench .method-control.compact {
+    width: 100%;
+  }
+
+  .data-collection-groups,
+  .download-delivery-grid,
+  .result-measurement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-data-row {
+    grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+  }
+
+  .interface-row dd {
+    width: 100%;
   }
 
   .diagnostics-workbench .diagnostic-run-state.ready {
-    padding: 15px 14px 16px;
-  }
-
-  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
-    gap: 7px 16px;
+    padding: 13px 14px 14px;
   }
 
   .timeline-chart-frame {
