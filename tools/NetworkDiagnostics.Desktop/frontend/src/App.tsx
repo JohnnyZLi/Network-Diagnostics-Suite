@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AdvancedDiagnostics, type AdvancedRuntimeStatus } from './AdvancedDiagnostics';
+import { AlertsPanel } from './AlertsPanel';
 import { desktopBridge } from './bridge';
 import { CommandPalette, type PaletteCommand } from './CommandPalette';
 import { ContinuousDiagnostics, type MonitorSnapshot } from './ContinuousDiagnostics';
@@ -169,6 +170,7 @@ function App() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [historyInitialReportId, setHistoryInitialReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -361,6 +363,7 @@ function App() {
       } else if (key === 'h') {
         event.preventDefault();
         setPaletteOpen(false);
+        setAlertsOpen(false);
         historyOpen ? setHistoryOpen(false) : openHistory();
       }
     };
@@ -400,6 +403,7 @@ function App() {
   }
 
   function openHistory(reportId: string | null = null) {
+    setAlertsOpen(false);
     setHistoryInitialReportId(reportId);
     setHistoryOpen(true);
     void loadReports();
@@ -515,8 +519,8 @@ function App() {
     {
       id: 'workspace-health',
       title: 'Go to Live Network Health',
-      detail: 'Current score, passive measurements, timeline, capacity history, and alerts.',
-      keywords: 'monitor health timeline alerts continuous live network',
+      detail: 'Current score, passive measurements, timeline, and capacity history.',
+      keywords: 'monitor health timeline continuous live network',
       priority: 1,
       enabled: true,
       run: () => scrollToSection('live-network-health'),
@@ -531,12 +535,21 @@ function App() {
       run: () => scrollToSection('run-diagnostics'),
     },
     {
+      id: 'workspace-alerts',
+      title: 'Open Issues & Alerts',
+      detail: 'Review outages, recoveries, network changes, and degradation events.',
+      keywords: 'alerts issues outage recovery network change events',
+      priority: 3,
+      enabled: desktopBridge.available,
+      run: () => { setHistoryOpen(false); setAlertsOpen(true); },
+    },
+    {
       id: 'workspace-history',
       title: 'Open Saved Runs',
       detail: 'Browse, compare, import, export, and annotate persisted reports.',
       keywords: 'history reports saved runs compare json',
       shortcut: 'Ctrl/⌘ H',
-      priority: 3,
+      priority: 4,
       enabled: desktopBridge.available,
       run: () => openHistory(),
     },
@@ -545,7 +558,7 @@ function App() {
       title: 'Go to Advanced Diagnostics',
       detail: 'Test configuration, native preflight, interface binding, privacy, and LAN tools.',
       keywords: 'advanced endpoint interface lan privacy preflight',
-      priority: 4,
+      priority: 5,
       enabled: true,
       run: () => scrollToSection('advanced-diagnostics'),
     },
@@ -554,7 +567,7 @@ function App() {
       title: running ? 'Diagnostic is already running' : `Run ${selectedProfile.title}`,
       detail: `${methodLabel(method)} using the current native configuration.`,
       keywords: 'run start diagnostic current selected test',
-      priority: 5,
+      priority: 6,
       enabled: desktopBridge.available && !running,
       run: () => { scrollToSection('run-diagnostics'); void prepareDiagnostic(); },
     },
@@ -563,7 +576,7 @@ function App() {
       title: 'Measure Capacity',
       detail: 'Lower-data Connection Check using aggregate transfer flow.',
       keywords: 'content speed aggregate low data bandwidth capacity',
-      priority: 6,
+      priority: 7,
       enabled: desktopBridge.available && !running,
       run: measureCapacity,
     },
@@ -572,7 +585,7 @@ function App() {
       title: 'Measure Peak Capacity',
       detail: 'Stress + Aggregate with plan-based high-data confirmation.',
       keywords: 'peak speed stress aggregate bandwidth capacity',
-      priority: 7,
+      priority: 8,
       enabled: desktopBridge.available && !running,
       run: measurePeakCapacity,
     },
@@ -643,11 +656,23 @@ function App() {
             className={`history-trigger ${historyOpen ? 'active' : ''}`}
             aria-label="Saved runs"
             aria-expanded={historyOpen}
-            onClick={() => historyOpen ? setHistoryOpen(false) : openHistory()}
+            onClick={() => { setAlertsOpen(false); historyOpen ? setHistoryOpen(false) : openHistory(); }}
             disabled={!desktopBridge.available}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg>
             <span>History</span>
+          </button>
+          <button
+            type="button"
+            className={`history-trigger alerts-trigger ${alertsOpen ? 'active' : ''}`}
+            aria-label={monitorSnapshot?.unreadAlertCount ? `Alerts, ${monitorSnapshot.unreadAlertCount} unread` : 'Alerts'}
+            aria-expanded={alertsOpen}
+            onClick={() => { setHistoryOpen(false); setAlertsOpen((current) => !current); }}
+            disabled={!desktopBridge.available}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.8 9.6a5.2 5.2 0 0 1 10.4 0c0 5.2 2.1 5.7 2.1 5.7H4.7s2.1-.5 2.1-5.7Z" /><path d="M10 18.2h4" /></svg>
+            <span>Alerts</span>
+            {!!monitorSnapshot?.unreadAlertCount && <b>{monitorSnapshot.unreadAlertCount > 99 ? '99+' : monitorSnapshot.unreadAlertCount}</b>}
           </button>
           <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} disabled={!desktopBridge.available} />
         </div>
@@ -831,6 +856,13 @@ function App() {
           <b>View</b>
         </button>
       )}
+
+      <AlertsPanel
+        open={alertsOpen}
+        snapshot={monitorSnapshot}
+        onUpdate={setMonitorSnapshot}
+        onClose={() => setAlertsOpen(false)}
+      />
 
       <HistoryPanel
         open={historyOpen}
