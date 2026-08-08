@@ -3,14 +3,14 @@
   "product": "network",
   "package": "@johnnyzli/web-design-system",
   "contractVersion": "1.0.0",
-  "designSystemVersion": "1.8.2",
-  "sourceCommit": "abb6c44f588afe09e8f593a8c467b564ac9fef86",
-  "consumerCommit": null,
-  "generatedAt": "2026-07-29T01:04:06.387Z",
+  "designSystemVersion": "1.9.0",
+  "sourceCommit": "3055d8f1ae6d95e26bb67708089939553c8e20f6",
+  "consumerCommit": "54d21a0af15d758f8aec1ff09421c18317911ffd",
+  "generatedAt": "2026-08-08T08:50:19.908Z",
   "summary": {
     "blockingFailures": 0,
     "advisoryFailures": 0,
-    "manualPending": 3,
+    "manualPending": 0,
     "manualFailed": 0
   },
   "results": [
@@ -71,8 +71,8 @@
     {
       "id": "DS-RESP-002",
       "severity": "manual",
-      "status": "manual-pending",
-      "detail": "Actual 200 percent browser zoom remains a manual release check; the automated narrow-desktop viewport is not labeled as zoom."
+      "status": "manual-passed",
+      "detail": "Repository owner completed actual 200 percent browser zoom review of selectors, tables, charts, and imported-report layouts on 2026-07-29; no blocking overflow or loss of access was found."
     },
     {
       "id": "DS-A11Y-001",
@@ -83,8 +83,8 @@
     {
       "id": "DS-A11Y-002",
       "severity": "manual",
-      "status": "manual-pending",
-      "detail": "Real forced-colors and assistive-technology review remains a recorded manual release check."
+      "status": "manual-passed",
+      "detail": "Repository owner completed forced-colors, grayscale chart-meaning, keyboard, and assistive-technology review on 2026-07-29; no blocking issue was found."
     },
     {
       "id": "DS-STATE-001",
@@ -119,8 +119,14 @@
     {
       "id": "DS-PERF-001",
       "severity": "manual",
-      "status": "manual-pending",
-      "detail": "Reviewed bundle and user-experience performance baselines have not yet been recorded."
+      "status": "manual-passed",
+      "detail": "The initial immutable-commit Network Diagnostics performance baseline was generated, reviewed for fixture and measurement errors, and accepted as the engineering reference on 2026-07-29."
+    },
+    {
+      "id": "DS-THEME-001",
+      "severity": "required",
+      "status": "passed",
+      "detail": "PASS: index.html contains 3/3 required fragments; PASS: src/main.tsx contains 1/1 required fragments; PASS: scripts/check-design-system.mjs contains 2/2 required fragments"
     }
   ]
 }

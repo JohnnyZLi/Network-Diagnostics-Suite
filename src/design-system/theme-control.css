@@ -170,3 +170,52 @@
     color: HighlightText;
   }
 }
+
+/* Keep the complete top bar together while Sites or Settings is open. The
+   outer header stays in flow so opening a disclosure never causes a layout
+   jump; its inner bar and background are what become viewport-fixed. */
+:is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]),
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) {
+  z-index: var(--jl-z-menu);
+}
+
+:is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"])::before,
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before {
+  position: fixed;
+  z-index: calc(var(--jl-z-menu) - 1);
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--jl-layout-header-height);
+  border-bottom: 1px solid var(--jl-color-rule);
+  background: var(--jl-color-canvas);
+  content: "";
+  pointer-events: none;
+}
+
+:is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]) .jl-global-header__inner,
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-global-header__inner {
+  position: fixed;
+  z-index: var(--jl-z-menu);
+  top: 0;
+  right: 0;
+  left: 0;
+  margin-inline: auto;
+}
+
+/* Neutralize the older control-only pin so Sites/Settings remain in their
+   normal place inside the fixed full header instead of floating independently. */
+:is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]) .jl-site-switcher,
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-site-switcher {
+  position: relative;
+  z-index: auto;
+  top: auto;
+  right: auto;
+}
+
+@media (max-width: 560px) {
+  :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"])::before,
+  :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before {
+    height: 68px;
+  }
+}
