@@ -61,7 +61,7 @@ internal static class ProbeProgram
         if (options.IncludeInternetTransfer)
         {
             var plan = NetworkDeepProbe.Planning.NativeTransferPlanBuilder.Build(options.Profile, options.TransferMethod);
-            Console.WriteLine($"Internet transfer: {plan.ProfileName} / {plan.Method} / up to {plan.TransferCapBytes:N0} bytes.");
+            Console.WriteLine($"Internet transfer: {plan.ProfileName} / {plan.Method} / {options.DownloadPath} / up to {plan.TransferCapBytes:N0} bytes.");
         }
         Console.WriteLine();
         var progress = new Progress<string>(message => Console.WriteLine($"  • {message}"));
@@ -118,6 +118,7 @@ internal static class ProbeProgram
         Console.WriteLine("  --internet-transfer   Add profile-driven Internet download/upload measurements");
         Console.WriteLine("  --profile <name>      connection-check, quick, full, or stress (default: connection-check)");
         Console.WriteLine("  --transfer-method <m> compare, single, or aggregate (default: compare)");
+        Console.WriteLine("  --download-path <p>   automatic, direct-r2, or worker (default: automatic)");
         Console.WriteLine("  --test-origin <url>   Endpoint candidate; repeat up to eight times");
         Console.WriteLine();
         Console.WriteLine("Local-link isolation (requires two machines on the same LAN):");
