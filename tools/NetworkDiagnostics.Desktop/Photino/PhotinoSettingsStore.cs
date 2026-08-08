@@ -91,6 +91,23 @@ public sealed class PhotinoSettingsStore
     public PhotinoAppSettings SaveMonitoringWindow(MonitorWindow window) =>
         Update(settings => settings with { MonitoringWindow = window.ContractId() });
 
+    public PhotinoAppSettings SaveExpectedCapacity(double downloadMbps, double uploadMbps)
+    {
+        if (!double.IsFinite(downloadMbps) || downloadMbps is < 1 or > 100_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(downloadMbps), "Expected download must be between 1 and 100,000 Mbps.");
+        }
+        if (!double.IsFinite(uploadMbps) || uploadMbps is < 1 or > 100_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(uploadMbps), "Expected upload must be between 1 and 100,000 Mbps.");
+        }
+        return Update(settings => settings with
+        {
+            ExpectedDownloadMbps = downloadMbps,
+            ExpectedUploadMbps = uploadMbps
+        });
+    }
+
     public PhotinoAppSettings SaveAdvanced(
         IEnumerable<string> endpointCandidates,
         string? interfaceId,
