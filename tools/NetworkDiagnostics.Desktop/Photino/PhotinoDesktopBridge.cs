@@ -140,6 +140,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "diagnostic.describePlan",
                             "diagnostic.preflight",
                             "diagnostic.interfaces",
+                            "diagnostic.download-path",
                             "reports.list",
                             "reports.get",
                             "reports.compare",
@@ -333,6 +334,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         var profile = BridgeProtocol.ParseProfile(request.Payload);
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
+        var downloadPath = BridgeProtocol.ParseDownloadPath(request.Payload);
         var settings = settingsStore.Load();
         var origins = settings.TestOrigins.Count == 0
             ? new[] { new Uri("https://network.johnnyli.dev/") }
@@ -342,7 +344,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
             TransferMethod: method,
             TestOrigins: origins,
             InterfaceId: string.IsNullOrWhiteSpace(settings.InterfaceId) ? null : settings.InterfaceId,
-            IncludeAddresses: settings.IncludeLocalIdentifiers));
+            IncludeAddresses: settings.IncludeLocalIdentifiers,
+            DownloadPath: downloadPath));
         SendResponse(sender, request.Id, true, result);
     }
 
@@ -710,6 +713,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             report = ReportSummary(stored),
             context = ReportComparisonService.ContextLabel(stored.Report),
             method = BridgeProtocol.MethodId(stored.Report.Run.TransferMethod),
+            downloadDelivery = stored.Report.InternetTransfer?.DownloadDelivery,
             presentation = new
             {
                 outcome = presentation.Outcome.ToString().ToLowerInvariant(),
@@ -719,6 +723,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 presentation.NextAction,
                 presentation.Metrics,
                 presentation.Findings,
+                technicalData = presentation.TechnicalEvidence,
                 presentation.TechnicalEvidence
             }
         };
@@ -743,7 +748,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
             requestLossPercent = internet?.IdleLatency.LossPercent,
             downloadMbps = internet?.Download.SteadyMbps,
             uploadMbps = internet?.Upload.SteadyMbps,
-            dataUsedBytes = internet?.DataUsedBytes
+            dataUsedBytes = internet?.DataUsedBytes,
+            requestedDownloadPath = internet?.DownloadDelivery?.RequestedPath,
+            selectedDownloadPath = internet?.DownloadDelivery?.SelectedPath
         };
     }
 
@@ -765,23 +772,46 @@ public sealed class PhotinoDesktopBridge : IDisposable
     {
         var profile = BridgeProtocol.ParseProfile(request.Payload);
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
+        var downloadPath = BridgeProtocol.ParseDownloadPath(request.Payload);
         var plan = NetworkDiagnosticsRunner.DescribePlan(profile, method);
+
+        static object Stage(TransferStagePlan stage) => new
+        {
+            id = stage.Id,
+            direction = stage.Direction.ToString().ToLowerInvariant(),
+            strategy = stage.Strategy.ToString().ToLowerInvariant(),
+            connections = stage.Connections,
+            durationMs = stage.DurationMs,
+            capBytes = stage.CapBytes,
+            samples = stage.Samples
+        };
 
         SendResponse(sender, request.Id, true, new
         {
             profile = BridgeProtocol.ProfileId(profile),
             profileName = plan.ProfileName,
             method = BridgeProtocol.MethodId(method),
+            downloadPath = BridgeProtocol.DownloadPathId(downloadPath),
+            estimatedSeconds = plan.EstimatedSeconds,
             transferCapBytes = plan.TransferCapBytes,
-            downloadStages = plan.DownloadStages.Count,
-            uploadStages = plan.UploadStages.Count
+            includeServices = plan.IncludeServices,
+            deepDiagnostics = profile is TestProfileId.Standard or TestProfileId.Extended,
+            idlePingCount = plan.IdlePingCount,
+            pingIntervalMs = plan.PingIntervalMs,
+            downloadStages = plan.DownloadStages.Select(Stage).ToArray(),
+            uploadStages = plan.UploadStages.Select(Stage).ToArray(),
+            downloadRuns = plan.DownloadStages.Sum(stage => Math.Max(1, stage.Samples)),
+            maxDownloadConnections = plan.DownloadStages.Max(stage => stage.Connections),
+            maxUploadConnections = plan.UploadStages.Max(stage => stage.Connections),
+            totalTransferStages = plan.DownloadStages.Count + plan.UploadStages.Count
         });
     }
 
     private static NativeDiagnosticRunOptions BuildRunOptions(
         PhotinoAppSettings settings,
         TestProfileId profile,
-        TransferMethod method)
+        TransferMethod method,
+        DownloadPathPreference downloadPath)
     {
         var origins = settings.TestOrigins.Count == 0
             ? new[] { new Uri("https://network.johnnyli.dev/") }
@@ -797,7 +827,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
             LanDurationSeconds: settings.LanDurationSeconds,
             LanConnections: settings.LanConnections,
             ProducerApplication: "desktop-photino",
-            ProducerVersion: ApplicationVersion);
+            ProducerVersion: ApplicationVersion,
+            DownloadPath: downloadPath);
     }
 
     private async Task StartDiagnosticAsync(PhotinoWindow sender, BridgeRequest request)
@@ -820,8 +851,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
 
         var profile = BridgeProtocol.ParseProfile(request.Payload);
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
+        var downloadPath = BridgeProtocol.ParseDownloadPath(request.Payload);
         var plan = NetworkDiagnosticsRunner.DescribePlan(profile, method);
-        var runOptions = BuildRunOptions(settingsStore.Load(), profile, method);
+        var runOptions = BuildRunOptions(settingsStore.Load(), profile, method, downloadPath);
         monitorService.SetDiagnosticActivity(true);
 
         SendResponse(sender, request.Id, true, new
@@ -829,6 +861,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             runId = bridgeRunId,
             profile = BridgeProtocol.ProfileId(profile),
             method = BridgeProtocol.MethodId(method),
+            downloadPath = BridgeProtocol.DownloadPathId(downloadPath),
             transferCapBytes = plan.TransferCapBytes
         });
 
@@ -881,6 +914,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 generatedAt = report.GeneratedAt,
                 profile = BridgeProtocol.ProfileId(report.Run.Profile),
                 method = BridgeProtocol.MethodId(method),
+                downloadPath = BridgeProtocol.DownloadPathId(downloadPath),
+                downloadDelivery = internet?.DownloadDelivery,
                 latencyMs = internet?.IdleLatency.MedianMs,
                 requestLossPercent = internet?.IdleLatency.LossPercent,
                 downloadMbps = internet?.Download.SteadyMbps,
