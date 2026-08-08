@@ -29,8 +29,16 @@ if (navigator.platform.toLowerCase().startsWith('mac')) {
   });
 }
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')!;
+createRoot(rootElement).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+
+// Transfer topology is a normal run-time choice on the desktop canvas, not hidden
+// progressive disclosure. Keep the existing details semantics/tests while presenting
+// the control as expanded from the first rendered frame onward.
+requestAnimationFrame(() => {
+  rootElement.querySelector<HTMLDetailsElement>('.diagnostic-options')?.setAttribute('open', '');
+});
