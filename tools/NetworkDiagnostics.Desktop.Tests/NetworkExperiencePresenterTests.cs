@@ -117,6 +117,38 @@ public sealed class NetworkExperiencePresenterTests
     }
 
     [Fact]
+    public void ControlledDiagnosticLoadRemainsVisibleWithoutDegradingPassiveScore()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var diagnosticLoad = new MonitorSample(
+            now.AddSeconds(-5),
+            MonitorSampleState.Unresponsive,
+            650,
+            180,
+            30,
+            650,
+            100,
+            "Wi-Fi",
+            "network",
+            IsDiagnosticLoad: true);
+        var samples = new[]
+        {
+            Sample(now.AddSeconds(-15), 20, 2),
+            Sample(now.AddSeconds(-10), 20, 2),
+            diagnosticLoad,
+            Sample(now, 20, 2)
+        };
+        var snapshot = new MonitorSnapshot(true, now.AddMinutes(-1), now, samples, [], "Monitoring is active");
+
+        var presentation = NetworkExperiencePresenter.Build(snapshot, Options, MonitorWindow.FiveMinutes);
+
+        Assert.Equal(100, presentation.Score);
+        Assert.Equal(100, presentation.Responsiveness.Score);
+        Assert.Equal(100, presentation.Reliability.Score);
+        Assert.Contains(presentation.Timeline, sample => sample.IsDiagnosticLoad && sample.State == MonitorSampleState.Unresponsive);
+    }
+
+    [Fact]
     public void SelectedWindowExcludesOlderHeartbeatSamples()
     {
         var now = DateTimeOffset.UtcNow;
