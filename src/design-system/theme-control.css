@@ -208,7 +208,7 @@
 
 :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before,
 :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner {
-  animation: jl-header-disclosure-exit 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: jl-header-disclosure-exit 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes jl-header-disclosure-exit {
