@@ -1,0 +1,56 @@
+name: One-time pinned site-controls sync
+
+on:
+  push:
+    branches: ["agent/sync-pinned-site-controls"]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Sync shared header source
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          sha = "539ab47fae9f38faa41efef29b7d66de2bcfac75"
+          Path("design-system.lock.json").write_text(json.dumps({
+              "package": "@johnnyzli/web-design-system",
+              "version": "1.9.0",
+              "sourceCommit": sha,
+          }, indent=2) + "\n", encoding="utf-8")
+          PY
+          npm run design-system:sync
+          cat > src/design-system/SOURCE.md <<'EOF'
+          # Generated design-system assets
+
+          Do not edit these files directly.
+
+          Package: @johnnyzli/web-design-system
+          Version: 1.9.0
+          Source commit: 539ab47fae9f38faa41efef29b7d66de2bcfac75
+
+          Validate with `npm run design-system:check`.
+          EOF
+          rm .github/workflows/one-time-sync-pinned-site-controls.yml
+      - name: Commit synchronized assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Sync pinned shared header controls"
+          git push origin HEAD:${GITHUB_REF_NAME}
