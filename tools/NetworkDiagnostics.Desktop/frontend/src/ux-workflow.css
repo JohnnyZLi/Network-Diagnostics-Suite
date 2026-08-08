@@ -282,6 +282,56 @@
   min-height: 180px;
 }
 
+.history-row-meta {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-outcome {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.history-outcome.success,
+.history-outcome.healthy,
+.history-outcome.pass {
+  border-color: color-mix(in srgb, var(--good) 34%, var(--line));
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 7%, var(--surface));
+}
+
+.history-outcome.warning,
+.history-outcome.degraded,
+.history-outcome.problem {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.history-outcome.failure,
+.history-outcome.failed,
+.history-outcome.error,
+.history-outcome.poor {
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--line));
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+.history-data-used {
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
 /* Wide screens use History as an inspector instead of a modal sheet. */
 @media (min-width: 1500px) {
   .app-shell.history-docked main {
