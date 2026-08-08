@@ -15,6 +15,7 @@
     grid-column: 1;
     grid-row: 1;
     align-self: center;
+    white-space: nowrap;
   }
 
   .diagnostic-choice-group > .method-control {
