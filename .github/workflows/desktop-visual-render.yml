@@ -88,7 +88,6 @@ jobs:
           }
 
           open_palette() {
-            # WebKitGTK needs explicit content focus under Xvfb before Ctrl-F.
             xdotool mousemove --sync 800 330 click 1
             sleep 0.15
             xdotool key --clearmodifiers ctrl+f
@@ -106,8 +105,7 @@ jobs:
           wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
           sleep 1
 
-          # The opening state is passive health. Prove the command palette can return
-          # to that canonical section instead of treating monitoring as a workspace.
+          # Opening state and semantic navigation.
           open_palette
           capture command-palette-dark
           xdotool type --delay 35 'health'
@@ -116,7 +114,6 @@ jobs:
           sleep 1.2
           capture live-health-dark
 
-          # Active diagnostics are the second section and have their own Ready state.
           open_palette
           xdotool type --delay 35 'run diagnostics'
           capture command-palette-diagnostics-filtered
@@ -124,18 +121,21 @@ jobs:
           sleep 1.2
           capture diagnostics-ready-dark
 
-          # Advanced diagnostics is progressive disclosure on the same page. Jump to
-          # its summary cards, open Preflight, then use keyboard focus to invoke the
-          # first control inside the expanded tool rather than relying on its height.
+          # Advanced now has two real concepts: Test configuration and LAN tools.
+          # Open Test configuration, then reach its embedded Preflight action through
+          # keyboard order so the validation is not coupled to the expanded pane height.
           open_palette
           xdotool type --delay 35 'advanced'
           capture command-palette-advanced-filtered
           xdotool key --clearmodifiers Return
           sleep 1.2
           capture advanced-diagnostics-dark
-          xdotool mousemove --sync 1200 840 click 1
+          xdotool mousemove --sync 470 365 click 1
           sleep 0.5
-          capture advanced-preflight-ready-dark
+          capture advanced-configuration-ready-dark
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Return
           for attempt in {1..24}; do
@@ -143,16 +143,15 @@ jobs:
               break
             fi
             if (( attempt == 24 )); then
-              echo "Inline Advanced preflight did not return the native measurement contract."
-              tail -140 /tmp/desktop-app.log
+              echo "Embedded Advanced preflight did not return the native measurement contract."
+              tail -160 /tmp/desktop-app.log
               exit 1
             fi
             sleep 0.5
           done
           capture advanced-preflight-dark
 
-          # Settings is application configuration only. Return to the top and prove
-          # the gear opens the compact appearance popover, not diagnostic controls.
+          # Settings owns app-level preferences, including expected capacity.
           xdotool mousemove --sync 80 500 click 1
           xdotool key --clearmodifiers ctrl+Home
           sleep 0.7
@@ -160,12 +159,11 @@ jobs:
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
-          # Content is a diagnostic preset, not a monitoring feature. Run it through
-          # the command palette and assert the native Connection Check + Aggregate
-          # contract before waiting for the real persisted report.
+          # Capacity is the user-facing speed concept. The standard action maps to
+          # Connection Check + Aggregate; Peak remains a separate heavier action.
           open_palette
-          xdotool type --delay 35 'content speed'
-          capture command-palette-content-filtered
+          xdotool type --delay 35 'measure capacity'
+          capture command-palette-capacity-filtered
           xdotool key --clearmodifiers Return
           sleep 0.35
           capture diagnostics-running-early
@@ -177,8 +175,8 @@ jobs:
               break
             fi
             if (( attempt == 20 )); then
-              echo "Content preset did not start Connection Check + Aggregate."
-              tail -120 /tmp/desktop-app.log
+              echo "Capacity action did not start Connection Check + Aggregate."
+              tail -140 /tmp/desktop-app.log
               exit 1
             fi
             sleep 0.25
@@ -195,7 +193,7 @@ jobs:
             fi
             if (( attempt == 90 )); then
               echo "Connection Check did not finish and persist a report within 90 seconds."
-              tail -160 /tmp/desktop-app.log
+              tail -180 /tmp/desktop-app.log
               exit 1
             fi
             sleep 1
@@ -203,9 +201,7 @@ jobs:
 
           capture diagnostics-result-dark
 
-          # A completed Content preset feeds capacity history back into the native
-          # monitor. Use the semantic workbench jump rather than browser scroll state
-          # so the measured Capacity screenshot always depicts Live Network Health.
+          # The completed report must feed capacity history and stay linked from Health.
           open_palette
           xdotool type --delay 35 'health'
           xdotool key --clearmodifiers Return
@@ -230,27 +226,29 @@ jobs:
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
 
-          # History remains the focused past-runs workspace.
+          # At 1600px History is a docked inspector, not a modal sheet. It must leave
+          # the workbench visible and still support the full report-management flow.
           xdotool key --clearmodifiers ctrl+h
-          capture saved-runs-panel
+          sleep 0.5
+          capture saved-runs-docked
 
-          xdotool mousemove --sync 1315 205 click 1
+          # Filters add useful list controls above the first row; select the first run.
+          xdotool mousemove --sync 1325 340 click 1
+          sleep 0.5
           capture saved-report-detail
 
-          xdotool mousemove --sync 1400 760
+          xdotool mousemove --sync 1370 720
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # Report detail owns focus when it mounts. From that container the first
-          # two sequential controls are Technical evidence and Edit details.
+          # ReportDetail owns focus on mount. Technical evidence and Edit details are
+          # the first two controls from that container, independent of scroll geometry.
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Return
           sleep 0.4
           capture saved-report-editor
 
-          # The editor autofocuses Label. Stay on the keyboard path so annotation
-          # persistence does not depend on editor or viewport geometry.
           xdotool key --clearmodifiers ctrl+a
           xdotool type --delay 20 'CI baseline'
           xdotool key --clearmodifiers Tab
