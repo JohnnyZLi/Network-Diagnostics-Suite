@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
@@ -36,7 +37,17 @@ public sealed partial class WorkbenchShell : UserControl
     public object? WorkspaceContent
     {
         get => WorkspaceHost.Content;
-        set => WorkspaceHost.Content = value;
+        set
+        {
+            if (value is Control control
+                && control.GetLogicalParent() is ContentControl parent
+                && ReferenceEquals(parent.Content, control))
+            {
+                parent.Content = null;
+            }
+
+            WorkspaceHost.Content = value;
+        }
     }
 
     public bool InspectorOpen => InspectorBorder.IsVisible;
@@ -158,17 +169,17 @@ public sealed partial class WorkbenchShell : UserControl
         var compactSidebar = width < 1080;
         var showInspector = inspectorRequested && width >= 760;
 
-        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 60 : 204);
-        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 284 : 0);
+        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 164 : 188);
+        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 272 : 0);
 
         ProductNameText.IsVisible = !compactSidebar;
         ProductModeText.IsVisible = !compactSidebar;
-        TestWorkspaceLabel.IsVisible = !compactSidebar;
-        ReportsWorkspaceLabel.IsVisible = !compactSidebar;
-        ComparisonsWorkspaceLabel.IsVisible = !compactSidebar;
-        SettingsWorkspaceLabel.IsVisible = !compactSidebar;
+        TestWorkspaceLabel.IsVisible = true;
+        ReportsWorkspaceLabel.IsVisible = true;
+        ComparisonsWorkspaceLabel.IsVisible = true;
+        SettingsWorkspaceLabel.IsVisible = true;
         CommandHintText.IsVisible = !compactSidebar;
-        ActiveRunTitleText.IsVisible = !compactSidebar;
+        ActiveRunTitleText.IsVisible = true;
         ActiveRunDetailText.IsVisible = !compactSidebar;
 
         InspectorBorder.IsVisible = showInspector;
@@ -183,13 +194,14 @@ public sealed partial class WorkbenchShell : UserControl
         {
             if (index > 0)
             {
-                BreadcrumbPanel.Children.Add(new TextBlock
+                var separator = new TextBlock
                 {
                     Text = "/",
                     FontSize = 11,
-                    Foreground = Avalonia.Media.Brush.Parse("#858B8C"),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                });
+                };
+                separator.Classes.Add("shellMuted");
+                BreadcrumbPanel.Children.Add(separator);
             }
 
             var segment = breadcrumbs[index];

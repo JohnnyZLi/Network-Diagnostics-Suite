@@ -14,6 +14,7 @@ public sealed partial class ReportDetailWorkspace : UserControl
     public ReportDetailWorkspace()
     {
         InitializeComponent();
+        SizeChanged += WorkspaceSizeChanged;
     }
 
     public event EventHandler? BackRequested;
@@ -37,47 +38,63 @@ public sealed partial class ReportDetailWorkspace : UserControl
         ProfileText.Text = stored.ProfileName;
         MethodText.Text = stored.Report.Run.TransferMethod.ToString();
         ContextText.Text = ReportComparisonService.ContextLabel(stored.Report);
+        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
 
-        MetricsPanel.Children.Clear();
-        foreach (var metric in presentation.Metrics)
-        {
-            MetricsPanel.Children.Add(BuildMetric(metric));
-        }
+        RenderHealthGroups(presentation);
+        RenderFindings(presentation.Findings);
+        RenderEvidence(presentation.TechnicalEvidence);
+    }
 
+    private void RenderHealthGroups(ConnectionCheckPresentation presentation)
+    {
+        var groups = HealthGroupPresenter.Build(presentation)
+            .ToDictionary(group => group.Kind);
+        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Responsiveness]);
+        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Reliability]);
+        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Throughput]);
+        ApplyHealthGroupLayout(Bounds.Width);
+    }
+
+    private void RenderFindings(IReadOnlyList<FindingPresentation> findings)
+    {
         FindingsPanel.Children.Clear();
-        if (presentation.Findings.Count == 0)
+        if (findings.Count == 0)
         {
             var empty = new TextBlock
             {
-                Text = "No diagnostic findings were generated for this report.",
+                Text = "No material findings were generated for this report.",
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap
             };
             empty.Classes.Add("muted");
             FindingsPanel.Children.Add(empty);
-        }
-        else
-        {
-            foreach (var finding in presentation.Findings)
-            {
-                FindingsPanel.Children.Add(BuildFinding(finding));
-            }
+            return;
         }
 
+        foreach (var finding in findings)
+        {
+            FindingsPanel.Children.Add(BuildFinding(finding));
+        }
+    }
+
+    private void RenderEvidence(IReadOnlyList<string> evidence)
+    {
         EvidencePanel.Children.Clear();
-        foreach (var item in presentation.TechnicalEvidence)
+        foreach (var item in evidence)
         {
             var row = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
                 ColumnSpacing = 9
             };
-            row.Children.Add(new TextBlock
+            var marker = new TextBlock
             {
                 Text = "•",
-                Foreground = Brush.Parse("#C77E68"),
                 FontSize = 12
-            });
+            };
+            marker.Classes.Add("eyebrow");
+            row.Children.Add(marker);
+
             var text = new TextBlock
             {
                 Text = item,
@@ -85,12 +102,21 @@ public sealed partial class ReportDetailWorkspace : UserControl
                 LineHeight = 17,
                 TextWrapping = TextWrapping.Wrap
             };
-            text.Classes.Add("muted");
+            text.Classes.Add("secondary");
             Grid.SetColumn(text, 1);
             row.Children.Add(text);
             EvidencePanel.Children.Add(row);
         }
     }
+
+    private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyHealthGroupLayout(eventArgs.NewSize.Width);
+
+    private void ApplyHealthGroupLayout(double width) =>
+        HealthGroupCardFactory.ApplyResponsiveLayout(
+            HealthGroupGrid,
+            [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
+            width);
 
     private void BackClicked(object? sender, RoutedEventArgs eventArgs) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
@@ -119,81 +145,43 @@ public sealed partial class ReportDetailWorkspace : UserControl
         }
     }
 
-    private static Border BuildMetric(MetricPresentation metric)
-    {
-        var detail = new TextBlock
-        {
-            Text = metric.Detail,
-            FontSize = 10,
-            LineHeight = 15,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = Brush.Parse("#969B9C")
-        };
-        var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(new TextBlock
-        {
-            Text = metric.Label.ToUpperInvariant(),
-            FontSize = 9,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 1.2,
-            Foreground = Brush.Parse("#969B9C")
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = metric.Value,
-            FontSize = 21,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = metric.WasMeasured ? Brush.Parse("#F0EDE7") : Brush.Parse("#969B9C")
-        });
-        stack.Children.Add(detail);
-
-        return new Border
-        {
-            Width = 200,
-            Height = 104,
-            Margin = new Avalonia.Thickness(0, 0, 10, 10),
-            Padding = new Avalonia.Thickness(14),
-            Background = Brush.Parse("#171B1C"),
-            BorderBrush = Brush.Parse(metric.WasMeasured ? "#303536" : "#3B3732"),
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(9),
-            Child = stack
-        };
-    }
-
     private static Border BuildFinding(FindingPresentation finding)
     {
-        var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(new TextBlock
+        var label = new TextBlock
         {
-            Text = finding.Label.ToUpperInvariant(),
-            FontSize = 9,
-            FontWeight = FontWeight.SemiBold,
-            LetterSpacing = 1.2,
-            Foreground = Brush.Parse("#C77E68")
-        });
-        stack.Children.Add(new TextBlock
+            Text = finding.Label.ToUpperInvariant()
+        };
+        label.Classes.Add("eyebrow");
+
+        var title = new TextBlock
         {
             Text = finding.Title,
             FontSize = 14,
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
-        });
-        stack.Children.Add(new TextBlock
+        };
+
+        var summary = new TextBlock
         {
             Text = finding.Summary,
             FontSize = 12,
             LineHeight = 18,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = Brush.Parse("#969B9C")
-        });
+            TextWrapping = TextWrapping.Wrap
+        };
+        summary.Classes.Add("secondary");
 
-        return new Border
+        var stack = new StackPanel { Spacing = 4 };
+        stack.Children.Add(label);
+        stack.Children.Add(title);
+        stack.Children.Add(summary);
+
+        var row = new Border
         {
-            BorderBrush = Brush.Parse("#303536"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-            Padding = new Avalonia.Thickness(0, 0, 0, 12),
+            Padding = new Avalonia.Thickness(0, 5, 0, 14),
+            Margin = new Avalonia.Thickness(0, 0, 0, 12),
             Child = stack
         };
+        row.Classes.Add("divider");
+        return row;
     }
 }

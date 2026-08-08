@@ -16,6 +16,7 @@ public sealed partial class TestResultWorkspace : UserControl
     public TestResultWorkspace()
     {
         InitializeComponent();
+        SizeChanged += WorkspaceSizeChanged;
     }
 
     public event EventHandler? RunAgainRequested;
@@ -40,6 +41,7 @@ public sealed partial class TestResultWorkspace : UserControl
         NextActionText.Text = presentation.NextAction;
         ContextText.Text = ContextLabel(report, session);
         InterpretationText.Text = Interpretation(presentation, report, session);
+        HealthGroupCardFactory.ApplyOutcomeIndicator(OutcomeIndicator, presentation.Outcome);
 
         var profile = report?.Run.Profile ?? session.Profile;
         QuickButton.IsVisible = profile == TestProfileId.ConnectionCheck
@@ -47,70 +49,51 @@ public sealed partial class TestResultWorkspace : UserControl
         ExportButton.IsVisible = report is not null;
         CompareButton.IsVisible = report is not null;
 
-        RenderMetrics(presentation.Metrics);
+        RenderHealthGroups(presentation);
         RenderFindings(presentation.Findings);
         RenderEvidence(presentation.TechnicalEvidence);
         RenderRunDetails(report, session);
         ApplySection();
     }
 
-    private void RenderMetrics(IReadOnlyList<MetricPresentation> metrics)
+    private void RenderHealthGroups(ConnectionCheckPresentation presentation)
     {
-        MetricGrid.Children.Clear();
-        for (var index = 0; index < Math.Min(4, metrics.Count); index++)
-        {
-            var metric = metrics[index];
-            var label = new TextBlock
-            {
-                Text = metric.Label.ToUpperInvariant(),
-                FontSize = 10,
-                FontWeight = FontWeight.SemiBold,
-                LetterSpacing = 1.2,
-                Foreground = Brush.Parse("#C77E68")
-            };
-            var value = new TextBlock
-            {
-                Text = metric.Value,
-                FontSize = 23,
-                FontWeight = FontWeight.SemiBold,
-                Opacity = metric.WasMeasured ? 1 : 0.65
-            };
-            var detail = new TextBlock
-            {
-                Text = metric.Detail,
-                FontSize = 11,
-                Foreground = Brush.Parse("#969C9D"),
-                TextWrapping = TextWrapping.Wrap
-            };
-            var content = new StackPanel { Spacing = 5 };
-            content.Children.Add(label);
-            content.Children.Add(value);
-            content.Children.Add(detail);
-            var card = new Border { Child = content };
-            card.Classes.Add("panel");
-            card.Padding = new Avalonia.Thickness(14);
-            Grid.SetColumn(card, index);
-            MetricGrid.Children.Add(card);
-        }
+        var groups = HealthGroupPresenter.Build(presentation)
+            .ToDictionary(group => group.Kind);
+        ResponsivenessGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Responsiveness]);
+        ReliabilityGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Reliability]);
+        ThroughputGroupHost.Content = HealthGroupCardFactory.Build(groups[HealthGroupKind.Throughput]);
+        ApplyHealthGroupLayout(Bounds.Width);
     }
 
     private void RenderFindings(IReadOnlyList<FindingPresentation> findings)
     {
         FindingsPanel.Children.Clear();
+        if (findings.Count == 0)
+        {
+            var empty = new TextBlock
+            {
+                Text = "No material findings were generated for this result.",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap
+            };
+            empty.Classes.Add("muted");
+            FindingsPanel.Children.Add(empty);
+            return;
+        }
+
         foreach (var finding in findings)
         {
             var label = new TextBlock
             {
-                Text = finding.Label.ToUpperInvariant(),
-                FontSize = 10,
-                FontWeight = FontWeight.SemiBold,
-                LetterSpacing = 1.2,
-                Foreground = Brush.Parse("#C77E68")
+                Text = finding.Label.ToUpperInvariant()
             };
+            label.Classes.Add("eyebrow");
+
             var title = new TextBlock
             {
                 Text = finding.Title,
-                FontSize = 16,
+                FontSize = 15,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap
             };
@@ -118,20 +101,24 @@ public sealed partial class TestResultWorkspace : UserControl
             {
                 Text = finding.Summary,
                 FontSize = 12,
-                Foreground = Brush.Parse("#969C9D"),
+                LineHeight = 18,
                 TextWrapping = TextWrapping.Wrap
             };
+            summary.Classes.Add("secondary");
+
             var content = new StackPanel { Spacing = 4 };
             content.Children.Add(label);
             content.Children.Add(title);
             content.Children.Add(summary);
-            FindingsPanel.Children.Add(new Border
+
+            var row = new Border
             {
-                BorderBrush = Brush.Parse("#303536"),
-                BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-                Padding = new Avalonia.Thickness(0, 0, 0, 12),
+                Padding = new Avalonia.Thickness(0, 5, 0, 14),
+                Margin = new Avalonia.Thickness(0, 0, 0, 12),
                 Child = content
-            });
+            };
+            row.Classes.Add("divider");
+            FindingsPanel.Children.Add(row);
         }
     }
 
@@ -143,16 +130,20 @@ public sealed partial class TestResultWorkspace : UserControl
             var marker = new TextBlock
             {
                 Text = "•",
-                Foreground = Brush.Parse("#C77E68"),
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Top
             };
+            marker.Classes.Add("eyebrow");
+
             var text = new TextBlock
             {
                 Text = item,
                 FontSize = 12,
-                Foreground = Brush.Parse("#D6D3CD"),
+                LineHeight = 18,
                 TextWrapping = TextWrapping.Wrap
             };
+            text.Classes.Add("secondary");
+
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
             row.Children.Add(marker);
             Grid.SetColumn(text, 1);
@@ -176,7 +167,9 @@ public sealed partial class TestResultWorkspace : UserControl
 
     private void AddDetail(string label, string value)
     {
-        var labelText = new TextBlock { Text = label, FontSize = 11, Foreground = Brush.Parse("#969C9D") };
+        var labelText = new TextBlock { Text = label, FontSize = 11 };
+        labelText.Classes.Add("muted");
+
         var valueText = new TextBlock
         {
             Text = value,
@@ -208,6 +201,15 @@ public sealed partial class TestResultWorkspace : UserControl
         SetSelected(EvidenceButton, evidence);
     }
 
+    private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
+        ApplyHealthGroupLayout(eventArgs.NewSize.Width);
+
+    private void ApplyHealthGroupLayout(double width) =>
+        HealthGroupCardFactory.ApplyResponsiveLayout(
+            HealthGroupGrid,
+            [ResponsivenessGroupHost, ReliabilityGroupHost, ThroughputGroupHost],
+            width);
+
     private static void SetSelected(Button button, bool selected)
     {
         if (selected)
@@ -233,8 +235,7 @@ public sealed partial class TestResultWorkspace : UserControl
             var context = ReportComparisonService.ContextLabel(report);
             return string.IsNullOrWhiteSpace(context)
                 ? $"Saved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}"
-                : $"{context}\nSaved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}"
-                ;
+                : $"{context}\nSaved locally · {report.GeneratedAt.ToLocalTime():MMM d, yyyy}";
         }
 
         return session.Status switch
@@ -264,7 +265,7 @@ public sealed partial class TestResultWorkspace : UserControl
         }
         return report is null
             ? "This preview uses the same result hierarchy as a completed diagnostic, but it is not attached to a saved report."
-            : "The overview prioritizes the verdict and actionable findings. Evidence retains the technical context needed to verify or challenge that interpretation.";
+            : "The overview prioritizes the verdict and actionable findings. Technical details retain the evidence needed to verify or challenge that interpretation.";
     }
 
     private static string StatusLabel(NetworkDiagnosticsReportV2? report, ActiveRunSnapshot session) => report is not null

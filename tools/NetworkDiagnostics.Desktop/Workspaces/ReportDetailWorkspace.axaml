@@ -1,96 +1,102 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Workspaces.ReportDetailWorkspace"
-             Background="#111415"
-             Foreground="#E9E6E0"
+             Background="{DynamicResource AppCanvasBrush}"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
-  <UserControl.Styles>
-    <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
-      <Setter Property="FontSize" Value="10" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.6" />
-    </Style>
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9C" />
-    </Style>
-    <Style Selector="Border.card">
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="BorderBrush" Value="#303536" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="10" />
-    </Style>
-    <Style Selector="Button.action">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="13,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="#C96346" />
-      <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.ghost">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="12,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#D4D7D6" />
-      <Setter Property="BorderBrush" Value="#3B4142" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
-    <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Background" Value="#222728" />
-      <Setter Property="BorderBrush" Value="#565D5E" />
-    </Style>
-  </UserControl.Styles>
-
-  <Grid RowDefinitions="58,*">
-    <Border Grid.Row="0" Background="#15191A" BorderBrush="#303536" BorderThickness="0,0,0,1" Padding="18,0">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+  <Grid RowDefinitions="52,*">
+    <Border Grid.Row="0"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="18,0">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Button Classes="ghost" Content="← Reports" VerticalAlignment="Center" Click="BackClicked" />
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Name="ToolbarTitleText" FontSize="13" FontWeight="SemiBold" Text="Report" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+          <TextBlock Name="ToolbarTitleText" FontSize="12" FontWeight="SemiBold" Text="Report" />
           <TextBlock Name="ToolbarMetaText" Classes="muted" FontSize="10" />
         </StackPanel>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
           <Button Classes="ghost" Content="Edit label" Click="EditClicked" />
           <Button Classes="ghost" Content="Export" Click="ExportClicked" />
-          <Button Classes="action" Content="Compare" Click="CompareClicked" />
+          <Button Classes="primary" Content="Compare" Click="CompareClicked" />
         </StackPanel>
       </Grid>
     </Border>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="34,30,34,40" Spacing="18">
-        <Grid ColumnDefinitions="*,280" ColumnSpacing="22">
-          <StackPanel Grid.Column="0" Spacing="8">
+      <StackPanel Margin="34,30,34,42" Spacing="22">
+        <Grid ColumnDefinitions="Auto,*,300" ColumnSpacing="14">
+          <Border Name="OutcomeIndicator"
+                  Grid.Column="0"
+                  Width="12"
+                  Height="12"
+                  CornerRadius="6"
+                  Classes="indicatorNeutral"
+                  Margin="0,8,0,0"
+                  VerticalAlignment="Top" />
+
+          <StackPanel Grid.Column="1" Spacing="8">
             <TextBlock Name="OutcomeLabelText" Classes="eyebrow" />
-            <TextBlock Name="VerdictText" FontSize="30" FontWeight="SemiBold" LineHeight="36" TextWrapping="Wrap" />
-            <TextBlock Name="SummaryText" Classes="muted" FontSize="15" LineHeight="23" MaxWidth="780" TextWrapping="Wrap" />
+            <TextBlock Name="VerdictText"
+                       FontSize="32"
+                       FontWeight="SemiBold"
+                       LineHeight="38"
+                       TextWrapping="Wrap" />
+            <TextBlock Name="SummaryText"
+                       Classes="secondary"
+                       FontSize="15"
+                       LineHeight="23"
+                       MaxWidth="780"
+                       TextWrapping="Wrap" />
           </StackPanel>
-          <Border Grid.Column="1" Classes="card" Padding="16">
+
+          <Border Grid.Column="2" Classes="accentSurface" Padding="18">
             <StackPanel Spacing="7">
-              <TextBlock Classes="eyebrow" Text="NEXT ACTION" />
-              <TextBlock Name="NextActionText" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
+              <TextBlock Classes="eyebrow" Text="RECOMMENDED NEXT STEP" />
+              <TextBlock Name="NextActionText"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         LineHeight="21"
+                         TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </Grid>
 
-        <StackPanel Spacing="9">
-          <TextBlock Classes="eyebrow" Text="MEASUREMENTS" />
-          <WrapPanel Name="MetricsPanel" ItemWidth="210" ItemHeight="112" />
+        <StackPanel Spacing="11">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="eyebrow" Text="NETWORK HEALTH" />
+              <TextBlock FontSize="17" FontWeight="SemiBold" Text="The saved run at a glance" />
+            </StackPanel>
+            <TextBlock Grid.Column="1"
+                       Classes="muted"
+                       FontSize="10"
+                       Text="Responsiveness · Reliability · Throughput"
+                       VerticalAlignment="Bottom" />
+          </Grid>
+
+          <Grid Name="HealthGroupGrid"
+                ColumnDefinitions="*,*,*"
+                RowDefinitions="Auto"
+                ColumnSpacing="12"
+                RowSpacing="12">
+            <ContentControl Name="ResponsivenessGroupHost" Grid.Column="0" />
+            <ContentControl Name="ReliabilityGroupHost" Grid.Column="1" />
+            <ContentControl Name="ThroughputGroupHost" Grid.Column="2" />
+          </Grid>
         </StackPanel>
 
-        <Grid ColumnDefinitions="1.15*,0.85*" ColumnSpacing="14">
-          <Border Grid.Column="0" Classes="card" Padding="18">
-            <StackPanel Spacing="13">
+        <Grid ColumnDefinitions="1.18*,0.82*" ColumnSpacing="18">
+          <StackPanel Grid.Column="0" Spacing="11">
+            <StackPanel Spacing="4">
               <TextBlock Classes="eyebrow" Text="FINDINGS" />
-              <StackPanel Name="FindingsPanel" Spacing="12" />
+              <TextBlock FontSize="17" FontWeight="SemiBold" Text="What materially affected the verdict" />
             </StackPanel>
-          </Border>
+            <StackPanel Name="FindingsPanel" />
+          </StackPanel>
 
-          <StackPanel Grid.Column="1" Spacing="14">
-            <Border Classes="card" Padding="18">
+          <StackPanel Grid.Column="1" Spacing="12">
+            <Border Classes="surface" Padding="18">
               <StackPanel Spacing="11">
                 <TextBlock Classes="eyebrow" Text="REPORT CONTEXT" />
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="18" RowSpacing="8">
@@ -106,11 +112,16 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="card" Padding="18">
-              <StackPanel Spacing="11">
-                <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
-                <StackPanel Name="EvidencePanel" Spacing="8" />
-              </StackPanel>
+            <Border Classes="surface" Padding="0" ClipToBounds="True">
+              <Expander IsExpanded="False">
+                <Expander.Header>
+                  <StackPanel Margin="14,12" Spacing="3">
+                    <TextBlock Classes="eyebrow" Text="TECHNICAL EVIDENCE" />
+                    <TextBlock Classes="muted" FontSize="10" Text="Expand raw run and measurement details" />
+                  </StackPanel>
+                </Expander.Header>
+                <StackPanel Name="EvidencePanel" Margin="18,2,18,18" Spacing="8" />
+              </Expander>
             </Border>
           </StackPanel>
         </Grid>
