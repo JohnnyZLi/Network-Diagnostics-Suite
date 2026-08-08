@@ -1,14 +1,34 @@
 using System.Runtime.InteropServices;
+using Photino.NET;
 
 namespace NetworkDiagnostics.Desktop;
 
 internal static class MacWindowChrome
 {
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
+    private const string ToggleZoomMessage = "macos.window.toggleZoom";
     private static readonly nuint FullSizeContentViewMask = (nuint)1 << 15;
     private static readonly nuint HiddenTitleVisibility = 1;
     private const double TrafficLightVerticalOffset = -7.0;
     private static readonly Dictionary<IntPtr, NativePoint[]> TrafficLightOrigins = new();
+    private static bool nativeMessageHandlerRegistered;
+
+    public static void RegisterNativeMessageHandler(PhotinoWindow photinoWindow)
+    {
+        if (!OperatingSystem.IsMacOS() || nativeMessageHandlerRegistered)
+        {
+            return;
+        }
+
+        nativeMessageHandlerRegistered = true;
+        photinoWindow.RegisterWebMessageReceivedHandler((_, message) =>
+        {
+            if (string.Equals(message, ToggleZoomMessage, StringComparison.Ordinal))
+            {
+                TryToggleZoom();
+            }
+        });
+    }
 
     public static bool TryEnableUnifiedTitlebar()
     {
@@ -19,19 +39,7 @@ internal static class MacWindowChrome
 
         try
         {
-            var applicationClass = objc_getClass("NSApplication");
-            if (applicationClass == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            var application = SendObject(applicationClass, "sharedApplication");
-            if (application == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            var window = FindPhotinoWindow(application);
+            var window = FindPhotinoWindow();
             if (window == IntPtr.Zero)
             {
                 Console.Error.WriteLine("macOS unified title bar is waiting for the Photino NSWindow to become available.");
@@ -54,8 +62,47 @@ internal static class MacWindowChrome
         }
     }
 
-    private static IntPtr FindPhotinoWindow(IntPtr application)
+    public static bool TryToggleZoom()
     {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return false;
+        }
+
+        try
+        {
+            var window = FindPhotinoWindow();
+            if (window == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            // performZoom: is the native title-bar zoom/restore action. Using AppKit
+            // keeps macOS window sizing semantics instead of inventing a WebView size.
+            SendVoidObject(window, "performZoom:", IntPtr.Zero);
+            return true;
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine($"macOS title-bar zoom could not be toggled: {error.Message}");
+            return false;
+        }
+    }
+
+    private static IntPtr FindPhotinoWindow()
+    {
+        var applicationClass = objc_getClass("NSApplication");
+        if (applicationClass == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+
+        var application = SendObject(applicationClass, "sharedApplication");
+        if (application == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+
         // WindowCreated fires before AppKit necessarily designates the new window as
         // key/main. Prefer those stable identities once available, then fall back to
         // NSApplication.windows so the title-bar treatment can still be applied before
@@ -149,6 +196,9 @@ internal static class MacWindowChrome
     private static void SendVoidPoint(IntPtr receiver, string selector, NativePoint value) =>
         objc_msgSend_Void_Point(receiver, sel_registerName(selector), value);
 
+    private static void SendVoidObject(IntPtr receiver, string selector, IntPtr value) =>
+        objc_msgSend_Void_IntPtr(receiver, sel_registerName(selector), value);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint
     {
@@ -191,4 +241,7 @@ internal static class MacWindowChrome
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_Void_Point(IntPtr receiver, IntPtr selector, NativePoint value);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_Void_IntPtr(IntPtr receiver, IntPtr selector, IntPtr value);
 }
