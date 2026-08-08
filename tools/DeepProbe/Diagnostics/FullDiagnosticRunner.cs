@@ -60,7 +60,8 @@ internal static class FullDiagnosticRunner
             preflight.EndpointSelection.Selected.Origin,
             transferProgress,
             cancellationToken,
-            preflight.Binding?.SourceAddress);
+            preflight.Binding?.SourceAddress,
+            options.DownloadPath);
         advancedSession.SetPhase("complete");
 
         DeepProbeReport? deepDiagnostics = null;
@@ -82,7 +83,7 @@ internal static class FullDiagnosticRunner
             }
         }
 
-        progress?.Report("Finalizing dual-stack, network-change, and host evidence");
+        progress?.Report("Finalizing dual-stack, network-change, and host data");
         var advancedEvidence = await advancedSession.CompleteAsync(cancellationToken);
         var completedAt = DateTimeOffset.UtcNow;
         var report = new NetworkDiagnosticsReportV2(
@@ -133,7 +134,7 @@ internal static class FullDiagnosticRunner
                 "info",
                 "high",
                 "Local and path diagnostics did not complete",
-                "The Internet transfer phases completed and remain available, but the operating-system deep-probe section failed before it could produce evidence.",
+                "The Internet transfer phases completed and remain available, but the operating-system deep-probe section failed before it could produce data.",
                 [new DiagnosticEvidence("deepDiagnostics.status", "Deep diagnostics", "Failed", deepFailure)],
                 ["Repeat the same profile. If the section fails again, inspect permissions and the technical error before changing network settings."],
                 "Repeat Full or Stress after resolving the local diagnostic error."));
@@ -188,7 +189,7 @@ internal static class FullDiagnosticRunner
                 "warning",
                 "high",
                 "The network or public measurement path changed during the run",
-                "The result combines evidence collected across a changing interface, route, gateway, address family, proxy, public network, or endpoint edge and should not be treated as a stable baseline.",
+                "The result combines data collected across a changing interface, route, gateway, address family, proxy, public network, or endpoint edge and should not be treated as a stable baseline.",
                 change.Changes.Select((item, index) => new DiagnosticEvidence(
                     $"networkChange.changes[{index}]",
                     "Network change",
