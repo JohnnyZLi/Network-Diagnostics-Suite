@@ -46,7 +46,7 @@ export function SettingsMenu({
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M9.6 3h4.8l.6 2.4 1.7 1 2.4-.7 2.4 4.2-1.8 1.7v2l1.8 1.7-2.4 4.2-2.4-.7-1.7 1-.6 2.4H9.6L9 19.8l-1.7-1-2.4.7-2.4-4.2 1.8-1.7v-2L2.5 9.9l2.4-4.2 2.4.7 1.7-1L9.6 3Z" />
-          <circle cx="12" cy="12.6" r="3.1" />
+          <circle cx="12" cy="12" r="3.1" />
         </svg>
       </button>
 
