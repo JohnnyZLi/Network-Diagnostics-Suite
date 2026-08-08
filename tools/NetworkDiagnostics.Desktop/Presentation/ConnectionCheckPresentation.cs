@@ -80,7 +80,7 @@ public static class ConnectionCheckFixtures
         new(
             ConnectionCheckOutcome.Inconclusive,
             "Result is inconclusive",
-            "The connection is reachable, but the evidence conflicts.",
+            "The connection is reachable, but the measurements conflict.",
             "Latency and throughput varied enough that this short check cannot identify a reliable pattern.",
             "Repeat Connection Check once, then use Full if the result remains inconsistent.",
             [
@@ -90,7 +90,7 @@ public static class ConnectionCheckFixtures
                 new("Upload", "12 Mbps", "Short aggregate sample")
             ],
             [
-                new("Confidence", "Measurements were inconsistent", "The short profile collected evidence, but not enough stable evidence for a firm diagnosis.")
+                new("Confidence", "Measurements were inconsistent", "The short profile collected data, but not enough stable data for a firm diagnosis.")
             ],
             [
                 "Profile: connection-check",
@@ -111,7 +111,7 @@ public static class ConnectionCheckFixtures
                 new("Upload", "Not measured", "Transfer endpoint unavailable", false)
             ],
             [
-                new("Availability", "Performance endpoint unavailable", "Reachability evidence was retained and the unsupported transfer section is marked Not measured.")
+                new("Availability", "Performance endpoint unavailable", "Reachability data was retained and the unsupported transfer section is marked Not measured.")
             ],
             [
                 "Profile: connection-check",
@@ -132,7 +132,7 @@ public static class ConnectionCheckFixtures
                 new("Upload", "Not measured", "Test stopped before transfer", false)
             ],
             [
-                new("Failure", "Internet target was unreachable", "Partial local evidence is preserved instead of reporting every section as failed.")
+                new("Failure", "Internet target was unreachable", "Partial local data is preserved instead of reporting every section as failed.")
             ],
             [
                 "Profile: connection-check",
