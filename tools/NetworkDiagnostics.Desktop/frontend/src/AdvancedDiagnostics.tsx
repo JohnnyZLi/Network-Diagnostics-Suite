@@ -52,7 +52,10 @@ export function AdvancedDiagnostics({
 }) {
   const preflightRef = useRef<HTMLElement>(null);
   const persistedSettings = useRef<AdvancedSettings>(defaultSettings);
-  const handledResetRequest = useRef(0);
+  // A remount can happen when the normal Run Diagnostics interface control updates
+  // persisted configuration. Treat the current reset token as already handled so a
+  // historical Reset click cannot unexpectedly wipe a later interface selection.
+  const handledResetRequest = useRef(resetRequest);
   const [tool, setTool] = useState<AdvancedTool | null>(null);
   const [settings, setSettings] = useState<AdvancedSettings>(defaultSettings);
   const [endpointText, setEndpointText] = useState('');
@@ -343,7 +346,7 @@ export function AdvancedDiagnostics({
                     <div><span>Endpoint</span><strong>{endpoint ?? 'Native selection complete'}</strong></div>
                     <div><span>Interface</span><strong>{measuredInterface ?? settings.interfaceId ?? 'Automatic routing'}</strong></div>
                     <div><span>Interfaces seen</span><strong>{preflight.interfaces?.length ?? interfaces.length}</strong></div>
-                    <details><summary>Technical preflight payload</summary><pre>{JSON.stringify(preflight.measurement ?? preflight, null, 2)}</pre></details>
+                    <details><summary>Technical preflight data</summary><pre>{JSON.stringify(preflight.measurement ?? preflight, null, 2)}</pre></details>
                   </div>
                 )}
               </section>
