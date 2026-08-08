@@ -50,7 +50,7 @@ export function AdvancedDiagnostics({
   onStatusChange?: (status: AdvancedRuntimeStatus) => void;
   resetRequest?: number;
 }) {
-  const preflightRef = useRef<HTMLDivElement>(null);
+  const preflightRef = useRef<HTMLElement>(null);
   const persistedSettings = useRef<AdvancedSettings>(defaultSettings);
   const handledResetRequest = useRef(0);
   const [tool, setTool] = useState<AdvancedTool | null>(null);
