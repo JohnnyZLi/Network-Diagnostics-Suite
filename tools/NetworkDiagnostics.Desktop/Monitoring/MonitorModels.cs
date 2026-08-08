@@ -45,7 +45,8 @@ public sealed record MonitorSample(
     string NetworkSignature,
     double? DownloadMbps = null,
     double? UploadMbps = null,
-    bool IsSpeedMeasurement = false);
+    bool IsSpeedMeasurement = false,
+    bool IsDiagnosticLoad = false);
 
 public sealed record MonitorAlert(
     Guid Id,
