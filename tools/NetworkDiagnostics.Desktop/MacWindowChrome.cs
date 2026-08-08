@@ -7,6 +7,8 @@ internal static class MacWindowChrome
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
     private static readonly nuint FullSizeContentViewMask = (nuint)1 << 15;
     private static readonly nuint HiddenTitleVisibility = 1;
+    private const double TrafficLightVerticalOffset = -7.0;
+    private static readonly Dictionary<IntPtr, NativePoint[]> TrafficLightOrigins = new();
 
     public static bool TryEnableUnifiedTitlebar()
     {
@@ -41,6 +43,7 @@ internal static class MacWindowChrome
             SendVoidBool(window, "setTitlebarAppearsTransparent:", true);
             SendVoidNUInt(window, "setTitleVisibility:", HiddenTitleVisibility);
             SendVoidBool(window, "setMovableByWindowBackground:", true);
+            CenterTrafficLights(window);
             return true;
         }
         catch (Exception error)
@@ -86,6 +89,45 @@ internal static class MacWindowChrome
         return SendObjectNUInt(windows, "objectAtIndex:", count - 1);
     }
 
+    private static void CenterTrafficLights(IntPtr window)
+    {
+        // AppKit keeps the standard traffic lights at their conventional title-bar Y
+        // coordinate even when content extends into the title bar. Our unified toolbar
+        // is taller, so preserve the native buttons and move the group down by seven
+        // points to align their centers with the toolbar content (Chrome-style).
+        NativePoint[] origins;
+        lock (TrafficLightOrigins)
+        {
+            if (!TrafficLightOrigins.TryGetValue(window, out origins!))
+            {
+                origins = new NativePoint[3];
+                for (nuint buttonType = 0; buttonType < 3; buttonType++)
+                {
+                    var button = SendObjectNUInt(window, "standardWindowButton:", buttonType);
+                    origins[buttonType] = button == IntPtr.Zero
+                        ? default
+                        : SendPoint(button, "frameOrigin");
+                }
+                TrafficLightOrigins[window] = origins;
+            }
+        }
+
+        for (nuint buttonType = 0; buttonType < 3; buttonType++)
+        {
+            var button = SendObjectNUInt(window, "standardWindowButton:", buttonType);
+            if (button == IntPtr.Zero)
+            {
+                continue;
+            }
+
+            var origin = origins[buttonType];
+            SendVoidPoint(
+                button,
+                "setFrameOrigin:",
+                new NativePoint(origin.X, origin.Y + TrafficLightVerticalOffset));
+        }
+    }
+
     private static IntPtr SendObject(IntPtr receiver, string selector) =>
         objc_msgSend_IntPtr(receiver, sel_registerName(selector));
 
@@ -95,11 +137,20 @@ internal static class MacWindowChrome
     private static nuint SendNUInt(IntPtr receiver, string selector) =>
         objc_msgSend_NUInt(receiver, sel_registerName(selector));
 
+    private static NativePoint SendPoint(IntPtr receiver, string selector) =>
+        objc_msgSend_Point(receiver, sel_registerName(selector));
+
     private static void SendVoidNUInt(IntPtr receiver, string selector, nuint value) =>
         objc_msgSend_Void_NUInt(receiver, sel_registerName(selector), value);
 
     private static void SendVoidBool(IntPtr receiver, string selector, bool value) =>
         objc_msgSend_Void_Bool(receiver, sel_registerName(selector), value);
+
+    private static void SendVoidPoint(IntPtr receiver, string selector, NativePoint value) =>
+        objc_msgSend_Void_Point(receiver, sel_registerName(selector), value);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly record struct NativePoint(double X, double Y);
 
     [DllImport(ObjectiveCLibrary, CharSet = CharSet.Ansi)]
     private static extern IntPtr objc_getClass(string name);
@@ -117,6 +168,9 @@ internal static class MacWindowChrome
     private static extern nuint objc_msgSend_NUInt(IntPtr receiver, IntPtr selector);
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    private static extern NativePoint objc_msgSend_Point(IntPtr receiver, IntPtr selector);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_Void_NUInt(IntPtr receiver, IntPtr selector, nuint value);
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
@@ -124,4 +178,7 @@ internal static class MacWindowChrome
         IntPtr receiver,
         IntPtr selector,
         [MarshalAs(UnmanagedType.I1)] bool value);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_Void_Point(IntPtr receiver, IntPtr selector, NativePoint value);
 }
