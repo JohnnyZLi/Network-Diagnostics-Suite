@@ -37,22 +37,3 @@ createRoot(rootElement).render(
     <App />
   </StrictMode>,
 );
-
-// Transfer topology is a normal run-time choice on the desktop canvas, not hidden
-// progressive disclosure. React's concurrent render is not guaranteed to commit the
-// details element before the first animation frame, so observe the root until the
-// control exists and then lock it open. The summary itself is non-interactive in CSS.
-function exposeDiagnosticOptions(): boolean {
-  const options = rootElement.querySelector<HTMLDetailsElement>('.diagnostic-options');
-  if (!options) return false;
-  options.open = true;
-  return true;
-}
-
-if (!exposeDiagnosticOptions()) {
-  const observer = new MutationObserver(() => {
-    if (exposeDiagnosticOptions()) observer.disconnect();
-  });
-  observer.observe(rootElement, { childList: true, subtree: true });
-  window.setTimeout(() => observer.disconnect(), 5000);
-}
