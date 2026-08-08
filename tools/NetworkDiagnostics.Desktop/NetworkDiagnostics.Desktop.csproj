@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="MacWindowChrome.cs" />
     <Compile Include="Photino/**/*.cs" />
     <Compile Include="Monitoring/MonitorModels.cs" />
     <Compile Include="Monitoring/MonitorHistoryStore.cs" />
