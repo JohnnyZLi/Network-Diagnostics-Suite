@@ -1,0 +1,39 @@
+name: Sync WDS b5a3fc5
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.head_ref == 'chore/sync-wds-b5a3fc5'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Pin and sync shared design system
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const sha = 'b5a3fc5898f5f62842d58f206d7ad6726e92f537';
+          fs.writeFileSync('design-system.lock.json', JSON.stringify({package:'@johnnyzli/web-design-system',version:'1.9.0',sourceCommit:sha}, null, 2) + '\n');
+          fs.writeFileSync('src/design-system/SOURCE.md', ['# Generated design-system assets','','Do not edit these files directly.','','Package: @johnnyzli/web-design-system','Version: 1.9.0',`Source commit: ${sha}`,'','Validate with `npm run design-system:check`.',''].join('\n'));
+          NODE
+          npm ci --no-audit --no-fund
+          npm run design-system:sync
+          npm run design-system:check
+          npm run design-system:integration
+          rm .github/workflows/sync-wds-b5a3fc5.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Sync Web Design System b5a3fc5"
+          git push
