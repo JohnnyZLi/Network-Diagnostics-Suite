@@ -11,6 +11,7 @@ import './ux-overhaul.css';
 import './ux-workflow.css';
 import './ux-macos-wide.css';
 import './ux-native-outcomes.css';
+import './ux-readability.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
