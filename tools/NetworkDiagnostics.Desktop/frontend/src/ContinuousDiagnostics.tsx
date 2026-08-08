@@ -347,8 +347,8 @@ function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSa
     });
     update();
     if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', update);
-      return () => window.removeEventListener('resize', update);
+      globalThis.addEventListener('resize', update);
+      return () => globalThis.removeEventListener('resize', update);
     }
     const observer = new ResizeObserver(update);
     observer.observe(svg);
