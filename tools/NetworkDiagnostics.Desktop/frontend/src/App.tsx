@@ -8,6 +8,7 @@ import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
 type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
+type WorkbenchSection = 'live-network-health' | 'run-diagnostics' | 'advanced-diagnostics';
 
 type HostInfo = {
   product: string;
@@ -63,10 +64,43 @@ type DiagnosticResult = {
   storedReport?: SavedReportSummary | null;
 };
 
+type ReportPresentation = {
+  outcome: string;
+  label: string;
+  verdict: string;
+  summary: string;
+  nextAction: string;
+  metrics: Array<{ label: string; value: string; detail: string; wasMeasured: boolean }>;
+  findings: Array<{ label: string; title: string; summary: string }>;
+  technicalEvidence: string[];
+};
+
+type SavedReportDetail = {
+  report: SavedReportSummary;
+  context: string;
+  method: string;
+  presentation: ReportPresentation;
+};
+
+type PendingRun = {
+  profile: DiagnosticProfile;
+  method: TransferMethod;
+  plan: DiagnosticPlan;
+};
+
 type DiagnosticFailure = { runId: string; message: string; errorType: string };
 type LiveMetrics = { latencyMs: number | null; downloadMbps: number | null; uploadMbps: number | null };
-type ProfileOption = { id: DiagnosticProfile; label: string; title: string; description: string; idleCopy: string };
+type ProfileOption = {
+  id: DiagnosticProfile;
+  label: string;
+  title: string;
+  description: string;
+  idleCopy: string;
+  duration: string;
+  evidence: string;
+};
 
+const HIGH_DATA_WARNING_BYTES = 750_000_000;
 const emptyLiveMetrics: LiveMetrics = { latencyMs: null, downloadMbps: null, uploadMbps: null };
 const defaultAdvancedStatus: AdvancedRuntimeStatus = {
   hasOverrides: false,
@@ -81,28 +115,36 @@ const profiles: ProfileOption[] = [
     label: 'Connection',
     title: 'Connection Check',
     description: 'A fast baseline for responsiveness, loss, and real download and upload performance.',
-    idleCopy: 'The lowest transfer ceiling for a focused baseline before you move into a deeper diagnostic.',
+    idleCopy: 'Start here when something feels wrong and you want a focused baseline before deeper investigation.',
+    duration: 'Usually under a minute',
+    evidence: 'Latency · loss · download · upload',
   },
   {
     id: 'quick',
     label: 'Quick',
     title: 'Quick Test',
     description: 'A short native test for a broader throughput snapshot without the duration of a full run.',
-    idleCopy: 'A larger measurement budget than Connection Check while remaining short enough for routine investigation.',
+    idleCopy: 'Use this for a broader routine measurement when Connection Check is not enough.',
+    duration: 'About 1 minute',
+    evidence: 'Latency · loss · throughput · basic path evidence',
   },
   {
     id: 'full',
     label: 'Full',
     title: 'Full Test',
-    description: 'The standard native profile for a more complete view of latency, loss, download, upload, and path evidence.',
-    idleCopy: 'The representative diagnostic when passive health says something is wrong and you want the complete native evidence set.',
+    description: 'The standard native profile for a complete view of performance and network-path evidence.',
+    idleCopy: 'Use Full when passive health or a shorter test points to a problem that needs localization.',
+    duration: 'About 1–3 minutes',
+    evidence: 'Latency · loss · throughput · DNS · route · MTU · IPv4/IPv6 · service reachability',
   },
   {
     id: 'stress',
     label: 'Stress',
     title: 'Stress Test',
-    description: 'A heavier native run intended to expose sustained-load behavior and less obvious connection limits.',
-    idleCopy: 'The largest transfer budget. Use it intentionally when you want sustained-load and capacity behavior.',
+    description: 'A heavier native run intended to expose sustained-load behavior and connection limits.',
+    idleCopy: 'Use Stress intentionally when you need sustained-load and peak-capacity behavior.',
+    duration: 'Several minutes',
+    evidence: 'Sustained throughput · loaded latency · path evidence · capacity limits',
   },
 ];
 
@@ -123,9 +165,11 @@ function App() {
   const [liveMetrics, setLiveMetrics] = useState<LiveMetrics>(emptyLiveMetrics);
   const [measuredBytes, setMeasuredBytes] = useState(0);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
+  const [latestReport, setLatestReport] = useState<SavedReportDetail | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyInitialReportId, setHistoryInitialReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -133,11 +177,12 @@ function App() {
   const [monitorLoading, setMonitorLoading] = useState(desktopBridge.available);
   const [monitorError, setMonitorError] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [peakConfirm, setPeakConfirm] = useState(false);
-  const [speedNotice, setSpeedNotice] = useState<string | null>(null);
+  const [pendingRun, setPendingRun] = useState<PendingRun | null>(null);
   const [advancedStatus, setAdvancedStatus] = useState<AdvancedRuntimeStatus>(defaultAdvancedStatus);
   const [advancedResetRequest, setAdvancedResetRequest] = useState(0);
   const [diagnosticsInView, setDiagnosticsInView] = useState(true);
+  const [activeSection, setActiveSection] = useState<WorkbenchSection>('live-network-health');
+  const [historyDocked, setHistoryDocked] = useState(false);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
@@ -172,6 +217,7 @@ function App() {
         } else {
           void loadMonitor();
         }
+        void loadReports(true);
       })
       .catch((value: Error) => {
         setError(value.message);
@@ -182,7 +228,8 @@ function App() {
   useEffect(() => {
     if (!desktopBridge.available) return;
     setPlan(null);
-    void desktopBridge.request<DiagnosticPlan>('diagnostic.describePlan', { profile, method })
+    setPendingRun(null);
+    void describePlan(profile, method)
       .then(setPlan)
       .catch((value: Error) => setError(value.message));
   }, [profile, method]);
@@ -218,9 +265,11 @@ function App() {
       setMeasuredBytes((current) => next.dataUsedBytes ?? current);
       setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
       setRunning(false);
+      setPendingRun(null);
       if (next.storedReport) {
         setReports((current) => [next.storedReport!, ...current.filter((item) => item.id !== next.storedReport!.id)]);
       }
+      if (next.reportId) void loadReportDetail(next.reportId).then(setLatestReport).catch(() => undefined);
       if (next.storageError) setError(`Measurement completed, but the report could not be saved: ${next.storageError}`);
     });
 
@@ -255,11 +304,46 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia('(min-width: 1500px)');
+    const update = () => setHistoryDocked(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const root = document.documentElement.dataset.platform === 'macos'
+      ? document.querySelector('main')
+      : null;
+    const sectionIds: WorkbenchSection[] = ['live-network-health', 'run-diagnostics', 'advanced-diagnostics'];
+    const visibility = new Map<WorkbenchSection, number>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        visibility.set(entry.target.id as WorkbenchSection, entry.isIntersecting ? entry.intersectionRatio : 0);
+      }
+      const visible = sectionIds
+        .map((id) => ({ id, ratio: visibility.get(id) ?? 0 }))
+        .sort((left, right) => right.ratio - left.ratio)[0];
+      if (visible?.ratio > 0) setActiveSection(visible.id);
+    }, { root, rootMargin: '-70px 0px -42% 0px', threshold: [0.05, 0.2, 0.45, 0.7] });
+    for (const id of sectionIds) {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const diagnostics = document.getElementById('run-diagnostics');
     if (!diagnostics || typeof IntersectionObserver === 'undefined') return;
+    const root = document.documentElement.dataset.platform === 'macos'
+      ? document.querySelector('main')
+      : null;
     const observer = new IntersectionObserver(
       ([entry]) => setDiagnosticsInView(entry.isIntersecting),
-      { root: null, rootMargin: '-68px 0px -15% 0px', threshold: 0.05 },
+      { root, rootMargin: '-68px 0px -15% 0px', threshold: 0.05 },
     );
     observer.observe(diagnostics);
     return () => observer.disconnect();
@@ -277,21 +361,37 @@ function App() {
       } else if (key === 'h') {
         event.preventDefault();
         setPaletteOpen(false);
-        openHistory();
+        historyOpen ? setHistoryOpen(false) : openHistory();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [historyOpen]);
 
   const progressPercent = Math.round(progressRatio * 100);
 
-  async function loadReports() {
+  async function describePlan(nextProfile: DiagnosticProfile, nextMethod: TransferMethod): Promise<DiagnosticPlan> {
+    return desktopBridge.request<DiagnosticPlan>('diagnostic.describePlan', { profile: nextProfile, method: nextMethod });
+  }
+
+  async function loadReportDetail(id: string): Promise<SavedReportDetail> {
+    return desktopBridge.request<SavedReportDetail>('reports.get', { id });
+  }
+
+  async function loadReports(loadLatest = false) {
     if (!desktopBridge.available) return;
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      setReports(await desktopBridge.request<SavedReportSummary[]>('reports.list'));
+      const nextReports = await desktopBridge.request<SavedReportSummary[]>('reports.list');
+      setReports(nextReports);
+      if (loadLatest && nextReports.length > 0) {
+        try {
+          setLatestReport(await loadReportDetail(nextReports[0].id));
+        } catch {
+          // History remains usable even if a single detail report cannot be opened.
+        }
+      }
     } catch (value) {
       setHistoryError(value instanceof Error ? value.message : 'Saved runs could not be read.');
     } finally {
@@ -299,7 +399,8 @@ function App() {
     }
   }
 
-  function openHistory() {
+  function openHistory(reportId: string | null = null) {
+    setHistoryInitialReportId(reportId);
     setHistoryOpen(true);
     void loadReports();
   }
@@ -334,12 +435,36 @@ function App() {
   function selectProfile(next: DiagnosticProfile) {
     if (running || next === profile) return;
     setProfile(next);
-    setPeakConfirm(false);
-    setSpeedNotice(null);
+    setPendingRun(null);
     setError(null);
   }
 
-  async function runDiagnostic(nextProfile: DiagnosticProfile = profile, nextMethod: TransferMethod = method) {
+  function selectMethod(next: TransferMethod) {
+    if (running || next === method) return;
+    setMethod(next);
+    setPendingRun(null);
+    setError(null);
+  }
+
+  async function prepareDiagnostic(nextProfile: DiagnosticProfile = profile, nextMethod: TransferMethod = method) {
+    if (running || !desktopBridge.available) return;
+    setError(null);
+    try {
+      const nextPlan = nextProfile === profile && nextMethod === method && plan
+        ? plan
+        : await describePlan(nextProfile, nextMethod);
+      if (nextPlan.transferCapBytes >= HIGH_DATA_WARNING_BYTES) {
+        setPendingRun({ profile: nextProfile, method: nextMethod, plan: nextPlan });
+        scrollToSection('run-diagnostics');
+        return;
+      }
+      await startDiagnostic(nextProfile, nextMethod);
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'The diagnostic plan could not be prepared.');
+    }
+  }
+
+  async function startDiagnostic(nextProfile: DiagnosticProfile, nextMethod: TransferMethod) {
     if (running) return;
     if (nextProfile !== profile) setProfile(nextProfile);
     if (nextMethod !== method) setMethod(nextMethod);
@@ -348,8 +473,7 @@ function App() {
     highestProgress.current = 0;
     stageBytes.current.clear();
     setError(null);
-    setSpeedNotice(null);
-    setPeakConfirm(false);
+    setPendingRun(null);
     setLiveMetrics(emptyLiveMetrics);
     setMeasuredBytes(0);
     setProgressRatio(0);
@@ -365,25 +489,18 @@ function App() {
     }
   }
 
-  function scrollToSection(id: string) {
+  function scrollToSection(id: WorkbenchSection | string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function runContentSpeed() {
+  function measureCapacity() {
     scrollToSection('run-diagnostics');
-    void runDiagnostic('connection-check', 'aggregate');
+    void prepareDiagnostic('connection-check', 'aggregate');
   }
 
-  function reviewPeakSpeed() {
-    scrollToSection('speed-checks');
-    if (!peakConfirm) {
-      setPeakConfirm(true);
-      setSpeedNotice('Peak uses Stress + Aggregate and the largest transfer budget. Select Run peak again to continue.');
-      return;
-    }
-    setPeakConfirm(false);
-    setSpeedNotice(null);
-    void runDiagnostic('stress', 'aggregate');
+  function measurePeakCapacity() {
+    scrollToSection('run-diagnostics');
+    void prepareDiagnostic('stress', 'aggregate');
   }
 
   async function cancelDiagnostic() {
@@ -407,8 +524,8 @@ function App() {
     {
       id: 'workspace-diagnostics',
       title: 'Go to Run Diagnostics',
-      detail: 'Connection Check, Quick, Full, Stress, measurement methods, and speed presets.',
-      keywords: 'run diagnostics test connection quick full stress speed',
+      detail: 'Connection Check, Quick, Full, Stress, and test options.',
+      keywords: 'run diagnostics test connection quick full stress',
       priority: 2,
       enabled: true,
       run: () => scrollToSection('run-diagnostics'),
@@ -421,12 +538,12 @@ function App() {
       shortcut: 'Ctrl/⌘ H',
       priority: 3,
       enabled: desktopBridge.available,
-      run: openHistory,
+      run: () => openHistory(),
     },
     {
       id: 'workspace-advanced',
       title: 'Go to Advanced Diagnostics',
-      detail: 'Targeting, interface binding, privacy, native preflight, and LAN tools.',
+      detail: 'Test configuration, native preflight, interface binding, privacy, and LAN tools.',
       keywords: 'advanced endpoint interface lan privacy preflight',
       priority: 4,
       enabled: true,
@@ -439,25 +556,25 @@ function App() {
       keywords: 'run start diagnostic current selected test',
       priority: 5,
       enabled: desktopBridge.available && !running,
-      run: () => { scrollToSection('run-diagnostics'); void runDiagnostic(); },
+      run: () => { scrollToSection('run-diagnostics'); void prepareDiagnostic(); },
     },
     {
       id: 'run-content',
-      title: 'Run Content Speed Check',
-      detail: 'Low-data Connection Check using aggregate transfer flow.',
+      title: 'Measure Capacity',
+      detail: 'Lower-data Connection Check using aggregate transfer flow.',
       keywords: 'content speed aggregate low data bandwidth capacity',
       priority: 6,
       enabled: desktopBridge.available && !running,
-      run: runContentSpeed,
+      run: measureCapacity,
     },
     {
-      id: 'open-peak',
-      title: 'Review Peak Capacity Check',
-      detail: 'Jump to the explicit Stress + Aggregate high-data confirmation.',
+      id: 'run-peak',
+      title: 'Measure Peak Capacity',
+      detail: 'Stress + Aggregate with plan-based high-data confirmation.',
       keywords: 'peak speed stress aggregate bandwidth capacity',
       priority: 7,
       enabled: desktopBridge.available && !running,
-      run: () => scrollToSection('speed-checks'),
+      run: measurePeakCapacity,
     },
     ...(running ? [{
       id: 'cancel-run',
@@ -484,17 +601,37 @@ function App() {
       keywords: `method transfer flow ${item.id} ${item.detail}`,
       priority: 30 + index,
       enabled: !running,
-      run: () => { setMethod(item.id); scrollToSection('run-diagnostics'); },
+      run: () => { selectMethod(item.id); scrollToSection('run-diagnostics'); },
     } satisfies PaletteCommand)),
   ];
 
+  const latestDiagnostic = latestReport ? {
+    profileName: latestReport.report.profileName,
+    generatedAt: latestReport.report.generatedAt,
+    outcome: latestReport.presentation.outcome,
+    label: latestReport.presentation.label,
+    verdict: latestReport.presentation.verdict,
+    summary: latestReport.presentation.summary,
+    nextAction: latestReport.presentation.nextAction,
+  } : null;
+
+  const primaryFinding = latestReport?.presentation.findings[0] ?? null;
+  const recommendedProfile = recommendationProfile(result, latestReport);
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${historyOpen && historyDocked ? 'history-docked' : ''}`}>
       <header className="product-bar">
-        <div className="brand">
+        <button type="button" className="brand brand-home" onClick={() => scrollToSection('live-network-health')} aria-label="Go to Live Network Health">
           <span className="brand-mark" role="img" aria-label={shellHealthLabel} title={shellHealthLabel} />
           <div><strong>Network Diagnostics</strong><span>Desktop</span></div>
-        </div>
+        </button>
+
+        <nav className="workbench-nav" aria-label="Workbench sections">
+          <button type="button" className={activeSection === 'live-network-health' ? 'active' : ''} aria-current={activeSection === 'live-network-health' ? 'location' : undefined} onClick={() => scrollToSection('live-network-health')}>Health</button>
+          <button type="button" className={activeSection === 'run-diagnostics' ? 'active' : ''} aria-current={activeSection === 'run-diagnostics' ? 'location' : undefined} onClick={() => scrollToSection('run-diagnostics')}>Diagnostics</button>
+          <button type="button" className={activeSection === 'advanced-diagnostics' ? 'active' : ''} aria-current={activeSection === 'advanced-diagnostics' ? 'location' : undefined} onClick={() => scrollToSection('advanced-diagnostics')}>Advanced</button>
+        </nav>
+
         <div className="product-actions">
           <div className={`host-state ${host ? 'connected' : ''}`}>
             <span className="status-dot" aria-hidden="true" />
@@ -521,16 +658,21 @@ function App() {
           snapshot={monitorSnapshot}
           loading={monitorLoading}
           error={monitorError}
+          activeDiagnostic={running ? { profileName: profileTitle(activeProfile.current), phase: phaseLabel(progress?.phase, progress?.message) } : null}
+          latestDiagnostic={latestDiagnostic}
           onUpdate={setMonitorSnapshot}
           onError={setMonitorError}
-          onMeasureCapacity={() => scrollToSection('speed-checks')}
+          onRunRecommended={() => { scrollToSection('run-diagnostics'); selectProfile('connection-check'); }}
+          onOpenLatestReport={() => latestReport && openHistory(latestReport.report.id)}
+          onMeasureCapacity={measureCapacity}
+          onMeasurePeakCapacity={measurePeakCapacity}
         />
 
         <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
           <div className="workbench-section-header diagnostics-header">
             <div>
               <h2 id="run-diagnostics-title">RUN DIAGNOSTICS</h2>
-              <p>Run a controlled test when you need deeper evidence.</p>
+              <p>Choose what you need to learn. Test topology and native overrides stay secondary until you need them.</p>
             </div>
           </div>
 
@@ -546,15 +688,18 @@ function App() {
               </div>
               <small>{selectedProfile.description}</small>
             </div>
-            <div className="diagnostic-selector-group method-selector-group">
-              <span>Measurement method</span>
-              <div className="method-control" aria-label="Measurement method">
-                {methods.map((item) => (
-                  <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => setMethod(item.id)} disabled={running}>{item.label}</button>
-                ))}
+
+            <details className="diagnostic-options">
+              <summary><span>Test options</span><span>{methods.find((item) => item.id === method)?.label} · {methods.find((item) => item.id === method)?.detail}</span></summary>
+              <div className="diagnostic-options-body">
+                <div className="diagnostic-options-copy">Transfer topology is an expert option. Both runs single and aggregate flows so you can distinguish one-flow behavior from parallel capacity.</div>
+                <div className="method-control" aria-label="Measurement method">
+                  {methods.map((item) => (
+                    <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => selectMethod(item.id)} disabled={running}>{item.label}</button>
+                  ))}
+                </div>
               </div>
-              <small>{methods.find((item) => item.id === method)?.detail}</small>
-            </div>
+            </details>
           </div>
 
           {advancedStatus.hasOverrides && (
@@ -564,13 +709,24 @@ function App() {
             </div>
           )}
 
+          {pendingRun && !running && (
+            <div className="high-data-confirm" role="alert">
+              <div>
+                <span>High-data diagnostic</span>
+                <strong>{profileTitle(pendingRun.profile)} may transfer up to {formatBytes(pendingRun.plan.transferCapBytes)}.</strong>
+                <p>{durationFor(pendingRun.profile)}. This warning follows the actual measurement plan regardless of where the test was started.</p>
+              </div>
+              <div><button type="button" className="secondary-action" onClick={() => setPendingRun(null)}>Cancel</button><button type="button" className="primary-action" onClick={() => void startDiagnostic(pendingRun.profile, pendingRun.method)}>Run diagnostic</button></div>
+            </div>
+          )}
+
           {running ? (
             <div className="diagnostic-run-state running">
               <div className="diagnostic-run-heading">
                 <div>
                   <div className="run-status-line"><span className="pulse" aria-hidden="true" />{phaseLabel(progress?.phase, progress?.message)}</div>
                   <h3>{progress?.message || 'Preparing the test…'}</h3>
-                  <p>{profileTitle(activeProfile.current)} is running through the native engine while live network monitoring continues independently above.</p>
+                  <p>{profileTitle(activeProfile.current)} is running through the native engine. Passive monitoring continues, but test-generated load is identified separately.</p>
                 </div>
                 <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>Cancel test</button>
               </div>
@@ -590,10 +746,13 @@ function App() {
               <div className="diagnostic-run-heading">
                 <div>
                   <span className="result-label">Latest diagnostic · {new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
-                  <h3>{displayedProfile.title} complete</h3>
-                  <p>Latest successful measurement. It stays here until the next diagnostic completes.</p>
+                  <h3>{latestReport?.presentation.verdict || `${displayedProfile.title} complete`}</h3>
+                  <p>{latestReport?.presentation.summary || 'Latest successful measurement. It stays here until the next diagnostic completes.'}</p>
                 </div>
-                <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={openHistory}>Open history</button><button type="button" className="primary-action" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button></div>
+                <div className="diagnostic-result-actions">
+                  <button type="button" className="secondary-action" onClick={() => openHistory(result.reportId)}>View report</button>
+                  <button type="button" className="primary-action" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button>
+                </div>
               </div>
               <div className="metric-strip diagnostic-metrics" aria-label="Latest diagnostic metrics">
                 <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median latency" />
@@ -601,6 +760,20 @@ function App() {
                 <Metric label="Upload" value={metric(result.uploadMbps, 'Mbps')} detail="Steady throughput" />
                 <Metric label="Request loss" value={metric(result.requestLossPercent, '%')} detail="First-party requests" />
               </div>
+              {latestReport && (
+                <div className="diagnostic-verdict">
+                  <div className="diagnostic-verdict-main">
+                    <span>{latestReport.presentation.label}</span>
+                    <strong>{primaryFinding?.title || latestReport.presentation.verdict}</strong>
+                    <p>{primaryFinding?.summary || latestReport.presentation.summary}</p>
+                  </div>
+                  <div className="recommended-next-step">
+                    <span>Recommended next step</span>
+                    <strong>{latestReport.presentation.nextAction || 'No additional testing is required right now.'}</strong>
+                    {recommendedProfile ? <p><button type="button" className="inline-action" onClick={() => { selectProfile(recommendedProfile); scrollToSection('run-diagnostics'); }}>Prepare {profileTitle(recommendedProfile)}</button></p> : <p>Keep passive monitoring running and retest only if the connection changes.</p>}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="diagnostic-run-state ready">
@@ -609,12 +782,13 @@ function App() {
                 <h3>{selectedProfile.title}</h3>
                 <p>{selectedProfile.idleCopy}</p>
                 <div className="diagnostic-plan-facts">
+                  <span><b>{selectedProfile.duration}</b> typical duration</span>
                   <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
-                  <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
-                  <span><b>{methodLabel(method)}</b> measurement method</span>
+                  <span><b>{methodLabel(method)}</b> test topology</span>
                 </div>
+                <div className="diagnostic-evidence-summary"><span>Evidence</span><strong>{selectedProfile.evidence}</strong></div>
               </div>
-              <button type="button" className="primary-action diagnostic-run-button" onClick={() => void runDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button>
+              <button type="button" className="primary-action diagnostic-run-button" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button>
             </div>
           )}
 
@@ -622,7 +796,7 @@ function App() {
             <section className="detail-row diagnostic-evidence-row">
               <div className="plan-card">
                 <span className="section-kicker">Active test plan</span>
-                <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(method)}</span></div>
+                <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(activeMethod.current)}</span></div>
                 <div className="plan-facts">
                   <span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span>
                   <span><b>{plan ? `${plan.downloadStages + plan.uploadStages}` : '—'}</b> transfer stages</span>
@@ -638,44 +812,6 @@ function App() {
                 <div className="evidence-line"><span>Method</span><strong>{methodLabel(activeMethod.current)}</strong></div>
               </div>
             </section>
-          )}
-
-          {!running && result && (
-            <div className="diagnostic-result-followup">
-              <div className="next-run-summary">
-                <span>Next run</span>
-                <strong>{selectedProfile.title}</strong>
-                <small>{methodLabel(method)} · {plan ? formatBytes(plan.transferCapBytes) : '—'} max · {plan ? `${plan.downloadStages + plan.uploadStages} stages` : 'plan loading'}</small>
-              </div>
-              <details className="diagnostic-run-details">
-                <summary>Last run details</summary>
-                <div className="diagnostic-run-detail-grid">
-                  <div><span>Profile</span><strong>{displayedProfile.title}</strong></div>
-                  <div><span>Method</span><strong>{methodLabel(result.method)}</strong></div>
-                  <div><span>Payload</span><strong>{formatBytes(result.dataUsedBytes ?? 0)}</strong></div>
-                  <div><span>Report</span><strong>{result.savedLocally === false ? 'Not saved' : 'Saved locally'}</strong></div>
-                </div>
-              </details>
-            </div>
-          )}
-
-          {!running && (
-            <div id="speed-checks" className="speed-check-section">
-              <div className="speed-check-heading"><div><strong>Speed checks</strong><span>Convenient presets using the same native diagnostic runner</span></div></div>
-              {speedNotice && <div className="speed-check-notice" role="status">{speedNotice}</div>}
-              <div className="speed-check-grid">
-                <button type="button" className="speed-check-card" disabled={!desktopBridge.available} onClick={runContentSpeed}>
-                  <span><strong>Content speed</strong><small>Connection Check · Aggregate</small></span>
-                  <p>Lower-data capacity estimate representative of normal transfers.</p>
-                  <b>Run</b>
-                </button>
-                <button type="button" className={`speed-check-card ${peakConfirm ? 'confirm' : ''}`} disabled={!desktopBridge.available} onClick={reviewPeakSpeed}>
-                  <span><strong>Peak capacity</strong><small>Stress · Aggregate</small></span>
-                  <p>High-data measurement intended to approach maximum sustained throughput.</p>
-                  <b>{peakConfirm ? 'Run peak' : 'Review'}</b>
-                </button>
-              </div>
-            </div>
           )}
         </section>
 
@@ -701,7 +837,9 @@ function App() {
         reports={reports}
         loading={historyLoading}
         error={historyError}
-        onClose={() => setHistoryOpen(false)}
+        initialReportId={historyInitialReportId}
+        docked={historyDocked}
+        onClose={() => { setHistoryOpen(false); setHistoryInitialReportId(null); }}
         onRefresh={() => void loadReports()}
       />
 
@@ -738,6 +876,18 @@ function overallProgress(progress: DiagnosticProgress, method: TransferMethod): 
     return 0.90;
   }
   return 0.02;
+}
+
+function recommendationProfile(result: DiagnosticResult | null, detail: SavedReportDetail | null): DiagnosticProfile | null {
+  if (!result || !detail) return null;
+  const outcome = detail.presentation.outcome.toLowerCase();
+  if (outcome === 'success' || outcome === 'healthy' || outcome === 'good') return null;
+  if (result.profile === 'connection-check' || result.profile === 'quick') return 'full';
+  return null;
+}
+
+function durationFor(profile: DiagnosticProfile): string {
+  return profiles.find((item) => item.id === profile)?.duration ?? 'Duration depends on the measurement plan';
 }
 
 function metric(value: number | null | undefined, unit: string): string { return value == null ? '—' : `${formatNumber(value)} ${unit}`; }
