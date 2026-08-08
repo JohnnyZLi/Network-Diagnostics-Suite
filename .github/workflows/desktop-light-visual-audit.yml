@@ -64,7 +64,11 @@ jobs:
           echo $! > /tmp/desktop-light-app.pid
           for attempt in {1..50}; do
             if wmctrl -l | grep -q 'Network Diagnostics'; then
-              wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+              # Explicit geometry is more reliable than X11 maximize for WebKitGTK;
+              # maximize can leave the backing surface blank until a later resize.
+              wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              xdotool mousemove --sync 800 500 click 1
               sleep 3
               exit 0
             fi
@@ -83,13 +87,33 @@ jobs:
           set -euo pipefail
 
           capture() {
-            sleep 0.7
-            scrot "desktop-light/screenshots/$1.png"
+            local name="$1"
+            local path="desktop-light/screenshots/$name.png"
+            sleep 0.8
+            scrot "$path"
+
+            # A blank WebKitGTK backing surface compresses to a very small PNG even
+            # though the window manager frame is present. Force a one-pixel resize
+            # redraw once, then reject the artifact if it is still blank-like.
+            if (( $(stat -c%s "$path") < 60000 )); then
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1579,939
+              sleep 0.45
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              sleep 1
+              scrot "$path"
+            fi
+
+            if (( $(stat -c%s "$path") < 60000 )); then
+              echo "Light-theme screenshot $name is blank or did not redraw."
+              ls -lh "$path"
+              cat /tmp/desktop-light-app.log
+              exit 1
+            fi
           }
 
           capture connection-check-light-wide
-          wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
           wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
+          sleep 0.7
           capture connection-check-light-compact
 
           if ! kill -0 "$(cat /tmp/desktop-light-app.pid)" 2>/dev/null; then
