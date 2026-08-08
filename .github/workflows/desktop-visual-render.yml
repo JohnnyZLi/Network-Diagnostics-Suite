@@ -121,9 +121,7 @@ jobs:
           sleep 1.2
           capture diagnostics-ready-dark
 
-          # Advanced now has two real concepts: Test configuration and LAN tools.
-          # Open Test configuration, then reach its embedded Preflight action through
-          # keyboard order so the validation is not coupled to the expanded pane height.
+          # Advanced has two real concepts: Test configuration and LAN tools.
           open_palette
           xdotool type --delay 35 'advanced'
           capture command-palette-advanced-filtered
@@ -160,8 +158,9 @@ jobs:
           capture settings-popover-dark
           xdotool key --clearmodifiers Escape
 
-          # Capacity is the user-facing speed concept. The standard action maps to
-          # Connection Check + Aggregate; Peak remains a separate heavier action.
+          # Capacity remains a semantic shortcut to Connection Check + Aggregate +
+          # Automatic delivery while the normal diagnostics surface exposes all three
+          # topology and download-path choices directly.
           open_palette
           xdotool type --delay 35 'measure capacity'
           capture command-palette-capacity-filtered
@@ -172,11 +171,11 @@ jobs:
           capture diagnostics-running-later
 
           for attempt in {1..20}; do
-            if grep -Fq '"profile":"connection-check","method":"aggregate","transferCapBytes"' /tmp/desktop-app.log; then
+            if grep -Fq '"profile":"connection-check","method":"aggregate","downloadPath":"automatic","transferCapBytes"' /tmp/desktop-app.log; then
               break
             fi
             if (( attempt == 20 )); then
-              echo "Capacity action did not start Connection Check + Aggregate."
+              echo "Capacity action did not start Connection Check + Aggregate + Automatic."
               tail -140 /tmp/desktop-app.log
               exit 1
             fi
@@ -254,8 +253,8 @@ jobs:
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # ReportDetail owns focus on mount. Technical evidence and Edit details are
-          # the first two controls from that container, independent of scroll geometry.
+          # ReportDetail owns focus on mount. Technical data and Edit details are the
+          # first two controls from that container, independent of scroll geometry.
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Return
