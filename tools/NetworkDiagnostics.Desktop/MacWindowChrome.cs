@@ -9,6 +9,7 @@ internal static class MacWindowChrome
     private const string ToggleZoomMessage = "macos.window.toggleZoom";
     private static readonly nuint FullSizeContentViewMask = (nuint)1 << 15;
     private static readonly nuint HiddenTitleVisibility = 1;
+    private const double TrafficLightHorizontalOffset = 8.0;
     private const double TrafficLightVerticalOffset = -12.0;
     private static readonly Dictionary<IntPtr, NativePoint[]> TrafficLightOrigins = new();
     private static bool nativeMessageHandlerRegistered;
@@ -138,10 +139,11 @@ internal static class MacWindowChrome
 
     private static void CenterTrafficLights(IntPtr window)
     {
-        // AppKit keeps the standard traffic lights at its conventional title-bar Y
-        // coordinate even when content extends into the title bar. The unified toolbar
-        // is taller, so preserve the real controls and move the group down twelve points
-        // to align their optical centers with the React toolbar content.
+        // Full-size content keeps AppKit's standard controls at the conventional title-
+        // bar origin. The unified toolbar is taller and uses a more generous leading
+        // inset, so preserve the real controls while moving the group eight points right
+        // and twelve points down. The resulting outer inset matches the toolbar's visual
+        // padding instead of leaving the close button pressed against the window edge.
         NativePoint[] origins;
         lock (TrafficLightOrigins)
         {
@@ -171,7 +173,9 @@ internal static class MacWindowChrome
             SendVoidPoint(
                 button,
                 "setFrameOrigin:",
-                new NativePoint(origin.X, origin.Y + TrafficLightVerticalOffset));
+                new NativePoint(
+                    origin.X + TrafficLightHorizontalOffset,
+                    origin.Y + TrafficLightVerticalOffset));
         }
     }
 
