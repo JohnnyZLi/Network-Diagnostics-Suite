@@ -1,8 +1,9 @@
-name: One-time pinned site-controls sync
+name: One-time sync pinned site controls
 
 on:
   push:
-    branches: ["agent/sync-pinned-site-controls"]
+    branches:
+      - agent/sync-pinned-site-controls
 
 permissions:
   contents: write
@@ -11,46 +12,52 @@ jobs:
   sync:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7
         with:
+          ref: agent/sync-pinned-site-controls
           fetch-depth: 0
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+
+      - uses: actions/setup-node@v7
         with:
-          node-version: "24"
-          package-manager-cache: false
-      - name: Sync shared header source
+          node-version: 24
+          cache: npm
+
+      - name: Pin merged design-system commit
+        env:
+          WDS_SOURCE_COMMIT: 539ab47fae9f38faa41efef29b7d66de2bcfac75
         run: |
           python3 - <<'PY'
-          import json
+          import json, os, re
           from pathlib import Path
-          sha = "539ab47fae9f38faa41efef29b7d66de2bcfac75"
-          Path("design-system.lock.json").write_text(json.dumps({
-              "package": "@johnnyzli/web-design-system",
-              "version": "1.9.0",
-              "sourceCommit": sha,
-          }, indent=2) + "\n", encoding="utf-8")
+          sha = os.environ['WDS_SOURCE_COMMIT']
+
+          lock_path = Path('design-system.lock.json')
+          lock = json.loads(lock_path.read_text())
+          lock['sourceCommit'] = sha
+          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
+
+          source_path = Path('src/design-system/SOURCE.md')
+          text = source_path.read_text()
+          text, count = re.subn(r'Source commit: [0-9a-f]+', f'Source commit: {sha}', text, count=1)
+          if count != 1:
+              raise SystemExit('Could not update Network Diagnostics design-system source metadata')
+          source_path.write_text(text)
           PY
-          npm run design-system:sync
-          cat > src/design-system/SOURCE.md <<'EOF'
-          # Generated design-system assets
 
-          Do not edit these files directly.
-
-          Package: @johnnyzli/web-design-system
-          Version: 1.9.0
-          Source commit: 539ab47fae9f38faa41efef29b7d66de2bcfac75
-
-          Validate with `npm run design-system:check`.
-          EOF
-          rm .github/workflows/one-time-sync-pinned-site-controls.yml
-      - name: Commit synchronized assets
+      - name: Sync and validate generated assets
         run: |
+          npm ci --no-audit --no-fund
+          npm run design-system:sync
+          npm run design-system:check
+          npm run design-system:integration
+
+      - name: Commit generated sync only
+        run: |
+          git rm .github/workflows/one-time-sync-pinned-site-controls.yml
+          rm -f .sync-pinned-controls-trigger
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Sync pinned shared header controls"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin HEAD:agent/sync-pinned-site-controls
