@@ -14,9 +14,20 @@
   --ux-toolbar-height: 68px;
 }
 
+:root[data-platform="macos"] {
+  --ux-toolbar-height: 54px;
+}
+
 /* Wider data canvas, constrained prose. */
 main {
   width: min(var(--ux-canvas), calc(100% - 72px));
+}
+
+/* macOS uses an inner absolute scroll viewport so the AppKit-aligned toolbar never
+   participates in elastic overscroll. Spend its horizontal padding against the same
+   wide canvas instead of retaining the pre-overhaul 1180px constraint. */
+:root[data-platform="macos"] .app-shell > main {
+  padding-inline: max(36px, calc((100vw - var(--ux-canvas)) / 2));
 }
 
 .workbench-section-header > div:first-child,
@@ -361,6 +372,10 @@ main {
     width: min(var(--ux-canvas), calc(100% - 96px));
   }
 
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: max(48px, calc((100vw - var(--ux-canvas)) / 2));
+  }
+
   .monitor-components.live-health-components {
     gap: 18px;
   }
@@ -375,6 +390,10 @@ main {
 @media (max-width: 1080px) {
   main {
     width: min(100% - 44px, 1040px);
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: 22px;
   }
 
   .workbench-nav {
@@ -394,6 +413,10 @@ main {
 @media (max-width: 820px) {
   main {
     width: min(100% - 30px, 760px);
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: 15px;
   }
 
   .workbench-section {
@@ -440,6 +463,12 @@ main {
 
   .diagnostic-run-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-platform="macos"] {
+    --ux-toolbar-height: 52px;
   }
 }
 
