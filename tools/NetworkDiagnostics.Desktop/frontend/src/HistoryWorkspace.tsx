@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import './history.css';
-import './report.css';
-import './report-management.css';
 
 export type SavedReportSummary = {
   id: string;

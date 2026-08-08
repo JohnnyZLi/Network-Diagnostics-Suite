@@ -60,7 +60,9 @@ jobs:
           sleep 1
           openbox > /tmp/diagnostics-openbox.log 2>&1 &
           echo $! > /tmp/diagnostics-openbox.pid
-          diagnostics-visual/publish/NetworkDiagnosticsDesktop > /tmp/diagnostics-app.log 2>&1 &
+          diagnostics-visual/publish/NetworkDiagnosticsDesktop \
+            --workspace=diagnostics --appearance=dark --window-size=1580x940 \
+            > /tmp/diagnostics-app.log 2>&1 &
           echo $! > /tmp/diagnostics-app.pid
           for attempt in {1..50}; do
             if wmctrl -l | grep -q 'Network Diagnostics'; then
@@ -86,15 +88,23 @@ jobs:
           capture() {
             local name="$1"
             local path="diagnostics-visual/screenshots/$name.png"
-            sleep 0.35
-            scrot "$path"
-            if (( $(stat -c%s "$path") < 60000 )); then
-              wmctrl -r 'Network Diagnostics' -e 0,10,35,1579,939
-              sleep 0.35
-              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
-              sleep 0.7
+            local attempt
+            for attempt in {1..5}; do
+              sleep 0.8
               scrot "$path"
-            fi
+              if (( $(stat -c%s "$path") >= 60000 )); then
+                return
+              fi
+              # WebKitGTK can retain a blank backing surface after navigation or an
+              # X11 resize. Alternate one pixel of geometry and focus the webview so
+              # every milestone gets several real redraw opportunities.
+              if (( attempt % 2 == 1 )); then
+                wmctrl -r 'Network Diagnostics' -e 0,10,35,1579,939
+              else
+                wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              fi
+              xdotool mousemove --sync 800 330 click 1
+            done
             if (( $(stat -c%s "$path") < 60000 )); then
               echo "Screenshot $name is blank or did not redraw."
               cat /tmp/diagnostics-app.log

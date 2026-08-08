@@ -1,4 +1,4 @@
-const INTERFACE_SELECT = '.interface-row select[aria-label="Network interface"]';
+const INTERFACE_SELECT = 'select[data-interface-picker]';
 const MENU_ID = 'network-interface-picker-menu';
 
 type PickerState = {
@@ -244,3 +244,21 @@ document.addEventListener('scroll', (event) => {
 }, true);
 
 window.addEventListener('resize', () => closePicker());
+
+const startupPicker = new URLSearchParams(window.location.search).get('open-interface-picker');
+if (startupPicker === 'run' || startupPicker === 'advanced') {
+  let attempts = 0;
+  const selector = startupPicker === 'run'
+    ? 'select[data-interface-picker][aria-label="Network interface"]'
+    : 'select[data-interface-picker][aria-label="Advanced network interface"]';
+  const tryOpen = () => {
+    const select = document.querySelector<HTMLSelectElement>(selector);
+    if (select && !select.disabled && select.options.length > 1) {
+      openPicker(select);
+      return;
+    }
+    attempts += 1;
+    if (attempts < 40) window.setTimeout(tryOpen, 250);
+  };
+  window.setTimeout(tryOpen, 250);
+}

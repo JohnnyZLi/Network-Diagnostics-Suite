@@ -1,12 +1,6 @@
-.product-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
 .settings-menu {
   position: relative;
-  flex: 0 0 auto;
+  height: 34px;
 }
 
 .settings-trigger {
@@ -15,204 +9,190 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.settings-trigger:hover,
+.settings-trigger.active {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.settings-trigger.active {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--line));
+  color: var(--accent-strong);
 }
 
 .settings-trigger svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.55;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: transform 220ms ease;
-}
-
-.settings-trigger:hover:not(:disabled),
-.settings-trigger.active {
-  color: var(--text);
-  background: var(--surface-soft);
-  border-color: var(--line-strong);
-}
-
-.settings-trigger:hover:not(:disabled) svg,
-.settings-trigger.active svg {
-  transform: rotate(18deg);
-}
-
-.settings-trigger:disabled {
-  opacity: 0.45;
-  cursor: default;
+  stroke-width: 1.45;
 }
 
 .settings-popover {
   position: absolute;
-  z-index: 20;
-  top: calc(100% + 10px);
+  top: calc(100% + 9px);
   right: 0;
-  width: min(360px, calc(100vw - 28px));
-  padding: 16px;
+  z-index: 210;
+  width: 340px;
+  overflow: hidden;
   border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
-  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  animation: settings-enter 100ms ease-out both;
+}
+
+@keyframes settings-enter {
+  from { opacity: .7; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-section {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
 }
 
 .settings-section + .settings-section {
-  margin-top: 16px;
-  padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 
 .settings-copy {
   display: grid;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 3px;
 }
 
 .settings-copy strong {
-  font-size: 13px;
-  letter-spacing: -0.01em;
+  font-size: 10.5px;
 }
 
 .settings-copy span {
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 8.8px;
+  line-height: 1.4;
 }
 
 .appearance-control {
+  min-height: 34px;
+  padding: 3px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
   border: 1px solid var(--line);
-  border-radius: 11px;
-  background: var(--surface);
+  border-radius: 8px;
+  background: var(--control);
 }
 
 .appearance-control button {
-  height: 34px;
-  border: 0;
-  border-radius: 7px;
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 9px;
+  font-weight: 690;
   cursor: pointer;
-  transition: color 150ms ease, background 150ms ease;
 }
 
 .appearance-control button:hover {
   color: var(--text);
+  background: var(--surface-soft);
 }
 
 .appearance-control button.active {
-  color: var(--accent-strong);
   background: var(--accent-soft);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .capacity-preference-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .capacity-preference-fields label {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .capacity-preference-fields label > span {
   color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 8.5px;
+  font-weight: 670;
 }
 
 .capacity-preference-fields label > div {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 9px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface);
+  position: relative;
 }
 
 .capacity-preference-fields input {
-  min-width: 0;
   width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
+  height: 34px;
+  padding: 0 40px 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--control);
   color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
+  font: 690 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.capacity-preference-fields input:focus {
+  border-color: var(--data);
+  outline: 0;
+  box-shadow: 0 0 0 2px var(--data-soft);
 }
 
 .capacity-preference-fields b {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 50%;
+  right: 8px;
   color: var(--faint);
-  font-size: 10.5px;
-  font-weight: 650;
+  font-size: 7.5px;
+  transform: translateY(-50%);
 }
 
 .settings-save {
-  width: 100%;
-  min-height: 36px;
-  margin-top: 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  height: 33px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fffaf7;
+  font-size: 9px;
+  font-weight: 710;
   cursor: pointer;
 }
 
-.settings-save:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--line-strong));
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface-soft));
-}
-
-.settings-save:disabled,
-.capacity-preference-fields input:disabled {
-  opacity: .55;
-  cursor: default;
-}
-
 .settings-message {
-  margin: 12px 0 0;
+  margin: 0 12px 12px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--good) 36%, var(--line));
+  border-radius: 6px;
+  background: var(--good-soft);
   color: var(--good);
-  font-size: 11.5px;
-  line-height: 1.4;
+  font-size: 8.5px;
 }
 
 .settings-message.error {
+  border-color: color-mix(in srgb, var(--danger) 36%, var(--line));
+  background: var(--danger-soft);
   color: var(--danger);
 }
 
-@media (max-width: 540px) {
-  .product-actions {
-    gap: 8px;
-  }
-
+@media (max-width: 520px) {
   .settings-popover {
     position: fixed;
-    top: 58px;
-    right: 12px;
-  }
-
-  .capacity-preference-fields {
-    grid-template-columns: 1fr;
+    top: 62px;
+    right: 10px;
+    left: 10px;
+    width: auto;
   }
 }

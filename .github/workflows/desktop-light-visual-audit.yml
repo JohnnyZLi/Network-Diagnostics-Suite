@@ -60,7 +60,8 @@ jobs:
           sleep 1
           openbox > /tmp/desktop-light-openbox.log 2>&1 &
           echo $! > /tmp/desktop-light-openbox.pid
-          desktop-light/publish/NetworkDiagnosticsDesktop > /tmp/desktop-light-app.log 2>&1 &
+          desktop-light/publish/NetworkDiagnosticsDesktop --appearance=light \
+            > /tmp/desktop-light-app.log 2>&1 &
           echo $! > /tmp/desktop-light-app.pid
           for attempt in {1..50}; do
             if wmctrl -l | grep -q 'Network Diagnostics'; then

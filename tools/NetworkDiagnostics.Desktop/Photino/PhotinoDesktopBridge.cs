@@ -714,6 +714,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
             context = ReportComparisonService.ContextLabel(stored.Report),
             method = BridgeProtocol.MethodId(stored.Report.Run.TransferMethod),
             downloadDelivery = stored.Report.InternetTransfer?.DownloadDelivery,
+            measurement = stored.Report.Measurement,
             presentation = new
             {
                 outcome = presentation.Outcome.ToString().ToLowerInvariant(),

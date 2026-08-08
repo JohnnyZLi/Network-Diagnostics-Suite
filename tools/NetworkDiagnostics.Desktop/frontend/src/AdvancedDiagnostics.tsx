@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import './advanced.css';
-import './workbench.css';
 
 type TransferMethod = 'compare' | 'single' | 'aggregate';
 type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
@@ -44,11 +43,13 @@ export function AdvancedDiagnostics({
   method,
   onStatusChange,
   resetRequest = 0,
+  preflightRequest = 0,
 }: {
   profile: DiagnosticProfile;
   method: TransferMethod;
   onStatusChange?: (status: AdvancedRuntimeStatus) => void;
   resetRequest?: number;
+  preflightRequest?: number;
 }) {
   const preflightRef = useRef<HTMLElement>(null);
   const persistedSettings = useRef<AdvancedSettings>(defaultSettings);
@@ -56,7 +57,8 @@ export function AdvancedDiagnostics({
   // persisted configuration. Treat the current reset token as already handled so a
   // historical Reset click cannot unexpectedly wipe a later interface selection.
   const handledResetRequest = useRef(resetRequest);
-  const [tool, setTool] = useState<AdvancedTool | null>(null);
+  const handledPreflightRequest = useRef(preflightRequest);
+  const [tool, setTool] = useState<AdvancedTool>('configuration');
   const [settings, setSettings] = useState<AdvancedSettings>(defaultSettings);
   const [endpointText, setEndpointText] = useState('');
   const [interfaces, setInterfaces] = useState<InterfaceChoice[]>([]);
@@ -126,6 +128,13 @@ export function AdvancedDiagnostics({
     handledResetRequest.current = resetRequest;
     void resetToDefaults();
   }, [resetRequest, loading]);
+
+  useEffect(() => {
+    if (!preflightRequest || preflightRequest === handledPreflightRequest.current || loading) return;
+    handledPreflightRequest.current = preflightRequest;
+    setTool('configuration');
+    void runPreflight();
+  }, [preflightRequest, loading]);
 
   function emitStatus(saved: AdvancedSettings, running: boolean, activePort: number | null) {
     onStatusChange?.(runtimeStatus(saved, running, activePort));
@@ -293,14 +302,14 @@ export function AdvancedDiagnostics({
               description="Endpoints, interface binding, report privacy, and native preflight."
               status={targetingSummary(persistedSettings.current)}
               active={tool === 'configuration'}
-              onClick={() => setTool((current) => current === 'configuration' ? null : 'configuration')}
+              onClick={() => setTool('configuration')}
             />
             <AdvancedToolCard
               title="LAN tools"
               description="Local peer throughput and native server testing."
               status={serverRunning ? `Server listening on :${displayedServerPort}` : settings.lanTarget?.trim() ? 'LAN peer configured' : 'Not configured'}
               active={tool === 'lan'}
-              onClick={() => setTool((current) => current === 'lan' ? null : 'lan')}
+              onClick={() => setTool('lan')}
             />
           </div>
 
@@ -317,7 +326,7 @@ export function AdvancedDiagnostics({
                   <label className="advanced-field">
                     <span>Bind diagnostic traffic</span>
                     <div className="advanced-select-shell">
-                      <select value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
+                      <select data-interface-picker aria-label="Advanced network interface" value={settings.interfaceId ?? ''} onChange={(event) => patchSettings('interfaceId', event.target.value || null)}>
                         <option value="">Automatic routing</option>
                         {interfaces.map((choice, index) => {
                           const id = interfaceId(choice);
@@ -400,8 +409,18 @@ function targetingSummary(settings: AdvancedSettings): string {
 }
 
 function interfaceId(choice: InterfaceChoice): string | null { return stringValue(choice, ['id', 'interfaceId', 'adapterId', 'name']); }
-function interfaceLabel(choice: InterfaceChoice, fallback: string): string { const name = stringValue(choice, ['displayName', 'name', 'description', 'interfaceName']); const type = stringValue(choice, ['type', 'interfaceType']); return [name ?? fallback, type].filter(Boolean).join(' · '); }
+function interfaceLabel(choice: InterfaceChoice, fallback: string): string {
+  const name = stringValue(choice, ['displayName', 'name', 'interfaceName']) ?? fallback;
+  const description = stringValue(choice, ['description']);
+  const type = stringValue(choice, ['type', 'interfaceType']);
+  const speed = numberValue(choice, ['linkSpeedMbps']);
+  const families = [choice.supportsIpv4 === true ? 'IPv4' : null, choice.supportsIpv6 === true ? 'IPv6' : null].filter(Boolean).join(' + ');
+  const speedLabel = speed == null ? null : speed >= 1000 ? `${formatNumber(speed / 1000)} Gbps link` : `${formatNumber(speed)} Mbps link`;
+  return [name, description && description !== name ? description : null, type, speedLabel, families].filter(Boolean).join(' · ');
+}
 function stringValue(record: Record<string, unknown>, keys: string[]): string | null { for (const key of keys) { const value = record[key]; if (typeof value === 'string' && value.trim()) return value; } return null; }
+function numberValue(record: Record<string, unknown>, keys: string[]): number | null { for (const key of keys) { const value = record[key]; if (typeof value === 'number' && Number.isFinite(value)) return value; } return null; }
+function formatNumber(value: number): string { return new Intl.NumberFormat(undefined, { maximumFractionDigits: value >= 100 ? 0 : 1 }).format(value); }
 function findString(value: unknown, keys: string[]): string | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as Record<string, unknown>;

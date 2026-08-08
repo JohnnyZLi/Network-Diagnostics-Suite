@@ -1,4 +1,4 @@
-# Network Diagnostics Desktop — Photino preview
+# Network Diagnostics Desktop
 
 This archive contains the Photino.NET rebuild of the Network Diagnostics desktop application. The desktop shell uses a React + TypeScript + Vite interface inside Photino while retaining the existing .NET diagnostics engine, schema 2.0 report contract, native monitoring services, report store, and export logic.
 
@@ -6,26 +6,20 @@ The application is self-contained; the .NET runtime does not need to be installe
 
 ## Available in this build
 
-- A single **Network Diagnostics** page organized around the current network: observe live health first, run controlled diagnostics second, and open specialized Advanced tools only when needed.
-- **Live Network Health** is the primary opening state. Its health-score orb always represents passive network health; it does not change meaning when a diagnostic starts.
-- Passive monitoring includes seven-day local history, responsiveness/reliability scoring, multiple time windows, connection timeline, pause/resume, local alerts, and a clearly labeled last-measured capacity state.
-- Copyable network summary, self-contained HTML health snapshot export, and privacy-aware CSV monitoring-history export are available from the secondary Share & export control.
-- **Run Diagnostics** owns the active-test lifecycle with distinct Ready, Running, and Latest Result states while passive monitoring continues independently.
-- **Connection Check, Quick, Full, and Stress** profiles are backed by the native `NetworkDiagnosticsRunner` with **Single, Aggregate, and Compare** transfer methods.
-- Live phase, latency, throughput, payload, progress, cancellation, completion, and failure feedback stay inside the active diagnostic region rather than replacing the live-health score.
-- Lower-data **Content speed** (`Connection Check + Aggregate`) and high-data **Peak capacity** (`Stress + Aggregate`) are explicit diagnostic presets rather than additional monitoring modes.
-- The latest successful diagnostic remains available until another run completes; selecting a different profile only prepares the next run.
-- Native Full/Stress evidence includes interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing details, loaded-path localization, dual-stack/HTTP3 evidence, network-change detection, and host-resource evidence when supported by the platform.
-- Persisted nondefault Advanced configuration is surfaced beside the normal Run controls so endpoint/interface/privacy/LAN overrides never silently change a diagnostic.
-- **Advanced diagnostics** uses progressive disclosure for Targeting, LAN diagnostics, and Preflight. Only the selected specialized tool expands into detailed controls.
-- Advanced Targeting supports endpoint candidates, interface binding, and explicit local-identifier opt-in. LAN supports peer target/port/duration/connections and the native throughput server. Preflight verifies the saved native route/target configuration without starting the full throughput run.
-- Unsaved Advanced edits are explicitly labeled, and a running LAN server keeps its actual listening port visible as persistent application state.
-- Schema 2.0 reports are persisted through the existing atomic report store.
-- **History** remains a focused side workspace for saved-run detail, findings/evidence, comparison, JSON import/export, and persisted labels/tags.
-- **Settings** is limited to application preferences such as appearance; diagnostic capability is not hidden behind the gear menu.
-- **Cmd/Ctrl-F command palette** provides keyboard jumps to Live Network Health, Run Diagnostics, Advanced diagnostics, History, diagnostic profiles, transfer methods, and run/cancel actions.
-- Persisted **System / Light / Dark** appearance preference.
-- Responsive Photino/WebView interface validated in dark and light themes and compact window sizes.
+- Three primary workspaces keep the instrument compact: **Live Network Health**, **Run Diagnostics**, and **Advanced Diagnostics**. History, alerts, and settings remain secondary panels.
+- **Live Network Health** opens first. Its score and timeline always represent passive monitoring, even while controlled diagnostic traffic is running.
+- Passive monitoring includes seven-day local history, responsiveness and reliability scoring, multiple time windows, capacity history, pause/resume, local alerts, and privacy-aware summary/HTML/CSV exports.
+- **Run Diagnostics** exposes native **Connection, Quick, Full, and Stress** profiles; **Both, Single, and Aggregate** transfer topologies; **Automatic, Direct R2, and Worker** download paths; and automatic or explicit network-interface routing.
+- The setup workspace shows the actual native run plan: estimated runtime, transfer cap, baseline sampling, download runs, service checks, diagnostic depth, and every connection stage.
+- Native preflight data shows the selected endpoint, provider/network, edge, latency, interface, requested download path, actual delivery path, and R2 availability or fallback behavior before launch.
+- Each profile has an explicit measurement manifest. Full and Stress include the wider native system suite: interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing data, loaded-path localization, dual-stack and HTTP/3 data, network-change detection, and host-resource data where supported.
+- A running diagnostic replaces setup controls with phase, stage, overall progress, payload, live latency/throughput, active path, and cancellation controls.
+- A completed diagnostic immediately prioritizes the native verdict, findings, measurements, actual delivery path, recommended next step, saved report, and expandable technical data.
+- **Advanced Diagnostics** covers ordered endpoint candidates, explicit interface binding, local-identifier privacy, native preflight, and LAN peer/server throughput tools.
+- **History** supports saved-run search/filtering, report detail, findings, measurements, technical data, comparison, JSON import/export, and persisted labels/tags.
+- **Settings** owns System/Light/Dark appearance and expected capacity. Diagnostic configuration remains in the workbench.
+- **Cmd/Ctrl-F** opens a keyboard command palette for workspaces, profiles, topologies, download paths, preflight, run/cancel actions, alerts, and History.
+- Schema 2.0 reports continue to use the existing atomic native report store and remain compatible with existing readers.
 
 ## System tray
 

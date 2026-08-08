@@ -120,6 +120,7 @@ type SavedReportDetail = {
   context: string;
   method: string;
   downloadDelivery?: DownloadDelivery | null;
+  measurement?: unknown;
   presentation: ReportPresentation;
 };
 
@@ -143,6 +144,26 @@ type AdvancedSettings = {
 type PreflightResult = {
   measurement?: unknown;
   interfaces?: InterfaceChoice[];
+  downloadPath?: {
+    requestedPath: string;
+    selectedPath: string;
+    r2ProbeStatus: string;
+    fallbackReason?: string | null;
+    r2Origin?: string | null;
+  };
+};
+
+type MeasurementPathSummary = {
+  endpoint: string;
+  origin: string;
+  providerNetwork: string;
+  edge: string;
+  latency: string;
+  interface: string;
+  protocol: string;
+  ipVersion: string;
+  tls: string;
+  http3: string;
 };
 
 type DiagnosticFailure = { runId: string; message: string; errorType: string };
@@ -202,12 +223,25 @@ const downloadPaths: Array<{ id: DownloadPathPreference; label: string; detail: 
   { id: 'worker', label: 'Worker', detail: 'Worker stream only' },
 ];
 
+type StartupPanel = 'history' | 'alerts' | 'settings' | null;
+type StartupOptions = {
+  appearance: AppearanceMode | null;
+  profile: DiagnosticProfile;
+  method: TransferMethod;
+  downloadPath: DownloadPathPreference;
+  workspace: WorkbenchSection;
+  panel: StartupPanel;
+  runConnectionCheck: boolean;
+};
+
+const startupOptions = readStartupOptions();
+
 function App() {
   const [host, setHost] = useState<HostInfo | null>(null);
-  const [appearance, setAppearance] = useState<AppearanceMode>('system');
-  const [profile, setProfile] = useState<DiagnosticProfile>('connection-check');
-  const [method, setMethod] = useState<TransferMethod>('compare');
-  const [downloadPath, setDownloadPath] = useState<DownloadPathPreference>('automatic');
+  const [appearance, setAppearance] = useState<AppearanceMode>(startupOptions.appearance ?? 'system');
+  const [profile, setProfile] = useState<DiagnosticProfile>(startupOptions.profile);
+  const [method, setMethod] = useState<TransferMethod>(startupOptions.method);
+  const [downloadPath, setDownloadPath] = useState<DownloadPathPreference>(startupOptions.downloadPath);
   const [plan, setPlan] = useState<DiagnosticPlan | null>(null);
   const [progress, setProgress] = useState<DiagnosticProgress | null>(null);
   const [progressRatio, setProgressRatio] = useState(0);
@@ -217,8 +251,8 @@ function App() {
   const [latestReport, setLatestReport] = useState<SavedReportDetail | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(startupOptions.panel === 'history');
+  const [alertsOpen, setAlertsOpen] = useState(startupOptions.panel === 'alerts');
   const [historyInitialReportId, setHistoryInitialReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -230,14 +264,14 @@ function App() {
   const [pendingRun, setPendingRun] = useState<PendingRun | null>(null);
   const [advancedStatus, setAdvancedStatus] = useState<AdvancedRuntimeStatus>(defaultAdvancedStatus);
   const [advancedResetRequest, setAdvancedResetRequest] = useState(0);
+  const [advancedPreflightRequest, setAdvancedPreflightRequest] = useState(0);
   const [advancedSyncKey, setAdvancedSyncKey] = useState(0);
   const [advancedSettings, setAdvancedSettings] = useState<AdvancedSettings | null>(null);
   const [interfaces, setInterfaces] = useState<InterfaceChoice[]>([]);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [preflightLoading, setPreflightLoading] = useState(false);
   const [preflightError, setPreflightError] = useState<string | null>(null);
-  const [diagnosticsInView, setDiagnosticsInView] = useState(true);
-  const [activeSection, setActiveSection] = useState<WorkbenchSection>('live-network-health');
+  const [activeSection, setActiveSection] = useState<WorkbenchSection>(startupOptions.workspace);
   const [historyDocked, setHistoryDocked] = useState(false);
   const activeRunId = useRef<string | null>(null);
   const activeMethod = useRef<TransferMethod>('compare');
@@ -247,11 +281,13 @@ function App() {
   const stageBytes = useRef(new Map<string, number>());
   const appearanceRequest = useRef(0);
   const preflightRequest = useRef(0);
+  const startupRunScheduled = useRef(false);
 
   const selectedProfile = profiles.find((item) => item.id === profile) ?? profiles[0];
   const displayedProfile = result ? profiles.find((item) => item.id === result.profile) ?? selectedProfile : selectedProfile;
   const selectedPath = downloadPaths.find((item) => item.id === downloadPath) ?? downloadPaths[0];
   const preflightSummary = summarizePreflight(preflight?.measurement);
+  const resultPathSummary = summarizePreflight(latestReport?.measurement ?? preflight?.measurement);
   const shellHealthLabel = !monitorSnapshot
     ? 'Live network health: building baseline'
     : !monitorSnapshot.running
@@ -270,7 +306,7 @@ function App() {
     void desktopBridge.request<HostInfo>('app.ready')
       .then((info) => {
         setHost(info);
-        setAppearance(info.appearance || 'system');
+        setAppearance(startupOptions.appearance ?? info.appearance ?? 'system');
         if (info.monitor) {
           setMonitorSnapshot(info.monitor);
           setMonitorLoading(false);
@@ -279,6 +315,10 @@ function App() {
         }
         void loadRunConfiguration(true);
         void loadReports(true);
+        if (startupOptions.runConnectionCheck && !startupRunScheduled.current) {
+          startupRunScheduled.current = true;
+          window.setTimeout(() => void prepareDiagnostic('connection-check', startupOptions.method, startupOptions.downloadPath), 350);
+        }
       })
       .catch((value: Error) => {
         setError(value.message);
@@ -371,46 +411,11 @@ function App() {
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
-    const query = window.matchMedia('(min-width: 1500px)');
+    const query = window.matchMedia('(min-width: 1360px)');
     const update = () => setHistoryDocked(query.matches);
     update();
     query.addEventListener?.('change', update);
     return () => query.removeEventListener?.('change', update);
-  }, []);
-
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return;
-    const root = document.documentElement.dataset.platform === 'macos'
-      ? document.querySelector('main')
-      : null;
-    const sectionIds: WorkbenchSection[] = ['live-network-health', 'run-diagnostics', 'advanced-diagnostics'];
-    const visibility = new Map<WorkbenchSection, number>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) visibility.set(entry.target.id as WorkbenchSection, entry.isIntersecting ? entry.intersectionRatio : 0);
-      const visible = sectionIds
-        .map((id) => ({ id, ratio: visibility.get(id) ?? 0 }))
-        .sort((left, right) => right.ratio - left.ratio)[0];
-      if (visible?.ratio > 0) setActiveSection(visible.id);
-    }, { root, rootMargin: '-70px 0px -42% 0px', threshold: [0.05, 0.2, 0.45, 0.7] });
-    for (const id of sectionIds) {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const diagnostics = document.getElementById('run-diagnostics');
-    if (!diagnostics || typeof IntersectionObserver === 'undefined') return;
-    const root = document.documentElement.dataset.platform === 'macos'
-      ? document.querySelector('main')
-      : null;
-    const observer = new IntersectionObserver(
-      ([entry]) => setDiagnosticsInView(entry.isIntersecting),
-      { root, rootMargin: '-68px 0px -15% 0px', threshold: 0.05 },
-    );
-    observer.observe(diagnostics);
-    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -549,21 +554,27 @@ function App() {
   }
 
   function selectProfile(next: DiagnosticProfile) {
-    if (running || next === profile) return;
+    if (running) return;
+    setResult(null);
+    if (next === profile) return;
     setProfile(next);
     setPendingRun(null);
     setError(null);
   }
 
   function selectMethod(next: TransferMethod) {
-    if (running || next === method) return;
+    if (running) return;
+    setResult(null);
+    if (next === method) return;
     setMethod(next);
     setPendingRun(null);
     setError(null);
   }
 
   function selectDownloadPath(next: DownloadPathPreference) {
-    if (running || next === downloadPath) return;
+    if (running) return;
+    setResult(null);
+    if (next === downloadPath) return;
     setDownloadPath(next);
     setPendingRun(null);
     setError(null);
@@ -582,7 +593,7 @@ function App() {
         : await describePlan(nextProfile, nextMethod, nextPath);
       if (nextPlan.transferCapBytes >= HIGH_DATA_WARNING_BYTES) {
         setPendingRun({ profile: nextProfile, method: nextMethod, downloadPath: nextPath, plan: nextPlan });
-        scrollToSection('run-diagnostics');
+        showWorkspace('run-diagnostics');
         return;
       }
       await startDiagnostic(nextProfile, nextMethod, nextPath);
@@ -593,6 +604,7 @@ function App() {
 
   async function startDiagnostic(nextProfile: DiagnosticProfile, nextMethod: TransferMethod, nextPath: DownloadPathPreference) {
     if (running) return;
+    showWorkspace('run-diagnostics');
     if (nextProfile !== profile) setProfile(nextProfile);
     if (nextMethod !== method) setMethod(nextMethod);
     if (nextPath !== downloadPath) setDownloadPath(nextPath);
@@ -622,17 +634,23 @@ function App() {
     }
   }
 
-  function scrollToSection(id: WorkbenchSection | string) {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function showWorkspace(id: WorkbenchSection) {
+    setActiveSection(id);
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${id}`);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('.workspace-stage')?.scrollTo({ top: 0, behavior: 'smooth' });
+      document.querySelector<HTMLElement>('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   function measureCapacity() {
-    scrollToSection('run-diagnostics');
+    showWorkspace('run-diagnostics');
     void prepareDiagnostic('connection-check', 'aggregate', 'automatic');
   }
 
   function measurePeakCapacity() {
-    scrollToSection('run-diagnostics');
+    showWorkspace('run-diagnostics');
     void prepareDiagnostic('stress', 'aggregate', 'automatic');
   }
 
@@ -644,6 +662,16 @@ function App() {
     }
   }
 
+  function configureNextRun() {
+    setResult(null);
+    setError(null);
+  }
+
+  function repeatDiagnostic() {
+    setResult(null);
+    window.requestAnimationFrame(() => void prepareDiagnostic());
+  }
+
   const paletteCommands: PaletteCommand[] = [
     {
       id: 'workspace-health',
@@ -652,7 +680,7 @@ function App() {
       keywords: 'monitor health timeline continuous live network',
       priority: 1,
       enabled: true,
-      run: () => scrollToSection('live-network-health'),
+      run: () => showWorkspace('live-network-health'),
     },
     {
       id: 'workspace-diagnostics',
@@ -661,7 +689,7 @@ function App() {
       keywords: 'run diagnostics test connection quick full stress r2 worker',
       priority: 2,
       enabled: true,
-      run: () => scrollToSection('run-diagnostics'),
+      run: () => showWorkspace('run-diagnostics'),
     },
     {
       id: 'workspace-alerts',
@@ -689,7 +717,16 @@ function App() {
       keywords: 'advanced endpoint lan privacy preflight',
       priority: 5,
       enabled: true,
-      run: () => scrollToSection('advanced-diagnostics'),
+      run: () => showWorkspace('advanced-diagnostics'),
+    },
+    {
+      id: 'advanced-preflight',
+      title: 'Run Native Preflight',
+      detail: 'Validate the saved endpoint, route, interface, and protocol path without a throughput run.',
+      keywords: 'advanced validate setup endpoint route interface protocol preflight',
+      priority: 6,
+      enabled: desktopBridge.available && !running,
+      run: () => { showWorkspace('advanced-diagnostics'); setAdvancedPreflightRequest((current) => current + 1); },
     },
     {
       id: 'run-selected',
@@ -698,7 +735,7 @@ function App() {
       keywords: 'run start diagnostic current selected test',
       priority: 6,
       enabled: desktopBridge.available && !running,
-      run: () => { scrollToSection('run-diagnostics'); void prepareDiagnostic(); },
+      run: () => { showWorkspace('run-diagnostics'); void prepareDiagnostic(); },
     },
     {
       id: 'run-content',
@@ -734,7 +771,7 @@ function App() {
       keywords: `profile ${item.id} ${item.label}`,
       priority: 20 + index,
       enabled: !running,
-      run: () => { selectProfile(item.id); scrollToSection('run-diagnostics'); },
+      run: () => { selectProfile(item.id); showWorkspace('run-diagnostics'); },
     } satisfies PaletteCommand)),
     ...methods.map((item, index) => ({
       id: `method-${item.id}`,
@@ -743,7 +780,7 @@ function App() {
       keywords: `method transfer flow ${item.id} ${item.detail}`,
       priority: 30 + index,
       enabled: !running,
-      run: () => { selectMethod(item.id); scrollToSection('run-diagnostics'); },
+      run: () => { selectMethod(item.id); showWorkspace('run-diagnostics'); },
     } satisfies PaletteCommand)),
     ...downloadPaths.map((item, index) => ({
       id: `download-path-${item.id}`,
@@ -752,7 +789,7 @@ function App() {
       keywords: `download path r2 worker ${item.id}`,
       priority: 40 + index,
       enabled: !running,
-      run: () => { selectDownloadPath(item.id); scrollToSection('run-diagnostics'); },
+      run: () => { selectDownloadPath(item.id); showWorkspace('run-diagnostics'); },
     } satisfies PaletteCommand)),
   ];
 
@@ -766,22 +803,21 @@ function App() {
     nextAction: latestReport.presentation.nextAction,
   } : null;
 
-  const primaryFinding = latestReport?.presentation.findings[0] ?? null;
   const recommendedProfile = recommendationProfile(result, latestReport);
   const technicalData = latestReport?.presentation.technicalData ?? latestReport?.presentation.technicalEvidence ?? [];
 
   return (
     <div className={`app-shell ${historyOpen && historyDocked ? 'history-docked' : ''}`}>
       <header className="product-bar">
-        <button type="button" className="brand brand-home" onClick={() => scrollToSection('live-network-health')} aria-label="Go to Live Network Health">
+        <button type="button" className="brand brand-home" onClick={() => showWorkspace('live-network-health')} aria-label="Go to Live Network Health">
           <span className="brand-mark" role="img" aria-label={shellHealthLabel} title={shellHealthLabel} />
           <div><strong>Network Diagnostics</strong><span>Desktop</span></div>
         </button>
 
-        <nav className="workbench-nav" aria-label="Workbench sections">
-          <button type="button" className={activeSection === 'live-network-health' ? 'active' : ''} aria-current={activeSection === 'live-network-health' ? 'location' : undefined} onClick={() => scrollToSection('live-network-health')}>Health</button>
-          <button type="button" className={activeSection === 'run-diagnostics' ? 'active' : ''} aria-current={activeSection === 'run-diagnostics' ? 'location' : undefined} onClick={() => scrollToSection('run-diagnostics')}>Diagnostics</button>
-          <button type="button" className={activeSection === 'advanced-diagnostics' ? 'active' : ''} aria-current={activeSection === 'advanced-diagnostics' ? 'location' : undefined} onClick={() => scrollToSection('advanced-diagnostics')}>Advanced</button>
+        <nav className="workbench-nav" aria-label="Primary workspaces">
+          <button type="button" className={activeSection === 'live-network-health' ? 'active' : ''} aria-current={activeSection === 'live-network-health' ? 'page' : undefined} onClick={() => showWorkspace('live-network-health')}><span>01</span>Health</button>
+          <button type="button" className={activeSection === 'run-diagnostics' ? 'active' : ''} aria-current={activeSection === 'run-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('run-diagnostics')}><span>02</span>Diagnostics</button>
+          <button type="button" className={activeSection === 'advanced-diagnostics' ? 'active' : ''} aria-current={activeSection === 'advanced-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('advanced-diagnostics')}><span>03</span>Advanced</button>
         </nav>
 
         <div className="product-actions">
@@ -799,11 +835,13 @@ function App() {
             <span>Alerts</span>
             {!!monitorSnapshot?.unreadAlertCount && <b>{monitorSnapshot.unreadAlertCount > 99 ? '99+' : monitorSnapshot.unreadAlertCount}</b>}
           </button>
-          <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} disabled={!desktopBridge.available} />
+          <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} disabled={!desktopBridge.available} initialOpen={startupOptions.panel === 'settings'} />
         </div>
       </header>
 
-      <main>
+      <main className="app-main">
+        <div className="workspace-stage">
+        <div className={`workspace-pane ${activeSection === 'live-network-health' ? 'active' : ''}`} aria-hidden={activeSection !== 'live-network-health'}>
         <ContinuousDiagnostics
           snapshot={monitorSnapshot}
           loading={monitorLoading}
@@ -812,200 +850,296 @@ function App() {
           latestDiagnostic={latestDiagnostic}
           onUpdate={setMonitorSnapshot}
           onError={setMonitorError}
-          onRunRecommended={() => { scrollToSection('run-diagnostics'); selectProfile('connection-check'); }}
+          onRunRecommended={() => { showWorkspace('run-diagnostics'); selectProfile('connection-check'); }}
           onOpenLatestReport={() => latestReport && openHistory(latestReport.report.id)}
           onMeasureCapacity={measureCapacity}
           onMeasurePeakCapacity={measurePeakCapacity}
         />
+        </div>
 
+        <div className={`workspace-pane ${activeSection === 'run-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'run-diagnostics'}>
         <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
-          <div className="workbench-section-header diagnostics-header"><div><h2 id="run-diagnostics-title">RUN DIAGNOSTICS</h2></div></div>
-          {error && <div className="error-banner" role="alert">{error}</div>}
+          <header className="workspace-heading diagnostics-heading">
+            <div>
+              <span className="workspace-kicker">02 / ACTIVE TESTING</span>
+              <h1 id="run-diagnostics-title">RUN DIAGNOSTICS</h1>
+            </div>
+            <div className="workspace-heading-status" aria-live="polite">
+              <span>{running ? 'RUN IN PROGRESS' : result ? 'LATEST RESULT' : 'NATIVE ENGINE READY'}</span>
+              <strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? displayedProfile.title : selectedProfile.title}</strong>
+            </div>
+          </header>
 
-          {!running && (
-            <div className="diagnostic-launcher">
-              <section className="diagnostic-control-panel" aria-label="Diagnostic configuration">
-                <div className="diagnostic-control-section diagnostic-profile-control">
-                  <span className="diagnostic-control-label">Test profile</span>
-                  <div className="method-control profile-control" aria-label="Diagnostic profile">
-                    {profiles.map((item) => (
-                      <button key={item.id} type="button" className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)}>{item.label}</button>
-                    ))}
-                  </div>
-                  <p>{selectedProfile.description}</p>
+          {error && <div className="error-banner" role="alert"><strong>Diagnostic status</strong><span>{error}</span><button type="button" aria-label="Dismiss status" onClick={() => setError(null)}>×</button></div>}
+
+          {!running && !result && (
+            <>
+              {advancedStatus.hasOverrides && (
+                <div className="advanced-config-banner">
+                  <div><span aria-hidden="true">CUSTOM</span><div><strong>Non-default native configuration</strong><small>{advancedStatus.summary}</small></div></div>
+                  <div><button type="button" onClick={() => showWorkspace('advanced-diagnostics')}>Review</button><button type="button" onClick={() => setAdvancedResetRequest((current) => current + 1)}>Reset</button></div>
                 </div>
+              )}
 
-                <div className="diagnostic-control-section diagnostic-choice-group diagnostic-topology-control">
-                  <div><span className="diagnostic-control-label">Transfer topology</span><small>{methods.find((item) => item.id === method)?.detail}</small></div>
-                  <div className="method-control compact" aria-label="Transfer topology">
-                    {methods.map((item) => (
-                      <button key={item.id} type="button" className={method === item.id ? 'active' : ''} onClick={() => selectMethod(item.id)}>{item.label}</button>
-                    ))}
+              <div className="diagnostic-setup-grid">
+                <section className="setup-console" aria-label="Diagnostic controls">
+                  <div className="console-heading">
+                    <div><span>RUN CONFIGURATION</span><strong>{selectedProfile.title}</strong></div>
+                    <span>{plan ? formatDuration(plan.estimatedSeconds) : 'Reading plan…'}</span>
                   </div>
+
+                  <fieldset className="console-control profile-fieldset">
+                    <legend>Profile</legend>
+                    <div className="segmented-control profile-control" aria-label="Diagnostic profile">
+                      {profiles.map((item) => (
+                        <button key={item.id} type="button" aria-pressed={profile === item.id} className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)}>
+                          <strong>{item.label}</strong>
+                        </button>
+                      ))}
+                    </div>
+                    <p>{selectedProfile.description}</p>
+                  </fieldset>
+
+                  <div className="console-control-pair">
+                    <fieldset className="console-control">
+                      <legend>Topology <small>{methods.find((item) => item.id === method)?.detail}</small></legend>
+                      <div className="segmented-control compact" aria-label="Transfer topology">
+                        {methods.map((item) => (
+                          <button key={item.id} type="button" aria-pressed={method === item.id} className={method === item.id ? 'active' : ''} onClick={() => selectMethod(item.id)}>{item.label}</button>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="console-control">
+                      <legend>Download path <small>{selectedPath.detail}</small></legend>
+                      <div className="segmented-control compact" aria-label="Download measurement path">
+                        {downloadPaths.map((item) => (
+                          <button key={item.id} type="button" aria-pressed={downloadPath === item.id} className={downloadPath === item.id ? 'active' : ''} onClick={() => selectDownloadPath(item.id)}>{item.label}</button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  <div className="console-control interface-control">
+                    <div className="control-label-row"><label htmlFor="run-interface">Network interface</label><span>{interfaces.length} detected</span></div>
+                    <div className="interface-row diagnostic-interface-row">
+                      <select id="run-interface" data-interface-picker aria-label="Network interface" value={advancedSettings?.interfaceId ?? ''} disabled={!advancedSettings || running} onChange={(event) => void selectInterface(event.target.value)}>
+                        <option value="">Automatic routing · System default route</option>
+                        {interfaces.map((choice, index) => {
+                          const id = interfaceId(choice);
+                          if (!id) return null;
+                          return <option key={id + '-' + index} value={id}>{interfaceLabel(choice, id)}</option>;
+                        })}
+                        {advancedSettings?.interfaceId && !interfaces.some((choice) => interfaceId(choice) === advancedSettings.interfaceId) && <option value={advancedSettings.interfaceId}>{advancedSettings.interfaceId}</option>}
+                      </select>
+                    </div>
+                    <small>Explicit binding applies to supported HTTP and LAN sockets; system-routed probes remain identified in the report.</small>
+                  </div>
+
+                  {pendingRun ? (
+                    <div className="high-data-confirm" role="alert">
+                      <div><span>TRANSFER CONFIRMATION</span><strong>Up to {formatBytes(pendingRun.plan.transferCapBytes)}</strong><p>{profileTitle(pendingRun.profile)} · {formatDuration(pendingRun.plan.estimatedSeconds)} · {methodLabel(pendingRun.method)} · {downloadPathLabel(pendingRun.downloadPath)}</p></div>
+                      <div><button type="button" className="secondary-action" onClick={() => setPendingRun(null)}>Cancel</button><button type="button" className="primary-action" onClick={() => void startDiagnostic(pendingRun.profile, pendingRun.method, pendingRun.downloadPath)}>Confirm run</button></div>
+                    </div>
+                  ) : (
+                    <div className="run-command">
+                      <div>
+                        <span>READY TO RUN</span>
+                        <strong>{plan ? formatBytes(plan.transferCapBytes) + ' maximum transfer' : 'Loading native plan'}</strong>
+                        <small>{methodLabel(method)} · {downloadPathLabel(downloadPath)} · report saved locally</small>
+                      </div>
+                      <button type="button" className="primary-action diagnostic-run-button" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available || !plan}>
+                        <span aria-hidden="true">▶</span> Run {selectedProfile.label}
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                <section className="run-intelligence" aria-label="Native run plan and measurement path">
+                  <div className="instrument-columns">
+                    <section className="instrument-section run-plan-section">
+                      <header><div><span>RUN PLAN</span><strong>{selectedProfile.label}</strong></div><small>{plan ? plan.totalTransferStages + ' transfer stages' : 'Loading'}</small></header>
+                      <div className="plan-fact-grid">
+                        <PlanFact label="Runtime" value={plan ? formatDuration(plan.estimatedSeconds) : '—'} />
+                        <PlanFact label="Transfer cap" value={plan ? formatBytes(plan.transferCapBytes) : '—'} />
+                        <PlanFact label="Baseline" value={plan ? plan.idlePingCount + ' × ' + plan.pingIntervalMs + ' ms' : '—'} />
+                        <PlanFact label="Download runs" value={plan ? String(plan.downloadRuns) : '—'} />
+                        <PlanFact label="Service checks" value={plan ? plan.includeServices ? 'Enabled' : 'Off' : '—'} />
+                        <PlanFact label="Diagnostic depth" value={plan ? plan.deepDiagnostics ? 'Full native suite' : 'Core native set' : '—'} />
+                      </div>
+                      <div className="stage-plan">
+                        <span>CONNECTION STAGES</span>
+                        <PlanStages plan={plan} />
+                      </div>
+                    </section>
+
+                    <section className="instrument-section path-section">
+                      <header><div><span>MEASUREMENT PATH</span><strong>{preflightLoading ? 'Checking route' : preflightSummary.endpoint}</strong></div><small>{preflightLoading ? 'LIVE PREFLIGHT' : 'CURRENT'}</small></header>
+                      <dl className="path-ledger">
+                        <PathRow label="Endpoint" value={preflightLoading ? 'Selecting…' : preflightSummary.origin} />
+                        <PathRow label="Provider / network" value={preflightSummary.providerNetwork} />
+                        <PathRow label="Location / protocol" value={[preflightSummary.edge, preflightSummary.protocol, preflightSummary.ipVersion].filter((value) => value !== '—').join(' · ') || '—'} />
+                        <PathRow label="Preflight latency" value={preflightSummary.latency} />
+                        <PathRow label="Interface" value={resultPathSummary.interface} />
+                        <PathRow label="Requested delivery" value={downloadPathLabel(downloadPath)} />
+                        <PathRow label="Actual preflight path" value={preflight?.downloadPath ? downloadPathResultLabel(preflight.downloadPath.selectedPath) : preflightLoading ? 'Checking…' : '—'} accent />
+                        <PathRow label="R2 probe" value={preflight?.downloadPath ? statusLabel(preflight.downloadPath.r2ProbeStatus) : downloadPath === 'worker' ? 'Not requested' : 'Pending'} />
+                      </dl>
+                      {preflight?.downloadPath?.fallbackReason && <p className="path-callout">{preflight.downloadPath.fallbackReason}</p>}
+                      {preflightError && <p className="path-callout error">{preflightError}</p>}
+                    </section>
+                  </div>
+
+                  <section className="measurements-manifest">
+                    <header><div><span>MEASUREMENTS THIS PROFILE COLLECTS</span><strong>{dataCollectionLevel(profile)} depth</strong></div><small>{advancedSettings?.lanTarget ? 'LAN target included' : 'Internet + native system'}</small></header>
+                    <div className="measurement-groups">
+                      {dataCollectedFor(profile, method, !!advancedSettings?.lanTarget).map((group) => (
+                        <div className="measurement-group" key={group.label}><span>{group.label}</span><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></div>
+                      ))}
+                    </div>
+                  </section>
+                </section>
+              </div>
+            </>
+          )}
+
+          {running && (
+            <div className="active-run-instrument">
+              <header className="active-run-header">
+                <div>
+                  <span className="run-status-line"><i className="pulse" aria-hidden="true" />CONTROLLED LOAD · {profileTitle(activeProfile.current).toUpperCase()}</span>
+                  <h2>{progress?.message || 'Preparing the measurement path…'}</h2>
+                  <p>{phaseLabel(progress?.phase, progress?.message)} · {methodLabel(activeMethod.current)} · {downloadPathLabel(activeDownloadPath.current)}</p>
                 </div>
+                <button type="button" className="secondary-action danger-action" onClick={() => void cancelDiagnostic()}>Cancel run</button>
+              </header>
 
-                <div className="diagnostic-control-section diagnostic-choice-group diagnostic-download-control">
-                  <div><span className="diagnostic-control-label">Download path</span><small>{selectedPath.detail}</small></div>
-                  <div className="method-control compact path-control" aria-label="Download measurement path">
-                    {downloadPaths.map((item) => (
-                      <button key={item.id} type="button" className={downloadPath === item.id ? 'active' : ''} onClick={() => selectDownloadPath(item.id)}>{item.label}</button>
-                    ))}
+              <div className="active-progress">
+                <div className="active-progress-value"><strong>{progressPercent}</strong><span>%</span></div>
+                <div><div className="diagnostic-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><span style={{ width: progressPercent + '%' }} /></div><small>{formatBytes(measuredBytes)} measured · {plan ? formatBytes(plan.transferCapBytes) : '—'} cap</small></div>
+              </div>
+
+              <RunPhaseRail phase={progress?.phase} message={progress?.message} plan={plan} />
+
+              <div className="active-run-grid">
+                <section className="live-readings">
+                  <header><span>LIVE MEASUREMENTS</span><small>Native progress samples</small></header>
+                  <div className="live-reading-grid">
+                    <Metric label="Latency" value={metric(liveMetrics.latencyMs, 'ms')} detail="Latest baseline" />
+                    <Metric label="Download" value={metric(liveMetrics.downloadMbps, 'Mbps')} detail="Latest throughput" />
+                    <Metric label="Upload" value={metric(liveMetrics.uploadMbps, 'Mbps')} detail="Latest throughput" />
+                    <Metric label="Payload" value={formatBytes(measuredBytes)} detail="Transferred so far" />
                   </div>
-                </div>
+                </section>
 
-                <div className="diagnostic-control-section diagnostic-interface-control">
-                  <span className="diagnostic-control-label">Network interface</span>
-                  <div className="interface-row diagnostic-interface-row">
-                    <select aria-label="Network interface" value={advancedSettings?.interfaceId ?? ''} disabled={!advancedSettings || running} onChange={(event) => void selectInterface(event.target.value)}>
-                      <option value="">Automatic routing</option>
-                      {interfaces.map((choice, index) => {
-                        const id = interfaceId(choice);
-                        if (!id) return null;
-                        return <option key={`${id}-${index}`} value={id}>{interfaceLabel(choice, id)}</option>;
-                      })}
-                      {advancedSettings?.interfaceId && !interfaces.some((choice) => interfaceId(choice) === advancedSettings.interfaceId) && <option value={advancedSettings.interfaceId}>{advancedSettings.interfaceId}</option>}
-                    </select>
-                  </div>
-                </div>
-
-                {pendingRun ? (
-                  <div className="diagnostic-inline-confirm high-data-confirm" role="alert">
-                    <div><span>High-data diagnostic</span><strong>{profileTitle(pendingRun.profile)} may transfer up to {formatBytes(pendingRun.plan.transferCapBytes)}.</strong><p>Estimated {formatDuration(pendingRun.plan.estimatedSeconds)} · {methodLabel(pendingRun.method)} · {downloadPathLabel(pendingRun.downloadPath)}.</p></div>
-                    <div><button type="button" className="secondary-action" onClick={() => setPendingRun(null)}>Cancel</button><button type="button" className="primary-action" onClick={() => void startDiagnostic(pendingRun.profile, pendingRun.method, pendingRun.downloadPath)}>Run diagnostic</button></div>
-                  </div>
-                ) : (
-                  <div className="diagnostic-launch-action">
-                    <div><strong>{selectedProfile.title}</strong><span>{plan ? `${formatDuration(plan.estimatedSeconds)} · up to ${formatBytes(plan.transferCapBytes)} · ${methodLabel(method)} · ${downloadPathLabel(downloadPath)}` : 'Reading native test plan…'}</span></div>
-                    <button type="button" className="primary-action diagnostic-run-button" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available || !plan}>Run {selectedProfile.title}</button>
-                  </div>
-                )}
-              </section>
-
-              <section className="diagnostic-info-card run-details-card">
-                <div className="diagnostic-info-heading"><span>RUN DETAILS</span><strong>{selectedProfile.label}</strong></div>
-
-                <div className="run-details-section test-plan-section">
-                  <div className="run-details-subheading">TEST PLAN</div>
-                  <dl className="diagnostic-data-list">
-                    <DataRow label="Estimated time" value={plan ? formatDuration(plan.estimatedSeconds) : '—'} />
-                    <DataRow label="Transfer cap" value={plan ? formatBytes(plan.transferCapBytes) : '—'} />
-                    <DataRow label="Download connections" value={plan ? connectionSequence(plan.downloadStages) : '—'} />
-                    <DataRow label="Upload connections" value={plan ? connectionSequence(plan.uploadStages) : '—'} />
-                    <DataRow label="Download runs" value={plan ? String(plan.downloadRuns) : '—'} />
-                    <DataRow label="Transfer stages" value={plan ? String(plan.totalTransferStages) : '—'} />
-                    <DataRow label="Baseline samples" value={plan ? String(plan.idlePingCount) : '—'} />
-                    <DataRow label="Service checks" value={plan ? plan.includeServices ? 'Enabled' : 'Off' : '—'} />
-                    <DataRow label="Native deep diagnostics" value={plan ? plan.deepDiagnostics ? 'Full suite' : 'Core set' : '—'} />
-                    <DataRow label="Saved report" value="Local" />
+                <section className="active-route">
+                  <header><span>ACTIVE PATH</span><small>{preflightSummary.latency} preflight</small></header>
+                  <dl className="path-ledger">
+                    <PathRow label="Endpoint" value={preflightSummary.endpoint} />
+                    <PathRow label="Network / edge" value={[preflightSummary.providerNetwork, preflightSummary.edge].filter((value) => value !== '—').join(' · ') || '—'} />
+                    <PathRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
+                    <PathRow label="Delivery request" value={downloadPathLabel(activeDownloadPath.current)} accent />
                   </dl>
-                </div>
+                </section>
+              </div>
 
-                <div className="run-details-section measurement-path-section">
-                  <div className="run-details-subheading-row"><span>MEASUREMENT PATH</span><small>{preflightLoading ? 'Checking…' : 'Current'}</small></div>
-                  <dl className="diagnostic-data-list">
-                    <DataRow label="Endpoint" value={preflightLoading ? 'Selecting…' : preflightSummary.endpoint} />
-                    <DataRow label="Provider / network" value={preflightSummary.providerNetwork} />
-                    <DataRow label="Edge / location" value={preflightSummary.edge} />
-                    <DataRow label="Preflight latency" value={preflightSummary.latency} />
-                    <DataRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
-                    <DataRow label="Download path" value={downloadPathLabel(downloadPath)} />
-                    <DataRow label="R2 behavior" value={downloadPath === 'worker' ? 'Not requested' : downloadPath === 'direct-r2' ? 'Required' : 'Probe + fallback'} />
-                  </dl>
-                  {preflightError && <p className="diagnostic-path-error">{preflightError}</p>}
-                  {advancedSettings?.endpointCandidates.length ? <p className="diagnostic-path-note">{advancedSettings.endpointCandidates.length} custom endpoint candidate{advancedSettings.endpointCandidates.length === 1 ? '' : 's'} active.</p> : <p className="diagnostic-path-note">Built-in first-party endpoint selection.</p>}
-                </div>
-              </section>
-
-              <section className="diagnostic-info-card data-collected-card">
-                <div className="diagnostic-info-heading"><span>DATA COLLECTED</span><strong>{dataCollectionLevel(profile)}</strong></div>
-                <div className="data-collection-groups">
-                  {dataCollectedFor(profile, method, !!advancedSettings?.lanTarget).map((group) => (
-                    <div className="data-collection-group" key={group.label}><span>{group.label}</span><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></div>
-                  ))}
-                </div>
+              <section className="active-stage-budget">
+                <header><span>STAGE BUDGET</span><small>{plan?.totalTransferStages ?? '—'} transfer stages · {plan?.downloadRuns ?? '—'} download runs</small></header>
+                <PlanStages plan={plan} activePhase={progress?.phase} activeMessage={progress?.message} />
               </section>
             </div>
           )}
 
-          {advancedStatus.hasOverrides && !running && (
-            <div className="advanced-config-banner">
-              <div><span aria-hidden="true">⚙</span><div><strong>Custom configuration active</strong><small>{advancedStatus.summary}</small></div></div>
-              <div><button type="button" onClick={() => scrollToSection('advanced-diagnostics')}>Review</button><button type="button" onClick={() => setAdvancedResetRequest((current) => current + 1)}>Reset</button></div>
-            </div>
-          )}
+          {!running && result && (
+            <div className="completed-run">
+              <header className="completed-run-header">
+                <div>
+                  <span className={'result-outcome ' + (latestReport?.presentation.outcome ?? 'complete')}>{latestReport?.presentation.label || 'COMPLETE'}</span>
+                  <h2>{latestReport?.presentation.verdict || displayedProfile.title + ' complete'}</h2>
+                  <p>{latestReport?.presentation.summary || 'The native measurement completed and the result was saved locally.'}</p>
+                  <small>{new Date(result.generatedAt).toLocaleString()} · {methodLabel(result.method)} · {result.savedLocally ? 'Saved locally' : 'Report not saved'} · {formatBytes(result.dataUsedBytes ?? 0)} transferred</small>
+                </div>
+                <div className="diagnostic-result-actions">
+                  <button type="button" className="secondary-action" onClick={configureNextRun}>Configure new run</button>
+                  <button type="button" className="secondary-action" onClick={() => openHistory(result.reportId)}>Open saved report</button>
+                  <button type="button" className="primary-action" onClick={repeatDiagnostic} disabled={!desktopBridge.available}>Run again</button>
+                </div>
+              </header>
 
-          {running ? (
-            <div className="diagnostic-running-stack">
-              <div className="diagnostic-run-state running">
-                <div className="diagnostic-run-heading">
-                  <div><div className="run-status-line"><span className="pulse" aria-hidden="true" />{phaseLabel(progress?.phase, progress?.message)}</div><h3>{progress?.message || 'Preparing the test…'}</h3><p>{profileTitle(activeProfile.current)} is running through the native engine. Test-generated traffic is tracked separately from passive health.</p></div>
-                  <button type="button" className="secondary-action" onClick={() => void cancelDiagnostic()}>Cancel test</button>
-                </div>
-                <div className="diagnostic-progress-row"><div className="diagnostic-progress-track" aria-label={`${progressPercent}% complete`}><span style={{ width: `${progressPercent}%` }} /></div><strong>{progressPercent}%</strong></div>
-                <div className="metric-strip diagnostic-metrics" aria-label="Active diagnostic metrics">
-                  <Metric label="Latency" value={metric(liveMetrics.latencyMs, 'ms')} detail="Latest baseline sample" />
-                  <Metric label="Download" value={metric(liveMetrics.downloadMbps, 'Mbps')} detail="Latest live sample" />
-                  <Metric label="Upload" value={metric(liveMetrics.uploadMbps, 'Mbps')} detail="Latest live sample" />
-                  <Metric label="Payload" value={formatBytes(measuredBytes)} detail="Measured so far" />
-                </div>
-              </div>
-              <section className="detail-row diagnostic-run-data-row">
-                <div className="plan-card">
-                  <span className="section-kicker">Active test plan</span>
-                  <div className="plan-main"><strong>{plan?.profileName || selectedProfile.title}</strong><span>{methodLabel(activeMethod.current)} · {downloadPathLabel(activeDownloadPath.current)}</span></div>
-                  <div className="plan-facts"><span><b>{plan ? formatBytes(plan.transferCapBytes) : '—'}</b> maximum transfer</span><span><b>{plan?.totalTransferStages ?? '—'}</b> transfer stages</span><span><b>{plan?.maxDownloadConnections ?? '—'}</b> max download connections</span></div>
-                </div>
-                <div className="data-card">
-                  <span className="section-kicker">Run data</span>
-                  <div className="data-line"><span>Phase</span><strong>{phaseLabel(progress?.phase, progress?.message)}</strong></div>
-                  <div className="data-line"><span>Endpoint</span><strong>{preflightSummary.endpoint}</strong></div>
-                  <div className="data-line"><span>Interface</span><strong>{activeInterfaceLabel(advancedSettings, interfaces)}</strong></div>
-                  <div className="data-line"><span>Download path</span><strong>{downloadPathLabel(activeDownloadPath.current)}</strong></div>
-                  <div className="data-line"><span>Measured payload</span><strong>{formatBytes(measuredBytes)}</strong></div>
-                </div>
-              </section>
-            </div>
-          ) : result ? (
-            <div className="diagnostic-run-state result">
-              <div className="diagnostic-run-heading">
-                <div><span className="result-label">Latest diagnostic · {new Date(result.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span><h3>{latestReport?.presentation.verdict || `${displayedProfile.title} complete`}</h3><p>{latestReport?.presentation.summary || 'Latest successful measurement. It stays here until the next diagnostic completes.'}</p></div>
-                <div className="diagnostic-result-actions"><button type="button" className="secondary-action" onClick={() => openHistory(result.reportId)}>View report</button><button type="button" className="primary-action" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available}>Run {selectedProfile.title}</button></div>
-              </div>
-              <div className="metric-strip diagnostic-metrics" aria-label="Latest diagnostic metrics">
-                <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median latency" />
+              <div className="result-kpi-band" aria-label="Primary result measurements">
+                <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median response" />
                 <Metric label="Download" value={metric(result.downloadMbps, 'Mbps')} detail="Steady throughput" />
                 <Metric label="Upload" value={metric(result.uploadMbps, 'Mbps')} detail="Steady throughput" />
                 <Metric label="Request loss" value={metric(result.requestLossPercent, '%')} detail="First-party requests" />
               </div>
-              {(result.downloadDelivery || latestReport?.downloadDelivery) && <DownloadDeliveryPanel delivery={result.downloadDelivery ?? latestReport?.downloadDelivery ?? null} />}
-              {latestReport && (
-                <>
-                  <div className="diagnostic-verdict">
-                    <div className="diagnostic-verdict-main"><span>{latestReport.presentation.label}</span><strong>{primaryFinding?.title || latestReport.presentation.verdict}</strong><p>{primaryFinding?.summary || latestReport.presentation.summary}</p></div>
-                    <div className="recommended-next-step"><span>Recommended next step</span><strong>{latestReport.presentation.nextAction || 'No additional testing is required right now.'}</strong>{recommendedProfile ? <p><button type="button" className="inline-action" onClick={() => { selectProfile(recommendedProfile); scrollToSection('run-diagnostics'); }}>Prepare {profileTitle(recommendedProfile)}</button></p> : <p>Keep passive monitoring running and retest only if the connection changes.</p>}</div>
-                  </div>
-                  <section className="result-measurements">
-                    <div className="result-section-heading"><span>MEASUREMENTS</span><strong>{latestReport.presentation.metrics.filter((item) => item.wasMeasured).length} measured</strong></div>
-                    <div className="result-measurement-grid">{latestReport.presentation.metrics.map((item, index) => <div className={`result-measurement ${item.wasMeasured ? '' : 'not-measured'}`} key={`${item.label}-${index}`}><span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small></div>)}</div>
-                  </section>
-                  {technicalData.length > 0 && <details className="result-technical-data"><summary>Technical data · {technicalData.length} items</summary><ul>{technicalData.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></details>}
-                </>
-              )}
-            </div>
-          ) : null}
-        </section>
 
+              {latestReport ? (
+                <>
+                  <div className="result-analysis-grid">
+                    <section className="findings-section">
+                      <header><div><span>FINDINGS</span><strong>{latestReport.presentation.findings.length} reported</strong></div><small>Native classifier</small></header>
+                      <div className="findings-list">
+                        {latestReport.presentation.findings.map((finding, index) => (
+                          <article className="finding-row" key={finding.title + '-' + index}>
+                            <span>{String(index + 1).padStart(2, '0')} · {finding.label}</span>
+                            <div><strong>{finding.title}</strong><p>{finding.summary}</p></div>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+
+                    <aside className="result-route-section">
+                      <header><div><span>ACTUAL MEASUREMENT PATH</span><strong>{resultPathSummary.endpoint}</strong></div><small>{resultPathSummary.latency}</small></header>
+                      <dl className="path-ledger">
+                        <PathRow label="Endpoint" value={resultPathSummary.origin} />
+                        <PathRow label="Provider / network" value={resultPathSummary.providerNetwork} />
+                        <PathRow label="Location / protocol" value={[resultPathSummary.edge, resultPathSummary.protocol, resultPathSummary.ipVersion].filter((value) => value !== '—').join(' · ') || '—'} />
+                        <PathRow label="TLS / HTTP3" value={[resultPathSummary.tls, resultPathSummary.http3].filter((value) => value !== '—').join(' · ') || '—'} />
+                        <PathRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
+                      </dl>
+                      <DownloadDeliveryRows delivery={result.downloadDelivery ?? latestReport.downloadDelivery ?? null} />
+                      <div className="next-action-block">
+                        <span>NEXT STEP</span>
+                        <strong>{latestReport.presentation.nextAction || 'No additional diagnostic is required.'}</strong>
+                        {recommendedProfile && <button type="button" className="inline-action" onClick={() => { configureNextRun(); selectProfile(recommendedProfile); }}>Configure {profileTitle(recommendedProfile)}</button>}
+                      </div>
+                    </aside>
+                  </div>
+
+                  <section className="measurement-ledger">
+                    <header><div><span>MEASUREMENTS</span><strong>{latestReport.presentation.metrics.filter((item) => item.wasMeasured).length} measured</strong></div><small>{displayedProfile.title} · schema 2.0 report</small></header>
+                    <div className="measurement-ledger-grid">
+                      {latestReport.presentation.metrics.map((item, index) => (
+                        <div className={'measurement-entry ' + (item.wasMeasured ? '' : 'not-measured')} key={item.label + '-' + index}>
+                          <span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {technicalData.length > 0 && <details className="technical-data-panel"><summary><span>TECHNICAL DATA</span><strong>{technicalData.length} items</strong><small>Raw native context and report identifiers</small></summary><ul>{technicalData.map((item, index) => <li key={index + '-' + item}>{item}</li>)}</ul></details>}
+                </>
+              ) : <div className="result-loading"><span className="monitor-loader" /><strong>Loading native findings and measurements</strong></div>}
+            </div>
+          )}
+        </section>
+        </div>
+
+        <div className={`workspace-pane ${activeSection === 'advanced-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'advanced-diagnostics'}>
         <AdvancedDiagnostics
           key={`advanced-${advancedSyncKey}`}
           profile={profile}
           method={method}
           onStatusChange={(next) => { setAdvancedStatus(next); void loadRunConfiguration(false); }}
           resetRequest={advancedResetRequest}
+          preflightRequest={advancedPreflightRequest}
         />
+        </div>
+        </div>
       </main>
 
-      {running && !diagnosticsInView && (
-        <button type="button" className="sticky-run-status" onClick={() => scrollToSection('run-diagnostics')}><span className="pulse" aria-hidden="true" /><strong>{profileTitle(activeProfile.current)}</strong><small>{phaseLabel(progress?.phase, progress?.message)} · {progressPercent}%</small><b>View</b></button>
+      {running && activeSection !== 'run-diagnostics' && (
+        <button type="button" className="sticky-run-status" onClick={() => showWorkspace('run-diagnostics')}><span className="pulse" aria-hidden="true" /><strong>{profileTitle(activeProfile.current)}</strong><small>{phaseLabel(progress?.phase, progress?.message)} · {progressPercent}%</small><b>View</b></button>
       )}
 
       <AlertsPanel open={alertsOpen} snapshot={monitorSnapshot} onUpdate={setMonitorSnapshot} onClose={() => setAlertsOpen(false)} />
@@ -1015,17 +1149,92 @@ function App() {
   );
 }
 
-function DataRow({ label, value }: { label: string; value: string }) {
-  return <div className="diagnostic-data-row"><dt>{label}</dt><dd>{value}</dd></div>;
+function readStartupOptions(): StartupOptions {
+  const query = new URLSearchParams(window.location.search);
+  const appearanceValue = query.get('appearance');
+  const appearance = appearanceValue && ['system', 'light', 'dark'].includes(appearanceValue)
+    ? appearanceValue as AppearanceMode
+    : null;
+  const profile = allowedStartupValue(query.get('profile'), ['connection-check', 'quick', 'full', 'stress'] as const, 'connection-check');
+  const method = allowedStartupValue(query.get('method'), ['compare', 'single', 'aggregate'] as const, 'compare');
+  const downloadPath = allowedStartupValue(query.get('download-path'), ['automatic', 'direct-r2', 'worker'] as const, 'automatic');
+  const panelValue = query.get('panel');
+  const panel = panelValue && ['history', 'alerts', 'settings'].includes(panelValue) ? panelValue as StartupPanel : null;
+  const runConnectionCheck = query.get('run') === 'connection-check';
+  const hash = window.location.hash.replace(/^#/, '');
+  const workspace = ['live-network-health', 'run-diagnostics', 'advanced-diagnostics'].includes(hash)
+    ? hash as WorkbenchSection
+    : runConnectionCheck ? 'run-diagnostics' : 'live-network-health';
+  return { appearance, profile, method, downloadPath, workspace, panel, runConnectionCheck };
+}
+
+function allowedStartupValue<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+  return value && allowed.includes(value as T) ? value as T : fallback;
 }
 
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return <div className="metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>;
 }
 
-function DownloadDeliveryPanel({ delivery }: { delivery: DownloadDelivery | null }) {
+function PlanFact({ label, value }: { label: string; value: string }) {
+  return <div className="plan-fact"><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function PathRow({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className={accent ? 'path-row accent' : 'path-row'}><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function PlanStages({ plan, activePhase, activeMessage }: { plan: DiagnosticPlan | null; activePhase?: string; activeMessage?: string }) {
+  if (!plan) return <span className="stage-plan-empty">Reading connection stages…</span>;
+  const message = activeMessage?.toLowerCase() ?? '';
+  const effectivePhase = message.includes('download') ? 'download' : message.includes('upload') ? 'upload' : activePhase;
+  const stages = [...plan.downloadStages, ...plan.uploadStages];
+  return (
+    <div className="stage-chip-list">
+      {stages.map((stage, index) => {
+        const done = effectivePhase === 'upload' && stage.direction === 'download'
+          || effectivePhase === 'diagnostics' && !message.includes('download') && !message.includes('upload')
+          || activePhase === 'complete';
+        const active = effectivePhase === stage.direction;
+        return (
+          <div className={'stage-chip ' + (done ? 'done' : active ? 'active' : '')} key={stage.direction + '-' + stage.id + '-' + index}>
+            <span>{stage.direction === 'download' ? '↓' : '↑'}</span>
+            <div><strong>{stage.connections}× {stage.strategy}</strong><small>{formatDuration(stage.durationMs / 1000)} · {formatBytes(stage.capBytes)} · {stage.samples} sample{stage.samples === 1 ? '' : 's'}</small></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RunPhaseRail({ phase, message, plan }: { phase?: string; message?: string; plan: DiagnosticPlan | null }) {
+  const normalized = message?.toLowerCase() ?? '';
+  const current = phase === 'complete' || normalized.includes('finaliz') || normalized.includes('complete') ? 4
+    : phase === 'upload' || normalized.includes('upload') ? 3
+      : phase === 'download' || normalized.includes('download') ? 2
+        : phase === 'idle' || normalized.includes('latency') ? 1
+          : 0;
+  const phases = [
+    ['Path', 'Endpoint + route'],
+    ['Baseline', plan ? plan.idlePingCount + ' samples' : 'Latency samples'],
+    ['Download', plan ? plan.downloadStages.length + ' stages' : 'Transfer stages'],
+    ['Upload', plan ? plan.uploadStages.length + ' stages' : 'Transfer stages'],
+    ['Analysis', plan?.deepDiagnostics ? 'Full native suite' : 'Core findings'],
+  ];
+  return <ol className="run-phase-rail" aria-label="Diagnostic phases">{phases.map(([label, detail], index) => <li key={label} className={index < current ? 'done' : index === current ? 'active' : ''}><i>{index < current ? '✓' : index + 1}</i><div><strong>{label}</strong><span>{detail}</span></div></li>)}</ol>;
+}
+
+function DownloadDeliveryRows({ delivery }: { delivery: DownloadDelivery | null }) {
   if (!delivery) return null;
-  return <section className="download-delivery-panel"><div className="result-section-heading"><span>DOWNLOAD DELIVERY</span><strong>{downloadPathResultLabel(delivery.selectedPath)}</strong></div><div className="download-delivery-grid"><div><span>Requested</span><strong>{downloadPathResultLabel(delivery.requestedPath)}</strong></div><div><span>Actual path</span><strong>{downloadPathResultLabel(delivery.selectedPath)}</strong></div><div><span>R2 status</span><strong>{statusLabel(delivery.r2ProbeStatus)}</strong></div><div><span>Requests</span><strong>{delivery.requestsCompleted} / {delivery.requestsStarted} completed</strong></div><div><span>R2 requests</span><strong>{delivery.r2Requests}</strong></div><div><span>Worker requests</span><strong>{delivery.workerRequests}</strong></div></div>{delivery.fallbackReason && <p>{delivery.fallbackReason}</p>}</section>;
+  return (
+    <dl className="delivery-ledger">
+      <PathRow label="Requested delivery" value={downloadPathResultLabel(delivery.requestedPath)} />
+      <PathRow label="Actual delivery" value={downloadPathResultLabel(delivery.selectedPath)} accent />
+      <PathRow label="R2 probe" value={statusLabel(delivery.r2ProbeStatus)} />
+      <PathRow label="Requests" value={delivery.requestsCompleted + ' / ' + delivery.requestsStarted + ' completed · ' + delivery.r2Requests + ' R2 · ' + delivery.workerRequests + ' Worker'} />
+      {delivery.fallbackReason && <div className="delivery-fallback"><dt>Fallback</dt><dd>{delivery.fallbackReason}</dd></div>}
+    </dl>
+  );
 }
 
 function overallProgress(progress: DiagnosticProgress, method: TransferMethod): number {
@@ -1075,10 +1284,6 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainder = Math.round(seconds % 60);
   return remainder ? `${minutes} min ${remainder} sec` : `${minutes} min`;
-}
-function connectionSequence(stages: DiagnosticStage[]): string {
-  const values = stages.map((stage) => stage.connections);
-  return values.length ? values.join(' + ') : '—';
 }
 function methodLabel(method: TransferMethod): string {
   if (method === 'single') return 'Single flow';
@@ -1157,24 +1362,46 @@ function dataCollectedFor(profile: DiagnosticProfile, method: TransferMethod, ha
   return [{ label: 'Performance', items: [...core, ...stress] }, { label: 'Path + protocol', items: protocol }, { label: 'Native system', items: native }];
 }
 
-function summarizePreflight(measurement: unknown): { endpoint: string; providerNetwork: string; edge: string; latency: string } {
-  if (!measurement || typeof measurement !== 'object') return { endpoint: 'Not checked', providerNetwork: '—', edge: '—', latency: '—' };
+function summarizePreflight(measurement: unknown): MeasurementPathSummary {
+  const empty: MeasurementPathSummary = { endpoint: 'Not checked', origin: '—', providerNetwork: '—', edge: '—', latency: '—', interface: 'Automatic routing', protocol: '—', ipVersion: '—', tls: '—', http3: '—' };
+  if (!measurement || typeof measurement !== 'object') return empty;
   const selected = findObjectWithKeys(measurement, ['origin', 'preflightLatencyMs']) ?? findObjectWithKeys(measurement, ['origin', 'name']);
+  const networkRecord = findObjectWithKeys(measurement, ['edge', 'network']) ?? findObjectWithKeys(measurement, ['protocol', 'ipVersion']);
+  const interfaceRecord = findObjectWithKeys(measurement, ['id', 'name', 'type']) ?? findObjectWithKeys(measurement, ['name', 'description', 'type']);
+  const http3Record = findObjectWithKeys(measurement, ['attempted', 'supported']);
   const endpoint = selected ? stringValue(selected, ['name', 'origin', 'id']) ?? 'Selected endpoint' : findString(measurement, ['origin', 'endpoint']) ?? 'Selected endpoint';
+  const origin = selected ? stringValue(selected, ['origin']) : findString(measurement, ['origin']);
   const provider = selected ? stringValue(selected, ['provider']) : null;
-  const network = findString(measurement, ['network', 'isp', 'asnName']);
-  const edge = findString(measurement, ['edge', 'location', 'colo', 'city']);
+  const network = networkRecord ? stringValue(networkRecord, ['network', 'isp', 'asnName']) : findString(measurement, ['network', 'isp', 'asnName']);
+  const edge = networkRecord ? stringValue(networkRecord, ['edge', 'location', 'colo', 'city']) : findString(measurement, ['edge', 'location', 'colo', 'city']);
   const latencyValue = selected ? numberValue(selected, ['preflightLatencyMs', 'latencyMs', 'medianLatencyMs']) : findNumber(measurement, ['preflightLatencyMs', 'latencyMs', 'medianLatencyMs']);
+  const interfaceName = interfaceRecord ? stringValue(interfaceRecord, ['displayName', 'name', 'description']) : null;
+  const interfaceType = interfaceRecord ? stringValue(interfaceRecord, ['type', 'interfaceType']) : null;
+  const http3Supported = http3Record?.supported;
   return {
     endpoint,
+    origin: origin ?? '—',
     providerNetwork: [provider, network].filter(Boolean).join(' · ') || '—',
     edge: edge ?? '—',
     latency: latencyValue == null ? '—' : `${formatNumber(latencyValue)} ms`,
+    interface: [interfaceName, interfaceType].filter(Boolean).join(' · ') || 'Automatic routing',
+    protocol: networkRecord ? stringValue(networkRecord, ['protocol']) ?? '—' : '—',
+    ipVersion: networkRecord ? stringValue(networkRecord, ['ipVersion']) ?? '—' : '—',
+    tls: networkRecord ? stringValue(networkRecord, ['tlsVersion']) ?? '—' : '—',
+    http3: typeof http3Supported === 'boolean' ? http3Supported ? 'HTTP/3 available' : 'HTTP/3 unavailable' : '—',
   };
 }
 
 function interfaceId(choice: InterfaceChoice): string | null { return stringValue(choice, ['id', 'interfaceId', 'adapterId', 'name']); }
-function interfaceLabel(choice: InterfaceChoice, fallback: string): string { const name = stringValue(choice, ['displayName', 'name', 'description', 'interfaceName']); const type = stringValue(choice, ['type', 'interfaceType']); return [name ?? fallback, type].filter(Boolean).join(' · '); }
+function interfaceLabel(choice: InterfaceChoice, fallback: string): string {
+  const name = stringValue(choice, ['displayName', 'name', 'interfaceName']) ?? fallback;
+  const description = stringValue(choice, ['description']);
+  const type = stringValue(choice, ['type', 'interfaceType']);
+  const speed = numberValue(choice, ['linkSpeedMbps']);
+  const families = [choice.supportsIpv4 === true ? 'IPv4' : null, choice.supportsIpv6 === true ? 'IPv6' : null].filter(Boolean).join(' + ');
+  const speedLabel = speed == null ? null : speed >= 1000 ? `${formatNumber(speed / 1000)} Gbps link` : `${formatNumber(speed)} Mbps link`;
+  return [name, description && description !== name ? description : null, type, speedLabel, families].filter(Boolean).join(' · ');
+}
 function activeInterfaceLabel(settings: AdvancedSettings | null, choices: InterfaceChoice[]): string {
   if (!settings?.interfaceId) return 'Automatic routing';
   const match = choices.find((choice) => interfaceId(choice) === settings.interfaceId);

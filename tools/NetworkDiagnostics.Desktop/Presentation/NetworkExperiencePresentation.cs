@@ -293,11 +293,11 @@ public static class NetworkExperiencePresenter
         if (sampleCount == 0) return "Monitoring has started and is collecting the first response-time samples.";
         return band switch
         {
-            ExperienceBand.Excellent => "Rock solid and ready to go.",
-            ExperienceBand.Good => "The connection is working well with minor room for improvement.",
-            ExperienceBand.Fair => "The connection is usable, but one or more components are inconsistent.",
-            ExperienceBand.Degraded => "Performance issues are likely to be noticeable during normal use.",
-            ExperienceBand.Poor => "The connection needs attention.",
+            ExperienceBand.Excellent => "Monitored latency, reliability, and recent capacity are within healthy ranges.",
+            ExperienceBand.Good => "Most monitored indicators are healthy; one component is below the top range.",
+            ExperienceBand.Fair => "One or more monitored indicators are inconsistent.",
+            ExperienceBand.Degraded => "Monitoring detected degradation likely to affect interactive traffic.",
+            ExperienceBand.Poor => "Monitoring detected sustained network problems that require investigation.",
             _ => "More measurements are needed before a network score is available."
         };
     }

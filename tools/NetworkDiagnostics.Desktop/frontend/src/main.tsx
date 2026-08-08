@@ -1,23 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import './styles.css';
-import './theme.css';
-import './workbench-polish.css';
-import './shell-status.css';
-import './macos-window.css';
-import './shell-interactions.css';
-import './ux-overhaul.css';
-import './ux-workflow.css';
-import './ux-macos-wide.css';
-import './ux-native-outcomes.css';
-import './ux-readability.css';
-import './ux-final-layout.css';
-import './timeline-chart.css';
-import './final-ui-pass.css';
-import './result-state.css';
-import './diagnostics-compact-config.css';
-import './diagnostics-launcher-polish.css';
+import './app.css';
 import './interface-picker.css';
 import './interface-picker';
 

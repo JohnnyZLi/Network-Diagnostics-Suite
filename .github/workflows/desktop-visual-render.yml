@@ -163,15 +163,8 @@ jobs:
           xdotool key --clearmodifiers Return
           sleep 1.2
           capture advanced-diagnostics-dark
-          xdotool mousemove --sync 420 805 click 1
-          sleep 0.5
           capture advanced-configuration-ready-dark
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Tab
-          xdotool key --clearmodifiers Return
+          navigate_palette 'run native preflight'
           for attempt in {1..24}; do
             if grep -Fq '"payload":{"measurement":{"contractVersion":"1.1"' /tmp/desktop-app.log; then
               break

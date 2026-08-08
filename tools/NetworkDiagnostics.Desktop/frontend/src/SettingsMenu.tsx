@@ -16,12 +16,14 @@ export function SettingsMenu({
   appearance,
   onAppearanceChange,
   disabled = false,
+  initialOpen = false,
 }: {
   appearance: AppearanceMode;
   onAppearanceChange: (appearance: AppearanceMode) => void;
   disabled?: boolean;
+  initialOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [download, setDownload] = useState('100');
   const [upload, setUpload] = useState('20');
   const [loading, setLoading] = useState(false);

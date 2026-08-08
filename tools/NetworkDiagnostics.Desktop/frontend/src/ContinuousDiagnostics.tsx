@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import './monitor.css';
-import './workbench.css';
 
 export type MonitorWindow = '1m' | '5m' | '1h' | '24h' | '7d';
 type TimelineMetric = 'latency' | 'jitter' | 'loss';
@@ -225,6 +224,8 @@ export function ContinuousDiagnostics({
             </div>
           )}
 
+          <div className="live-health-dashboard">
+          <div className="live-health-overview">
           <div className="live-health-hero">
             <div className={`health-score-orb ${snapshot.band}`} aria-label={snapshot.score == null ? 'Building network score' : `Network health score ${snapshot.score}`}>
               <strong>{snapshot.score ?? '—'}</strong>
@@ -263,6 +264,8 @@ export function ContinuousDiagnostics({
               </div>
             </div>
           )}
+
+          </div>
 
           <div className="live-timeline-section">
             <div className="live-timeline-heading">
@@ -318,6 +321,7 @@ export function ContinuousDiagnostics({
                 </div>
               </div>
             ) : <p className="monitor-muted">The first heartbeat sample will appear after the native monitor reaches its endpoint.</p>}
+          </div>
           </div>
 
           <div className="monitor-components live-health-components">
@@ -414,7 +418,7 @@ function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSa
       });
 
   return (
-    <div className="timeline-chart-frame">
+    <div className={`timeline-chart-frame${sparse ? ' sparse' : ''}`}>
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${timelineMetricLabel(metric)} over the selected monitoring window`}>
         {yTicks.map((tick, index) => {
           const y = top + (index / (yTicks.length - 1)) * plotHeight;
@@ -645,11 +649,11 @@ function timelineSummary(samples: MonitorTimelineSample[]) {
 function healthHeadline(snapshot: MonitorSnapshot): string {
   if (snapshot.score == null) return 'Building a baseline for this connection';
   switch (snapshot.band) {
-    case 'excellent': return 'Connection is healthy';
-    case 'good': return 'Connection is performing well';
-    case 'fair': return 'Connection needs attention';
-    case 'degraded': return 'Connection is degraded';
-    case 'poor': return 'Connection is having problems';
+    case 'excellent': return 'Network health is within normal range';
+    case 'good': return 'Network health is mostly within range';
+    case 'fair': return 'Network health is inconsistent';
+    case 'degraded': return 'Network degradation detected';
+    case 'poor': return 'Network problems detected';
     default: return snapshot.status;
   }
 }
