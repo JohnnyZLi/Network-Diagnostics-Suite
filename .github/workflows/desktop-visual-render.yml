@@ -209,6 +209,18 @@ jobs:
           sleep 1.5
           capture live-health-capacity-measured-dark
 
+          # Issues & alerts is a first-class top-bar workspace rather than a long inline
+          # Health block. Open it semantically so the sidecar layout is part of the real
+          # Photino acceptance artifact rather than only unit/CSS validation.
+          open_palette
+          xdotool type --delay 35 'alerts'
+          capture command-palette-alerts-filtered
+          xdotool key --clearmodifiers Return
+          sleep 0.7
+          capture alerts-sidecar-dark
+          xdotool key --clearmodifiers Escape
+          sleep 0.25
+
           if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-app.log
             exit 1
