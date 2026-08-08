@@ -12,6 +12,8 @@ export type SavedReportSummary = {
   profileName: string;
   label?: string | null;
   tags: string[];
+  outcome?: string | null;
+  outcomeLabel?: string | null;
   latencyMs?: number | null;
   requestLossPercent?: number | null;
   downloadMbps?: number | null;
@@ -304,7 +306,7 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
   const filtered = reports.filter((report) => {
     if (profile !== 'all' && report.profile !== profile) return false;
     if (!normalized) return true;
-    return [report.label, report.profileName, ...report.tags].filter(Boolean).some((value) => String(value).toLocaleLowerCase().includes(normalized));
+    return [report.label, report.profileName, report.outcomeLabel, ...report.tags].filter(Boolean).some((value) => String(value).toLocaleLowerCase().includes(normalized));
   });
   const profileOptions = [...new Map(reports.map((report) => [report.profile, report.profileName])).entries()];
 
@@ -312,7 +314,7 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
     <div className="history-body">
       {error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}
       <div className="history-filter-bar">
-        <label><span>Search saved runs</span><input type="search" value={query} placeholder="Label, profile, or tag" onChange={(event) => setQuery(event.target.value)} /></label>
+        <label><span>Search saved runs</span><input type="search" value={query} placeholder="Label, result, profile, or tag" onChange={(event) => setQuery(event.target.value)} /></label>
         <label><span>Profile</span><select value={profile} onChange={(event) => setProfile(event.target.value)}><option value="all">All profiles</option>{profileOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
       </div>
       <div className="history-list-summary"><strong>{filtered.length}</strong><span>{filtered.length === 1 ? 'saved run' : 'saved runs'}</span></div>
@@ -406,9 +408,17 @@ function ReportRow({ report, disabled = false, onClick }: { report: SavedReportS
   const date = generatedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: generatedAt.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
   const time = generatedAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   const hasLoss = (report.requestLossPercent ?? 0) > 0;
+  const outcome = report.outcome || 'unknown';
   return (
     <button type="button" className="history-row history-row-button" onClick={onClick} disabled={disabled}>
-      <div className="history-row-heading"><div><strong>{displayName(report)}</strong><span>{date} · {time}</span></div><div className="history-row-meta">{hasLoss && <span className="history-loss">{formatMetric(report.requestLossPercent, '%')} loss</span>}<span>{formatBytes(report.dataUsedBytes)}</span></div></div>
+      <div className="history-row-heading">
+        <div><strong>{displayName(report)}</strong><span>{date} · {time}</span></div>
+        <div className="history-row-meta">
+          {report.outcomeLabel && <span className={`history-outcome ${outcome}`}>{report.outcomeLabel}</span>}
+          {hasLoss && <span className="history-loss">{formatMetric(report.requestLossPercent, '%')} loss</span>}
+          <span className="history-data-used">{formatBytes(report.dataUsedBytes)}</span>
+        </div>
+      </div>
       <div className="history-metrics"><HistoryMetric label="Latency" value={formatMetric(report.latencyMs, 'ms')} /><HistoryMetric label="Download" value={formatMetric(report.downloadMbps, 'Mbps')} /><HistoryMetric label="Upload" value={formatMetric(report.uploadMbps, 'Mbps')} /></div>
       {report.tags.length > 0 && <div className="history-tags" aria-label="Report tags">{report.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
     </button>
