@@ -71,6 +71,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         if (disposed) return;
         disposed = true;
         monitorService.SnapshotChanged -= MonitorSnapshotChanged;
+        monitorService.SetDiagnosticActivity(false);
         lock (runGate)
         {
             activeRun?.Cancel();
@@ -154,6 +155,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
                             "monitor.exportHistory",
                             "settings.get",
                             "settings.setAppearance",
+                            "settings.setExpectedCapacity",
                             "settings.getAdvanced",
                             "settings.setAdvanced",
                             "lan.server.start",
@@ -172,6 +174,10 @@ public sealed class PhotinoDesktopBridge : IDisposable
                         sender,
                         request.Id,
                         settingsStore.SaveAppearance(BridgeProtocol.ParseAppearance(request.Payload)));
+                    break;
+
+                case "settings.setExpectedCapacity":
+                    await SetExpectedCapacityAsync(sender, request);
                     break;
 
                 case "settings.getAdvanced":
@@ -285,7 +291,9 @@ public sealed class PhotinoDesktopBridge : IDisposable
         {
             appearance = BridgeProtocol.AppearanceId(settings.Appearance),
             monitoringEnabled = settings.MonitoringEnabled,
-            monitoringWindow = settings.SelectedMonitoringWindow.ContractId()
+            monitoringWindow = settings.SelectedMonitoringWindow.ContractId(),
+            expectedDownloadMbps = settings.ExpectedDownloadMbps,
+            expectedUploadMbps = settings.ExpectedUploadMbps
         });
     }
 
@@ -412,6 +420,15 @@ public sealed class PhotinoDesktopBridge : IDisposable
         SendResponse(sender, request.Id, true, MonitorPayload(settings));
     }
 
+    private async Task SetExpectedCapacityAsync(PhotinoWindow sender, BridgeRequest request)
+    {
+        var downloadMbps = BridgeProtocol.ParseRequiredDouble(request.Payload, "downloadMbps", 1, 100_000);
+        var uploadMbps = BridgeProtocol.ParseRequiredDouble(request.Payload, "uploadMbps", 1, 100_000);
+        var settings = settingsStore.SaveExpectedCapacity(downloadMbps, uploadMbps);
+        await monitorService.UpdateOptionsAsync(settings.ToMonitorOptions());
+        SendSettings(sender, request.Id, settings);
+    }
+
     private void SetMonitoringWindow(PhotinoWindow sender, BridgeRequest request)
     {
         var contractId = BridgeProtocol.ParseOptionalString(request.Payload, "window")?.Trim().ToLowerInvariant();
@@ -536,7 +553,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
                 state = sample.State.ToString().ToLowerInvariant(),
                 sample.LatencyMs,
                 sample.JitterMs,
-                sample.PacketLossPercent
+                sample.PacketLossPercent,
+                diagnosticLoad = sample.IsDiagnosticLoad
             }).ToArray(),
             alerts = presentation.Alerts.Select(alert => new
             {
@@ -709,6 +727,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
     private static object ReportSummary(StoredReport stored)
     {
         var internet = stored.Report.InternetTransfer;
+        var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
         return new
         {
             id = stored.Report.Run.Id,
@@ -718,6 +737,8 @@ public sealed class PhotinoDesktopBridge : IDisposable
             profileName = stored.ProfileName,
             label = stored.Label,
             tags = stored.Tags,
+            outcome = presentation.Outcome.ToString().ToLowerInvariant(),
+            outcomeLabel = presentation.Label,
             latencyMs = internet?.IdleLatency.MedianMs,
             requestLossPercent = internet?.IdleLatency.LossPercent,
             downloadMbps = internet?.Download.SteadyMbps,
@@ -801,6 +822,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         var method = BridgeProtocol.ParseTransferMethod(request.Payload);
         var plan = NetworkDiagnosticsRunner.DescribePlan(profile, method);
         var runOptions = BuildRunOptions(settingsStore.Load(), profile, method);
+        monitorService.SetDiagnosticActivity(true);
 
         SendResponse(sender, request.Id, true, new
         {
@@ -885,6 +907,7 @@ public sealed class PhotinoDesktopBridge : IDisposable
         }
         finally
         {
+            monitorService.SetDiagnosticActivity(false);
             lock (runGate)
             {
                 if (activeBridgeRunId == bridgeRunId)
