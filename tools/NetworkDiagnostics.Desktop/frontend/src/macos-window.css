@@ -10,6 +10,10 @@
   transform: translateY(-2px);
 }
 
+:root[data-platform="macos"] .brand span:not(.brand-mark) {
+  display: none;
+}
+
 :root[data-platform="macos"] .app-shell > main {
   padding-top: 84px;
 }
