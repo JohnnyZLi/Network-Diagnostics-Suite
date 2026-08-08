@@ -361,7 +361,7 @@ function installHeaderDisclosureExit(root) {
       clearExit();
     };
     inner.addEventListener("animationend", animationEndHandler);
-    timer = window.setTimeout(() => { if (currentSequence === sequence) clearExit(); }, 260);
+    timer = window.setTimeout(() => { if (currentSequence === sequence) clearExit(); }, 420);
   };
 
   const sync = (open) => {
