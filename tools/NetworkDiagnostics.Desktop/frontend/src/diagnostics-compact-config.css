@@ -2,6 +2,36 @@
    Primary choices stay close together while the live native test plan sits beside
    them, reducing pointer travel without hiding any diagnostic data. */
 
+@media (min-width: 721px) {
+  .diagnostic-choice-group {
+    grid-template-rows: auto auto;
+  }
+
+  .diagnostic-choice-group > div:first-child {
+    display: contents;
+  }
+
+  .diagnostic-choice-group > div:first-child .diagnostic-control-label {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .diagnostic-choice-group > .method-control {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .diagnostic-choice-group > div:first-child small {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 3px;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 @media (min-width: 1181px) {
   .diagnostic-launcher {
     display: grid;
@@ -34,7 +64,7 @@
   }
 
   .diagnostic-choice-group {
-    grid-template-columns: 148px minmax(0, 390px);
+    grid-template-columns: 166px minmax(0, 390px);
     justify-content: start;
     gap: 16px;
     padding: 13px 24px;
@@ -115,7 +145,7 @@
   }
 
   .diagnostic-choice-group {
-    grid-template-columns: 140px minmax(0, 350px);
+    grid-template-columns: 156px minmax(0, 350px);
   }
 
   .diagnostics-workbench .method-control.compact {
@@ -149,7 +179,7 @@
   }
 
   .diagnostic-choice-group {
-    grid-template-columns: 148px minmax(0, 410px);
+    grid-template-columns: 156px minmax(0, 410px);
     justify-content: start;
   }
 
