@@ -2,9 +2,9 @@
 
 - Contract: 1.0.0
 - Design system: 1.9.0
-- Source commit: 3055d8f1ae6d95e26bb67708089939553c8e20f6
-- Consumer commit: 54d21a0af15d758f8aec1ff09421c18317911ffd
-- Generated: 2026-08-08T08:50:19.908Z
+- Source commit: 57ba35fc314a01deeac69f77fc8a11eade993e9d
+- Consumer commit: 01425a6cd59ddaebcd02fbd61e1a23e7cebd59b2
+- Generated: 2026-08-08T09:24:48.719Z
 - Blocking failures: 0
 - Manual pending: 0
 

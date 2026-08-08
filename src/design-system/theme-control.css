@@ -175,12 +175,14 @@
    outer header stays in flow so opening a disclosure never causes a layout
    jump; its inner bar and background are what become viewport-fixed. */
 :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]),
-:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) {
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]),
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] {
   z-index: var(--jl-z-menu);
 }
 
 :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"])::before,
-:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before {
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before,
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before {
   position: fixed;
   z-index: calc(var(--jl-z-menu) - 1);
   top: 0;
@@ -194,7 +196,8 @@
 }
 
 :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]) .jl-global-header__inner,
-:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-global-header__inner {
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-global-header__inner,
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner {
   position: fixed;
   z-index: var(--jl-z-menu);
   top: 0;
@@ -203,10 +206,26 @@
   margin-inline: auto;
 }
 
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before,
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner {
+  animation: jl-header-disclosure-exit 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes jl-header-disclosure-exit {
+  from { top: 0; }
+  to { top: var(--_jl-header-disclosure-exit-y, calc(-1 * var(--jl-layout-header-height))); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before,
+  :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner { animation: none; }
+}
+
 /* Neutralize the older control-only pin so Sites/Settings remain in their
    normal place inside the fixed full header instead of floating independently. */
 :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]) .jl-site-switcher,
-:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-site-switcher {
+:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-site-switcher,
+:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-site-switcher {
   position: relative;
   z-index: auto;
   top: auto;
@@ -215,7 +234,8 @@
 
 @media (max-width: 560px) {
   :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"])::before,
-  :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before {
+  :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before,
+  :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before {
     height: 68px;
   }
 }
