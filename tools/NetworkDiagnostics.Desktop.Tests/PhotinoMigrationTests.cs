@@ -14,15 +14,10 @@ public sealed class PhotinoMigrationTests
     [InlineData("standard", TestProfileId.Standard, "full")]
     [InlineData("stress", TestProfileId.Extended, "stress")]
     [InlineData("extended", TestProfileId.Extended, "stress")]
-    public void ProfileContractMapsBrowserIdsToNativeProfiles(
-        string contractId,
-        TestProfileId expected,
-        string normalizedId)
+    public void ProfileContractMapsBrowserIdsToNativeProfiles(string contractId, TestProfileId expected, string normalizedId)
     {
         using var document = JsonDocument.Parse($$"""{"profile":"{{contractId}}"}""");
-
         var profile = BridgeProtocol.ParseProfile(document.RootElement);
-
         Assert.Equal(expected, profile);
         Assert.Equal(normalizedId, BridgeProtocol.ProfileId(profile));
     }
@@ -31,15 +26,10 @@ public sealed class PhotinoMigrationTests
     [InlineData("compare", TransferMethod.Compare, "compare")]
     [InlineData("single", TransferMethod.Single, "single")]
     [InlineData("aggregate", TransferMethod.Aggregate, "aggregate")]
-    public void TransferMethodContractMapsBrowserIdsToNativeMethods(
-        string contractId,
-        TransferMethod expected,
-        string normalizedId)
+    public void TransferMethodContractMapsBrowserIdsToNativeMethods(string contractId, TransferMethod expected, string normalizedId)
     {
         using var document = JsonDocument.Parse($$"""{"method":"{{contractId}}"}""");
-
         var method = BridgeProtocol.ParseTransferMethod(document.RootElement);
-
         Assert.Equal(expected, method);
         Assert.Equal(normalizedId, BridgeProtocol.MethodId(method));
     }
@@ -48,15 +38,10 @@ public sealed class PhotinoMigrationTests
     [InlineData("system", AppearancePreference.System, "system")]
     [InlineData("light", AppearancePreference.Light, "light")]
     [InlineData("dark", AppearancePreference.Dark, "dark")]
-    public void AppearanceContractMapsBrowserIdsToNativePreferences(
-        string contractId,
-        AppearancePreference expected,
-        string normalizedId)
+    public void AppearanceContractMapsBrowserIdsToNativePreferences(string contractId, AppearancePreference expected, string normalizedId)
     {
         using var document = JsonDocument.Parse($$"""{"appearance":"{{contractId}}"}""");
-
         var appearance = BridgeProtocol.ParseAppearance(document.RootElement);
-
         Assert.Equal(expected, appearance);
         Assert.Equal(normalizedId, BridgeProtocol.AppearanceId(appearance));
     }
@@ -66,9 +51,7 @@ public sealed class PhotinoMigrationTests
     {
         var expected = Guid.NewGuid();
         using var document = JsonDocument.Parse($$"""{"id":"{{expected}}"}""");
-
         var reportId = BridgeProtocol.ParseRequiredGuid(document.RootElement, "id");
-
         Assert.Equal(expected, reportId);
     }
 
@@ -79,10 +62,7 @@ public sealed class PhotinoMigrationTests
     public void ReportIdContractRejectsInvalidPayloads(string json)
     {
         using var document = JsonDocument.Parse(json);
-
-        var error = Assert.Throws<ArgumentException>(() =>
-            BridgeProtocol.ParseRequiredGuid(document.RootElement, "id"));
-
+        var error = Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredGuid(document.RootElement, "id"));
         Assert.Contains("valid report ID", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -91,7 +71,6 @@ public sealed class PhotinoMigrationTests
     {
         using var enabled = JsonDocument.Parse("{\"enabled\":true}");
         using var invalid = JsonDocument.Parse("{\"enabled\":\"true\"}");
-
         Assert.True(BridgeProtocol.ParseRequiredBool(enabled.RootElement, "enabled"));
         Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredBool(invalid.RootElement, "enabled"));
     }
@@ -102,10 +81,20 @@ public sealed class PhotinoMigrationTests
         using var valid = JsonDocument.Parse("{\"port\":8765}");
         using var tooLow = JsonDocument.Parse("{\"port\":80}");
         using var stringValue = JsonDocument.Parse("{\"port\":\"8765\"}");
-
         Assert.Equal(8765, BridgeProtocol.ParseRequiredInt(valid.RootElement, "port", 1024, 65535));
         Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredInt(tooLow.RootElement, "port", 1024, 65535));
         Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredInt(stringValue.RootElement, "port", 1024, 65535));
+    }
+
+    [Fact]
+    public void DoubleContractEnforcesBoundsAndRejectsStrings()
+    {
+        using var valid = JsonDocument.Parse("{\"downloadMbps\":940.5}");
+        using var tooLow = JsonDocument.Parse("{\"downloadMbps\":0}");
+        using var stringValue = JsonDocument.Parse("{\"downloadMbps\":\"940.5\"}");
+        Assert.Equal(940.5, BridgeProtocol.ParseRequiredDouble(valid.RootElement, "downloadMbps", 1, 100_000));
+        Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredDouble(tooLow.RootElement, "downloadMbps", 1, 100_000));
+        Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseRequiredDouble(stringValue.RootElement, "downloadMbps", 1, 100_000));
     }
 
     [Fact]
@@ -117,7 +106,6 @@ public sealed class PhotinoMigrationTests
               "tags": ["wifi", "evening", "wifi"]
             }
             """);
-
         Assert.Equal("Home baseline", BridgeProtocol.ParseOptionalString(document.RootElement, "label"));
         Assert.Equal(["wifi", "evening", "wifi"], BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
     }
@@ -128,10 +116,7 @@ public sealed class PhotinoMigrationTests
     public void ReportAnnotationContractRejectsInvalidTags(string json)
     {
         using var document = JsonDocument.Parse(json);
-
-        var error = Assert.Throws<ArgumentException>(() =>
-            BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
-
+        var error = Assert.Throws<ArgumentException>(() => BridgeProtocol.ParseStringArray(document.RootElement, "tags"));
         Assert.Contains("strings", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -139,7 +124,6 @@ public sealed class PhotinoMigrationTests
     public void MissingPayloadValuesUseLowRiskDefaults()
     {
         using var document = JsonDocument.Parse("{}");
-
         Assert.Equal(TestProfileId.ConnectionCheck, BridgeProtocol.ParseProfile(document.RootElement));
         Assert.Equal(TransferMethod.Compare, BridgeProtocol.ParseTransferMethod(document.RootElement));
         Assert.Equal(AppearancePreference.System, BridgeProtocol.ParseAppearance(document.RootElement));
@@ -148,11 +132,10 @@ public sealed class PhotinoMigrationTests
     }
 
     [Fact]
-    public void AppearanceMonitoringAndAdvancedPreferencesPersistAcrossStoreInstances()
+    public void AppearanceMonitoringCapacityAndAdvancedPreferencesPersistAcrossStoreInstances()
     {
         var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
         var settingsPath = Path.Combine(directory, "desktop-settings.json");
-
         try
         {
             var store = new PhotinoSettingsStore(settingsPath);
@@ -160,6 +143,8 @@ public sealed class PhotinoMigrationTests
             Assert.Equal(AppearancePreference.System, defaults.Appearance);
             Assert.True(defaults.MonitoringEnabled);
             Assert.Equal(MonitorWindow.FiveMinutes, defaults.SelectedMonitoringWindow);
+            Assert.Equal(100, defaults.ExpectedDownloadMbps);
+            Assert.Equal(20, defaults.ExpectedUploadMbps);
             Assert.Empty(defaults.TestOrigins);
             Assert.Null(defaults.InterfaceId);
             Assert.False(defaults.IncludeLocalIdentifiers);
@@ -171,20 +156,16 @@ public sealed class PhotinoMigrationTests
             store.SaveAppearance(AppearancePreference.Dark);
             store.SaveMonitoringEnabled(false);
             store.SaveMonitoringWindow(MonitorWindow.OneHour);
-            store.SaveAdvanced(
-                ["https://one.example/", "https://two.example/"],
-                "interface-1",
-                true,
-                "192.168.1.20",
-                9000,
-                12,
-                6);
+            store.SaveExpectedCapacity(940, 115);
+            store.SaveAdvanced(["https://one.example/", "https://two.example/"], "interface-1", true, "192.168.1.20", 9000, 12, 6);
 
             var reloaded = new PhotinoSettingsStore(settingsPath).Load();
             Assert.Equal(AppearancePreference.Dark, reloaded.Appearance);
             Assert.False(reloaded.MonitoringEnabled);
             Assert.Equal(MonitorWindow.OneHour, reloaded.SelectedMonitoringWindow);
             Assert.Equal(TimeSpan.FromSeconds(5), reloaded.ToMonitorOptions().Interval);
+            Assert.Equal(940, reloaded.ExpectedDownloadMbps);
+            Assert.Equal(115, reloaded.ExpectedUploadMbps);
             Assert.Equal(["https://one.example/", "https://two.example/"], reloaded.TestOrigins);
             Assert.Equal("interface-1", reloaded.InterfaceId);
             Assert.True(reloaded.IncludeLocalIdentifiers);
@@ -205,15 +186,29 @@ public sealed class PhotinoMigrationTests
     {
         var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
         var settingsPath = Path.Combine(directory, "desktop-settings.json");
-
         try
         {
             var store = new PhotinoSettingsStore(settingsPath);
-            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(
-                ["not-a-url"], null, false, null, 8765, 8, 4));
-            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(
-                Enumerable.Range(0, 9).Select(index => $"https://{index}.example/"),
-                null, false, null, 8765, 8, 4));
+            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(["not-a-url"], null, false, null, 8765, 8, 4));
+            Assert.Throws<ArgumentException>(() => store.SaveAdvanced(Enumerable.Range(0, 9).Select(index => $"https://{index}.example/"), null, false, null, 8765, 8, 4));
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ExpectedCapacityRejectsInvalidValues()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "network-diagnostics-photino-tests", Guid.NewGuid().ToString("N"));
+        var settingsPath = Path.Combine(directory, "desktop-settings.json");
+        try
+        {
+            var store = new PhotinoSettingsStore(settingsPath);
+            Assert.Throws<ArgumentOutOfRangeException>(() => store.SaveExpectedCapacity(0, 20));
+            Assert.Throws<ArgumentOutOfRangeException>(() => store.SaveExpectedCapacity(100, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => store.SaveExpectedCapacity(double.NaN, 20));
         }
         finally
         {
@@ -237,17 +232,9 @@ public sealed class PhotinoMigrationTests
             480.5,
             41.2,
             true);
-        var snapshot = new MonitorSnapshot(
-            true,
-            sample.Timestamp.AddMinutes(-1),
-            sample.Timestamp,
-            [sample],
-            [],
-            "Monitoring");
-
+        var snapshot = new MonitorSnapshot(true, sample.Timestamp.AddMinutes(-1), sample.Timestamp, [sample], [], "Monitoring");
         var redacted = MonitoringExportService.BuildHistoryCsv(snapshot, MonitorWindow.FiveMinutes, false);
         var identified = MonitoringExportService.BuildHistoryCsv(snapshot, MonitorWindow.FiveMinutes, true);
-
         Assert.Contains("redacted", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("en0", redacted, StringComparison.Ordinal);
         Assert.DoesNotContain("private-network-signature", redacted, StringComparison.Ordinal);
