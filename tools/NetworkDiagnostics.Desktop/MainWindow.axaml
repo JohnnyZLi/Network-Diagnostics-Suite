@@ -12,8 +12,6 @@
   <Grid Name="WorkspaceRoot">
     <Grid Name="TestArea">
       <ContentControl Name="SetupView" />
-      <ContentControl Name="RunningView" IsVisible="False" />
-      <ContentControl Name="ResultsView" IsVisible="False" />
     </Grid>
   </Grid>
 </Window>

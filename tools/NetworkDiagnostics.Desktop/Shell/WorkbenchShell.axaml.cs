@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using NetworkDiagnostics.Desktop.Navigation;
 
 namespace NetworkDiagnostics.Desktop.Shell;
@@ -8,7 +9,10 @@ namespace NetworkDiagnostics.Desktop.Shell;
 public sealed partial class WorkbenchShell : UserControl
 {
     private const string GenericSettingsDetail = "Settings are organized by purpose and participate in the same back and forward history as every other workspace.";
-    private bool inspectorRequested = true;
+    private const double InspectorMinimumWidth = 1180;
+    private const string StableProductContext = "Local diagnostics";
+    private bool inspectorRequested;
+    private WorkspaceKind currentWorkspace = WorkspaceKind.Test;
 
     public WorkbenchShell()
     {
@@ -20,6 +24,8 @@ public sealed partial class WorkbenchShell : UserControl
     public event EventHandler? BackRequested;
 
     public event EventHandler? ForwardRequested;
+
+    public event EventHandler? HomeRequested;
 
     public event EventHandler? ActiveRunRequested;
 
@@ -36,7 +42,17 @@ public sealed partial class WorkbenchShell : UserControl
     public object? WorkspaceContent
     {
         get => WorkspaceHost.Content;
-        set => WorkspaceHost.Content = value;
+        set
+        {
+            if (value is Control control
+                && control.GetLogicalParent() is ContentControl parent
+                && ReferenceEquals(parent.Content, control))
+            {
+                parent.Content = null;
+            }
+
+            WorkspaceHost.Content = value;
+        }
     }
 
     public bool InspectorOpen => InspectorBorder.IsVisible;
@@ -50,11 +66,18 @@ public sealed partial class WorkbenchShell : UserControl
     {
         BackButton.IsEnabled = canGoBack;
         ForwardButton.IsEnabled = canGoForward;
-        RenderBreadcrumbs(entry.Destination.Breadcrumbs);
-        SelectWorkspace(entry.Destination.Workspace);
-        SetInspectorOpen(entry.ViewState.InspectorOpen);
+        currentWorkspace = entry.Destination.Workspace;
+        RenderProductContext();
 
-        InspectorWorkspaceText.Text = entry.Destination.Workspace.ToString();
+        if (currentWorkspace != WorkspaceKind.Test || !entry.ViewState.InspectorOpen)
+        {
+            inspectorRequested = false;
+        }
+        ApplyResponsiveLayout(Bounds.Width);
+
+        InspectorWorkspaceText.Text = currentWorkspace == WorkspaceKind.Test
+            ? "Overview"
+            : currentWorkspace.ToString();
         InspectorSelectionText.Text = SelectionLabel(entry.Destination);
     }
 
@@ -92,16 +115,28 @@ public sealed partial class WorkbenchShell : UserControl
         string detail,
         double progress)
     {
+        var visibilityChanged = ActiveRunPanel.IsVisible != visible;
         ActiveRunPanel.IsVisible = visible;
         ActiveRunTitleText.Text = title;
         ActiveRunDetailText.Text = detail;
         ActiveRunProgress.Value = Math.Clamp(progress, 0, 100);
+        if (visibilityChanged)
+        {
+            RefreshResponsiveChrome();
+        }
     }
 
     public void SetInspectorOpen(bool open)
     {
-        inspectorRequested = open;
+        inspectorRequested = open && currentWorkspace == WorkspaceKind.Test;
         ApplyResponsiveLayout(Bounds.Width);
+    }
+
+    public void RefreshResponsiveChrome()
+    {
+        ApplyResponsiveLayout(Bounds.Width);
+        PolishHeaderUtilities();
+        PolishActiveRunLayout();
     }
 
     public void OpenCommandPalette(IReadOnlyList<WorkbenchCommand> commands) =>
@@ -115,6 +150,12 @@ public sealed partial class WorkbenchShell : UserControl
     private void ForwardClicked(object? sender, RoutedEventArgs eventArgs) =>
         ForwardRequested?.Invoke(this, EventArgs.Empty);
 
+    private void HomeClicked(object? sender, RoutedEventArgs eventArgs) =>
+        HomeRequested?.Invoke(this, EventArgs.Empty);
+
+    private void SettingsClicked(object? sender, RoutedEventArgs eventArgs) =>
+        WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(WorkspaceKind.Settings));
+
     private void ActiveRunClicked(object? sender, RoutedEventArgs eventArgs) =>
         ActiveRunRequested?.Invoke(this, EventArgs.Empty);
 
@@ -123,17 +164,6 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void CommandPaletteInvoked(object? sender, CommandInvokedEventArgs eventArgs) =>
         CommandInvoked?.Invoke(this, eventArgs);
-
-    private void WorkspaceClicked(object? sender, RoutedEventArgs eventArgs)
-    {
-        if (sender is not Button { Tag: string workspaceName }
-            || !Enum.TryParse<WorkspaceKind>(workspaceName, out var workspace))
-        {
-            return;
-        }
-
-        WorkspaceRequested?.Invoke(this, new WorkspaceRequestedEventArgs(workspace));
-    }
 
     private void BreadcrumbClicked(object? sender, RoutedEventArgs eventArgs)
     {
@@ -145,6 +175,7 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void InspectorClicked(object? sender, RoutedEventArgs eventArgs)
     {
+        if (currentWorkspace != WorkspaceKind.Test || Bounds.Width < InspectorMinimumWidth || OverlayOpen) return;
         inspectorRequested = !InspectorBorder.IsVisible;
         ApplyResponsiveLayout(Bounds.Width);
         InspectorVisibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -155,74 +186,47 @@ public sealed partial class WorkbenchShell : UserControl
 
     private void ApplyResponsiveLayout(double width)
     {
-        var compactSidebar = width < 1080;
-        var showInspector = inspectorRequested && width >= 760;
-
-        ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactSidebar ? 60 : 204);
-        ShellGrid.ColumnDefinitions[2].Width = new GridLength(showInspector ? 284 : 0);
-
-        ProductNameText.IsVisible = !compactSidebar;
-        ProductModeText.IsVisible = !compactSidebar;
-        TestWorkspaceLabel.IsVisible = !compactSidebar;
-        ReportsWorkspaceLabel.IsVisible = !compactSidebar;
-        ComparisonsWorkspaceLabel.IsVisible = !compactSidebar;
-        SettingsWorkspaceLabel.IsVisible = !compactSidebar;
-        CommandHintText.IsVisible = !compactSidebar;
-        ActiveRunTitleText.IsVisible = !compactSidebar;
-        ActiveRunDetailText.IsVisible = !compactSidebar;
+        var compact = width < 960;
+        var inspectorEligible = currentWorkspace == WorkspaceKind.Test
+            && width >= InspectorMinimumWidth
+            && !OverlayOpen;
+        var showInspector = inspectorEligible && inspectorRequested;
+        var showProductIdentity = width >= 880
+            && (!ActiveRunPanel.IsVisible || width >= 1080);
 
         InspectorBorder.IsVisible = showInspector;
-        InspectorToggleButton.Content = showInspector ? "Hide info" : "Inspector";
+        InspectorToggleButton.IsVisible = width >= 960;
+        InspectorToggleButton.IsEnabled = inspectorEligible;
+        ProductStack.IsVisible = showProductIdentity;
+        ActiveRunDetailText.IsVisible = width >= 1180;
+        HomeButton.Content = compact ? "⌂" : "Home";
+        HomeButton.MinWidth = compact ? 34 : 52;
+        SettingsToolbarButton.Content = compact ? "⚙" : "Settings";
+        SettingsToolbarButton.MinWidth = compact ? 34 : 58;
+        CommandToolbarButton.Content = compact ? "⌘F" : "Commands  ⌘F";
+        InspectorToggleButton.Content = showInspector ? "Close info" : "Info";
     }
 
-    private void RenderBreadcrumbs(IReadOnlyList<BreadcrumbSegment> breadcrumbs)
+    private void RenderProductContext()
     {
+        if (BreadcrumbPanel.Children.Count == 1
+            && BreadcrumbPanel.Children[0] is TextBlock current
+            && string.Equals(current.Text, StableProductContext, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         BreadcrumbPanel.Children.Clear();
-
-        for (var index = 0; index < breadcrumbs.Count; index++)
+        var text = new TextBlock
         {
-            if (index > 0)
-            {
-                BreadcrumbPanel.Children.Add(new TextBlock
-                {
-                    Text = "/",
-                    FontSize = 11,
-                    Foreground = Avalonia.Media.Brush.Parse("#858B8C"),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                });
-            }
-
-            var segment = breadcrumbs[index];
-            var button = new Button
-            {
-                Content = segment.Label,
-                Tag = segment.Destination,
-                IsEnabled = segment.Destination is not null
-            };
-            button.Classes.Add("breadcrumb");
-            button.Click += BreadcrumbClicked;
-            BreadcrumbPanel.Children.Add(button);
-        }
-    }
-
-    private void SelectWorkspace(WorkspaceKind workspace)
-    {
-        SetSelected(TestWorkspaceButton, workspace == WorkspaceKind.Test);
-        SetSelected(ReportsWorkspaceButton, workspace == WorkspaceKind.Reports);
-        SetSelected(ComparisonsWorkspaceButton, workspace == WorkspaceKind.Comparisons);
-        SetSelected(SettingsWorkspaceButton, workspace == WorkspaceKind.Settings);
-    }
-
-    private static void SetSelected(Button button, bool selected)
-    {
-        if (selected)
-        {
-            if (!button.Classes.Contains("selected")) button.Classes.Add("selected");
-        }
-        else
-        {
-            button.Classes.Remove("selected");
-        }
+            Text = StableProductContext,
+            FontSize = 8,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+            MaxWidth = 148
+        };
+        text.Classes.Add("shellMuted");
+        BreadcrumbPanel.Children.Add(text);
     }
 
     private static (string Title, string Detail) ResolveInspectorCopy(string title, string detail)
@@ -248,7 +252,7 @@ public sealed partial class WorkbenchShell : UserControl
                 "Preview terminal result states without network activity, changing measurement settings, or saving a diagnostic report."),
             _ => (
                 "Application defaults",
-                "Set the starting profile, transfer method, and interface for new diagnostics. Existing and active tests keep their own configuration.")
+                "Set monitoring, appearance, and diagnostic defaults. Existing and active tests keep their own configuration.")
         };
     }
 
@@ -260,6 +264,7 @@ public sealed partial class WorkbenchShell : UserControl
         ComparisonDestination comparison when comparison.BaselineId is not null && comparison.CandidateId is not null => "Two reports",
         ComparisonDestination comparison when comparison.BaselineId is not null => "Baseline selected",
         SettingsDestination settings => settings.Section,
+        TestSetupDestination => "Live monitor",
         _ => "None"
     };
 

@@ -1,0 +1,141 @@
+name: Desktop Light visual audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-light-visual-audit.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-light:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb openbox xdotool wmctrl scrot
+
+      - name: Publish Linux desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output desktop-light/publish
+
+      - name: Configure Light appearance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path.home() / '.local' / 'share' / 'JohnnyLi' / 'NetworkDiagnostics' / 'settings.json'
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps({'appearance': 'light', 'workbench': None}, indent=2))
+          PY
+
+      - name: Launch virtual desktop
+        run: |
+          mkdir -p desktop-light/screenshots
+          Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/desktop-light-xvfb.log 2>&1 &
+          echo $! > /tmp/desktop-light-xvfb.pid
+          sleep 1
+          openbox > /tmp/desktop-light-openbox.log 2>&1 &
+          echo $! > /tmp/desktop-light-openbox.pid
+          desktop-light/publish/NetworkDiagnosticsDesktop > /tmp/desktop-light-app.log 2>&1 &
+          echo $! > /tmp/desktop-light-app.pid
+          for attempt in {1..40}; do
+            if wmctrl -l | grep -q 'Network Diagnostics Suite'; then
+              wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+              sleep 2
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-light-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-light-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/desktop-light-app.log
+          exit 1
+
+      - name: Capture Light problem states
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capture() {
+            sleep 0.8
+            scrot "desktop-light/screenshots/$1.png"
+          }
+
+          run_command() {
+            xdotool key --clearmodifiers ctrl+f
+            sleep 0.25
+            xdotool type --delay 12 "$1"
+            sleep 0.2
+            xdotool key Return
+            sleep 0.7
+          }
+
+          run_command 'open network overview'
+          capture overview-light
+
+          run_command 'preview saved report'
+          capture saved-report-light
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture saved-report-light-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          xdotool key Escape
+
+          run_command 'preview healthy result'
+          capture result-overview-light
+          xdotool mousemove 255 205 click 1
+          capture result-evidence-light
+          wmctrl -r 'Network Diagnostics Suite' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics Suite' -e 0,80,70,1000,760
+          capture result-evidence-light-compact
+          wmctrl -r 'Network Diagnostics Suite' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+
+          run_command 'open network overview'
+          run_command 'run selected diagnostic'
+          capture running-light-1
+          capture running-light-2
+          capture running-light-3
+
+          if grep -Ei 'exception|unhandled|fatal' /tmp/desktop-light-app.log; then
+            cat /tmp/desktop-light-app.log
+            exit 1
+          fi
+
+      - name: Upload Light rendered states
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: desktop-light-visual-audit
+          path: |
+            desktop-light/screenshots
+            /tmp/desktop-light-app.log
+            /tmp/desktop-light-openbox.log
+            /tmp/desktop-light-xvfb.log
+          retention-days: 7

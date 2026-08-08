@@ -1,12 +1,14 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NetworkDeepProbe.Planning;
+using NetworkDiagnostics.Desktop.Monitoring;
 
 namespace NetworkDiagnostics.Desktop.Services;
 
 public sealed record DesktopSettings(
     bool IncludeLocalIdentifiers = false,
-    string DefaultProfile = "connection-check",
+    string Appearance = "dark",
+    string DefaultProfile = "quick",
     string DefaultTransferMethod = "compare",
     string? ReportDirectory = null,
     string? TestOrigin = null,
@@ -18,14 +20,26 @@ public sealed record DesktopSettings(
     int LanConnections = 4,
     long FullApprovedCapBytes = 0,
     long StressApprovedCapBytes = 0,
-    DesktopWorkbenchState? Workbench = null)
+    bool MonitoringEnabled = true,
+    int MonitoringIntervalSeconds = 5,
+    string MonitoringWindow = "5m",
+    int ContentSpeedCadenceHours = 1,
+    double ExpectedDownloadMbps = 100,
+    double ExpectedUploadMbps = 20,
+    int MonitoringAlertScoreThreshold = 70,
+    bool StartInBackground = false,
+    bool LiveTrayEnabled = false,
+    bool ReduceMotion = false,
+    bool IncreaseContrast = false,
+    DesktopWorkbenchState? Workbench = null,
+    int VisualGeneration = 3)
 {
     public TestProfileId SelectedProfile => DefaultProfile switch
     {
-        "quick" => TestProfileId.Quick,
+        "connection-check" => TestProfileId.ConnectionCheck,
         "standard" => TestProfileId.Standard,
         "extended" => TestProfileId.Extended,
-        _ => TestProfileId.ConnectionCheck
+        _ => TestProfileId.Quick
     };
 
     public TransferMethod SelectedTransferMethod => DefaultTransferMethod switch
@@ -34,6 +48,8 @@ public sealed record DesktopSettings(
         "aggregate" => TransferMethod.Aggregate,
         _ => TransferMethod.Compare
     };
+
+    public MonitorWindow SelectedMonitoringWindow => MonitorWindowExtensions.Parse(MonitoringWindow);
 
     public IReadOnlyList<Uri> ParsedTestOrigins
     {
@@ -50,6 +66,15 @@ public sealed record DesktopSettings(
             return values.Length == 0 ? [new Uri("https://network.johnnyli.dev/")] : values;
         }
     }
+
+    public MonitorOptions ToMonitorOptions() => new(
+        MonitoringEnabled,
+        ParsedTestOrigins[0],
+        TimeSpan.FromSeconds(Math.Clamp(MonitoringIntervalSeconds, 2, 60)),
+        Math.Clamp(MonitoringAlertScoreThreshold, 1, 100),
+        Math.Max(1, ExpectedDownloadMbps),
+        Math.Max(1, ExpectedUploadMbps),
+        ContentSpeedCadenceHours is 1 or 4 or 6 or 24 ? ContentSpeedCadenceHours : 0);
 
     public bool HasDataApproval(TestProfileId profile, long currentCapBytes) => profile switch
     {
@@ -109,6 +134,8 @@ public sealed record DesktopSettings(
 
 public sealed class DesktopSettingsStore
 {
+    private const int CurrentVisualGeneration = 3;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -134,7 +161,15 @@ public sealed class DesktopSettingsStore
         try
         {
             var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken);
-            return JsonSerializer.Deserialize<DesktopSettings>(json, JsonOptions) ?? new DesktopSettings();
+            var loaded = JsonSerializer.Deserialize<DesktopSettings>(json, JsonOptions) ?? new DesktopSettings();
+            return loaded.VisualGeneration < CurrentVisualGeneration
+                ? loaded with
+                {
+                    Appearance = "dark",
+                    Workbench = null,
+                    VisualGeneration = CurrentVisualGeneration
+                }
+                : loaded;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
         {
