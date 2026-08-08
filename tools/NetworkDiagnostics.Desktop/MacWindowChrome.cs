@@ -101,9 +101,9 @@ internal static class MacWindowChrome
             if (!TrafficLightOrigins.TryGetValue(window, out origins!))
             {
                 origins = new NativePoint[3];
-                for (nuint buttonType = 0; buttonType < 3; buttonType++)
+                for (var buttonType = 0; buttonType < origins.Length; buttonType++)
                 {
-                    var button = SendObjectNUInt(window, "standardWindowButton:", buttonType);
+                    var button = SendObjectNUInt(window, "standardWindowButton:", (nuint)buttonType);
                     origins[buttonType] = button == IntPtr.Zero
                         ? default
                         : SendPoint(button, "frameOrigin");
@@ -112,9 +112,9 @@ internal static class MacWindowChrome
             }
         }
 
-        for (nuint buttonType = 0; buttonType < 3; buttonType++)
+        for (var buttonType = 0; buttonType < origins.Length; buttonType++)
         {
-            var button = SendObjectNUInt(window, "standardWindowButton:", buttonType);
+            var button = SendObjectNUInt(window, "standardWindowButton:", (nuint)buttonType);
             if (button == IntPtr.Zero)
             {
                 continue;
@@ -150,7 +150,17 @@ internal static class MacWindowChrome
         objc_msgSend_Void_Point(receiver, sel_registerName(selector), value);
 
     [StructLayout(LayoutKind.Sequential)]
-    private readonly record struct NativePoint(double X, double Y);
+    private struct NativePoint
+    {
+        public NativePoint(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public double X;
+        public double Y;
+    }
 
     [DllImport(ObjectiveCLibrary, CharSet = CharSet.Ansi)]
     private static extern IntPtr objc_getClass(string name);
