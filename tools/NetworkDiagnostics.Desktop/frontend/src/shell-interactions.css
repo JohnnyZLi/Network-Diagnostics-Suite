@@ -1,3 +1,35 @@
+/* On macOS, keep the AppKit-aligned product bar out of WebKit's elastic document
+   scroll surface. Only main content scrolls, so fast top/bottom flings can never
+   rubber-band the toolbar away from the stationary native traffic lights. */
+:root[data-platform="macos"] {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+:root[data-platform="macos"] body,
+:root[data-platform="macos"] #root,
+:root[data-platform="macos"] .app-shell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+:root[data-platform="macos"] .app-shell > main {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  padding-inline: max(34px, calc((100vw - 1180px) / 2));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
+}
+
 /* Shell controls should feel like one desktop toolbar: no layout-shifting hover
    effects, no ad-hoc vertical nudges, and restrained state animation. */
 .history-trigger,
