@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { ShellEnhancements } from './ShellEnhancements';
 import './styles.css';
 import './theme.css';
 import './workbench-polish.css';
@@ -16,7 +15,6 @@ import './ux-readability.css';
 import './ux-final-layout.css';
 import './timeline-chart.css';
 import './final-ui-pass.css';
-import './shell-enhancements.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
@@ -37,7 +35,6 @@ const rootElement = document.getElementById('root')!;
 createRoot(rootElement).render(
   <StrictMode>
     <App />
-    <ShellEnhancements />
   </StrictMode>,
 );
 
