@@ -137,6 +137,7 @@ jobs:
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Return
           for attempt in {1..24}; do
             if grep -Fq '"payload":{"measurement":{"contractVersion":"1.1"' /tmp/desktop-app.log; then
