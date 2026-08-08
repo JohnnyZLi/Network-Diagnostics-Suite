@@ -16,6 +16,7 @@ import './ux-final-layout.css';
 import './timeline-chart.css';
 import './final-ui-pass.css';
 import './result-state.css';
+import './diagnostics-compact-config.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
