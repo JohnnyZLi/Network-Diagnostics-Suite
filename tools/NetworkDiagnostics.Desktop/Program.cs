@@ -41,10 +41,11 @@ internal static class Program
 
             if (OperatingSystem.IsMacOS())
             {
-                // Photino raises WindowCreated before AppKit is guaranteed to have a
-                // key/main window. Apply immediately when possible, then retry when
-                // focus or layout changes so AppKit cannot snap the traffic lights back
-                // to the conventional title-bar position.
+                // WindowCreated can precede AppKit's final title-bar layout. Apply the
+                // unified style as soon as possible, then keep it synchronized through
+                // focus/size changes. A final UI-thread pass immediately after Load below
+                // establishes the first visible traffic-light position before the user
+                // needs to move or resize the window.
                 window.WindowCreatedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
                 window.WindowFocusInHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
                 window.WindowSizeChangedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
@@ -53,6 +54,10 @@ internal static class Program
 
             bridge.Attach(window);
             window.Load(baseUrl);
+            if (OperatingSystem.IsMacOS())
+            {
+                MacWindowChrome.TryEnableUnifiedTitlebar();
+            }
             window.WaitForClose();
             return 0;
         }
