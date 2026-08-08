@@ -12,6 +12,7 @@ import './ux-workflow.css';
 import './ux-macos-wide.css';
 import './ux-native-outcomes.css';
 import './ux-readability.css';
+import './ux-final-layout.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
