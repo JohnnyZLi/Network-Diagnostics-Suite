@@ -17,6 +17,7 @@ import './timeline-chart.css';
 import './final-ui-pass.css';
 import './result-state.css';
 import './diagnostics-compact-config.css';
+import './diagnostics-launcher-polish.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
