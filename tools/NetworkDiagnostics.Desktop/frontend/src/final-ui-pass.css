@@ -1,6 +1,6 @@
 /* Final layout corrections for the Photino workbench.
-   Keep the idle diagnostic decision surface compact and reserve chart annotations
-   their own space instead of overlaying measured data. */
+   Keep diagnostics decision-first, reserve chart annotations their own space,
+   and let active work replace setup controls instead of stacking beneath them. */
 
 /* Sparse-history copy is explanatory metadata, not plot content. Give it a footer
    row so it can never collide with the final timestamp. */
@@ -16,24 +16,21 @@
   pointer-events: none;
 }
 
-/* RUN DIAGNOSTICS is one decision: choose a profile, optionally change topology,
-   then run it. Treat those controls as one compound launcher rather than three
-   independent cards. */
+/* RUN DIAGNOSTICS is one decision surface. Profile is primary; topology stays in
+   a subordinate disclosure and disappears entirely while a run is active. */
 .diagnostics-workbench .diagnostics-header {
   margin-bottom: 18px;
 }
 
 .diagnostics-workbench .workbench-section-header p {
-  max-width: 720px;
-  font-size: 13.5px;
+  display: none;
 }
 
 .diagnostics-workbench .diagnostic-selector-grid {
   width: 100%;
   max-width: none;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, .8fr);
-  align-items: stretch;
+  grid-template-columns: 1fr;
   gap: 0;
   padding: 0;
   overflow: hidden;
@@ -43,51 +40,19 @@
   background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
-.diagnostics-workbench .diagnostic-selector-group,
-.diagnostics-workbench .diagnostic-options {
+.diagnostics-workbench .diagnostic-selector-group {
   min-width: 0;
   min-height: 0;
-  padding: 17px 20px 16px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px 20px 15px;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
-.diagnostics-workbench .diagnostic-selector-group {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  border-right: 1px solid var(--line);
-}
-
-.diagnostics-workbench .diagnostic-options {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-}
-
-.diagnostics-workbench .diagnostic-selector-group > span,
-.diagnostics-workbench .diagnostic-options > summary {
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.diagnostics-workbench .diagnostic-options > summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: default;
-  pointer-events: none;
-}
-
-.diagnostics-workbench .diagnostic-options > summary::after,
-.diagnostics-workbench .diagnostic-options > summary span:last-child {
+.diagnostics-workbench .diagnostic-selector-group > span {
   display: none;
 }
 
@@ -97,47 +62,120 @@
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body,
-.diagnostics-workbench .diagnostic-options > .diagnostic-options-body {
-  display: block !important;
+.diagnostics-workbench .diagnostic-selector-group .method-control {
+  width: 100%;
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.diagnostics-workbench .method-control button {
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+/* Test topology is available without competing with the profile. Native <details>
+   behavior also keeps keyboard and accessibility semantics intact. */
+.diagnostics-workbench .diagnostic-options {
+  min-width: 0;
+  margin: 0;
   padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface-soft) 32%, transparent);
+}
+
+.diagnostics-workbench .diagnostic-options > summary {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0 20px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.diagnostics-workbench .diagnostic-options > summary::-webkit-details-marker {
+  display: none;
+}
+
+.diagnostics-workbench .diagnostic-options > summary span:last-child {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostics-workbench .diagnostic-options > summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transform-origin: center;
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.diagnostics-workbench .diagnostic-options > summary:hover,
+.diagnostics-workbench .diagnostic-options > summary:focus-visible,
+.diagnostics-workbench .diagnostic-options[open] > summary {
+  color: var(--text);
+}
+
+.diagnostics-workbench .diagnostic-options[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.diagnostics-workbench .diagnostic-options[open] > summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body {
+  display: none !important;
+}
+
+.diagnostics-workbench .diagnostic-options[open] > .diagnostic-options-body {
+  display: block !important;
+  padding: 14px 20px 16px;
 }
 
 .diagnostics-workbench .diagnostic-options-copy {
   display: none;
 }
 
-.diagnostics-workbench .diagnostic-selector-group .method-control,
 .diagnostics-workbench .diagnostic-options .method-control {
   width: 100%;
-  max-width: none;
+  max-width: 640px;
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
 
-.diagnostics-workbench .diagnostic-selector-group .method-control {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.diagnostics-workbench .diagnostic-options .method-control {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.diagnostics-workbench .method-control button {
-  min-width: 0;
-  min-height: 40px;
-  height: 40px;
-  padding: 0 10px;
-  font-size: 12.5px;
-}
-
-/* The ready state is the lower row of the same launcher. The profile description
-   already lives above, so do not repeat it as a second large card. */
+/* Ready is the action footer of the launcher, not a second card that repeats the
+   selected profile. Duration and transfer cap stay visible; topology is already
+   summarized by Test options immediately above. */
 .diagnostics-workbench .diagnostic-run-state.ready {
   min-height: 0;
   display: grid;
@@ -155,30 +193,22 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px 18px;
+  gap: 10px 20px;
 }
 
 .diagnostics-workbench .diagnostic-run-state.ready .result-label,
+.diagnostics-workbench .diagnostic-run-state.ready h3,
 .diagnostics-workbench .diagnostic-run-state.ready > div:first-child > p,
 .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary {
   display: none;
 }
 
-.diagnostics-workbench .diagnostic-run-state.ready h3 {
-  flex: 0 0 auto;
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.15;
-  letter-spacing: -.025em;
-  white-space: nowrap;
-}
-
 .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px 22px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -186,25 +216,26 @@
 
 .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span {
   min-width: 0;
-  display: inline-flex;
-  grid-template-columns: none;
-  align-items: baseline;
-  gap: 5px;
-  padding: 6px 9px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-soft) 72%, transparent);
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--faint);
-  font-size: 10.5px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1.35;
   white-space: nowrap;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span:nth-child(3) {
+  display: none;
 }
 
 .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts b {
   display: inline;
-  margin: 0;
+  margin: 0 4px 0 0;
   color: var(--text);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   line-height: inherit;
 }
@@ -219,16 +250,37 @@
   white-space: nowrap;
 }
 
+/* Active work owns the section. Disabled setup controls add no information and
+   make the run feel like a panel stacked under a form, so remove them while running. */
+.diagnostics-workbench:has(.diagnostic-run-state.running) .diagnostic-selector-grid {
+  display: none;
+}
+
+.diagnostics-workbench:has(.diagnostic-run-state.running) .diagnostic-run-state.running {
+  margin-top: 0;
+}
+
+/* Once a result exists, setup becomes a separate next-run control rather than part
+   of the result card. Keep it compact so the latest verdict remains dominant. */
+.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-grid {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-group {
+  padding-block: 13px 11px;
+}
+
+.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-selector-group > small {
+  font-size: 11.5px;
+}
+
+.diagnostics-workbench:has(.diagnostic-run-state.result) .diagnostic-options > summary {
+  min-height: 40px;
+}
+
 @media (max-width: 980px) {
-  .diagnostics-workbench .diagnostic-selector-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .diagnostics-workbench .diagnostic-selector-group {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
   .diagnostics-workbench .diagnostic-selector-group > small {
     white-space: normal;
   }
@@ -244,13 +296,20 @@
 }
 
 @media (max-width: 720px) {
-  .diagnostics-workbench .diagnostic-selector-group,
-  .diagnostics-workbench .diagnostic-options {
+  .diagnostics-workbench .diagnostic-selector-group {
     padding: 14px;
   }
 
   .diagnostics-workbench .diagnostic-selector-group .method-control {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diagnostics-workbench .diagnostic-options > summary {
+    padding-inline: 14px;
+  }
+
+  .diagnostics-workbench .diagnostic-options[open] > .diagnostic-options-body {
+    padding: 12px 14px 14px;
   }
 
   .diagnostics-workbench .diagnostic-options .method-control {
@@ -261,8 +320,8 @@
     padding: 13px 14px 14px;
   }
 
-  .diagnostics-workbench .diagnostic-run-state.ready h3 {
-    width: 100%;
+  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
+    gap: 7px 16px;
   }
 
   .timeline-chart-frame {
