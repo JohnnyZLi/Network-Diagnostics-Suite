@@ -172,11 +172,15 @@
 }
 
 /* Keep the complete top bar together while Sites or Settings is open. The
-   outer header stays in flow so opening a disclosure never causes a layout
-   jump; its inner bar and background are what become viewport-fixed. */
+   normal 82px inner row plus its 1px divider is 83px tall under border-box.
+   Lock that exact outer footprint while the inner bar is fixed so disclosure
+   state changes cannot move the divider or page content below the header. */
 :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]),
 :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]),
 :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] {
+  height: calc(var(--jl-layout-header-height) + 1px);
+  min-height: calc(var(--jl-layout-header-height) + 1px);
+  max-height: calc(var(--jl-layout-header-height) + 1px);
   z-index: var(--jl-z-menu);
 }
 
@@ -188,7 +192,7 @@
   top: 0;
   right: 0;
   left: 0;
-  height: var(--jl-layout-header-height);
+  height: calc(var(--jl-layout-header-height) + 1px);
   border-bottom: 1px solid var(--jl-color-rule);
   background: var(--jl-color-canvas);
   content: "";
@@ -208,7 +212,7 @@
 
 :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before,
 :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner {
-  animation: jl-header-disclosure-exit 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: jl-header-disclosure-exit 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @keyframes jl-header-disclosure-exit {
@@ -233,9 +237,17 @@
 }
 
 @media (max-width: 560px) {
+  :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]),
+  :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]),
+  :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] {
+    height: 69px;
+    min-height: 69px;
+    max-height: 69px;
+  }
+
   :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"])::before,
   :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"])::before,
   :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit]::before {
-    height: 68px;
+    height: 69px;
   }
 }
