@@ -62,12 +62,12 @@
   --jl-theme-dark-color-rule-strong: rgba(242, 239, 232, 0.32);
   --jl-theme-dark-color-rule-inverse: rgba(242, 239, 232, 0.24);
   --jl-theme-dark-color-overlay: rgba(0, 0, 0, 0.58);
-  --jl-theme-dark-color-accent: #d18468;
-  --jl-theme-dark-color-accent-hover: #dc987d;
-  --jl-theme-dark-color-accent-active: #bd694f;
-  --jl-theme-dark-color-accent-decorative: #c7775b;
+  --jl-theme-dark-color-accent: #9f553e;
+  --jl-theme-dark-color-accent-hover: #8f4d39;
+  --jl-theme-dark-color-accent-active: #7f4231;
+  --jl-theme-dark-color-accent-decorative: #a55d45;
   --jl-theme-dark-color-accent-soft: #754636;
-  --jl-theme-dark-color-on-accent: #171714;
+  --jl-theme-dark-color-on-accent: #fffaf4;
   --jl-theme-dark-color-danger-hover: #f0a29a;
   --jl-theme-dark-color-danger-active: #dd8279;
   --jl-theme-dark-color-placeholder: #918b82;
