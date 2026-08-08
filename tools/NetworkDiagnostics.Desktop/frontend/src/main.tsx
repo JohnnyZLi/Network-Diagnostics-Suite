@@ -18,6 +18,8 @@ import './final-ui-pass.css';
 import './result-state.css';
 import './diagnostics-compact-config.css';
 import './diagnostics-launcher-polish.css';
+import './interface-picker.css';
+import './interface-picker';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
