@@ -111,10 +111,41 @@ jobs:
             fi
           }
 
+          open_palette() {
+            xdotool mousemove --sync 800 330 click 1
+            sleep 0.15
+            xdotool key --clearmodifiers ctrl+f
+            sleep 0.45
+          }
+
           capture connection-check-light-wide
           wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
           sleep 0.7
           capture connection-check-light-compact
+
+          # The diagnostics surface has materially different density than Health;
+          # audit it independently at both desktop and compact widths.
+          wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+          sleep 0.6
+          open_palette
+          xdotool type --delay 30 'run diagnostics'
+          xdotool key --clearmodifiers Return
+          sleep 1.1
+          capture diagnostics-light-wide
+
+          wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,820
+          sleep 0.7
+          capture diagnostics-light-compact
+
+          # Stress exercises the densest native plan/data layout without spending the
+          # several-gigabyte transfer budget during a visual-only audit.
+          wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+          sleep 0.6
+          open_palette
+          xdotool type --delay 30 'select stress'
+          xdotool key --clearmodifiers Return
+          sleep 1.1
+          capture diagnostics-stress-light-wide
 
           if ! kill -0 "$(cat /tmp/desktop-light-app.pid)" 2>/dev/null; then
             cat /tmp/desktop-light-app.log
