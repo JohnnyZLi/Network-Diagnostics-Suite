@@ -39,6 +39,11 @@ internal static class Program
                 .Center()
                 .SetResizable(true);
 
+            if (OperatingSystem.IsMacOS())
+            {
+                window.WindowCreatedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+            }
+
             bridge.Attach(window);
             window.Load(baseUrl);
             window.WaitForClose();
