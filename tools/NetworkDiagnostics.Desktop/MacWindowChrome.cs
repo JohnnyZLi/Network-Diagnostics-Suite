@@ -29,14 +29,10 @@ internal static class MacWindowChrome
                 return false;
             }
 
-            var window = SendObject(application, "keyWindow");
+            var window = FindPhotinoWindow(application);
             if (window == IntPtr.Zero)
             {
-                window = SendObject(application, "mainWindow");
-            }
-            if (window == IntPtr.Zero)
-            {
-                Console.Error.WriteLine("macOS unified title bar was skipped because the Photino NSWindow was not available.");
+                Console.Error.WriteLine("macOS unified title bar is waiting for the Photino NSWindow to become available.");
                 return false;
             }
 
@@ -55,8 +51,46 @@ internal static class MacWindowChrome
         }
     }
 
+    private static IntPtr FindPhotinoWindow(IntPtr application)
+    {
+        // WindowCreated fires before AppKit necessarily designates the new window as
+        // key/main. Prefer those stable identities once available, then fall back to
+        // NSApplication.windows so the title-bar treatment can still be applied before
+        // the first visible frame.
+        var window = SendObject(application, "keyWindow");
+        if (window != IntPtr.Zero)
+        {
+            return window;
+        }
+
+        window = SendObject(application, "mainWindow");
+        if (window != IntPtr.Zero)
+        {
+            return window;
+        }
+
+        var windows = SendObject(application, "windows");
+        if (windows == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+
+        var count = SendNUInt(windows, "count");
+        if (count == 0)
+        {
+            return IntPtr.Zero;
+        }
+
+        // Photino currently owns one app window. Use the newest AppKit window as the
+        // creation-time fallback; the focus callback below retries against keyWindow.
+        return SendObjectNUInt(windows, "objectAtIndex:", count - 1);
+    }
+
     private static IntPtr SendObject(IntPtr receiver, string selector) =>
         objc_msgSend_IntPtr(receiver, sel_registerName(selector));
+
+    private static IntPtr SendObjectNUInt(IntPtr receiver, string selector, nuint value) =>
+        objc_msgSend_IntPtr_NUInt(receiver, sel_registerName(selector), value);
 
     private static nuint SendNUInt(IntPtr receiver, string selector) =>
         objc_msgSend_NUInt(receiver, sel_registerName(selector));
@@ -75,6 +109,9 @@ internal static class MacWindowChrome
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern IntPtr objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector);
+
+    [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_IntPtr_NUInt(IntPtr receiver, IntPtr selector, nuint value);
 
     [DllImport(ObjectiveCLibrary, EntryPoint = "objc_msgSend")]
     private static extern nuint objc_msgSend_NUInt(IntPtr receiver, IntPtr selector);
