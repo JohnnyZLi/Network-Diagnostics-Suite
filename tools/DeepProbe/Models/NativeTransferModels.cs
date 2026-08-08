@@ -58,6 +58,25 @@ public sealed record NativeFlowScalingPoint(
     NativeThroughputSummary Download,
     NativeLoadedLatencyReport DownloadLatency);
 
+public sealed record NativeDownloadPathStatus(
+    string RequestedPath,
+    string SelectedPath,
+    string R2ProbeStatus,
+    string? FallbackReason,
+    string R2Origin);
+
+public sealed record NativeDownloadDeliveryReport(
+    string RequestedPath,
+    string SelectedPath,
+    string R2ProbeStatus,
+    string? FallbackReason,
+    string R2Origin,
+    long Bytes,
+    int RequestsStarted,
+    int RequestsCompleted,
+    int R2Requests,
+    int WorkerRequests);
+
 public sealed record NativeInternetTransferReport(
     string Origin,
     LatencyStatistics IdleLatency,
@@ -67,7 +86,8 @@ public sealed record NativeInternetTransferReport(
     NativeLoadedLatencyReport UploadLatency,
     IReadOnlyList<NativeFlowMeasurement> FlowMeasurements,
     IReadOnlyList<NativeFlowScalingPoint> DownloadScaling,
-    long DataUsedBytes);
+    long DataUsedBytes,
+    NativeDownloadDeliveryReport? DownloadDelivery = null);
 
 public sealed record NativeTransferStageReport(
     string Id,

@@ -19,7 +19,8 @@ internal sealed record ProbeOptions(
     Uri TestOrigin,
     bool ShowHelp,
     IReadOnlyList<Uri>? AdditionalTestOrigins = null,
-    string? InterfaceId = null)
+    string? InterfaceId = null,
+    DownloadPathPreference DownloadPath = DownloadPathPreference.Automatic)
 {
     public IReadOnlyList<Uri> CandidateOrigins =>
         new[] { TestOrigin }
@@ -43,6 +44,7 @@ internal sealed record ProbeOptions(
         var includeInternetTransfer = false;
         var profile = TestProfileId.ConnectionCheck;
         var transferMethod = TransferMethod.Compare;
+        var downloadPath = DownloadPathPreference.Automatic;
         var testOrigins = new List<Uri>();
         string? interfaceId = null;
         var showHelp = false;
@@ -77,6 +79,9 @@ internal sealed record ProbeOptions(
                     break;
                 case "--transfer-method":
                     transferMethod = NativeTransferPlanBuilder.ParseMethod(RequireValue(args, ref index, "--transfer-method"));
+                    break;
+                case "--download-path":
+                    downloadPath = NativeTransferPlanBuilder.ParseDownloadPath(RequireValue(args, ref index, "--download-path"));
                     break;
                 case "--test-origin":
                     testOrigins.Add(ParseOrigin(RequireValue(args, ref index, "--test-origin")));
@@ -136,7 +141,8 @@ internal sealed record ProbeOptions(
             primaryOrigin,
             showHelp,
             testOrigins.Skip(1).ToArray(),
-            interfaceId);
+            interfaceId,
+            downloadPath);
     }
 
     private static string RequireValue(string[] args, ref int index, string option)

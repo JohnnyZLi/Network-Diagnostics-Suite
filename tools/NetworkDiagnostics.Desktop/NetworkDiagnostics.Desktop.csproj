@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -9,19 +9,57 @@
     <RootNamespace>NetworkDiagnostics.Desktop</RootNamespace>
     <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64;linux-x64;linux-arm64</RuntimeIdentifiers>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <InvariantGlobalization>false</InvariantGlobalization>
     <PublishTrimmed>false</PublishTrimmed>
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.0">
-      <ExcludeAssets>analyzers</ExcludeAssets>
-    </PackageReference>
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <Compile Include="Program.cs" />
+    <Compile Include="MacWindowChrome.cs" />
+    <Compile Include="Photino/**/*.cs" />
+    <Compile Include="Monitoring/MonitorModels.cs" />
+    <Compile Include="Monitoring/MonitorHistoryStore.cs" />
+    <Compile Include="Monitoring/ContinuousMonitorService.cs" />
+    <Compile Include="Monitoring/MonitoringExportService.cs" />
+    <Compile Include="Presentation/ConnectionCheckPresentation.cs" />
+    <Compile Include="Presentation/DiagnosticReportPresenter.cs" />
+    <Compile Include="Presentation/NetworkExperiencePresentation.cs" />
+    <Compile Include="Services/ReportComparisonService.cs" />
+    <Compile Include="Services/ReportStore.cs" />
+    <EmbeddedResource Include="Resources/**/*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.1" />
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+    <PackageReference Include="Photino.NET.Server" Version="4.0.12" />
     <ProjectReference Include="../NetworkDiagnostics.Core/NetworkDiagnostics.Core.csproj" />
   </ItemGroup>
+
+  <Target Name="BuildDesktopFrontend" BeforeTargets="BeforeBuild">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../.." Command="npm run desktop:web:build" />
+  </Target>
+
+  <Target Name="CopyDesktopFrontendToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <_DesktopFrontendFiles Include="$(MSBuildProjectDirectory)/frontend/dist/**/*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(_DesktopFrontendFiles)"
+      DestinationFiles="@(_DesktopFrontendFiles->'$(OutDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyDesktopFrontendToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_DesktopPublishFrontendFiles Include="$(MSBuildProjectDirectory)/frontend/dist/**/*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(_DesktopPublishFrontendFiles)"
+      DestinationFiles="@(_DesktopPublishFrontendFiles->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>

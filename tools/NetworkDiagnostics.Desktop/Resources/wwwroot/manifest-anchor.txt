@@ -1,0 +1,1 @@
+Network Diagnostics desktop static-file manifest anchor.

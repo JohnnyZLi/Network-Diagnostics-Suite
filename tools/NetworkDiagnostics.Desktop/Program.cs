@@ -1,7 +1,8 @@
-using Avalonia;
-using Avalonia.Fonts.Inter;
+using System.Drawing;
 using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Planning;
+using Photino.NET;
+using Photino.NET.Server;
 
 namespace NetworkDiagnostics.Desktop;
 
@@ -17,12 +18,75 @@ internal static class Program
             return plan.DownloadStages.Count > 0 && plan.UploadStages.Count > 0 ? 0 : 1;
         }
 
-        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+        ConfigureHeadlessLinuxWebKit();
+
+        var server = PhotinoServer.CreateStaticFileServer(
+            args,
+            startPort: 8210,
+            portRange: 40,
+            webRootFolder: "wwwroot",
+            out var baseUrl);
+        server.StartAsync().GetAwaiter().GetResult();
+
+        var bridge = new PhotinoDesktopBridge();
+        try
+        {
+            var window = new PhotinoWindow()
+                .SetTitle("Network Diagnostics")
+                .SetUseOsDefaultSize(false)
+                .SetSize(new Size(1180, 800))
+                .Center()
+                .SetResizable(true);
+
+            if (OperatingSystem.IsMacOS())
+            {
+                // WindowCreated can precede AppKit's final title-bar layout. Apply the
+                // unified style as soon as possible, then keep it synchronized through
+                // focus/size changes. A final UI-thread pass immediately after Load below
+                // establishes the first visible traffic-light position before the user
+                // needs to move or resize the window.
+                window.WindowCreatedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+                window.WindowFocusInHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+                window.WindowSizeChangedHandler = (_, _) => MacWindowChrome.TryEnableUnifiedTitlebar();
+                MacWindowChrome.RegisterNativeMessageHandler(window);
+            }
+
+            bridge.Attach(window);
+            window.Load(baseUrl);
+            if (OperatingSystem.IsMacOS())
+            {
+                MacWindowChrome.TryEnableUnifiedTitlebar();
+            }
+            window.WaitForClose();
+            return 0;
+        }
+        finally
+        {
+            bridge.Dispose();
+            server.StopAsync().GetAwaiter().GetResult();
+            server.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
-    public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace();
+    private static void ConfigureHeadlessLinuxWebKit()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        var isCi = string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase);
+        var display = Environment.GetEnvironmentVariable("DISPLAY");
+        if (!isCi || string.IsNullOrWhiteSpace(display) || !display.StartsWith(':'))
+        {
+            return;
+        }
+
+        // Xvfb provides no usable DRI3 device in our GitHub Actions visual/soak jobs.
+        // WebKitGTK accelerated compositing can therefore leave resized webviews gray
+        // or partially blank even though the DOM is still responsive. Disable only in
+        // headless Linux CI; real desktop sessions keep the normal renderer.
+        Environment.SetEnvironmentVariable("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    }
 }

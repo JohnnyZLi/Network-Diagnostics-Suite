@@ -1,0 +1,479 @@
+/* UX overhaul foundation
+   ----------------------
+   The desktop should spend space on useful evidence rather than tiny labels floating
+   inside large surfaces. This file is intentionally imported last so it can establish
+   readable floors without rewriting the older visual-system files in one risky pass. */
+
+:root {
+  --ux-canvas: 1420px;
+  --ux-reading: 720px;
+  --ux-body: 14px;
+  --ux-secondary: 12.5px;
+  --ux-meta: 11.5px;
+  --ux-control: 12px;
+  --ux-toolbar-height: 68px;
+}
+
+:root[data-platform="macos"] {
+  --ux-toolbar-height: 54px;
+}
+
+/* Wider data canvas, constrained prose. */
+main {
+  width: min(var(--ux-canvas), calc(100% - 72px));
+}
+
+/* macOS uses an inner absolute scroll viewport so the AppKit-aligned toolbar never
+   participates in elastic overscroll. Spend its horizontal padding against the same
+   wide canvas instead of retaining the pre-overhaul 1180px constraint. */
+:root[data-platform="macos"] .app-shell > main {
+  padding-inline: max(36px, calc((100vw - var(--ux-canvas)) / 2));
+}
+
+.workbench-section-header > div:first-child,
+.live-health-summary {
+  max-width: var(--ux-reading);
+}
+
+.workbench-section-header p,
+.live-health-summary > p,
+.diagnostic-run-state p,
+.advanced-muted {
+  font-size: var(--ux-body);
+  line-height: 1.55;
+}
+
+/* Readability floor: meaningful UI copy should not be rendered as micro-type. */
+.workbench-loading strong,
+.live-timeline-heading strong,
+.monitor-component-card strong,
+.capacity-card-heading strong,
+.advanced-config-banner strong,
+.diagnostic-selector-group > span,
+.result-label,
+.diagnostic-plan-facts span,
+.diagnostic-plan-facts b,
+.plan-facts,
+.evidence-line,
+.next-run-summary,
+.diagnostic-run-detail-grid,
+.speed-check-heading,
+.speed-check-card,
+.advanced-section-heading,
+.advanced-field > span,
+.advanced-field small,
+.advanced-toggle-row small,
+.advanced-tool-card small,
+.advanced-tool-card b,
+.history-kicker,
+.history-row-heading span,
+.history-metrics span,
+.report-section-heading span,
+.report-metric-card span,
+.report-metric-card small {
+  font-size: var(--ux-meta);
+}
+
+.workbench-loading p,
+.monitor-share-menu button,
+.monitor-share-menu small,
+.health-score-orb small,
+.live-health-metrics span,
+.live-timeline-heading span,
+.monitor-card-action,
+.monitor-healthy-strip strong,
+.monitor-healthy-strip small,
+.diagnostic-selector-group > small,
+.advanced-config-banner small,
+.advanced-config-banner button,
+.diagnostic-run-state p,
+.diagnostic-plan-facts span,
+.speed-check-card p,
+.speed-check-card small,
+.lan-runtime-badge {
+  font-size: var(--ux-secondary);
+}
+
+.method-control button,
+.monitor-toggle,
+.monitor-share-menu summary,
+.primary-action,
+.secondary-action,
+.history-trigger,
+.settings-trigger,
+.history-icon-button,
+.advanced-primary,
+.advanced-secondary,
+.advanced-server-card button,
+.report-action {
+  font-size: var(--ux-control);
+}
+
+.live-health-metrics strong {
+  font-size: 17px;
+}
+
+.metric strong,
+.history-metrics strong,
+.capacity-values strong {
+  font-size: clamp(17px, 1.35vw, 21px);
+}
+
+.monitor-component-top b {
+  font-size: clamp(22px, 2vw, 28px);
+}
+
+.monitor-component-top strong,
+.capacity-card-heading strong {
+  font-size: 14px;
+}
+
+/* Keep controls comfortably targetable without turning the interface into tablet UI. */
+.method-control button {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+
+.monitor-share-menu summary,
+.monitor-toggle.compact,
+.secondary-action,
+.history-trigger,
+.settings-trigger {
+  min-height: 36px;
+}
+
+.monitor-card-action {
+  min-height: 36px;
+}
+
+/* Toolbar navigation. The markup is introduced by the workbench shell; these rules
+   preserve the current restrained visual language and avoid page-tab styling. */
+.workbench-nav {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.workbench-nav button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.workbench-nav button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+}
+
+.workbench-nav button.active {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.brand-home {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.brand-home:focus-visible {
+  border-radius: 8px;
+}
+
+/* Health should use its generous footprint for interpretation, not small print. */
+.live-health-hero {
+  grid-template-columns: minmax(230px, .38fr) minmax(0, 1fr);
+  gap: clamp(48px, 6vw, 96px);
+}
+
+.live-health-summary h2 {
+  font-size: clamp(30px, 3vw, 42px);
+}
+
+.live-health-metrics > div {
+  padding-block: 18px;
+}
+
+.live-timeline-section {
+  padding-block: 30px;
+}
+
+.live-timeline-section .monitor-timeline {
+  height: 56px;
+}
+
+.live-health-components .monitor-component-card {
+  min-height: 250px;
+}
+
+.monitor-healthy-strip {
+  min-height: 66px;
+}
+
+/* Diagnostic selection should devote most visual weight to the test itself. */
+.diagnostic-selector-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.diagnostic-selector-group > small {
+  min-height: 0;
+  max-width: 760px;
+}
+
+.diagnostic-options {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+}
+
+.diagnostic-options > summary {
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+.diagnostic-options > summary::-webkit-details-marker {
+  display: none;
+}
+
+.diagnostic-options > summary::after {
+  content: '+';
+  color: var(--faint);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.diagnostic-options[open] > summary::after {
+  content: '−';
+}
+
+.diagnostic-options-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 14px 14px;
+}
+
+.diagnostic-options-copy {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.diagnostic-run-state.ready {
+  min-height: 220px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 30px 32px;
+}
+
+.diagnostic-plan-facts {
+  gap: 20px 36px;
+}
+
+.diagnostic-plan-facts b {
+  font-size: 13px;
+}
+
+.diagnostic-run-button {
+  min-width: 190px;
+  min-height: 44px;
+}
+
+/* Rich result/recommendation surfaces introduced by the workflow pass. */
+.diagnostic-verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .42fr);
+  gap: 26px;
+  padding: 22px 0 24px;
+  border-top: 1px solid var(--line);
+}
+
+.diagnostic-verdict-main,
+.recommended-next-step,
+.latest-diagnostic-summary,
+.health-recommendation,
+.diagnostic-load-notice,
+.timeline-range-summary {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+}
+
+.diagnostic-verdict-main,
+.recommended-next-step {
+  padding: 18px;
+}
+
+.diagnostic-verdict-main > span,
+.recommended-next-step > span,
+.latest-diagnostic-summary > span,
+.health-recommendation > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.diagnostic-verdict-main strong,
+.recommended-next-step strong,
+.latest-diagnostic-summary strong,
+.health-recommendation strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.diagnostic-verdict-main p,
+.recommended-next-step p,
+.latest-diagnostic-summary p,
+.health-recommendation p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Wide desktop: spend width on evidence and desktop inspector behavior. */
+@media (min-width: 1500px) {
+  main {
+    width: min(var(--ux-canvas), calc(100% - 96px));
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: max(48px, calc((100vw - var(--ux-canvas)) / 2));
+  }
+
+  .monitor-components.live-health-components {
+    gap: 18px;
+  }
+
+  .diagnostic-run-state.running,
+  .diagnostic-run-state.result {
+    padding-inline: 32px;
+  }
+}
+
+/* Standard laptop: keep the readable floor, collapse secondary layout before text. */
+@media (max-width: 1080px) {
+  main {
+    width: min(100% - 44px, 1040px);
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: 22px;
+  }
+
+  .workbench-nav {
+    display: none;
+  }
+
+  .live-health-hero {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 34px;
+  }
+
+  .diagnostic-verdict {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  main {
+    width: min(100% - 30px, 760px);
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-inline: 15px;
+  }
+
+  .workbench-section {
+    padding-block: 42px;
+  }
+
+  .workbench-section-header {
+    gap: 18px;
+  }
+
+  .live-health-hero {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding-inline: 0;
+  }
+
+  .health-score-orb {
+    width: min(220px, 62vw);
+  }
+
+  .live-health-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .live-health-metrics > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .live-health-metrics > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .diagnostic-options-body,
+  .diagnostic-run-state.ready {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .diagnostic-run-state.ready {
+    display: grid;
+    gap: 24px;
+  }
+
+  .diagnostic-run-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-platform="macos"] {
+    --ux-toolbar-height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workbench-nav button {
+    transition: none;
+  }
+}

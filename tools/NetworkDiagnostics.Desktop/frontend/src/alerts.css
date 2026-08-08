@@ -1,0 +1,324 @@
+.alerts-trigger {
+  position: relative;
+}
+
+.alerts-trigger b {
+  min-width: 19px;
+  height: 19px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.alerts-layer {
+  position: fixed;
+  inset: 68px 0 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:root[data-platform="macos"] .alerts-layer {
+  top: 54px;
+}
+
+.alerts-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, .08);
+  cursor: default;
+  pointer-events: auto;
+  animation: alerts-backdrop-enter 170ms ease-out both;
+}
+
+.alerts-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(470px, calc(100vw - 24px));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: -18px 0 46px rgba(0, 0, 0, .14);
+  pointer-events: auto;
+  animation: alerts-sidecar-enter 210ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+.alerts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.alerts-header > div {
+  min-width: 0;
+}
+
+.alerts-header > div > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .11em;
+}
+
+.alerts-header h2 {
+  margin: 0 0 7px;
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+
+.alerts-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.alerts-close {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.alerts-close:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.alerts-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.alerts-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.alerts-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 680;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.alerts-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.alerts-actions button.confirm {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
+}
+
+.alerts-actions button:disabled {
+  cursor: default;
+  opacity: .42;
+}
+
+.alerts-error {
+  margin: 12px 18px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 34%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.alerts-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 14px 28px;
+  scrollbar-gutter: stable;
+}
+
+.alerts-item {
+  position: relative;
+  padding: 16px 16px 17px 18px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-soft) 52%, transparent);
+}
+
+.alerts-item + .alerts-item {
+  margin-top: 9px;
+}
+
+.alerts-item::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: -1px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent-strong);
+}
+
+.alerts-item.success::before,
+.alerts-item.recovery::before,
+.alerts-item.info::before {
+  background: var(--good);
+}
+
+.alerts-item.error::before,
+.alerts-item.critical::before,
+.alerts-item.poor::before {
+  background: var(--danger);
+}
+
+.alerts-item.read {
+  opacity: .78;
+}
+
+.alerts-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 620;
+}
+
+.alerts-item-meta span + span::before {
+  content: '·';
+  margin-right: 6px;
+}
+
+.alerts-item-meta i {
+  margin-left: auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-strong);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 720;
+}
+
+.alerts-item > strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+
+.alerts-item > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.alerts-empty {
+  min-height: 220px;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  padding: 30px;
+  text-align: center;
+}
+
+.alerts-empty strong {
+  font-size: 14px;
+}
+
+.alerts-empty span {
+  max-width: 310px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@keyframes alerts-sidecar-enter {
+  from { opacity: .98; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes alerts-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (min-width: 1500px) {
+  .alerts-backdrop {
+    background: transparent;
+  }
+}
+
+@media (max-width: 820px) {
+  .alerts-trigger > span {
+    display: none;
+  }
+
+  .alerts-trigger b {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 8.5px;
+  }
+
+  .alerts-panel {
+    width: min(430px, calc(100vw - 10px));
+  }
+
+  :root[data-platform="macos"] .alerts-layer {
+    top: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alerts-panel,
+  .alerts-backdrop {
+    animation: none;
+  }
+}

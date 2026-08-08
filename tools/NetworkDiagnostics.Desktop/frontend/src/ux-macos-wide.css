@@ -1,0 +1,11 @@
+/* macOS keeps the workbench inside an absolute, non-bouncing scroll viewport.
+   When History becomes a wide-screen inspector, shrink that viewport rather than
+   merely changing normal-flow margins that AppKit/WebKit will ignore. */
+@media (min-width: 1500px) {
+  :root[data-platform="macos"] .app-shell.history-docked > main {
+    right: 520px;
+    width: auto;
+    margin: 0;
+    padding-inline: max(36px, calc((100vw - 520px - 1030px) / 2));
+  }
+}

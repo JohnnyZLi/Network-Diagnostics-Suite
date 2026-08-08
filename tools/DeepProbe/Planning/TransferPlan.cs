@@ -25,6 +25,13 @@ public enum TransferMethod
     Aggregate
 }
 
+public enum DownloadPathPreference
+{
+    Automatic,
+    DirectR2,
+    Worker
+}
+
 public enum TransferDirection
 {
     Download,
@@ -76,6 +83,14 @@ public static class NativeTransferPlanBuilder
         "single" => TransferMethod.Single,
         "aggregate" or "parallel" => TransferMethod.Aggregate,
         _ => throw new ArgumentException("Transfer method must be compare, single, or aggregate.")
+    };
+
+    public static DownloadPathPreference ParseDownloadPath(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "automatic" or "auto" => DownloadPathPreference.Automatic,
+        "direct-r2" or "r2-direct" or "r2" => DownloadPathPreference.DirectR2,
+        "worker" or "worker-stream" => DownloadPathPreference.Worker,
+        _ => throw new ArgumentException("Download path must be automatic, direct-r2, or worker.")
     };
 
     public static NativeTransferPlan Build(TestProfileId profile, TransferMethod method)

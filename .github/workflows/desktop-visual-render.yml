@@ -1,0 +1,392 @@
+name: Desktop visual render
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-visual-render.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      GTK_THEME: 'Adwaita:dark'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Photino Linux host and virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libnotify-dev \
+            xvfb openbox xdotool wmctrl scrot
+
+      - name: Publish Linux desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output desktop-visual/publish
+          test -f desktop-visual/publish/wwwroot/index.html
+
+      - name: Launch Photino desktop
+        run: |
+          mkdir -p desktop-visual/screenshots
+          Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/desktop-xvfb.log 2>&1 &
+          echo $! > /tmp/desktop-xvfb.pid
+          sleep 1
+          openbox > /tmp/desktop-openbox.log 2>&1 &
+          echo $! > /tmp/desktop-openbox.pid
+          desktop-visual/publish/NetworkDiagnosticsDesktop > /tmp/desktop-app.log 2>&1 &
+          echo $! > /tmp/desktop-app.pid
+          for attempt in {1..50}; do
+            if wmctrl -l | grep -q 'Network Diagnostics'; then
+              wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+              sleep 3
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/desktop-app.log
+          exit 1
+
+      - name: Capture Photino milestone states
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capture() {
+            sleep 0.7
+            scrot "desktop-visual/screenshots/$1.png"
+          }
+
+          open_palette() {
+            xdotool mousemove --sync 800 330 click 1
+            sleep 0.15
+            xdotool key --clearmodifiers ctrl+f
+            sleep 0.45
+          }
+
+          navigate_palette() {
+            open_palette
+            xdotool type --delay 30 "$1"
+            xdotool key --clearmodifiers Return
+            sleep 0.8
+          }
+
+          capture live-health-wide
+
+          wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
+          capture live-health-1000x760
+          wmctrl -r 'Network Diagnostics' -e 0,150,100,820,700
+          capture live-health-820x700
+
+          wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+          sleep 1
+
+          # Opening state and semantic navigation.
+          open_palette
+          capture command-palette-dark
+          xdotool type --delay 35 'health'
+          capture command-palette-health-filtered
+          xdotool key --clearmodifiers Return
+          sleep 1.2
+          capture live-health-dark
+
+          open_palette
+          xdotool type --delay 35 'run diagnostics'
+          capture command-palette-diagnostics-filtered
+          xdotool key --clearmodifiers Return
+          sleep 1.2
+          capture diagnostics-ready-dark
+
+          # The diagnostics surface is intentionally dense. Audit the compact layout
+          # and the maximum Stress plan instead of only the lightest profile.
+          wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+          wmctrl -r 'Network Diagnostics' -e 0,100,70,1000,840
+          capture diagnostics-ready-1000x840-dark
+          wmctrl -r 'Network Diagnostics' -b add,maximized_vert,maximized_horz
+          sleep 0.8
+          navigate_palette 'select stress'
+          capture diagnostics-stress-ready-dark
+          navigate_palette 'use worker download path'
+          capture diagnostics-stress-worker-path-dark
+          navigate_palette 'select connection'
+          navigate_palette 'use automatic download path'
+
+          # Normal Run Diagnostics preflight now carries actual R2/Worker availability
+          # in addition to endpoint, network, edge, latency, and interface data.
+          for attempt in {1..24}; do
+            if grep -Fq '"downloadPath":{"requestedPath":"automatic"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 24 )); then
+              echo "Run Diagnostics preflight did not return download-path status."
+              tail -180 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+
+          # Advanced has two real concepts: Test configuration and LAN tools.
+          open_palette
+          xdotool type --delay 35 'advanced'
+          capture command-palette-advanced-filtered
+          xdotool key --clearmodifiers Return
+          sleep 1.2
+          capture advanced-diagnostics-dark
+          xdotool mousemove --sync 420 805 click 1
+          sleep 0.5
+          capture advanced-configuration-ready-dark
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
+          for attempt in {1..24}; do
+            if grep -Fq '"payload":{"measurement":{"contractVersion":"1.1"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 24 )); then
+              echo "Embedded Advanced preflight did not return the native measurement contract."
+              tail -160 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+          capture advanced-preflight-dark
+
+          # Settings owns app-level preferences, including expected capacity.
+          xdotool mousemove --sync 80 500 click 1
+          xdotool key --clearmodifiers ctrl+Home
+          sleep 0.7
+          xdotool mousemove --sync 1550 52 click 1
+          capture settings-popover-dark
+          xdotool key --clearmodifiers Escape
+
+          # Capacity remains a semantic shortcut to Connection Check + Aggregate +
+          # Automatic delivery while the normal diagnostics surface exposes all three
+          # topology and download-path choices directly.
+          open_palette
+          xdotool type --delay 35 'measure capacity'
+          capture command-palette-capacity-filtered
+          xdotool key --clearmodifiers Return
+          sleep 0.35
+          navigate_palette 'run diagnostics'
+          capture diagnostics-running-early
+          sleep 1.3
+          capture diagnostics-running-later
+
+          for attempt in {1..20}; do
+            if grep -Fq '"profile":"connection-check","method":"aggregate","downloadPath":"automatic","transferCapBytes"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 20 )); then
+              echo "Capacity action did not start Connection Check + Aggregate + Automatic."
+              tail -140 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.25
+          done
+
+          reports_dir="$HOME/.local/share/NetworkDiagnostics/reports"
+          for attempt in {1..90}; do
+            if find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' -print -quit 2>/dev/null | grep -q .; then
+              break
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            if (( attempt == 90 )); then
+              echo "Connection Check did not finish and persist a report within 90 seconds."
+              tail -180 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          navigate_palette 'run diagnostics'
+          capture diagnostics-result-dark
+
+          # Automatic must record the requested and actual delivery path rather than
+          # presenting the selector as a decorative control.
+          for attempt in {1..20}; do
+            if grep -Fq '"downloadDelivery":{"requestedPath":"automatic"' /tmp/desktop-app.log; then
+              break
+            fi
+            if (( attempt == 20 )); then
+              echo "Automatic run did not record download delivery data."
+              tail -180 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 0.25
+          done
+
+          # Worker is a second real execution path. Run the same lightweight profile
+          # through it and verify the completed report says Worker was actually used.
+          navigate_palette 'use worker download path'
+          capture diagnostics-worker-ready-dark
+          navigate_palette 'run connection check'
+          for attempt in {1..90}; do
+            if grep -Fq '"downloadDelivery":{"requestedPath":"worker","selectedPath":"worker"' /tmp/desktop-app.log; then
+              break
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-app.log
+              exit 1
+            fi
+            if (( attempt == 90 )); then
+              echo "Worker Connection Check did not complete through the Worker path."
+              tail -220 /tmp/desktop-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          navigate_palette 'run diagnostics'
+          capture diagnostics-worker-result-dark
+
+          # The completed report must feed capacity history and stay linked from Health.
+          navigate_palette 'health'
+          capture live-health-capacity-measured-dark
+
+          # Issues & alerts is a first-class top-bar workspace rather than a long inline
+          # Health block. Open it semantically so the sidecar layout is part of the real
+          # Photino acceptance artifact rather than only unit/CSS validation.
+          open_palette
+          xdotool type --delay 35 'alerts'
+          capture command-palette-alerts-filtered
+          xdotool key --clearmodifiers Return
+          sleep 0.7
+          capture alerts-sidecar-dark
+          xdotool key --clearmodifiers Escape
+          sleep 0.25
+
+          if ! kill -0 "$(cat /tmp/desktop-app.pid)" 2>/dev/null; then
+            cat /tmp/desktop-app.log
+            exit 1
+          fi
+          if grep -Ei 'unhandled exception|fatal error|segmentation fault' /tmp/desktop-app.log; then
+            cat /tmp/desktop-app.log
+            exit 1
+          fi
+
+          test -d "$reports_dir"
+          report_count=$(find "$reports_dir" -maxdepth 1 -type f -name '*-connection-check-*.json' | wc -l)
+          if (( report_count < 2 )); then
+            echo "Both Automatic and Worker Connection Checks were expected to persist reports."
+            find "$HOME/.local/share/NetworkDiagnostics" -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+          find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
+
+          # At 1600px History is a docked inspector, not a modal sheet. It must leave
+          # the workbench visible and still support the full report-management flow.
+          xdotool key --clearmodifiers ctrl+h
+          sleep 0.5
+          capture saved-runs-docked
+
+          # Filters add useful list controls above the first row; select the first run.
+          xdotool mousemove --sync 1325 340 click 1
+          sleep 0.5
+          capture saved-report-detail
+
+          xdotool mousemove --sync 1370 720
+          xdotool click --repeat 14 --delay 45 5
+          capture saved-report-detail-bottom
+
+          # ReportDetail owns focus on mount. Technical data and Edit details are the
+          # first two controls from that container, independent of scroll geometry.
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
+          sleep 0.4
+          capture saved-report-editor
+
+          xdotool key --clearmodifiers ctrl+a
+          xdotool type --delay 20 'CI baseline'
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers ctrl+a
+          xdotool type --delay 20 'ci, photino'
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Tab
+          xdotool key --clearmodifiers Return
+          sleep 0.5
+          capture saved-report-annotated
+
+          python3 - "$reports_dir" <<'PY'
+          import glob
+          import json
+          import os
+          import sys
+
+          reports_dir = sys.argv[1]
+
+          def objects(value):
+              if isinstance(value, dict):
+                  yield value
+                  for child in value.values():
+                      yield from objects(child)
+              elif isinstance(value, list):
+                  for child in value:
+                      yield from objects(child)
+
+          found = False
+          for path in glob.glob(os.path.join(reports_dir, '*-connection-check-*.json')):
+              with open(path, encoding='utf-8') as handle:
+                  document = json.load(handle)
+              for item in objects(document):
+                  normalized = {str(key).lower(): value for key, value in item.items()}
+                  if normalized.get('label') == 'CI baseline' and normalized.get('tags') == ['ci', 'photino']:
+                      found = True
+                      break
+              if found:
+                  break
+
+          if not found:
+              raise SystemExit('Saved report metadata was not persisted to the JSON report.')
+          PY
+
+          xdotool key --clearmodifiers Escape
+
+      - name: Upload rendered states
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: desktop-photino-visual-render
+          path: |
+            desktop-visual/screenshots
+            desktop-visual/report-files.txt
+            /tmp/desktop-app.log
+            /tmp/desktop-openbox.log
+            /tmp/desktop-xvfb.log
+          retention-days: 7

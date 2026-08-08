@@ -1,0 +1,267 @@
+/* Quantitative connection history. The state strip remains as a compact secondary
+   signal, while the primary plot shows an actual measured series. */
+.timeline-analysis {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.timeline-chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.timeline-metric-control {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 330px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.timeline-metric-control button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.timeline-metric-control button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.timeline-metric-control button.active {
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--line-strong), 0 1px 4px color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.timeline-metric-control button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.timeline-chart-reading {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.timeline-chart-reading span {
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.timeline-chart-reading strong {
+  color: var(--text);
+  font-size: 14px;
+  letter-spacing: -.015em;
+}
+
+.timeline-chart-frame {
+  position: relative;
+  min-height: 230px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--surface-soft) 34%, transparent), transparent 45%),
+    var(--surface);
+}
+
+.timeline-chart-frame svg {
+  display: block;
+  width: 100%;
+  height: 230px;
+  overflow: visible;
+}
+
+.timeline-grid-line,
+.timeline-time-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-time-grid {
+  stroke: color-mix(in srgb, var(--line) 70%, transparent);
+  stroke-dasharray: 2 5;
+}
+
+.timeline-grid-line.major {
+  stroke: var(--line-strong);
+}
+
+.timeline-axis-label,
+.timeline-time-label,
+.timeline-lane-label {
+  fill: var(--faint);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 620;
+}
+
+/* The selected metric is already named in the control immediately above the plot.
+   Suppress in-plot lane labels so they cannot collide with the top Y-axis value on
+   compact or WebKit-rendered canvases. */
+.timeline-lane-label {
+  display: none;
+}
+
+.timeline-series-line {
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-series-area {
+  fill: color-mix(in srgb, var(--accent) 9%, transparent);
+  stroke: none;
+}
+
+.timeline-point {
+  stroke: var(--surface);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  transition: r 120ms ease, opacity 120ms ease;
+}
+
+.timeline-point.responsive,
+.timeline-state-block.responsive {
+  fill: var(--good);
+}
+
+.timeline-point.laggy,
+.timeline-state-block.laggy {
+  fill: var(--accent-strong);
+}
+
+.timeline-point.unresponsive,
+.timeline-state-block.unresponsive {
+  fill: var(--danger);
+}
+
+.timeline-point.inactive,
+.timeline-state-block.inactive {
+  fill: var(--faint);
+}
+
+.timeline-point-group:hover .timeline-point {
+  r: 6.5px;
+}
+
+.timeline-diagnostic-ring {
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-outage-marker {
+  stroke: color-mix(in srgb, var(--danger) 50%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-state-baseline {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-state-block {
+  opacity: .9;
+}
+
+.timeline-sparse-note {
+  position: absolute;
+  right: 14px;
+  bottom: 8px;
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.timeline-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.timeline-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-chart-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.timeline-chart-legend .responsive i { background: var(--good); }
+.timeline-chart-legend .laggy i { background: var(--accent-strong); }
+.timeline-chart-legend .unresponsive i { background: var(--danger); }
+.timeline-chart-legend .diagnostic i {
+  background: transparent;
+  border: 1.5px dashed var(--accent-strong);
+}
+
+/* Retire the old state-only strip when the quantitative chart is present. */
+.live-timeline-section .monitor-timeline {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .timeline-chart-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .timeline-metric-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .timeline-chart-reading {
+    justify-content: flex-start;
+  }
+
+  .timeline-chart-frame,
+  .timeline-chart-frame svg {
+    height: 210px;
+    min-height: 210px;
+  }
+
+  .timeline-chart-legend {
+    gap: 8px 12px;
+    font-size: 11px;
+  }
+}

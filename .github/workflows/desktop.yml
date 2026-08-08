@@ -10,6 +10,8 @@ on:
       - "tools/NetworkDiagnostics.Core/**"
       - "tools/NetworkDiagnostics.Desktop/**"
       - "tools/NetworkDiagnostics.Desktop.Tests/**"
+      - "package.json"
+      - "package-lock.json"
       - "Directory.Build.*"
       - "global.json"
       - "NuGet.config"
@@ -22,6 +24,8 @@ on:
       - "tools/NetworkDiagnostics.Core/**"
       - "tools/NetworkDiagnostics.Desktop/**"
       - "tools/NetworkDiagnostics.Desktop.Tests/**"
+      - "package.json"
+      - "package-lock.json"
       - "Directory.Build.*"
       - "global.json"
       - "NuGet.config"
@@ -72,10 +76,15 @@ jobs:
             mac_bundle: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
         with:
           dotnet-version: 10.0.x
-      - name: Test desktop navigation
+      - name: Test desktop bridge contract
         run: dotnet test tools/NetworkDiagnostics.Desktop.Tests/NetworkDiagnostics.Desktop.Tests.csproj --configuration Release
       - name: Publish desktop application
         run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/desktop-${{ matrix.rid }}/publish
@@ -93,11 +102,11 @@ jobs:
           if [ "${{ matrix.mac_bundle }}" = "true" ]; then
             app="$package/Network Diagnostics.app"
             mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-            cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
+            cp -R "artifacts/desktop-${{ matrix.rid }}/publish/." "$app/Contents/MacOS/"
             chmod +x "$app/Contents/MacOS/NetworkDiagnosticsDesktop"
             cat > "$app/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>CFBundleDevelopmentRegion</key>
@@ -126,10 +135,18 @@ jobs:
           </plist>
           PLIST
           else
-            cp "artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }}" "$package/${{ matrix.binary }}"
+            cp -R "artifacts/desktop-${{ matrix.rid }}/publish/." "$package/"
             if [ "${{ runner.os }}" != "Windows" ]; then
               chmod +x "$package/${{ matrix.binary }}"
             fi
+          fi
+      - name: Validate packaged frontend
+        shell: bash
+        run: |
+          if [ "${{ matrix.mac_bundle }}" = "true" ]; then
+            test -f "artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}/Network Diagnostics.app/Contents/MacOS/wwwroot/index.html"
+          else
+            test -f "artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}/wwwroot/index.html"
           fi
       - name: Validate macOS application bundle
         if: matrix.mac_bundle

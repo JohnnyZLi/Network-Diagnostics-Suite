@@ -1,0 +1,276 @@
+/* Final wide-screen geometry: keep readable prose constrained inside components, but
+   let data surfaces use the space that remains beside the 520px History inspector. */
+@media (min-width: 1500px) {
+  .app-shell.history-docked main {
+    width: min(1330px, calc(100% - 590px));
+    margin-left: 48px;
+    margin-right: 542px;
+  }
+
+  :root[data-platform="macos"] .app-shell.history-docked > main {
+    right: 520px;
+    width: auto;
+    margin: 0;
+    padding-inline: max(36px, calc((100vw - 520px - 1330px) / 2));
+  }
+}
+
+/* Diagnostics should spend a desktop canvas on decisions and evidence, not on empty
+   card width. Profile and topology are peer run-time choices, so keep both visible. */
+.diagnostics-workbench .workbench-section-header p {
+  max-width: 760px;
+  font-size: 14.5px;
+}
+
+.diagnostics-workbench .diagnostic-selector-grid {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 22px;
+  padding-bottom: 28px;
+}
+
+.diagnostics-workbench .diagnostic-selector-group,
+.diagnostics-workbench .diagnostic-options {
+  min-width: 0;
+  min-height: 148px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+}
+
+.diagnostics-workbench .diagnostic-selector-group {
+  align-content: start;
+  gap: 11px;
+}
+
+.diagnostics-workbench .diagnostic-selector-group > span,
+.diagnostics-workbench .diagnostic-options > summary {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.diagnostics-workbench .diagnostic-selector-group > small {
+  max-width: none;
+  min-height: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.diagnostics-workbench .diagnostic-selector-group .method-control,
+.diagnostics-workbench .diagnostic-options .method-control {
+  width: 100%;
+  max-width: none;
+  display: grid;
+  gap: 4px;
+}
+
+.diagnostics-workbench .diagnostic-selector-group .method-control {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.diagnostics-workbench .diagnostic-options .method-control {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  order: -1;
+}
+
+.diagnostics-workbench .method-control button {
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 12px;
+  font-size: 13.5px;
+}
+
+/* The topology control is intentionally always exposed. The details element is kept
+   for compatibility with the existing DOM/tests, but no longer behaves like hidden
+   progressive disclosure on this roomy desktop surface. */
+.diagnostics-workbench .diagnostic-options > summary {
+  min-height: auto;
+  padding: 0 0 11px;
+  cursor: default;
+  pointer-events: none;
+}
+
+.diagnostics-workbench .diagnostic-options > summary::after {
+  display: none;
+}
+
+.diagnostics-workbench .diagnostic-options > summary span:last-child {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.diagnostics-workbench .diagnostic-options:not([open]) > .diagnostic-options-body,
+.diagnostics-workbench .diagnostic-options > .diagnostic-options-body {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 11px;
+  padding: 0;
+}
+
+.diagnostics-workbench .diagnostic-options-copy {
+  max-width: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Use the selected-test surface as a compact launch console. The summary occupies the
+   left, the concrete test plan occupies the middle, and the action stays anchored. */
+.diagnostics-workbench .diagnostic-run-state.ready {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  align-items: center;
+  gap: 34px;
+  padding: 26px 28px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready > div:first-child {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+  grid-template-rows: auto auto auto auto;
+  column-gap: 42px;
+  align-items: start;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .result-label,
+.diagnostics-workbench .diagnostic-run-state.ready h3,
+.diagnostics-workbench .diagnostic-run-state.ready > div:first-child > p {
+  grid-column: 1;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .result-label {
+  font-size: 12.5px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready h3 {
+  margin: 8px 0 9px;
+  font-size: clamp(30px, 2.4vw, 38px);
+  line-height: 1.02;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready > div:first-child > p {
+  max-width: 700px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 30px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(130px, .9fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span:last-child {
+  border-bottom: 0;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts b {
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary {
+  grid-column: 1 / -1;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary span {
+  font-size: 11.5px;
+}
+
+.diagnostics-workbench .diagnostic-run-state.ready .diagnostic-evidence-summary strong {
+  font-size: 13px;
+}
+
+.diagnostics-workbench .diagnostic-run-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding-inline: 18px;
+  font-size: 13.5px;
+}
+
+@media (max-width: 1180px) {
+  .diagnostics-workbench .diagnostic-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready > div:first-child {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
+    grid-column: 1;
+    grid-row: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts span {
+    display: block;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts b {
+    display: block;
+    margin-bottom: 4px;
+  }
+}
+
+@media (max-width: 820px) {
+  .diagnostics-workbench .diagnostic-selector-group,
+  .diagnostics-workbench .diagnostic-options {
+    min-height: 0;
+    padding: 15px;
+  }
+
+  .diagnostics-workbench .diagnostic-selector-group .method-control {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diagnostics-workbench .diagnostic-options .method-control {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready .diagnostic-plan-facts {
+    grid-template-columns: 1fr;
+  }
+}

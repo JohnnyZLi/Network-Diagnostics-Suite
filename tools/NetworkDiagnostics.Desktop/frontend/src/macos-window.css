@@ -1,0 +1,114 @@
+/* macOS keeps the real NSWindow traffic lights while AppKit lets the WebView fill
+   the title-bar area. The product bar is therefore the one visible top surface. */
+:root[data-platform="macos"] .product-bar {
+  height: 54px;
+  min-height: 54px;
+  padding: 0 26px 0 82px;
+  align-items: center;
+  user-select: none;
+}
+
+/* Keep every web-owned toolbar item on one real centerline. Avoid per-item nudges;
+   AppKit owns the traffic-light adjustment separately. */
+:root[data-platform="macos"] .product-bar .brand,
+:root[data-platform="macos"] .product-bar .product-actions,
+:root[data-platform="macos"] .product-bar .host-state,
+:root[data-platform="macos"] .product-bar .lan-runtime-badge,
+:root[data-platform="macos"] .product-bar .settings-menu {
+  align-items: center;
+  align-self: center;
+  margin-block: 0;
+  transform: none;
+}
+
+:root[data-platform="macos"] .product-bar .brand,
+:root[data-platform="macos"] .product-bar .product-actions,
+:root[data-platform="macos"] .product-bar .host-state,
+:root[data-platform="macos"] .product-bar .lan-runtime-badge {
+  min-height: 34px;
+}
+
+:root[data-platform="macos"] .product-bar .brand strong,
+:root[data-platform="macos"] .product-bar .host-state,
+:root[data-platform="macos"] .product-bar .lan-runtime-badge,
+:root[data-platform="macos"] .product-bar .history-trigger {
+  line-height: 1;
+}
+
+:root[data-platform="macos"] .product-bar .settings-menu {
+  display: flex;
+  height: 34px;
+}
+
+:root[data-platform="macos"] .brand span:not(.brand-mark) {
+  display: none;
+}
+
+:root[data-platform="macos"] .app-shell > main {
+  padding-top: 84px;
+}
+
+/* Full-size AppKit content moves the WebView origin into the native title bar.
+   History should still behave as a side workspace belonging to the app body, not
+   as a sheet pasted over the traffic lights and toolbar. */
+:root[data-platform="macos"] .history-layer {
+  top: 54px;
+  bottom: 0;
+  height: auto;
+}
+
+:root[data-platform="macos"] .history-backdrop {
+  background: rgba(0, 0, 0, 0.27);
+  animation-duration: 180ms;
+}
+
+:root[data-platform="macos"] .history-panel {
+  height: 100%;
+  overflow: hidden;
+  border-top: 1px solid var(--line-strong);
+  border-top-left-radius: 12px;
+  box-shadow: -22px 8px 58px rgba(0, 0, 0, 0.2);
+  animation: mac-history-enter 220ms cubic-bezier(.18, .78, .2, 1) both;
+}
+
+:root[data-platform="macos"] .history-header {
+  min-height: 118px;
+  padding: 24px 24px 20px;
+}
+
+:root[data-platform="macos"] .history-list {
+  padding-inline: 24px;
+}
+
+@keyframes mac-history-enter {
+  from {
+    transform: translateX(28px);
+    opacity: .72;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-platform="macos"] .product-bar {
+    height: 52px;
+    min-height: 52px;
+    padding-right: 18px;
+    padding-left: 78px;
+  }
+
+  :root[data-platform="macos"] .app-shell > main {
+    padding-top: 80px;
+  }
+
+  :root[data-platform="macos"] .history-layer {
+    top: 52px;
+  }
+
+  :root[data-platform="macos"] .history-panel {
+    width: min(100%, 420px);
+    border-top-left-radius: 10px;
+  }
+}

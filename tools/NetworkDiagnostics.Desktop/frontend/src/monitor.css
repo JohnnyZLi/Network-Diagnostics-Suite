@@ -1,0 +1,734 @@
+.monitor-trigger {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.monitor-trigger:hover,
+.monitor-trigger.active {
+  color: var(--text);
+  background: var(--surface-soft);
+  border-color: var(--line-strong);
+}
+
+.monitor-trigger svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitor-trigger-score {
+  min-width: 20px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 9px;
+}
+
+.monitor-trigger-alert {
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.monitor-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  pointer-events: none;
+}
+
+.monitor-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(0, 0, 0, 0.34);
+  pointer-events: auto;
+}
+
+.monitor-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: min(620px, calc(100vw - 34px));
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--bg) 96%, var(--surface));
+  box-shadow: -26px 0 70px rgba(0, 0, 0, 0.22);
+  pointer-events: auto;
+  animation: monitor-enter 180ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+.monitor-header {
+  min-height: 124px;
+  box-sizing: border-box;
+  padding: 27px 26px 21px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.monitor-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.monitor-header h2 {
+  margin: 0 0 6px;
+  font-size: 25px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.monitor-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.monitor-icon-button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.monitor-icon-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.monitor-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 26px 34px;
+  pointer-events: auto;
+}
+
+.monitor-error,
+.monitor-notice {
+  margin-bottom: 18px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.monitor-error {
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+}
+
+.monitor-notice {
+  border: 1px solid color-mix(in srgb, var(--good) 26%, transparent);
+  background: color-mix(in srgb, var(--good) 7%, transparent);
+  color: var(--text);
+}
+
+.monitor-empty {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.monitor-empty strong {
+  margin-bottom: 7px;
+  font-size: 14px;
+}
+
+.monitor-empty p {
+  max-width: 280px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.monitor-loader {
+  width: 25px;
+  height: 25px;
+  margin-bottom: 16px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: monitor-spin 850ms linear infinite;
+}
+
+.monitor-hero {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.monitor-score {
+  aspect-ratio: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, var(--surface-soft), var(--surface));
+}
+
+.monitor-score strong {
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.monitor-score span {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.monitor-score.excellent,
+.monitor-score.good {
+  border-color: color-mix(in srgb, var(--good) 42%, var(--line-strong));
+}
+
+.monitor-score.fair,
+.monitor-score.degraded {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--line-strong));
+}
+
+.monitor-score.poor {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line-strong));
+}
+
+.monitor-hero-copy h3 {
+  margin: 8px 0 7px;
+  font-size: 19px;
+  letter-spacing: -0.025em;
+}
+
+.monitor-hero-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.monitor-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.monitor-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.monitor-state.running i {
+  background: var(--good);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 9%, transparent);
+}
+
+.monitor-toggle {
+  height: 32px;
+  margin-top: 13px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitor-toggle:disabled,
+.monitor-window-control button:disabled,
+.monitor-alert-actions button:disabled,
+.monitor-speed-actions button:disabled,
+.monitor-export-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.monitor-window-section,
+.monitor-timeline-section,
+.monitor-utility-section,
+.monitor-export-section,
+.monitor-alert-section {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.monitor-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+}
+
+.monitor-section-heading strong {
+  font-size: 11px;
+}
+
+.monitor-section-heading span {
+  color: var(--faint);
+  font-size: 9px;
+}
+
+.monitor-window-control {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.monitor-window-control button {
+  height: 29px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitor-window-control button.active {
+  background: var(--surface-soft);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.monitor-timeline {
+  height: 42px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.monitor-timeline span {
+  min-width: 2px;
+  flex: 1 1 0;
+  border-radius: 2px;
+  background: var(--faint);
+}
+
+.monitor-timeline span.responsive { background: var(--good); }
+.monitor-timeline span.laggy { background: var(--accent); }
+.monitor-timeline span.unresponsive { background: var(--danger); }
+.monitor-timeline span.inactive { background: var(--line-strong); }
+
+.monitor-muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.monitor-components {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.monitor-component-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.monitor-component-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.monitor-component-top > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-component-top span {
+  color: var(--faint);
+  font-size: 8.5px;
+}
+
+.monitor-component-top strong {
+  font-size: 10.5px;
+}
+
+.monitor-component-top b {
+  font-size: 19px;
+  letter-spacing: -0.04em;
+}
+
+.monitor-component-card > p {
+  min-height: 45px;
+  margin: 10px 0 12px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.monitor-component-metrics {
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.monitor-component-metrics div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.monitor-component-metrics span {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-component-metrics strong {
+  flex: 0 0 auto;
+  font-size: 8.5px;
+}
+
+.monitor-utility-section,
+.monitor-speed-actions,
+.monitor-speed-actions button {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.monitor-speed-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.monitor-speed-actions button {
+  min-width: 0;
+  min-height: 65px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.monitor-speed-actions button:hover:not(:disabled),
+.monitor-speed-actions button.confirm {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+.monitor-speed-actions button.confirm {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong));
+}
+
+.monitor-speed-actions button > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-speed-actions strong {
+  font-size: 10.5px;
+}
+
+.monitor-speed-actions small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-speed-actions b {
+  color: var(--muted);
+  font-size: 8.5px;
+}
+
+.monitor-utility-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+
+.monitor-utility-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitor-export-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.monitor-export-actions button {
+  min-width: 0;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitor-export-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.monitor-export-actions svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitor-export-actions span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-export-copy {
+  margin: 9px 0 0;
+  color: var(--faint);
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+.monitor-alert-section {
+  border-bottom: 0;
+}
+
+.monitor-alert-heading > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-alert-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.monitor-alert-actions button {
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitor-alert-actions button.confirm {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  color: var(--danger);
+}
+
+.monitor-alert-list {
+  display: grid;
+  gap: 8px;
+}
+
+.monitor-alert {
+  padding: 11px 12px 12px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.monitor-alert.critical { border-left-color: var(--danger); }
+.monitor-alert.information { border-left-color: var(--good); }
+.monitor-alert.read { opacity: 0.68; }
+
+.monitor-alert > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--faint);
+  font-size: 8px;
+  text-transform: capitalize;
+}
+
+.monitor-alert strong {
+  font-size: 10.5px;
+}
+
+.monitor-alert p,
+.monitor-alert-empty p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.monitor-alert-empty {
+  padding: 24px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  text-align: center;
+}
+
+.monitor-alert-empty strong {
+  font-size: 10.5px;
+}
+
+@keyframes monitor-enter {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes monitor-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 720px) {
+  .monitor-trigger {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .monitor-trigger > span:not(.monitor-trigger-alert) {
+    display: none;
+  }
+
+  .monitor-trigger-score {
+    display: none;
+  }
+
+  .monitor-panel {
+    width: min(100%, 620px);
+  }
+
+  .monitor-body,
+  .monitor-header {
+    padding-inline: 20px;
+  }
+
+  .monitor-hero {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .monitor-components,
+  .monitor-speed-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-component-card > p {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 500px) {
+  .monitor-export-actions {
+    grid-template-columns: 1fr;
+  }
+}

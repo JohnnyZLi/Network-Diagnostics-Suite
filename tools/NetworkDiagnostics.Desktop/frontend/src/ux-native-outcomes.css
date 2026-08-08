@@ -1,0 +1,27 @@
+/* DiagnosticReportPresenter emits Healthy, Problematic, Inconclusive, Unavailable,
+   and Failed. Keep History and the latest-result link aligned with those real states. */
+.history-outcome.problematic,
+.history-outcome.inconclusive {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.history-outcome.unavailable {
+  border-color: var(--line-strong);
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.latest-diagnostic-summary.problematic,
+.latest-diagnostic-summary.inconclusive {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+}
+
+.latest-diagnostic-summary.failed {
+  border-color: color-mix(in srgb, var(--danger) 36%, var(--line));
+}
+
+.latest-diagnostic-summary.healthy {
+  border-color: color-mix(in srgb, var(--good) 24%, var(--line));
+}
