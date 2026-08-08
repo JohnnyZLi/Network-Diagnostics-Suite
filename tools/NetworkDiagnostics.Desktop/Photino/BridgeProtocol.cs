@@ -77,6 +77,28 @@ public static class BridgeProtocol
             propertyName);
     }
 
+    public static double ParseRequiredDouble(JsonElement payload, string propertyName, double minimum, double maximum)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        if (!double.IsFinite(minimum) || !double.IsFinite(maximum) || minimum > maximum)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minimum));
+        }
+        if (payload.ValueKind == JsonValueKind.Object
+            && payload.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetDouble(out var parsed)
+            && double.IsFinite(parsed)
+            && parsed >= minimum
+            && parsed <= maximum)
+        {
+            return parsed;
+        }
+        throw new ArgumentException(
+            $"Bridge field '{propertyName}' must be a number between {minimum:0.##} and {maximum:0.##}.",
+            propertyName);
+    }
+
     public static string? ParseOptionalString(JsonElement payload, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
