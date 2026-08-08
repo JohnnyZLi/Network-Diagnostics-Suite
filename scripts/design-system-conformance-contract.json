@@ -36,8 +36,8 @@
     },
     {
       "id": "DS-HEADER-001",
-      "title": "Shared global header",
-      "description": "Every product route or state uses the shared global-header and identity contract.",
+      "title": "Shared global header and disclosures",
+      "description": "Every product route or state uses the shared global-header identity, navigation, Sites, and Settings contract, including the shared attached-disclosure and complete-header pinned-state behavior.",
       "severity": "required",
       "appliesTo": [
         "portfolio",
@@ -53,7 +53,7 @@
     {
       "id": "DS-SITES-001",
       "title": "Canonical owned-site directory",
-      "description": "The Sites control exposes all three canonical owned sites and the correct current state.",
+      "description": "The Sites disclosure exposes only the three canonical owned sites and the correct current state.",
       "severity": "required",
       "appliesTo": [
         "portfolio",
@@ -68,8 +68,8 @@
     },
     {
       "id": "DS-SITES-002",
-      "title": "Sites and compact-menu keyboard contract",
-      "description": "Arrow keys, Escape, close behavior, and focus restoration follow the shared controller contract.",
+      "title": "Sites, Settings, and compact-menu interaction contract",
+      "description": "Arrow keys, Escape, outside-click dismissal, focus restoration, Sites/Settings mutual exclusion, and compact-menu close behavior follow the shared controller contract.",
       "severity": "required",
       "appliesTo": [
         "portfolio",
@@ -280,7 +280,7 @@
     {
       "id": "DS-THEME-001",
       "title": "Shared appearance preference",
-      "description": "The product supports System, Light, and Dark through the shared pre-paint theme and appearance-control contract.",
+      "description": "The product supports System, Light, and Dark through the shared pre-paint theme contract and adjacent Settings appearance selector, with theme changes expressed through shared semantic tokens.",
       "severity": "required",
       "appliesTo": [
         "portfolio",

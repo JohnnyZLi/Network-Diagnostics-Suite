@@ -225,17 +225,6 @@
   :is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-global-header__inner { animation: none; }
 }
 
-/* Neutralize the older control-only pin so Sites/Settings remain in their
-   normal place inside the fixed full header instead of floating independently. */
-:is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]) .jl-site-switcher,
-:is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]) .jl-site-switcher,
-:is(.jl-global-header, .jl-site-header)[data-jl-header-disclosure-exit] .jl-site-switcher {
-  position: relative;
-  z-index: auto;
-  top: auto;
-  right: auto;
-}
-
 @media (max-width: 560px) {
   :is(.jl-global-header, .jl-site-header):has([data-site-switcher-button][aria-expanded="true"]),
   :is(.jl-global-header, .jl-site-header):has([data-settings-button][aria-expanded="true"]),
