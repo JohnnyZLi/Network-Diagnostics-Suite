@@ -33,6 +33,7 @@ type SavedReportDetail = {
     nextAction: string;
     metrics: Array<{ label: string; value: string; detail: string; wasMeasured: boolean }>;
     findings: Array<{ label: string; title: string; summary: string }>;
+    technicalData?: string[];
     technicalEvidence: string[];
   };
 };
@@ -340,6 +341,7 @@ function CompareSelector({ reports, baseline, error, onCompare }: { reports: Sav
 function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: { detail: SavedReportDetail; error: string | null; notice: string | null; onEdit: () => void; onExport: () => void; onCompare: () => void }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const presentation = detail.presentation;
+  const technicalData = presentation.technicalData ?? presentation.technicalEvidence;
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => bodyRef.current?.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
@@ -357,14 +359,14 @@ function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: { 
         {(detail.report.label || detail.report.tags.length > 0) && <div className="report-annotations" aria-label="Report details">{detail.report.label && <span className="report-label-chip">{detail.report.label}</span>}{detail.report.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
       </section>
       <section className="report-section">
-        <div className="report-section-heading"><h3>Headline measurements</h3><span>{methodLabel(detail.method)}</span></div>
+        <div className="report-section-heading"><h3>Measurements</h3><span>{methodLabel(detail.method)}</span></div>
         <div className="report-metric-grid">{presentation.metrics.map((metric) => <div key={metric.label} className={`report-metric-card ${metric.wasMeasured ? '' : 'unmeasured'}`}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.detail}</small></div>)}</div>
       </section>
       <section className="report-section">
         <div className="report-section-heading"><h3>Findings</h3><span>{presentation.findings.length}</span></div>
         <div className="report-findings">{presentation.findings.map((finding, index) => <div className="report-finding" key={`${finding.title}-${index}`}><span>{finding.label}</span><strong>{finding.title}</strong><p>{finding.summary}</p></div>)}</div>
       </section>
-      <section className="report-section"><details className="report-evidence"><summary>Technical evidence · {presentation.technicalEvidence.length} items</summary><ul className="report-evidence-list">{presentation.technicalEvidence.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></details></section>
+      <section className="report-section"><details className="report-evidence"><summary>Technical data · {technicalData.length} items</summary><ul className="report-evidence-list">{technicalData.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></details></section>
       <div className="report-actions"><button type="button" className="report-action" onClick={onEdit}>Edit details</button><button type="button" className="report-action" onClick={onExport}>Export JSON</button><button type="button" className="report-action primary" onClick={onCompare}>Compare with another run</button></div>
     </div>
   );
