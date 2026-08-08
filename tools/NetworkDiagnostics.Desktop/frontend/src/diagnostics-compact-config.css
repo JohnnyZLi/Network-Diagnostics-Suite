@@ -1,178 +1,284 @@
-/* Compact Run Diagnostics configuration.
-   Primary choices stay close together while the live native test plan sits beside
-   them, reducing pointer travel without hiding any diagnostic data. */
+/* Compact Run Diagnostics launcher.
+   The pre-run state is a launch surface, not a stack of full-width forms:
+   profile stays primary, topology/path stay close to the pointer, the native plan
+   sits beside the choices where space allows, and the Run action appears before
+   the deeper measurement/data sections. */
 
-@media (min-width: 721px) {
-  .diagnostic-choice-group {
-    grid-template-rows: auto auto;
+/* Shared control density. */
+.diagnostics-workbench .profile-control {
+  width: min(100%, 560px);
+}
+
+.diagnostic-profile-control > p {
+  max-width: 680px;
+}
+
+.diagnostics-workbench .method-control button {
+  min-height: 38px;
+  height: 38px;
+}
+
+/* At real laptop widths, flatten only the READY launcher into the workbench grid.
+   This lets the Run action move ahead of Measurement Path / Data Collected without
+   changing the React run contract or the completed/running states. */
+@media (min-width: 740px) {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr);
+    column-gap: 12px;
+    align-items: start;
   }
 
-  .diagnostic-choice-group > div:first-child {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .diagnostics-header,
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .error-banner {
+    grid-column: 1 / -1;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .diagnostic-launcher,
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-information-grid {
     display: contents;
   }
 
-  .diagnostic-choice-group > div:first-child .diagnostic-control-label {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-profile-control {
+    order: 1;
+    min-width: 0;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-profile-control > p {
+    margin-top: 0;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-grid {
+    order: 2;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 7px;
+    padding: 12px 14px 11px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group + .diagnostic-choice-group {
+    border-left: 1px solid var(--line);
+    border-top: 1px solid var(--line);
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group > div:first-child {
+    display: contents;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group .diagnostic-control-label {
     grid-column: 1;
     grid-row: 1;
-    align-self: center;
     white-space: nowrap;
   }
 
-  .diagnostic-choice-group > .method-control {
-    grid-column: 2;
-    grid-row: 1;
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group > .method-control {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
   }
 
-  .diagnostic-choice-group > div:first-child small {
-    grid-column: 2;
-    grid-row: 2;
-    margin-top: 3px;
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-group > div:first-child small {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 0;
     overflow: visible;
+    color: var(--faint);
+    font-size: 10.8px;
+    font-weight: 600;
+    line-height: 1.35;
     text-overflow: clip;
     white-space: normal;
   }
-}
 
-@media (min-width: 1181px) {
-  .diagnostic-launcher {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card {
+    order: 2;
+    min-width: 0;
+    padding: 14px 16px 13px;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-soft) 42%, var(--surface));
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-info-heading {
+    margin-bottom: 5px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-data-list {
     display: grid;
-    grid-template-columns: minmax(560px, .95fr) minmax(420px, .72fr);
-    grid-template-rows: auto auto auto auto;
-    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
   }
 
-  .diagnostic-profile-control {
-    grid-column: 1;
-    grid-row: 1;
-    padding: 20px 24px 16px;
-    border-right: 1px solid var(--line);
-  }
-
-  .diagnostics-workbench .profile-control {
-    width: min(100%, 660px);
-  }
-
-  .diagnostic-profile-control > p {
-    max-width: 660px;
-  }
-
-  .diagnostic-choice-grid {
-    grid-column: 1;
-    grid-row: 2;
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-data-row {
+    min-height: 42px;
+    display: grid;
     grid-template-columns: 1fr;
-    border-top: 1px solid var(--line);
-    border-right: 1px solid var(--line);
+    align-content: center;
+    gap: 2px;
+    padding: 4px 0;
   }
 
-  .diagnostic-choice-group {
-    grid-template-columns: 166px minmax(0, 390px);
-    justify-content: start;
-    gap: 16px;
-    padding: 13px 24px;
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-data-row:nth-child(-n + 2) {
+    border-top: 0;
   }
 
-  .diagnostic-choice-group + .diagnostic-choice-group {
-    border-top: 1px solid var(--line);
-    border-left: 0;
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-data-row dt {
+    font-size: 10.5px;
   }
 
-  .diagnostics-workbench .method-control.compact {
-    width: min(100%, 390px);
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card .diagnostic-data-row dd {
+    overflow: visible;
+    font-size: 11.5px;
+    text-align: left;
+    text-overflow: clip;
+    white-space: normal;
   }
 
-  .diagnostics-workbench .method-control button {
+  /* The actual launch action comes before the deeper informational sections. */
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .diagnostic-run-state.ready {
+    order: 3;
+    grid-column: 1 / -1;
+    min-height: 0;
+    margin: 12px 0 0;
+    padding: 10px 12px 10px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .diagnostic-run-state.ready > div:first-child > span {
+    font-size: 10.8px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-run-button {
+    min-width: 190px;
     min-height: 40px;
     height: 40px;
   }
 
-  .diagnostic-information-grid {
-    display: contents;
-  }
-
-  .test-plan-card {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    padding: 20px 24px;
-    background: color-mix(in srgb, var(--surface-soft) 38%, transparent);
-  }
-
-  .diagnostic-info-card.test-plan-card {
-    border-left: 0;
-  }
-
-  .measurement-path-card {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .high-data-confirm {
+    order: 3;
     grid-column: 1 / -1;
-    grid-row: 3;
-    border-top: 1px solid var(--line);
-    border-left: 0 !important;
+    margin: 12px 0 0;
+    border-radius: 13px !important;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) > .advanced-config-banner {
+    order: 4;
+    grid-column: 1 / -1;
+    margin-top: 12px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .measurement-path-card {
+    order: 5;
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px;
     background: color-mix(in srgb, var(--surface-soft) 24%, transparent);
   }
 
-  .measurement-path-card .diagnostic-data-list {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .data-collected-card {
+    order: 6;
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .measurement-path-card .diagnostic-data-list {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .measurement-path-card .diagnostic-data-row:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .data-collected-card .data-collection-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
+}
+
+/* MacBook / normal desktop window: profile spans the top, compact tuning choices
+   sit left, test plan sits right, and the launch bar is immediately underneath. */
+@media (min-width: 740px) and (max-width: 1180px) {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-profile-control {
+    grid-column: 1 / -1;
+    margin-bottom: 12px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-grid {
+    grid-column: 1;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card {
+    grid-column: 2;
+  }
+}
+
+/* Wide desktop: keep the profile and tuning controls in the left launch column,
+   with the complete native plan occupying the right launch column. */
+@media (min-width: 1181px) {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) {
+    grid-template-columns: minmax(520px, .95fr) minmax(390px, .72fr);
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-profile-control {
+    grid-column: 1;
+    margin-bottom: 10px;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-grid {
+    grid-column: 1;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card {
+    grid-column: 2;
+    grid-row: span 2;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .measurement-path-card .diagnostic-data-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     column-gap: 28px;
   }
 
-  .measurement-path-card .diagnostic-data-row:nth-child(-n + 3) {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .measurement-path-card .diagnostic-data-row:nth-child(-n + 3) {
     border-top: 0;
   }
 
-  .measurement-path-card .interface-row dd {
-    width: min(230px, 100%);
-  }
-
-  .diagnostic-path-note,
-  .diagnostic-path-error {
-    margin-top: 12px;
-  }
-
-  .data-collected-card {
-    grid-column: 1 / -1;
-    grid-row: 4;
-    border-top: 1px solid var(--line);
-    border-left: 0 !important;
-  }
-
-  .data-collected-card .data-collection-groups {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .data-collected-card .data-collection-groups {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px 28px;
   }
 }
 
-@media (max-width: 1500px) and (min-width: 1181px) {
-  .diagnostic-launcher {
-    grid-template-columns: minmax(520px, .9fr) minmax(390px, .7fr);
-  }
-
-  .diagnostic-choice-group {
-    grid-template-columns: 156px minmax(0, 350px);
-  }
-
-  .diagnostics-workbench .method-control.compact {
-    width: min(100%, 350px);
-  }
-
-  .measurement-path-card .diagnostic-data-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .measurement-path-card .diagnostic-data-row:nth-child(3) {
-    border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  }
-
-  .data-collected-card .data-collection-groups {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1180px) {
-  .diagnostics-workbench .profile-control {
-    width: min(100%, 660px);
-  }
-
-  .diagnostic-profile-control > p {
-    max-width: 660px;
+/* Narrow windows still stack cleanly, but stop wasting vertical space. */
+@media (max-width: 739px) {
+  .diagnostic-profile-control {
+    gap: 8px;
+    padding: 14px 14px 12px;
   }
 
   .diagnostic-choice-grid {
@@ -180,27 +286,23 @@
   }
 
   .diagnostic-choice-group {
-    grid-template-columns: 156px minmax(0, 410px);
-    justify-content: start;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px 14px;
   }
 
   .diagnostic-choice-group + .diagnostic-choice-group {
     border-top: 1px solid var(--line);
     border-left: 0;
-  }
-
-  .diagnostics-workbench .method-control.compact {
-    width: min(100%, 410px);
-  }
-}
-
-@media (max-width: 720px) {
-  .diagnostic-choice-group {
-    grid-template-columns: 1fr;
   }
 
   .diagnostics-workbench .method-control.compact,
   .diagnostics-workbench .profile-control {
     width: 100%;
+  }
+
+  .diagnostics-workbench .diagnostic-run-state.ready {
+    gap: 10px;
+    padding: 11px 14px;
   }
 }
