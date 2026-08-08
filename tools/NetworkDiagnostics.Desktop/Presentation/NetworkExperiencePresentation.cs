@@ -55,18 +55,24 @@ public static class NetworkExperiencePresenter
             .Where(sample => !sample.IsSpeedMeasurement && sample.Timestamp >= cutoff)
             .OrderBy(sample => sample.Timestamp)
             .ToArray();
+        var healthSamples = heartbeatSamples
+            .Where(sample => !sample.IsDiagnosticLoad)
+            .ToArray();
         var successfulHeartbeatHistory = snapshot.Samples
-            .Where(sample => !sample.IsSpeedMeasurement)
+            .Where(sample => !sample.IsSpeedMeasurement && !sample.IsDiagnosticLoad)
             .Where(sample => sample.State is MonitorSampleState.Responsive or MonitorSampleState.Laggy)
             .OrderBy(sample => sample.Timestamp)
             .ToArray();
         var hasSuccessfulBaseline = successfulHeartbeatHistory.Length > 0;
         var endpointUnavailable = snapshot.IsRunning
-            && heartbeatSamples.Length > 0
+            && healthSamples.Length > 0
             && !hasSuccessfulBaseline
-            && heartbeatSamples.All(sample => sample.State is MonitorSampleState.Unresponsive or MonitorSampleState.Inactive);
+            && healthSamples.All(sample => sample.State is MonitorSampleState.Unresponsive or MonitorSampleState.Inactive);
         var presentationSamples = endpointUnavailable
-            ? heartbeatSamples.Select(NeutralizePreBaselineFailure).ToArray()
+            ? healthSamples.Select(NeutralizePreBaselineFailure).ToArray()
+            : healthSamples;
+        var timelineSamples = endpointUnavailable
+            ? heartbeatSamples.Select(sample => sample.IsDiagnosticLoad ? sample : NeutralizePreBaselineFailure(sample)).ToArray()
             : heartbeatSamples;
         var latestSpeed = snapshot.Samples
             .Where(sample => sample.IsSpeedMeasurement && sample.Timestamp >= now - TimeSpan.FromHours(24))
@@ -80,8 +86,10 @@ public static class NetworkExperiencePresenter
             ? null
             : WeightedOverall(responsiveness.Score, reliability.Score, speed.Score);
         var band = Band(score);
-        var latest = heartbeatSamples.LastOrDefault() ?? snapshot.Samples.OrderBy(sample => sample.Timestamp).LastOrDefault();
-        var timeline = Downsample(presentationSamples, MaximumTimelinePoints);
+        var latest = healthSamples.LastOrDefault()
+            ?? heartbeatSamples.LastOrDefault()
+            ?? snapshot.Samples.OrderBy(sample => sample.Timestamp).LastOrDefault();
+        var timeline = Downsample(timelineSamples, MaximumTimelinePoints);
         var firstSuccessfulSample = successfulHeartbeatHistory.FirstOrDefault()?.Timestamp;
         var alerts = snapshot.Alerts
             .Where(alert => alert.Timestamp >= cutoff)
@@ -96,7 +104,7 @@ public static class NetworkExperiencePresenter
             endpointUnavailable ? "Monitor unavailable" : StatusFor(band),
             endpointUnavailable
                 ? "The monitoring endpoint could not be reached. This does not yet prove that the local connection is down."
-                : SummaryFor(band, snapshot.IsRunning, heartbeatSamples.Length),
+                : SummaryFor(band, snapshot.IsRunning, healthSamples.Length),
             Environment.MachineName,
             latest?.InterfaceName ?? "Automatic routing",
             latest is null
@@ -306,7 +314,8 @@ public static class NetworkExperiencePresenter
             if (end <= start) end = Math.Min(samples.Count, start + 1);
             var bucket = samples.Skip(start).Take(end - start).ToArray();
             result.Add(bucket
-                .OrderByDescending(sample => Severity(sample.State))
+                .OrderByDescending(sample => sample.IsDiagnosticLoad)
+                .ThenByDescending(sample => Severity(sample.State))
                 .ThenByDescending(sample => sample.LatencyMs ?? 0)
                 .First());
         }
