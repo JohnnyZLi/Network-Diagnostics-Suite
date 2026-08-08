@@ -8,6 +8,7 @@ import './shell-status.css';
 import './macos-window.css';
 import './shell-interactions.css';
 import './ux-overhaul.css';
+import './ux-workflow.css';
 
 if (navigator.platform.toLowerCase().startsWith('mac')) {
   document.documentElement.dataset.platform = 'macos';
