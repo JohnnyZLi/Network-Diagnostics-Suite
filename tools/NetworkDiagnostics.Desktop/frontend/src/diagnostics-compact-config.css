@@ -1,0 +1,175 @@
+/* Compact Run Diagnostics configuration.
+   Primary choices stay close together while the live native test plan sits beside
+   them, reducing pointer travel without hiding any diagnostic data. */
+
+@media (min-width: 1181px) {
+  .diagnostic-launcher {
+    display: grid;
+    grid-template-columns: minmax(560px, .95fr) minmax(420px, .72fr);
+    grid-template-rows: auto auto auto auto;
+    align-items: stretch;
+  }
+
+  .diagnostic-profile-control {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 20px 24px 16px;
+    border-right: 1px solid var(--line);
+  }
+
+  .diagnostics-workbench .profile-control {
+    width: min(100%, 660px);
+  }
+
+  .diagnostic-profile-control > p {
+    max-width: 660px;
+  }
+
+  .diagnostic-choice-grid {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: 1fr;
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  .diagnostic-choice-group {
+    grid-template-columns: 148px minmax(0, 390px);
+    justify-content: start;
+    gap: 16px;
+    padding: 13px 24px;
+  }
+
+  .diagnostic-choice-group + .diagnostic-choice-group {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .diagnostics-workbench .method-control.compact {
+    width: min(100%, 390px);
+  }
+
+  .diagnostics-workbench .method-control button {
+    min-height: 40px;
+    height: 40px;
+  }
+
+  .diagnostic-information-grid {
+    display: contents;
+  }
+
+  .test-plan-card {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    padding: 20px 24px;
+    background: color-mix(in srgb, var(--surface-soft) 38%, transparent);
+  }
+
+  .diagnostic-info-card.test-plan-card {
+    border-left: 0;
+  }
+
+  .measurement-path-card {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    border-top: 1px solid var(--line);
+    border-left: 0 !important;
+    background: color-mix(in srgb, var(--surface-soft) 24%, transparent);
+  }
+
+  .measurement-path-card .diagnostic-data-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 28px;
+  }
+
+  .measurement-path-card .diagnostic-data-row:nth-child(-n + 3) {
+    border-top: 0;
+  }
+
+  .measurement-path-card .interface-row dd {
+    width: min(230px, 100%);
+  }
+
+  .diagnostic-path-note,
+  .diagnostic-path-error {
+    margin-top: 12px;
+  }
+
+  .data-collected-card {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    border-top: 1px solid var(--line);
+    border-left: 0 !important;
+  }
+
+  .data-collected-card .data-collection-groups {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px 28px;
+  }
+}
+
+@media (max-width: 1500px) and (min-width: 1181px) {
+  .diagnostic-launcher {
+    grid-template-columns: minmax(520px, .9fr) minmax(390px, .7fr);
+  }
+
+  .diagnostic-choice-group {
+    grid-template-columns: 140px minmax(0, 350px);
+  }
+
+  .diagnostics-workbench .method-control.compact {
+    width: min(100%, 350px);
+  }
+
+  .measurement-path-card .diagnostic-data-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .measurement-path-card .diagnostic-data-row:nth-child(3) {
+    border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  }
+
+  .data-collected-card .data-collection-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .diagnostics-workbench .profile-control {
+    width: min(100%, 660px);
+  }
+
+  .diagnostic-profile-control > p {
+    max-width: 660px;
+  }
+
+  .diagnostic-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-choice-group {
+    grid-template-columns: 148px minmax(0, 410px);
+    justify-content: start;
+  }
+
+  .diagnostic-choice-group + .diagnostic-choice-group {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .diagnostics-workbench .method-control.compact {
+    width: min(100%, 410px);
+  }
+}
+
+@media (max-width: 720px) {
+  .diagnostic-choice-group {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-workbench .method-control.compact,
+  .diagnostics-workbench .profile-control {
+    width: 100%;
+  }
+}
