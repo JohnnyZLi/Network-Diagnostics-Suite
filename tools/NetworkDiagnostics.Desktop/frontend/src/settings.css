@@ -55,7 +55,7 @@
   z-index: 20;
   top: calc(100% + 10px);
   right: 0;
-  width: min(290px, calc(100vw - 28px));
+  width: min(360px, calc(100vw - 28px));
   padding: 16px;
   border: 1px solid var(--line-strong);
   border-radius: 14px;
@@ -63,10 +63,16 @@
   box-shadow: 0 22px 54px rgba(0, 0, 0, 0.28);
 }
 
+.settings-section + .settings-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
 .settings-copy {
   display: grid;
   gap: 4px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .settings-copy strong {
@@ -76,7 +82,7 @@
 
 .settings-copy span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -91,12 +97,12 @@
 }
 
 .appearance-control button {
-  height: 32px;
+  height: 34px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   cursor: pointer;
   transition: color 150ms ease, background 150ms ease;
@@ -111,6 +117,90 @@
   background: var(--accent-soft);
 }
 
+.capacity-preference-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.capacity-preference-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.capacity-preference-fields label > span {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.capacity-preference-fields label > div {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.capacity-preference-fields input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.capacity-preference-fields b {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.settings-save {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-save:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-soft));
+}
+
+.settings-save:disabled,
+.capacity-preference-fields input:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.settings-message {
+  margin: 12px 0 0;
+  color: var(--good);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.settings-message.error {
+  color: var(--danger);
+}
+
 @media (max-width: 540px) {
   .product-actions {
     gap: 8px;
@@ -120,5 +210,9 @@
     position: fixed;
     top: 58px;
     right: 12px;
+  }
+
+  .capacity-preference-fields {
+    grid-template-columns: 1fr;
   }
 }
