@@ -192,7 +192,6 @@ export function ContinuousDiagnostics({
       <div className="workbench-section-header live-health-header">
         <div>
           <h1 id="live-health-title">LIVE NETWORK HEALTH</h1>
-          <p>Passive monitoring shows what the connection is doing now. Deeper diagnostics are used only when the evidence calls for them.</p>
         </div>
         {snapshot && (
           <div className="live-health-actions">
@@ -600,7 +599,7 @@ function healthRecommendation(snapshot: MonitorSnapshot): { kind: string; title:
     return {
       kind: 'attention',
       title: driver ? `${driver.title} is the weakest part of current health.` : 'Current health needs investigation.',
-      detail: driver?.summary ?? 'Run a focused Connection Check to collect evidence passive monitoring cannot see.',
+      detail: driver?.summary ?? 'Run a focused Connection Check for measurements passive monitoring cannot collect.',
       action: 'diagnostic',
     };
   }
