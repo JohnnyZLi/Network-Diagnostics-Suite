@@ -1,5 +1,6 @@
 name: Apply Run Diagnostics structure patch
 
+# One-shot migration helper. Remove after App.tsx is patched.
 on:
   push:
     branches:
