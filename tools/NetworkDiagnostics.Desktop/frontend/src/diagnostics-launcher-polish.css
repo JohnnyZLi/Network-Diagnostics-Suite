@@ -1,0 +1,20 @@
+/* Final placement correction for the ready-state launcher.
+   The workbench header occupies row 1, so wide layouts explicitly align the
+   profile and Test Plan at row 2 and the compact tuning controls at row 3. */
+
+@media (min-width: 1181px) {
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-profile-control {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .diagnostic-choice-grid {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .diagnostics-workbench:has(.diagnostic-run-state.ready) .test-plan-card {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+  }
+}
