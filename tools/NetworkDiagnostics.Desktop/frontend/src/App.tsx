@@ -147,6 +147,11 @@ function App() {
 
   const selectedProfile = profiles.find((item) => item.id === profile) ?? profiles[0];
   const displayedProfile = result ? profiles.find((item) => item.id === result.profile) ?? selectedProfile : selectedProfile;
+  const shellHealthLabel = !monitorSnapshot
+    ? 'Live network health: building baseline'
+    : !monitorSnapshot.running
+      ? 'Live network health: monitoring paused'
+      : `Live network health: ${monitorSnapshot.status}${monitorSnapshot.score == null ? '' : ` · score ${monitorSnapshot.score}`}`;
 
   useEffect(() => {
     document.documentElement.dataset.theme = appearance;
@@ -487,7 +492,7 @@ function App() {
     <div className="app-shell">
       <header className="product-bar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-mark" role="img" aria-label={shellHealthLabel} title={shellHealthLabel} />
           <div><strong>Network Diagnostics</strong><span>Desktop</span></div>
         </div>
         <div className="product-actions">
@@ -501,7 +506,7 @@ function App() {
             className={`history-trigger ${historyOpen ? 'active' : ''}`}
             aria-label="Saved runs"
             aria-expanded={historyOpen}
-            onClick={openHistory}
+            onClick={() => historyOpen ? setHistoryOpen(false) : openHistory()}
             disabled={!desktopBridge.available}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg>
