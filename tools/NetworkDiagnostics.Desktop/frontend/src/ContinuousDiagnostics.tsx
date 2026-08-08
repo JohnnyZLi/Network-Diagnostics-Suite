@@ -20,6 +20,7 @@ type MonitorTimelineSample = {
   latencyMs?: number | null;
   jitterMs?: number | null;
   packetLossPercent: number;
+  diagnosticLoad?: boolean;
 };
 type MonitorAlert = {
   id: string;
@@ -57,6 +58,17 @@ export type MonitorSnapshot = {
   alerts: MonitorAlert[];
 };
 
+type ActiveDiagnostic = { profileName: string; phase: string };
+type LatestDiagnostic = {
+  profileName: string;
+  generatedAt: string;
+  outcome: string;
+  label: string;
+  verdict: string;
+  summary: string;
+  nextAction: string;
+};
+
 const windows: Array<{ id: MonitorWindow; label: string }> = [
   { id: '1m', label: '1 min' },
   { id: '5m', label: '5 min' },
@@ -69,16 +81,26 @@ export function ContinuousDiagnostics({
   snapshot,
   loading,
   error,
+  activeDiagnostic,
+  latestDiagnostic,
   onUpdate,
   onError,
+  onRunRecommended,
+  onOpenLatestReport,
   onMeasureCapacity,
+  onMeasurePeakCapacity,
 }: {
   snapshot: MonitorSnapshot | null;
   loading: boolean;
   error: string | null;
+  activeDiagnostic: ActiveDiagnostic | null;
+  latestDiagnostic: LatestDiagnostic | null;
   onUpdate: (snapshot: MonitorSnapshot) => void;
   onError: (message: string | null) => void;
+  onRunRecommended: () => void;
+  onOpenLatestReport: () => void;
   onMeasureCapacity: () => void;
+  onMeasurePeakCapacity: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
@@ -155,12 +177,15 @@ export function ContinuousDiagnostics({
     }
   }
 
+  const range = snapshot ? timelineSummary(snapshot.timeline) : null;
+  const recommendation = snapshot ? healthRecommendation(snapshot) : null;
+
   return (
     <section id="live-network-health" className="workbench-section live-health-section" aria-labelledby="live-health-title">
       <div className="workbench-section-header live-health-header">
         <div>
           <h1 id="live-health-title">LIVE NETWORK HEALTH</h1>
-          <p>Passive monitoring shows whether the connection is healthy before you run a diagnostic.</p>
+          <p>Passive monitoring shows what the connection is doing now. Deeper diagnostics are used only when the evidence calls for them.</p>
         </div>
         {snapshot && (
           <div className="live-health-actions">
@@ -187,12 +212,18 @@ export function ContinuousDiagnostics({
         <>
           {error && <div className="monitor-error" role="alert">{error}</div>}
           {notice && <div className="monitor-notice" role="status">{notice}</div>}
+          {activeDiagnostic && (
+            <div className="diagnostic-load-notice" role="status">
+              <span className="pulse" aria-hidden="true" />
+              <div><strong>{activeDiagnostic.profileName} is generating controlled network load.</strong><p>{activeDiagnostic.phase}. Samples collected during test traffic are treated separately from normal passive health.</p></div>
+            </div>
+          )}
 
           <div className="live-health-hero">
             <div className={`health-score-orb ${snapshot.band}`} aria-label={snapshot.score == null ? 'Building network score' : `Network health score ${snapshot.score}`}>
               <strong>{snapshot.score ?? '—'}</strong>
               <span>{snapshot.score == null ? 'Building baseline' : snapshot.status}</span>
-              <small>Network health</small>
+              <small>Passive network health</small>
             </div>
 
             <div className="live-health-summary">
@@ -205,8 +236,27 @@ export function ContinuousDiagnostics({
                 <LiveMetric label="Loss" value={latestLoss(snapshot)} />
                 <LiveMetric label="Availability" value={componentMetric(snapshot.reliability, 'Availability')} />
               </div>
+              {recommendation && (
+                <div className={`health-recommendation ${recommendation.kind}`}>
+                  <span>Recommended action</span>
+                  <strong>{recommendation.title}</strong>
+                  <p>{recommendation.detail}</p>
+                  {recommendation.action === 'diagnostic' && <button type="button" className="inline-action" onClick={onRunRecommended}>Prepare Connection Check</button>}
+                  {recommendation.action === 'capacity' && <button type="button" className="inline-action" onClick={onMeasureCapacity}>Measure capacity</button>}
+                </div>
+              )}
             </div>
           </div>
+
+          {latestDiagnostic && (
+            <div className={`latest-diagnostic-summary ${latestDiagnostic.outcome}`}>
+              <span>Latest diagnostic · {latestDiagnostic.profileName} · {relativeTime(latestDiagnostic.generatedAt)}</span>
+              <div>
+                <div><strong>{latestDiagnostic.verdict}</strong><p>{latestDiagnostic.summary}</p></div>
+                <button type="button" className="secondary-action" onClick={onOpenLatestReport}>View report</button>
+              </div>
+            </div>
+          )}
 
           <div className="live-timeline-section">
             <div className="live-timeline-heading">
@@ -223,13 +273,14 @@ export function ContinuousDiagnostics({
                 ))}
               </div>
             </div>
+            {range && <div className="timeline-range-summary"><strong>{range.samples} samples</strong><span>{range.degraded} degraded</span><span>{range.outages} outages</span><span>{range.worstLatency}</span>{range.diagnosticLoad > 0 && <span>{range.diagnosticLoad} under diagnostic load</span>}</div>}
             {snapshot.timeline.length > 0 ? (
               <div className="monitor-timeline" aria-label="Connection state timeline">
                 {snapshot.timeline.map((sample, index) => (
                   <span
                     key={`${sample.timestamp}-${index}`}
-                    className={sample.state}
-                    title={`${formatTime(sample.timestamp)} · ${sample.state}${sample.latencyMs == null ? '' : ` · ${formatNumber(sample.latencyMs)} ms`}`}
+                    className={`${sample.state}${sample.diagnosticLoad ? ' diagnostic-load' : ''}`}
+                    title={`${formatTime(sample.timestamp)} · ${sample.diagnosticLoad ? 'diagnostic load' : sample.state}${sample.latencyMs == null ? '' : ` · ${formatNumber(sample.latencyMs)} ms`}`}
                   />
                 ))}
               </div>
@@ -239,7 +290,7 @@ export function ContinuousDiagnostics({
           <div className="monitor-components live-health-components">
             <MonitorComponentCard component={snapshot.responsiveness} />
             <MonitorComponentCard component={snapshot.reliability} />
-            <CapacityCard component={snapshot.speed} onAction={onMeasureCapacity} />
+            <CapacityCard component={snapshot.speed} onAction={onMeasureCapacity} onPeakAction={onMeasurePeakCapacity} />
           </div>
 
           {snapshot.alerts.length === 0 ? (
@@ -292,20 +343,22 @@ function LiveMetric({ label, value }: { label: string; value: string }) {
 }
 
 function MonitorComponentCard({ component }: { component: MonitorComponent }) {
+  const headlineMetric = component.metrics[0];
   return (
     <article className="monitor-component-card">
       <div className="monitor-component-top"><div><span>{component.title}</span><strong>{component.status}</strong></div><b>{component.score ?? '—'}</b></div>
+      {headlineMetric && <div className="component-headline-metric"><strong>{headlineMetric.value}</strong><span>{headlineMetric.label}</span></div>}
       <p>{component.summary}</p>
-      {component.metrics.length > 0 && (
+      {component.metrics.length > 1 && (
         <div className="monitor-component-metrics">
-          {component.metrics.slice(0, 4).map((metric) => <div key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></div>)}
+          {component.metrics.slice(1, 4).map((metric) => <div key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong></div>)}
         </div>
       )}
     </article>
   );
 }
 
-function CapacityCard({ component, onAction }: { component: MonitorComponent; onAction: () => void }) {
+function CapacityCard({ component, onAction, onPeakAction }: { component: MonitorComponent; onAction: () => void; onPeakAction: () => void }) {
   const download = componentMetric(component, 'Content download');
   const upload = componentMetric(component, 'Content upload');
   const expectedDownload = componentMetric(component, 'Expected download');
@@ -331,11 +384,55 @@ function CapacityCard({ component, onAction }: { component: MonitorComponent; on
           </div>
         </>
       ) : (
-        <p>Run a lightweight content-speed measurement to establish a download and upload baseline. Passive monitoring does not continuously load the connection.</p>
+        <p>Run a lightweight content measurement to establish a download and upload baseline. Passive monitoring does not continuously load the connection.</p>
       )}
-      <button type="button" className="monitor-card-action" onClick={onAction}>{measured ? 'Measure again' : 'Measure capacity'}</button>
+      <div className="capacity-actions"><button type="button" className="monitor-card-action" onClick={onAction}>{measured ? 'Measure again' : 'Measure capacity'}</button><button type="button" className="monitor-card-action secondary" onClick={onPeakAction}>Peak capacity</button></div>
     </article>
   );
+}
+
+function healthRecommendation(snapshot: MonitorSnapshot): { kind: string; title: string; detail: string; action: 'diagnostic' | 'capacity' } | null {
+  if (!snapshot.running) return null;
+  if (snapshot.band === 'fair' || snapshot.band === 'degraded' || snapshot.band === 'poor') {
+    const driver = weakerComponent(snapshot);
+    return {
+      kind: 'attention',
+      title: driver ? `${driver.title} is the weakest part of current health.` : 'Current health needs investigation.',
+      detail: driver?.summary ?? 'Run a focused Connection Check to collect evidence passive monitoring cannot see.',
+      action: 'diagnostic',
+    };
+  }
+  if (snapshot.speed.score == null) {
+    return {
+      kind: 'capacity',
+      title: 'Capacity has not been measured yet.',
+      detail: 'A lightweight content measurement adds download and upload context without continuously loading the connection.',
+      action: 'capacity',
+    };
+  }
+  return null;
+}
+
+function weakerComponent(snapshot: MonitorSnapshot): MonitorComponent | null {
+  return [snapshot.responsiveness, snapshot.reliability]
+    .filter((component) => component.score != null)
+    .sort((left, right) => (left.score ?? 101) - (right.score ?? 101))[0] ?? null;
+}
+
+function timelineSummary(samples: MonitorTimelineSample[]) {
+  if (samples.length === 0) return null;
+  const degraded = samples.filter((sample) => sample.state === 'laggy').length;
+  const outages = samples.filter((sample) => sample.state === 'unresponsive').length;
+  const diagnosticLoad = samples.filter((sample) => sample.diagnosticLoad).length;
+  const latencies = samples.flatMap((sample) => sample.latencyMs == null ? [] : [sample.latencyMs]);
+  const worst = latencies.length > 0 ? Math.max(...latencies) : null;
+  return {
+    samples: samples.length,
+    degraded,
+    outages,
+    diagnosticLoad,
+    worstLatency: worst == null ? 'No latency sample' : `${formatNumber(worst)} ms worst latency`,
+  };
 }
 
 function healthHeadline(snapshot: MonitorSnapshot): string {
@@ -355,7 +452,7 @@ function componentMetric(component: MonitorComponent, label: string): string {
 }
 
 function latestLoss(snapshot: MonitorSnapshot): string {
-  const sample = snapshot.timeline.at(-1);
+  const sample = [...snapshot.timeline].reverse().find((item) => !item.diagnosticLoad);
   return sample ? `${formatNumber(sample.packetLossPercent)}%` : '—';
 }
 
@@ -386,6 +483,14 @@ async function writeClipboard(value: string): Promise<void> {
   const copied = document.execCommand('copy');
   textarea.remove();
   if (!copied) throw new Error('Clipboard access is not available.');
+}
+
+function relativeTime(value: string): string {
+  const elapsed = Date.now() - new Date(value).getTime();
+  if (elapsed < 60_000) return 'just now';
+  if (elapsed < 3_600_000) return `${Math.max(1, Math.round(elapsed / 60_000))} min ago`;
+  if (elapsed < 86_400_000) return `${Math.max(1, Math.round(elapsed / 3_600_000))} hr ago`;
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function formatNumber(value: number): string {
