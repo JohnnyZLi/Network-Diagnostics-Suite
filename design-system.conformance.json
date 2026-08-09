@@ -154,8 +154,8 @@
       ]
     },
     "DS-RESP-002": {
-      "status": "manual-passed",
-      "reason": "Repository owner completed actual 200 percent browser zoom review of selectors, tables, charts, and imported-report layouts on 2026-07-29; no blocking overflow or loss of access was found."
+      "status": "manual-pending",
+      "reason": "The 2026-07-29 actual 200 percent browser zoom review predates the approved 2026-08-08 v1.9.0 header and appearance update. Automated desktop, mobile, and 320px audits pass; refresh the real browser-zoom review before renewing manual acceptance."
     },
     "DS-A11Y-001": {
       "evidence": [
@@ -171,8 +171,8 @@
       ]
     },
     "DS-A11Y-002": {
-      "status": "manual-passed",
-      "reason": "Repository owner completed forced-colors, grayscale chart-meaning, keyboard, and assistive-technology review on 2026-07-29; no blocking issue was found."
+      "status": "manual-pending",
+      "reason": "The 2026-07-29 forced-colors, grayscale chart-meaning, keyboard, and assistive-technology review predates the approved 2026-08-08 v1.9.0 header and appearance update. Automated keyboard, theme, responsive, and visual checks pass; refresh the human accessibility review before renewing manual acceptance."
     },
     "DS-STATE-001": {
       "evidence": [
