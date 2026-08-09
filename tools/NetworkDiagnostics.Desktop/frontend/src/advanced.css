@@ -2,15 +2,6 @@
   align-items: flex-end;
 }
 
-.advanced-workbench-header h2::before {
-  content: "03 / NATIVE TOOLS";
-  display: block;
-  margin-bottom: 4px;
-  color: var(--warning);
-  font: 750 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .14em;
-}
-
 .advanced-workbench-header p {
   max-width: 840px;
   margin-top: 10px;

@@ -815,9 +815,9 @@ function App() {
         </button>
 
         <nav className="workbench-nav" aria-label="Primary workspaces">
-          <button type="button" className={activeSection === 'live-network-health' ? 'active' : ''} aria-current={activeSection === 'live-network-health' ? 'page' : undefined} onClick={() => showWorkspace('live-network-health')}><span>01</span>Health</button>
-          <button type="button" className={activeSection === 'run-diagnostics' ? 'active' : ''} aria-current={activeSection === 'run-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('run-diagnostics')}><span>02</span>Diagnostics</button>
-          <button type="button" className={activeSection === 'advanced-diagnostics' ? 'active' : ''} aria-current={activeSection === 'advanced-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('advanced-diagnostics')}><span>03</span>Advanced</button>
+          <button type="button" className={activeSection === 'live-network-health' ? 'active' : ''} aria-current={activeSection === 'live-network-health' ? 'page' : undefined} onClick={() => showWorkspace('live-network-health')}>Health</button>
+          <button type="button" className={activeSection === 'run-diagnostics' ? 'active' : ''} aria-current={activeSection === 'run-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('run-diagnostics')}>Diagnostics</button>
+          <button type="button" className={activeSection === 'advanced-diagnostics' ? 'active' : ''} aria-current={activeSection === 'advanced-diagnostics' ? 'page' : undefined} onClick={() => showWorkspace('advanced-diagnostics')}>Advanced</button>
         </nav>
 
         <div className="product-actions">
@@ -861,7 +861,6 @@ function App() {
         <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
           <header className="workspace-heading diagnostics-heading">
             <div>
-              <span className="workspace-kicker">02 / ACTIVE TESTING</span>
               <h1 id="run-diagnostics-title">RUN DIAGNOSTICS</h1>
             </div>
             <div className="workspace-heading-status" aria-live="polite">

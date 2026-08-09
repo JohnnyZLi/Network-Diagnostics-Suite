@@ -227,23 +227,17 @@ dd {
 }
 
 .workbench-nav button {
-  min-width: 108px;
-  padding: 0 16px;
+  min-width: 100px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
   font-size: 15px;
   font-weight: 680;
   cursor: pointer;
-}
-
-.workbench-nav button span {
-  color: var(--faint);
-  font: 700 12.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .workbench-nav button:hover {
@@ -255,10 +249,6 @@ dd {
   color: var(--text);
   background: var(--surface-raised);
   box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
-}
-
-.workbench-nav button.active span {
-  color: var(--accent-strong);
 }
 
 .product-actions {
@@ -389,20 +379,11 @@ dd {
 
 .workspace-heading,
 .workbench-section-header {
-  min-height: 64px;
   margin-bottom: 20px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-}
-
-.workspace-kicker {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--data);
-  font: 750 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .14em;
 }
 
 .workspace-heading h1,
@@ -1755,7 +1736,7 @@ dd {
   }
 
   .workbench-nav button {
-    min-width: 94px;
+    min-width: 88px;
     padding-inline: 11px;
   }
 
@@ -1903,10 +1884,6 @@ dd {
     min-width: 64px;
     padding-inline: 7px;
     font-size: 13.5px;
-  }
-
-  .workbench-nav button span {
-    display: none;
   }
 
   .alerts-trigger,

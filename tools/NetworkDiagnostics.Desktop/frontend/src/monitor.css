@@ -9,15 +9,6 @@
   letter-spacing: -.035em;
 }
 
-.live-health-header h1::before {
-  content: "01 / PASSIVE MONITORING";
-  display: block;
-  margin-bottom: 4px;
-  color: var(--good);
-  font: 750 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .14em;
-}
-
 .live-health-actions {
   display: flex;
   align-items: center;
