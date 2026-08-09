@@ -59,7 +59,7 @@
 
 .alerts-header > div > span {
   color: var(--warning);
-  font: 750 8.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 750 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .12em;
 }
 
@@ -72,7 +72,7 @@
 
 .alerts-header p {
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: 13px;
 }
 
 .alerts-close {
@@ -117,7 +117,7 @@
   border-radius: 6px;
   background: var(--control);
   color: var(--muted);
-  font-size: 8.5px;
+  font-size: 12px;
   font-weight: 680;
   cursor: pointer;
 }
@@ -140,7 +140,7 @@
   border-radius: 6px;
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 8.5px;
+  font-size: 12px;
 }
 
 .alerts-list {
@@ -184,7 +184,7 @@
   align-items: center;
   gap: 7px;
   color: var(--faint);
-  font: 620 7.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 620 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-transform: uppercase;
 }
 
@@ -197,12 +197,12 @@
 }
 
 .alerts-item > strong {
-  font-size: 10.5px;
+  font-size: 14px;
 }
 
 .alerts-item > p {
   color: var(--muted);
-  font-size: 8.8px;
+  font-size: 12.5px;
   line-height: 1.4;
 }
 
@@ -218,11 +218,11 @@
 
 .alerts-empty strong {
   color: var(--text);
-  font-size: 11px;
+  font-size: 14.5px;
 }
 
 .alerts-empty span {
   max-width: 280px;
-  font-size: 9px;
+  font-size: 12.5px;
   line-height: 1.4;
 }

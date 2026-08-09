@@ -901,7 +901,7 @@ function App() {
                   </fieldset>
 
                   <div className="console-control-pair">
-                    <fieldset className="console-control">
+                    <fieldset className="console-control topology-control">
                       <legend>Topology <small>{methods.find((item) => item.id === method)?.detail}</small></legend>
                       <div className="segmented-control compact" aria-label="Transfer topology">
                         {methods.map((item) => (
@@ -910,7 +910,7 @@ function App() {
                       </div>
                     </fieldset>
 
-                    <fieldset className="console-control">
+                    <fieldset className="console-control download-path-control">
                       <legend>Download path <small>{selectedPath.detail}</small></legend>
                       <div className="segmented-control compact" aria-label="Download measurement path">
                         {downloadPaths.map((item) => (

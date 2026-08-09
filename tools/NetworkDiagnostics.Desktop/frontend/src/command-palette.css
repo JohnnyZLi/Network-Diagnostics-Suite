@@ -76,7 +76,7 @@
   border-radius: 4px;
   background: var(--control);
   color: var(--faint);
-  font: 650 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 650 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .command-palette-meta {
@@ -87,7 +87,7 @@
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
   color: var(--faint);
-  font: 600 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 600 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .command-palette-results {
@@ -129,13 +129,13 @@
 }
 
 .command-palette-copy strong {
-  font-size: 10.5px;
+  font-size: 14px;
 }
 
 .command-palette-copy small {
   overflow: hidden;
   color: var(--muted);
-  font-size: 8.8px;
+  font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -152,9 +152,9 @@
 
 .command-palette-empty strong {
   color: var(--text);
-  font-size: 11px;
+  font-size: 14.5px;
 }
 
 .command-palette-empty p {
-  font-size: 9px;
+  font-size: 12.5px;
 }
