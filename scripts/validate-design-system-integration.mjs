@@ -91,23 +91,26 @@ for (const obsolete of ["portfolio-dots.css", "typography-accent.css", "compact-
 }
 
 requireFragments(app, [
-  'className="site-header jl-global-header"',
+  'className="jl-global-header"',
   'className="jl-global-header__inner"',
-  'className="wordmark jl-site-identity"',
+  'className="jl-site-identity"',
   'className="jl-site-identity__owner"',
   'className="jl-site-identity__separator"',
-  'className="wordmark__product jl-site-identity__product"',
+  'className="jl-site-identity__product"',
   "jl-global-header__nav jl-header-menu",
-  'className="header-actions jl-global-header__actions"',
+  'className="jl-global-header__actions"',
   "data-site-switcher", "data-site-switcher-button", "data-site-switcher-menu",
   "data-header-menu", "data-header-menu-button", "jl-header-menu--open", "jl-header-menu-toggle",
   "populate: true", 'currentSite: "network"', "installSiteSwitcher", "installHeaderMenu",
   "siteController.destroy()", "navigationController.destroy()",
   "mobileNavControllerRef.current?.close()", "siteController.close()",
 ], "Network shared header");
+for (const legacyClass of ["site-header jl-global-header", "wordmark jl-site-identity", "wordmark__product jl-site-identity__product", "site-nav jl-global-header__nav", "header-actions jl-global-header__actions", "nav-toggle jl-header-menu-toggle"]) {
+  if (app.includes(legacyClass)) fail(`Network retains a legacy header class hook: ${legacyClass}.`);
+}
 if (app.includes("wordmark__mark")) fail("The product icon must not alter the shared identity lockup.");
 if (app.includes("OWNED_SITES.map") || app.includes("import { OWNED_SITES")) fail("Network repeats shared Sites menu content instead of using populate.");
-const headerActionsPosition = app.indexOf('className="header-actions jl-global-header__actions"');
+const headerActionsPosition = app.indexOf('className="jl-global-header__actions"');
 const menuButtonPosition = app.indexOf("data-header-menu-button", headerActionsPosition);
 const sitesPosition = app.indexOf("data-site-switcher", headerActionsPosition);
 if (headerActionsPosition < 0 || menuButtonPosition < 0 || sitesPosition < 0 || menuButtonPosition > sitesPosition) {
@@ -227,10 +230,13 @@ if (!adapter.includes("body::before,") || !adapter.includes("display: none;")) f
 for (const colorContract of [
   ".methodology-grid article:nth-child(n) h3", ".preview-grid article:nth-child(3) h3", "color: var(--text);",
 ]) if (!adapter.includes(colorContract)) fail(`Network explanatory color hierarchy is incomplete: ${colorContract}.`);
-if (!adapter.includes("display: block;") || !adapter.includes("grid-template-columns: none;")) fail("Network legacy header geometry is not neutralized.");
+requireFragments(adapter, [
+  ".app-shell > .jl-global-header {", "width: 100vw;", "margin-left: calc(50% - 50vw);",
+], "Network full-bleed header placement adapter");
 for (const forbidden of [
+  ".site-header", ".wordmark", ".header-actions", ".site-nav", ".jl-site-switcher__button",
   "@media (max-width: 900px)", ".site-nav--open", ".nav-toggle", "var(--jl-layout-portfolio-max)",
-  ".jl-site-switcher__button", "text-transform: uppercase",
+  "text-transform: uppercase",
 ]) if (adapter.includes(forbidden)) fail(`Network adapter re-owns shared header behavior or styling: ${forbidden}.`);
 
 if (/^\s*@layer\b/m.test(identityStyles)) fail("Shared header must remain unlayered so Network button resets cannot override it.");
