@@ -112,6 +112,19 @@ body::after,
   justify-self: end;
 }
 
+/* Shared wide rail: the global bar escapes the product content shell while
+   its package-owned inner row supplies the canonical 40px/20px edge insets. */
+@media (min-width: 1024px) {
+  .site-header {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+  }
+
+  .site-header .site-nav {
+    justify-self: center;
+  }
+}
+
 .text-blue,
 .text-violet,
 .text-green {
