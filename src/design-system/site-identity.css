@@ -24,6 +24,32 @@
   padding-block: 19px;
 }
 
+/* Shared wide-desktop header rail. The asymmetric 40px/20px edge
+   insets are balanced by a -10px center correction so contextual
+   navigation remains centered on the viewport rather than the rail. */
+@media (min-width: 1024px) {
+  .jl-global-header__inner {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    margin-inline: 0;
+    padding-left: 40px;
+    padding-right: 20px;
+  }
+
+  .jl-site-identity {
+    justify-self: start;
+  }
+
+  .jl-global-header__nav {
+    justify-self: center;
+    transform: translateX(-10px);
+  }
+
+  .jl-global-header__actions {
+    justify-self: end;
+  }
+}
+
 .jl-site-identity {
   min-width: 0;
   height: var(--jl-control-height-md);
