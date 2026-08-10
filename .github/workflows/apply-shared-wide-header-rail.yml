@@ -2,7 +2,7 @@ name: Apply shared wide header rail
 
 on:
   pull_request:
-    types: [synchronize]
+    types: [reopened]
 
 permissions:
   contents: write
