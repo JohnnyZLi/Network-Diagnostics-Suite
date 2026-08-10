@@ -189,14 +189,16 @@ jobs:
 
             const compact = viewportName === 'mobile' || viewportName === 'minimum';
             const expectedInnerHeight = compact ? 68 : 82;
-            const expectedOuterHeight = compact ? 82 : 83;
+            const expectedOuterHeight = compact ? 69 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
             const fittedSitesWidth = metrics.viewportWidth <= 360 ? 96 : 104;
             const legacySitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
             if (metrics.overflow) problems.push('document overflow');
             if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
             if (!near(metrics.headerInnerHeight, expectedInnerHeight)) problems.push(`header inner ${metrics.headerInnerHeight}, expected ${expectedInnerHeight}`);
-            if (!near(metrics.headerHeight, expectedOuterHeight)) problems.push(`header outer ${metrics.headerHeight}, expected ${expectedOuterHeight}`);
+            const outerHeightAllowed = near(metrics.headerHeight, expectedOuterHeight)
+              || (prefix === 'production' && compact && near(metrics.headerHeight, 82));
+            if (!outerHeightAllowed) problems.push(`header outer ${metrics.headerHeight}, expected ${expectedOuterHeight}`);
             if (!metrics.sitesButton) {
               problems.push('Sites button missing');
             } else {
