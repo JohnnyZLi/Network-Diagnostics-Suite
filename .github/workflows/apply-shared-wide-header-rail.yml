@@ -2,7 +2,7 @@ name: Apply shared wide header rail
 
 on:
   pull_request:
-    types: [ready_for_review]
+    types: [synchronize]
 
 permissions:
   contents: write
@@ -24,10 +24,18 @@ jobs:
           from pathlib import Path
           import json
           source = '11da218c3eb864013f051dddea644c19ea9847e4'
-          path = Path('design-system.lock.json')
-          lock = json.loads(path.read_text())
+          lock_path = Path('design-system.lock.json')
+          lock = json.loads(lock_path.read_text())
           lock['sourceCommit'] = source
-          path.write_text(json.dumps(lock, indent=2) + '\n')
+          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
+          Path('src/design-system/SOURCE.md').write_text(
+              '# Generated design-system assets\n\n'
+              'Do not edit these files directly.\n\n'
+              'Package: @johnnyzli/web-design-system\n'
+              'Version: 1.9.0\n'
+              f'Source commit: {source}\n\n'
+              'Validate with `npm run design-system:check`.\n'
+          )
           PY
           npm ci --no-audit --no-fund
           npm run design-system:sync
@@ -62,7 +70,7 @@ jobs:
         run: |
           git config user.name "JohnnyZLi"
           git config user.email "92900710+JohnnyZLi@users.noreply.github.com"
-          git rm .github/workflows/apply-shared-wide-header-rail.yml .github/workflows/run-shared-wide-header-sync.yml
+          git rm .github/workflows/apply-shared-wide-header-rail.yml
           if [ -f .ci-kick-shared-header-rail ]; then git rm .ci-kick-shared-header-rail; fi
           git add design-system.lock.json src/design-system src/design-system-adapter.css scripts/design-system-consumer-release.mjs scripts/design-system-conformance-runner.mjs scripts/design-system-conformance-contract.json
           git commit -m "Adopt shared wide desktop header rail"
