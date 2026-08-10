@@ -1,20 +1,19 @@
 name: Apply shared wide header rail
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches: [agent/adopt-shared-wide-header-rail]
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: agent/adopt-shared-wide-header-rail
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "24"
@@ -62,8 +61,8 @@ jobs:
         run: |
           git config user.name "JohnnyZLi"
           git config user.email "92900710+JohnnyZLi@users.noreply.github.com"
-          git rm .github/workflows/apply-shared-wide-header-rail.yml
+          git rm .github/workflows/apply-shared-wide-header-rail.yml .github/workflows/run-shared-wide-header-sync.yml
           if [ -f .ci-kick-shared-header-rail ]; then git rm .ci-kick-shared-header-rail; fi
           git add design-system.lock.json src/design-system src/design-system-adapter.css scripts/design-system-consumer-release.mjs scripts/design-system-conformance-runner.mjs scripts/design-system-conformance-contract.json
           git commit -m "Adopt shared wide desktop header rail"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:agent/adopt-shared-wide-header-rail
