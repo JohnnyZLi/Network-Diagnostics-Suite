@@ -1,0 +1,69 @@
+name: Apply shared wide header rail
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+      - name: Synchronize merged WDS source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          source = '11da218c3eb864013f051dddea644c19ea9847e4'
+          path = Path('design-system.lock.json')
+          lock = json.loads(path.read_text())
+          lock['sourceCommit'] = source
+          path.write_text(json.dumps(lock, indent=2) + '\n')
+          PY
+          npm ci --no-audit --no-fund
+          npm run design-system:sync
+      - name: Full-bleed the Network global bar on wide desktop
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/design-system-adapter.css')
+          text = path.read_text()
+          marker = '/* Shared wide rail: the global bar escapes the product content shell while\n'
+          if marker not in text:
+              anchor = '.text-blue,\n'
+              block = '''/* Shared wide rail: the global bar escapes the product content shell while
+   its package-owned inner row supplies the canonical 40px/20px edge insets. */
+@media (min-width: 1024px) {
+  .site-header {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+  }
+
+  .site-header .site-nav {
+    justify-self: center;
+  }
+}
+
+'''
+              if anchor not in text:
+                  raise SystemExit('Network adapter insertion anchor not found')
+              path.write_text(text.replace(anchor, block + anchor, 1))
+          PY
+      - name: Commit synchronized Network header
+        run: |
+          git config user.name "JohnnyZLi"
+          git config user.email "92900710+JohnnyZLi@users.noreply.github.com"
+          git rm .github/workflows/apply-shared-wide-header-rail.yml
+          if [ -f .ci-kick-shared-header-rail ]; then git rm .ci-kick-shared-header-rail; fi
+          git add design-system.lock.json src/design-system src/design-system-adapter.css scripts/design-system-consumer-release.mjs scripts/design-system-conformance-runner.mjs scripts/design-system-conformance-contract.json
+          git commit -m "Adopt shared wide desktop header rail"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
