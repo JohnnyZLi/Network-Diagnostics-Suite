@@ -189,7 +189,7 @@ jobs:
 
             const compact = viewportName === 'mobile' || viewportName === 'minimum';
             const expectedInnerHeight = compact ? 68 : 82;
-            const expectedOuterHeight = compact ? 82 : 83;
+            const expectedOuterHeight = compact ? 69 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
             const fittedSitesWidth = metrics.viewportWidth <= 360 ? 96 : 104;
             const legacySitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
