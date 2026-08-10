@@ -250,7 +250,7 @@ export default function App() {
             </nav>
             <div className="jl-global-header__actions">
               <button
-                className="jl-header-menu-toggle"
+                className="jl-header-menu-toggle nav-toggle"
                 type="button"
                 aria-expanded={mobileNavOpen}
                 aria-controls="primary-navigation"
