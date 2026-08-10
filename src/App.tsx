@@ -231,15 +231,15 @@ export default function App() {
     <>
       <MotionObserver />
       <div className="app-shell">
-        <header ref={headerRef} className="site-header jl-global-header">
+        <header ref={headerRef} className="jl-global-header">
           <div className="jl-global-header__inner">
-            <div className="wordmark jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
+            <div className="jl-site-identity" aria-label="Johnny Li, Network Diagnostics">
               <a className="jl-site-identity__owner" href="https://johnnyli.dev">Johnny Li</a>
               <span className="jl-site-identity__separator" aria-hidden="true">/</span>
-              <a className="wordmark__product jl-site-identity__product" href="/" aria-current="page">Network Diagnostics</a>
+              <a className="jl-site-identity__product" href="/" aria-current="page">Network Diagnostics</a>
             </div>
             <nav
-              className={`site-nav jl-global-header__nav jl-header-menu${mobileNavOpen ? " jl-header-menu--open" : ""}`}
+              className={`jl-global-header__nav jl-header-menu${mobileNavOpen ? " jl-header-menu--open" : ""}`}
               id="primary-navigation"
               aria-label="Primary navigation"
               data-header-menu
@@ -248,9 +248,9 @@ export default function App() {
               <a href="#privacy">Privacy</a>
               <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
             </nav>
-            <div className="header-actions jl-global-header__actions">
+            <div className="jl-global-header__actions">
               <button
-                className="nav-toggle jl-header-menu-toggle"
+                className="jl-header-menu-toggle"
                 type="button"
                 aria-expanded={mobileNavOpen}
                 aria-controls="primary-navigation"
@@ -266,7 +266,7 @@ export default function App() {
                   aria-controls="owned-sites-menu"
                   data-site-switcher-button
                 >
-                  <span>Sites</span>
+                  Sites
                   <span aria-hidden="true">⌄</span>
                 </button>
                 <ul
