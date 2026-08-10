@@ -2,7 +2,7 @@ name: Apply shared wide header rail
 
 on:
   pull_request:
-    types: [reopened]
+    types: [synchronize]
 
 permissions:
   contents: write
@@ -15,19 +15,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: agent/adopt-shared-wide-header-rail
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: "24"
-      - name: Synchronize merged WDS source
+      - name: Copy immutable shared source
         run: |
+          set -euo pipefail
+          SOURCE=11da218c3eb864013f051dddea644c19ea9847e4
+          ROOT="https://raw.githubusercontent.com/JohnnyZLi/Web-Design-System/$SOURCE"
           python - <<'PY'
           from pathlib import Path
           import json
           source = '11da218c3eb864013f051dddea644c19ea9847e4'
-          lock_path = Path('design-system.lock.json')
-          lock = json.loads(lock_path.read_text())
+          path = Path('design-system.lock.json')
+          lock = json.loads(path.read_text())
           lock['sourceCommit'] = source
-          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
+          path.write_text(json.dumps(lock, indent=2) + '\n')
           Path('src/design-system/SOURCE.md').write_text(
               '# Generated design-system assets\n\n'
               'Do not edit these files directly.\n\n'
@@ -37,9 +37,19 @@ jobs:
               'Validate with `npm run design-system:check`.\n'
           )
           PY
-          npm ci --no-audit --no-fund
-          npm run design-system:sync
-      - name: Full-bleed the Network global bar on wide desktop
+          curl -fsSL "$ROOT/tokens/tokens.css" -o src/design-system/tokens.css
+          curl -fsSL "$ROOT/styles/foundations.css" -o src/design-system/foundations.css
+          curl -fsSL "$ROOT/styles/site-identity.css" -o src/design-system/site-identity.css
+          curl -fsSL "$ROOT/styles/theme-control.css" -o src/design-system/theme-control.css
+          curl -fsSL "$ROOT/styles/content-primitives.css" -o src/design-system/content-primitives.css
+          curl -fsSL "$ROOT/scripts/site-controls.js" -o src/design-system/site-controls.js
+          curl -fsSL "$ROOT/scripts/theme-bootstrap.js" -o src/design-system/theme-bootstrap.js
+          curl -fsSL "$ROOT/scripts/site-controls.d.ts" -o src/design-system/site-controls.d.ts
+          curl -fsSL "$ROOT/scripts/consumer-release.mjs" -o scripts/design-system-consumer-release.mjs
+          curl -fsSL "$ROOT/scripts/conformance-runner.mjs" -o scripts/design-system-conformance-runner.mjs
+          curl -fsSL "$ROOT/conformance/contract.json" -o scripts/design-system-conformance-contract.json
+          curl -fsSL "$ROOT/version.json" -o src/design-system/version.json
+      - name: Full-bleed the Network global bar
         run: |
           python - <<'PY'
           from pathlib import Path
