@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   conformance:
@@ -16,99 +16,3 @@ jobs:
       install-command: npm ci --no-audit --no-fund
       conformance-command: npm run design-system:check && npm run design-system:integration && npm run design-system:conformance && npm run typecheck && npm test && npm run build
       artifact-name: network-design-system-conformance
-
-  sync-shared-rail:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/adopt-shared-wide-header-rail'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: agent/adopt-shared-wide-header-rail
-      - name: Copy immutable WDS source and apply Network rail adapter
-        run: |
-          set -euo pipefail
-          SOURCE=11da218c3eb864013f051dddea644c19ea9847e4
-          ROOT="https://raw.githubusercontent.com/JohnnyZLi/Web-Design-System/$SOURCE"
-          python - <<'PY'
-          from pathlib import Path
-          import json
-          source = '11da218c3eb864013f051dddea644c19ea9847e4'
-          lock_path = Path('design-system.lock.json')
-          lock = json.loads(lock_path.read_text())
-          lock['sourceCommit'] = source
-          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
-          Path('src/design-system/SOURCE.md').write_text(
-              '# Generated design-system assets\n\n'
-              'Do not edit these files directly.\n\n'
-              'Package: @johnnyzli/web-design-system\n'
-              'Version: 1.9.0\n'
-              f'Source commit: {source}\n\n'
-              'Validate with `npm run design-system:check`.\n'
-          )
-          PY
-          curl -fsSL "$ROOT/tokens/tokens.css" -o src/design-system/tokens.css
-          curl -fsSL "$ROOT/styles/foundations.css" -o src/design-system/foundations.css
-          curl -fsSL "$ROOT/styles/site-identity.css" -o src/design-system/site-identity.css
-          curl -fsSL "$ROOT/styles/theme-control.css" -o src/design-system/theme-control.css
-          curl -fsSL "$ROOT/styles/content-primitives.css" -o src/design-system/content-primitives.css
-          curl -fsSL "$ROOT/scripts/site-controls.js" -o src/design-system/site-controls.js
-          curl -fsSL "$ROOT/scripts/theme-bootstrap.js" -o src/design-system/theme-bootstrap.js
-          curl -fsSL "$ROOT/scripts/site-controls.d.ts" -o src/design-system/site-controls.d.ts
-          curl -fsSL "$ROOT/scripts/consumer-release.mjs" -o scripts/design-system-consumer-release.mjs
-          curl -fsSL "$ROOT/scripts/conformance-runner.mjs" -o scripts/design-system-conformance-runner.mjs
-          curl -fsSL "$ROOT/conformance/contract.json" -o scripts/design-system-conformance-contract.json
-          curl -fsSL "$ROOT/version.json" -o src/design-system/version.json
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('src/design-system-adapter.css')
-          text = path.read_text()
-          marker = '/* Shared wide rail: the global bar escapes the product content shell while\n'
-          if marker not in text:
-              anchor = '.text-blue,\n'
-              block = '''/* Shared wide rail: the global bar escapes the product content shell while
-   its package-owned inner row supplies the canonical 40px/20px edge insets. */
-@media (min-width: 1024px) {
-  .site-header {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-  }
-
-  .site-header .site-nav {
-    justify-self: center;
-  }
-}
-
-'''
-              if anchor not in text:
-                  raise SystemExit('Network adapter insertion anchor not found')
-              path.write_text(text.replace(anchor, block + anchor, 1))
-          PY
-      - name: Restore workflow and commit product change
-        run: |
-          cat > .github/workflows/design-system-conformance.yml <<'YAML'
-          name: Design-system conformance
-
-          on:
-            pull_request:
-            workflow_dispatch:
-
-          permissions:
-            contents: read
-
-          jobs:
-            conformance:
-              uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-conformance.yml@82f97cb4072758991f8baf98d7e7bed052142136
-              with:
-                node-version: "24"
-                timeout-minutes: 25
-                install-command: npm ci --no-audit --no-fund
-                conformance-command: npm run design-system:check && npm run design-system:integration && npm run design-system:conformance && npm run typecheck && npm test && npm run build
-                artifact-name: network-design-system-conformance
-          YAML
-          git config user.name "JohnnyZLi"
-          git config user.email "92900710+JohnnyZLi@users.noreply.github.com"
-          git rm -f .github/workflows/apply-shared-wide-header-rail.yml
-          if [ -f .ci-kick-shared-header-rail ]; then git rm .ci-kick-shared-header-rail; fi
-          git add .github/workflows/design-system-conformance.yml design-system.lock.json src/design-system src/design-system-adapter.css scripts/design-system-consumer-release.mjs scripts/design-system-conformance-runner.mjs scripts/design-system-conformance-contract.json
-          git commit -m "Adopt shared wide desktop header rail"
-          git push origin HEAD:agent/adopt-shared-wide-header-rail
