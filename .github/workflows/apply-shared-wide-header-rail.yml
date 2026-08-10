@@ -1,14 +1,15 @@
 name: Apply shared wide header rail
 
 on:
-  push:
-    branches: [agent/adopt-shared-wide-header-rail]
+  pull_request:
+    types: [ready_for_review]
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
