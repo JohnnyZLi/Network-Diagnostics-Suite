@@ -317,8 +317,9 @@ jobs:
           xdotool click --repeat 14 --delay 45 5
           capture saved-report-detail-bottom
 
-          # ReportDetail owns focus on mount. Technical data and Edit details are the
-          # first two controls from that container, independent of scroll geometry.
+          # ReportDetail owns focus on mount. Technical data, the full schema report,
+          # and Edit details are the first three controls, independent of scroll geometry.
+          xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Tab
           xdotool key --clearmodifiers Return
