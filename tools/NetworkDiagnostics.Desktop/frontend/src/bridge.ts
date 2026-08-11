@@ -7,7 +7,12 @@ export type BridgeEventName =
   | 'monitor.error'
   | 'lan.server.started'
   | 'lan.server.stopped'
-  | 'lan.server.failed';
+  | 'lan.server.failed'
+  | 'lan.server.progress'
+  | 'lan.client.progress'
+  | 'lan.client.completed'
+  | 'lan.client.cancelled'
+  | 'lan.client.failed';
 
 type BridgeResponse<T> = {
   type: 'response';

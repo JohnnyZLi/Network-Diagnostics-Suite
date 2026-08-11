@@ -1,40 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
+import type { SavedReportDetail, SavedReportSummary } from './contracts';
+import { focusableElements } from './dialog-focus';
 import './history.css';
 
-export type SavedReportSummary = {
-  id: string;
-  generatedAt: string;
-  storedAt: string;
-  profile: string;
-  profileName: string;
-  label?: string | null;
-  tags: string[];
-  outcome?: string | null;
-  outcomeLabel?: string | null;
-  latencyMs?: number | null;
-  requestLossPercent?: number | null;
-  downloadMbps?: number | null;
-  uploadMbps?: number | null;
-  dataUsedBytes?: number | null;
-};
-
-type SavedReportDetail = {
-  report: SavedReportSummary;
-  context: string;
-  method: string;
-  presentation: {
-    outcome: string;
-    label: string;
-    verdict: string;
-    summary: string;
-    nextAction: string;
-    metrics: Array<{ label: string; value: string; detail: string; wasMeasured: boolean }>;
-    findings: Array<{ label: string; title: string; summary: string }>;
-    technicalData?: string[];
-    technicalEvidence: string[];
-  };
-};
+export type { SavedReportSummary } from './contracts';
 
 type SavedReportComparison = {
   baseline: SavedReportSummary;
@@ -60,6 +30,7 @@ type PanelView =
   | { kind: 'list' }
   | { kind: 'detail'; detail: SavedReportDetail }
   | { kind: 'edit'; detail: SavedReportDetail }
+  | { kind: 'delete-confirm'; detail: SavedReportDetail }
   | { kind: 'compare-select'; baseline: SavedReportDetail }
   | { kind: 'comparison'; baseline: SavedReportDetail; comparison: SavedReportComparison };
 
@@ -72,6 +43,7 @@ export function HistoryPanel({
   docked = false,
   onClose,
   onRefresh,
+  onDeleted,
 }: {
   open: boolean;
   reports: SavedReportSummary[];
@@ -81,6 +53,7 @@ export function HistoryPanel({
   docked?: boolean;
   onClose: () => void;
   onRefresh: () => void;
+  onDeleted?: (reportId: string) => void;
 }) {
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
@@ -144,7 +117,7 @@ export function HistoryPanel({
   if (!open) return null;
 
   const header = headerFor(view);
-  const wide = view.kind === 'detail' || view.kind === 'edit' || view.kind === 'comparison';
+  const wide = view.kind === 'detail' || view.kind === 'edit' || view.kind === 'delete-confirm' || view.kind === 'comparison';
 
   async function openDetailById(id: string) {
     setViewLoading(true);
@@ -193,6 +166,33 @@ export function HistoryPanel({
     }
   }
 
+  async function openReportsFolder() {
+    setViewError(null);
+    try {
+      await desktopBridge.request('reports.openFolder');
+    } catch (value) {
+      setViewError(errorMessage(value, 'The reports folder could not be opened.'));
+    }
+  }
+
+  async function deleteReport(detail: SavedReportDetail) {
+    setViewLoading(true);
+    setViewError(null);
+    setViewNotice(null);
+    try {
+      await desktopBridge.request('reports.delete', { id: detail.report.id });
+      onDeleted?.(detail.report.id);
+      onRefresh();
+      setView({ kind: 'list' });
+      setViewNotice(`Deleted ${displayName(detail.report)} from local storage.`);
+    } catch (value) {
+      setViewError(errorMessage(value, 'The saved report could not be deleted.'));
+      setView({ kind: 'delete-confirm', detail });
+    } finally {
+      setViewLoading(false);
+    }
+  }
+
   async function saveAnnotations(detail: SavedReportDetail, label: string, tags: string[]) {
     setViewLoading(true);
     setViewError(null);
@@ -230,7 +230,7 @@ export function HistoryPanel({
     setViewNotice(null);
     setView((current) => {
       if (current.kind === 'comparison' || current.kind === 'compare-select') return { kind: 'detail', detail: current.baseline };
-      if (current.kind === 'edit') return { kind: 'detail', detail: current.detail };
+      if (current.kind === 'edit' || current.kind === 'delete-confirm') return { kind: 'detail', detail: current.detail };
       return { kind: 'list' };
     });
   }
@@ -255,6 +255,7 @@ export function HistoryPanel({
             {view.kind === 'list' ? (
               <>
                 <IconButton label="Import report" onClick={() => void importReport()} icon="import" />
+                <IconButton label="Open reports folder" onClick={() => void openReportsFolder()} icon="folder" />
                 <IconButton label="Refresh saved runs" onClick={onRefresh} disabled={loading} icon="refresh" />
               </>
             ) : <IconButton label="Back" onClick={goBack} icon="back" />}
@@ -263,11 +264,13 @@ export function HistoryPanel({
         </header>
 
         {viewLoading ? <LoadingView /> : view.kind === 'list' ? (
-          <ReportList reports={reports} loading={loading} error={error || viewError} onRefresh={onRefresh} onOpen={(report) => void openDetail(report)} />
+          <ReportList reports={reports} loading={loading} error={error || viewError} notice={viewNotice} onRefresh={onRefresh} onOpen={(report) => void openDetail(report)} />
         ) : view.kind === 'compare-select' ? (
           <CompareSelector reports={reports} baseline={view.baseline} error={viewError} onCompare={(report) => void compareWith(report, view.baseline)} />
         ) : view.kind === 'edit' ? (
           <ReportEditor detail={view.detail} error={viewError} onCancel={goBack} onSave={(label, tags) => void saveAnnotations(view.detail, label, tags)} />
+        ) : view.kind === 'delete-confirm' ? (
+          <DeleteConfirmation detail={view.detail} error={viewError} onCancel={goBack} onDelete={() => void deleteReport(view.detail)} />
         ) : view.kind === 'detail' ? (
           <ReportDetail
             detail={view.detail}
@@ -275,6 +278,7 @@ export function HistoryPanel({
             notice={viewNotice}
             onEdit={() => { setViewError(null); setViewNotice(null); setView({ kind: 'edit', detail: view.detail }); }}
             onExport={() => void exportReport(view.detail)}
+            onDelete={() => { setViewError(null); setViewNotice(null); setView({ kind: 'delete-confirm', detail: view.detail }); }}
             onCompare={() => { setViewError(null); setViewNotice(null); setView({ kind: 'compare-select', baseline: view.detail }); }}
           />
         ) : <ComparisonDetail comparison={view.comparison} error={viewError} />}
@@ -283,10 +287,11 @@ export function HistoryPanel({
   );
 }
 
-function ReportList({ reports, loading, error, onRefresh, onOpen }: {
+function ReportList({ reports, loading, error, notice, onRefresh, onOpen }: {
   reports: SavedReportSummary[];
   loading: boolean;
   error: string | null;
+  notice: string | null;
   onRefresh: () => void;
   onOpen: (report: SavedReportSummary) => void;
 }) {
@@ -298,7 +303,7 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
     return <div className="history-body"><div className="history-empty history-error" role="alert"><strong>Saved runs could not be read.</strong><p>{error}</p><button type="button" onClick={onRefresh}>Try again</button></div></div>;
   }
   if (reports.length === 0) {
-    return <div className="history-body">{error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}<div className="history-empty"><svg className="history-empty-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg><strong>No saved runs yet</strong><p>Finished diagnostics will appear here automatically, or import an existing JSON report.</p></div></div>;
+    return <div className="history-body">{notice && <div className="report-success-banner" role="status">{notice}</div>}{error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}<div className="history-empty"><svg className="history-empty-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="8" /></svg><strong>No saved runs yet</strong><p>Finished diagnostics will appear here automatically, or import an existing JSON report.</p></div></div>;
   }
 
   const normalized = query.trim().toLocaleLowerCase();
@@ -311,6 +316,7 @@ function ReportList({ reports, loading, error, onRefresh, onOpen }: {
 
   return (
     <div className="history-body">
+      {notice && <div className="report-success-banner" role="status">{notice}</div>}
       {error && <div className="report-error-banner report-list-banner" role="alert">{error}</div>}
       <div className="history-filter-bar">
         <label><span>Search saved runs</span><input type="search" value={query} placeholder="Label, result, profile, or tag" onChange={(event) => setQuery(event.target.value)} /></label>
@@ -336,10 +342,10 @@ function CompareSelector({ reports, baseline, error, onCompare }: { reports: Sav
   );
 }
 
-function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: { detail: SavedReportDetail; error: string | null; notice: string | null; onEdit: () => void; onExport: () => void; onCompare: () => void }) {
+function ReportDetail({ detail, error, notice, onEdit, onExport, onDelete, onCompare }: { detail: SavedReportDetail; error: string | null; notice: string | null; onEdit: () => void; onExport: () => void; onDelete: () => void; onCompare: () => void }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const presentation = detail.presentation;
-  const technicalData = presentation.technicalData ?? presentation.technicalEvidence;
+  const technicalData = presentation.technicalData ?? presentation.technicalEvidence ?? [];
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => bodyRef.current?.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
@@ -364,10 +370,15 @@ function ReportDetail({ detail, error, notice, onEdit, onExport, onCompare }: { 
         <div className="report-section-heading"><h3>Findings</h3><span>{presentation.findings.length}</span></div>
         <div className="report-findings">{presentation.findings.map((finding, index) => <div className="report-finding" key={`${finding.title}-${index}`}><span>{finding.label}</span><strong>{finding.title}</strong><p>{finding.summary}</p></div>)}</div>
       </section>
-      <section className="report-section"><details className="report-evidence"><summary>Technical data · {technicalData.length} items</summary><ul className="report-evidence-list">{technicalData.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></details></section>
-      <div className="report-actions"><button type="button" className="report-action" onClick={onEdit}>Edit details</button><button type="button" className="report-action" onClick={onExport}>Export JSON</button><button type="button" className="report-action primary" onClick={onCompare}>Compare with another run</button></div>
+      <section className="report-section"><details className="report-technical-data"><summary>Technical data · {technicalData.length} items</summary><ul className="report-technical-data-list">{technicalData.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></details></section>
+      {detail.technicalReport !== undefined && detail.technicalReport !== null ? <section className="report-section"><details className="report-technical-data raw-report"><summary>Full schema 2.0 technical report</summary><pre>{JSON.stringify(detail.technicalReport, null, 2)}</pre></details></section> : null}
+      <div className="report-actions"><button type="button" className="report-action" onClick={onEdit}>Edit details</button><button type="button" className="report-action" onClick={onExport}>Export JSON</button><button type="button" className="report-action danger" onClick={onDelete}>Delete</button><button type="button" className="report-action primary" onClick={onCompare}>Compare with another run</button></div>
     </div>
   );
+}
+
+function DeleteConfirmation({ detail, error, onCancel, onDelete }: { detail: SavedReportDetail; error: string | null; onCancel: () => void; onDelete: () => void }) {
+  return <div className="report-body delete-report-confirm"><section><span>DELETE LOCAL REPORT</span><h3>Delete {displayName(detail.report)}?</h3><p>This removes the saved JSON from the configured reports folder. Export the report first if you need another copy.</p><small>{formatDateTime(detail.report.generatedAt)} · {detail.context}</small></section>{error && <div className="report-error-banner" role="alert">{error}</div>}<div className="report-actions"><button type="button" className="report-action" onClick={onCancel}>Keep report</button><button type="button" className="report-action danger" onClick={onDelete} autoFocus>Delete report</button></div></div>;
 }
 
 function ReportEditor({ detail, error, onCancel, onSave }: { detail: SavedReportDetail; error: string | null; onCancel: () => void; onSave: (label: string, tags: string[]) => void }) {
@@ -427,8 +438,8 @@ function ReportRow({ report, disabled = false, onClick }: { report: SavedReportS
 
 function HistoryMetric({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
 
-function IconButton({ label, onClick, disabled = false, icon }: { label: string; onClick: () => void; disabled?: boolean; icon: 'import' | 'refresh' | 'back' | 'close' }) {
-  return <button type="button" className="history-icon-button" onClick={onClick} aria-label={label} title={label} disabled={disabled}><svg viewBox="0 0 24 24" aria-hidden="true">{icon === 'import' && <><path d="M12 3v11" /><path d="m8 10 4 4 4-4" /><path d="M5 17v3h14v-3" /></>}{icon === 'refresh' && <><path d="M20 11a8 8 0 1 0-2.34 5.66" /><path d="M20 5v6h-6" /></>}{icon === 'back' && <path d="M19 12H5M11 18l-6-6 6-6" />}{icon === 'close' && <path d="M6 6l12 12M18 6 6 18" />}</svg></button>;
+function IconButton({ label, onClick, disabled = false, icon }: { label: string; onClick: () => void; disabled?: boolean; icon: 'import' | 'folder' | 'refresh' | 'back' | 'close' }) {
+  return <button type="button" className="history-icon-button" onClick={onClick} aria-label={label} title={label} disabled={disabled}><svg viewBox="0 0 24 24" aria-hidden="true">{icon === 'import' && <><path d="M12 3v11" /><path d="m8 10 4 4 4-4" /><path d="M5 17v3h14v-3" /></>}{icon === 'folder' && <path d="M3.5 7.5h6l2-2h9v13h-17Z" />}{icon === 'refresh' && <><path d="M20 11a8 8 0 1 0-2.34 5.66" /><path d="M20 5v6h-6" /></>}{icon === 'back' && <path d="M19 12H5M11 18l-6-6 6-6" />}{icon === 'close' && <path d="M6 6l12 12M18 6 6 18" />}</svg></button>;
 }
 
 function LoadingView({ label = 'Reading local report data' }: { label?: string }) {
@@ -438,15 +449,12 @@ function LoadingView({ label = 'Reading local report data' }: { label?: string }
 function headerFor(view: PanelView): { kicker: string; title: string; subtitle: string } {
   if (view.kind === 'detail') return { kicker: 'Saved report', title: displayName(view.detail.report), subtitle: `${formatDateTime(view.detail.report.generatedAt)} · ${view.detail.context || view.detail.report.profileName}` };
   if (view.kind === 'edit') return { kicker: 'Report details', title: displayName(view.detail.report), subtitle: 'Add a local label and tags without changing diagnostic measurements.' };
+  if (view.kind === 'delete-confirm') return { kicker: 'Delete report', title: displayName(view.detail.report), subtitle: 'Confirm removal from local report storage.' };
   if (view.kind === 'compare-select') return { kicker: 'Compare reports', title: 'Choose another run', subtitle: 'The selected report stays as the baseline.' };
   if (view.kind === 'comparison') return { kicker: 'Comparison', title: `${view.comparison.baseline.profileName} vs ${view.comparison.candidate.profileName}`, subtitle: 'Baseline and candidate measurements are kept side by side.' };
   return { kicker: 'Local reports', title: 'Saved runs', subtitle: 'Completed diagnostics stored on this computer.' };
 }
 
-function focusableElements(root: HTMLElement | null): HTMLElement[] {
-  if (!root) return [];
-  return Array.from(root.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute('hidden'));
-}
 function errorMessage(value: unknown, fallback: string): string { return value instanceof Error ? value.message : fallback; }
 function displayName(report: SavedReportSummary): string { return report.label || report.profileName; }
 function parseTags(value: string): string[] { return value.split(',').map((tag) => tag.trim()).filter((tag) => tag.length > 0).filter((tag, index, tags) => tags.findIndex((candidate) => candidate.toLocaleLowerCase() === tag.toLocaleLowerCase()) === index).slice(0, 10); }

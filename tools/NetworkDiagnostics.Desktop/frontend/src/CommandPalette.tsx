@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useModalFocus } from './dialog-focus';
 import './command-palette.css';
 
 export type PaletteCommand = {
@@ -23,10 +24,9 @@ export function CommandPalette({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
-  closeRef.current = onClose;
+  useModalFocus(open, surfaceRef, onClose, inputRef);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -43,25 +43,7 @@ export function CommandPalette({
     if (!open) return;
     setQuery('');
     setSelected(0);
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeRef.current();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
+    return undefined;
   }, [open]);
 
   useEffect(() => {

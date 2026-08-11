@@ -33,6 +33,7 @@
     "probe:build:linux-arm64": "dotnet publish tools/DeepProbe/NetworkDeepProbe.csproj -c Release -r linux-arm64 --self-contained true --output artifacts/linux-arm64",
     "desktop:web:dev": "vite --config tools/NetworkDiagnostics.Desktop/frontend/vite.config.ts",
     "desktop:web:build": "tsc -p tools/NetworkDiagnostics.Desktop/frontend/tsconfig.json --noEmit && vite build --config tools/NetworkDiagnostics.Desktop/frontend/vite.config.ts",
+    "desktop:web:test": "vitest run --config tools/NetworkDiagnostics.Desktop/frontend/vitest.config.ts",
     "desktop:build": "npm run desktop:build:win-x64 && npm run desktop:build:mac-arm64 && npm run desktop:build:mac-x64 && npm run desktop:build:linux-x64 && npm run desktop:build:linux-arm64",
     "desktop:build:win-x64": "dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj -c Release -r win-x64 --self-contained true --output artifacts/desktop-win-x64",
     "desktop:build:mac-arm64": "dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj -c Release -r osx-arm64 --self-contained true --output artifacts/desktop-osx-arm64",
@@ -41,15 +42,19 @@
     "desktop:build:linux-arm64": "dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj -c Release -r linux-arm64 --self-contained true --output artifacts/desktop-linux-arm64"
   },
   "dependencies": {
+    "motion": "^13.1.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260729.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
+    "jsdom": "^30.0.1",
     "typescript": "7.0.2",
     "vite": "8.1.5",
     "vitest": "4.1.10",

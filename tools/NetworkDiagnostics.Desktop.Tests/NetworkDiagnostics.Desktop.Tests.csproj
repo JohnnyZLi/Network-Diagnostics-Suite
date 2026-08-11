@@ -17,6 +17,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="PhotinoMigrationTests.cs" />
+    <Compile Include="DownloadPathContractTests.cs" />
+    <Compile Include="DesktopRuntimeContractTests.cs" />
+    <Compile Include="ReportStoreTests.cs" />
     <Compile Include="MonitorHistoryStoreTests.cs" />
     <Compile Include="MonitorWindowTests.cs" />
     <Compile Include="NetworkExperiencePresenterTests.cs" />

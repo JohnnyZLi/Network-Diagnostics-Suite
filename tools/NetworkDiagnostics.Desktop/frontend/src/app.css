@@ -11,7 +11,7 @@
   --control: #0f151d;
   --text: #eef2f5;
   --muted: #9da8b4;
-  --faint: #707d8a;
+  --faint: #8995a1;
   --line: #26313d;
   --line-strong: #354352;
   --accent: #dc7452;
@@ -38,7 +38,7 @@
   --control: #f7f9fa;
   --text: #18222c;
   --muted: #5f6c78;
-  --faint: #7b8792;
+  --faint: #65727e;
   --line: #d5dde4;
   --line-strong: #bec9d2;
   --accent: #c66040;
@@ -66,7 +66,7 @@
     --control: #f7f9fa;
     --text: #18222c;
     --muted: #5f6c78;
-    --faint: #7b8792;
+    --faint: #65727e;
     --line: #d5dde4;
     --line-strong: #bec9d2;
     --accent: #c66040;
@@ -101,8 +101,8 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -148,7 +148,7 @@ dd {
   width: 100%;
   height: 100dvh;
   display: grid;
-  grid-template-rows: 64px minmax(0, 1fr);
+  grid-template-rows: 68px minmax(0, 1fr);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--data) 3%, transparent), transparent 28%),
     var(--bg);
@@ -158,12 +158,12 @@ dd {
   position: relative;
   z-index: 80;
   min-width: 0;
-  height: 64px;
-  padding: 0 22px;
+  height: 68px;
+  padding: 0 26px;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto minmax(340px, 1fr);
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
   backdrop-filter: blur(18px);
@@ -183,8 +183,8 @@ dd {
 }
 
 .brand-mark {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   border: 1px solid color-mix(in srgb, var(--good) 72%, white 12%);
   border-radius: 50%;
@@ -200,7 +200,7 @@ dd {
 
 .brand strong {
   overflow: hidden;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 720;
   letter-spacing: -.01em;
   text-overflow: ellipsis;
@@ -209,14 +209,14 @@ dd {
 
 .brand > div > span {
   color: var(--faint);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 
 .workbench-nav {
-  height: 44px;
+  height: 46px;
   padding: 4px;
   display: flex;
   align-items: stretch;
@@ -227,15 +227,15 @@ dd {
 }
 
 .workbench-nav button {
-  min-width: 100px;
-  padding: 0 14px;
+  min-width: 108px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 680;
   cursor: pointer;
 }
@@ -261,12 +261,12 @@ dd {
 
 .host-state,
 .lan-runtime-badge {
-  height: 38px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 630;
   white-space: nowrap;
 }
@@ -298,8 +298,8 @@ dd {
 
 .history-trigger {
   position: relative;
-  height: 40px;
-  padding: 0 13px;
+  height: 42px;
+  padding: 0 14px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -307,7 +307,7 @@ dd {
   border-radius: 9px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 680;
   cursor: pointer;
 }
@@ -343,7 +343,7 @@ dd {
   border-radius: 9px;
   background: var(--accent-soft);
   color: var(--accent-strong);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .app-main {
@@ -363,10 +363,10 @@ dd {
 
 .workspace-pane {
   display: none;
-  width: min(1680px, 100%);
+  width: min(1920px, 100%);
   min-height: 100%;
   margin: 0 auto;
-  padding: 28px clamp(24px, 2.8vw, 48px) 42px;
+  padding: 28px clamp(28px, 3vw, 58px) 52px;
 }
 
 .workspace-pane.active {
@@ -379,7 +379,7 @@ dd {
 
 .workspace-heading,
 .workbench-section-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -391,15 +391,15 @@ dd {
 .workbench-section-header h2 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(30px, 2.8vw, 40px);
+  font-size: clamp(30px, 2.2vw, 38px);
   font-weight: 760;
   line-height: 1;
   letter-spacing: -.035em;
 }
 
 .workspace-heading-status {
-  min-width: 220px;
-  padding-left: 20px;
+  min-width: 240px;
+  padding-left: 24px;
   display: grid;
   gap: 3px;
   border-left: 1px solid var(--line);
@@ -417,21 +417,21 @@ dd {
 .measurement-ledger header span,
 .technical-data-panel summary > span {
   color: var(--faint);
-  font: 760 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .12em;
 }
 
 .workspace-heading-status strong {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .primary-action,
 .secondary-action {
-  min-height: 44px;
-  padding: 0 18px;
+  min-height: 46px;
+  padding: 0 19px;
   border-radius: 8px;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 730;
   cursor: pointer;
 }
@@ -529,7 +529,7 @@ dd {
 
 .advanced-config-banner > div > span {
   color: var(--warning);
-  font: 760 12.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .1em;
 }
 
@@ -565,9 +565,9 @@ dd {
 /* Diagnostics setup */
 .diagnostic-setup-grid {
   display: grid;
-  grid-template-columns: minmax(480px, 520px) minmax(0, 1fr);
-  min-height: min(720px, calc(100dvh - 190px));
-  gap: 16px;
+  grid-template-columns: minmax(550px, 620px) minmax(0, 1fr);
+  min-height: min(780px, calc(100dvh - 178px));
+  gap: 20px;
   align-items: stretch;
 }
 
@@ -590,8 +590,8 @@ dd {
 }
 
 .console-heading {
-  min-height: 68px;
-  padding: 14px 18px;
+  min-height: 76px;
+  padding: 16px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -612,14 +612,14 @@ dd {
 }
 
 .console-heading strong {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 750;
 }
 
 .console-control {
   min-width: 0;
   margin: 0;
-  padding: 14px 18px;
+  padding: 17px 22px;
   border: 0;
   border-bottom: 1px solid var(--line);
 }
@@ -633,7 +633,7 @@ dd {
   justify-content: space-between;
   gap: 8px;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 740;
   letter-spacing: .02em;
 }
@@ -642,7 +642,7 @@ dd {
 .control-label-row span {
   overflow: hidden;
   color: var(--faint);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 620;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -651,13 +651,13 @@ dd {
 .profile-fieldset p {
   margin-top: 10px;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
 .segmented-control {
   min-width: 0;
-  min-height: 46px;
+  min-height: 50px;
   padding: 4px;
   display: grid;
   grid-auto-flow: column;
@@ -670,13 +670,13 @@ dd {
 
 .segmented-control button {
   min-width: 0;
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 10px;
   overflow: hidden;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 680;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -700,16 +700,16 @@ dd {
 
 .console-control-pair {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 .console-control-pair .console-control:first-child {
-  border-right: 0;
+  border-right: 1px solid var(--line);
 }
 
 .console-control-pair .segmented-control button {
-  padding-inline: 5px;
-  font-size: 13px;
+  padding-inline: 4px;
+  font-size: 14px;
 }
 
 .console-control-pair .console-control legend {
@@ -736,20 +736,20 @@ dd {
 }
 
 .control-label-row label {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 740;
 }
 
 .interface-control > small {
   color: var(--faint);
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 13.5px;
+  line-height: 1.4;
 }
 
 .run-command {
-  min-height: 94px;
+  min-height: 104px;
   margin-top: auto;
-  padding: 14px 16px 14px 18px;
+  padding: 16px 18px 16px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -766,26 +766,26 @@ dd {
 .run-command > div > span,
 .high-data-confirm > div > span {
   color: var(--accent-strong);
-  font: 760 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .12em;
 }
 
 .run-command strong {
   overflow: hidden;
-  font-size: 14.5px;
+  font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .run-command small {
   color: var(--faint);
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.25;
 }
 
 .diagnostic-run-button {
-  min-width: 160px;
-  height: 50px;
+  min-width: 178px;
+  height: 54px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -794,7 +794,7 @@ dd {
 }
 
 .diagnostic-run-button > span {
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .high-data-confirm {
@@ -844,7 +844,7 @@ dd {
 
 .instrument-section {
   min-width: 0;
-  padding: 16px 18px;
+  padding: 20px 22px;
 }
 
 .instrument-section + .instrument-section {
@@ -859,8 +859,8 @@ dd {
 .findings-section header,
 .result-route-section header,
 .measurement-ledger header {
-  min-height: 41px;
-  margin-bottom: 12px;
+  min-height: 46px;
+  margin-bottom: 14px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -883,10 +883,16 @@ dd {
 .result-route-section header strong,
 .measurement-ledger header strong {
   overflow: hidden;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 730;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.instrument-section header strong {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .instrument-section header small,
@@ -898,7 +904,7 @@ dd {
 .result-route-section header small,
 .measurement-ledger header small {
   color: var(--faint);
-  font: 680 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 680 13px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .06em;
   white-space: nowrap;
 }
@@ -912,8 +918,8 @@ dd {
 
 .plan-fact {
   min-width: 0;
-  min-height: 54px;
-  padding: 9px 10px;
+  min-height: 64px;
+  padding: 11px 12px;
   display: grid;
   gap: 1px;
   border-right: 1px solid var(--line);
@@ -924,17 +930,17 @@ dd {
 .path-row dt,
 .delivery-fallback dt {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: .025em;
 }
 
 .plan-fact strong {
-  overflow: hidden;
-  font-size: 14px;
+  overflow: visible;
+  font-size: 15px;
   font-weight: 710;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .stage-plan {
@@ -945,7 +951,7 @@ dd {
 
 .stage-plan > span {
   color: var(--faint);
-  font: 730 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 730 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .09em;
 }
 
@@ -957,7 +963,7 @@ dd {
 
 .stage-chip {
   min-width: 0;
-  padding: 8px 10px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -978,14 +984,14 @@ dd {
 }
 
 .stage-chip strong {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: capitalize;
 }
 
 .stage-chip small {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -1015,7 +1021,7 @@ dd {
 .path-row,
 .delivery-fallback {
   min-width: 0;
-  min-height: 38px;
+  min-height: 46px;
   display: grid;
   grid-template-columns: minmax(92px, .72fr) minmax(0, 1.28fr);
   align-items: center;
@@ -1026,13 +1032,42 @@ dd {
 .path-row dd,
 .delivery-fallback dd {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.path-row dd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.path-row dd > span {
+  min-width: 0;
+}
+
+.path-copy {
+  min-width: 46px;
+  height: 28px;
+  padding: 0 8px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.path-copy:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
 }
 
 .path-row.accent dd {
@@ -1041,11 +1076,11 @@ dd {
 
 .path-callout {
   margin-top: 10px;
-  padding: 9px 11px;
+  padding: 11px 13px;
   border-left: 2px solid var(--warning);
   background: var(--warning-soft);
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .path-callout.error {
@@ -1055,7 +1090,7 @@ dd {
 }
 
 .measurements-manifest {
-  padding: 16px 18px 18px;
+  padding: 20px 22px 22px;
   border-top: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface-soft) 62%, transparent);
 }
@@ -1063,7 +1098,7 @@ dd {
 .measurement-groups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 
 .measurement-group {
@@ -1072,7 +1107,7 @@ dd {
 
 .measurement-group > span {
   color: var(--data);
-  font: 730 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 730 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -1082,7 +1117,7 @@ dd {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 14px;
+  gap: 8px 16px;
   list-style: none;
 }
 
@@ -1090,8 +1125,8 @@ dd {
   position: relative;
   padding-left: 13px;
   color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.4;
+  font-size: 13.5px;
+  line-height: 1.45;
 }
 
 .measurement-group li::before {
@@ -1107,14 +1142,14 @@ dd {
 
 /* Active diagnostic */
 .active-run-instrument {
-  min-height: 570px;
-  padding: 0 18px 16px;
+  min-height: 650px;
+  padding: 0 22px 20px;
 }
 
 .active-run-header {
-  min-height: 104px;
-  margin: 0 -18px;
-  padding: 18px;
+  min-height: 118px;
+  margin: 0 -22px;
+  padding: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1136,7 +1171,7 @@ dd {
   align-items: center;
   gap: 8px;
   color: var(--data);
-  font: 760 12.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .11em;
 }
 
@@ -1156,7 +1191,7 @@ dd {
 
 .active-run-header h2 {
   overflow: hidden;
-  font-size: clamp(20px, 2.2vw, 30px);
+  font-size: clamp(24px, 2.2vw, 34px);
   font-weight: 750;
   letter-spacing: -.025em;
   text-overflow: ellipsis;
@@ -1165,13 +1200,13 @@ dd {
 
 .active-run-header p {
   color: var(--muted);
-  font-size: 14.5px;
+  font-size: 15.5px;
 }
 
 .active-progress {
-  min-height: 78px;
+  min-height: 92px;
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 88px minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   border-bottom: 1px solid var(--line);
@@ -1186,7 +1221,7 @@ dd {
 }
 
 .active-progress-value strong {
-  font: 760 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 40px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: -.06em;
 }
 
@@ -1202,12 +1237,12 @@ dd {
 
 .active-progress small {
   color: var(--faint);
-  font-size: 12.5px;
+  font-size: 13.5px;
   text-align: right;
 }
 
 .diagnostic-progress-track {
-  height: 7px;
+  height: 9px;
   overflow: hidden;
   border-radius: 4px;
   background: var(--control);
@@ -1223,9 +1258,9 @@ dd {
 }
 
 .run-phase-rail {
-  min-height: 82px;
+  min-height: 96px;
   margin: 0;
-  padding: 14px 0;
+  padding: 17px 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--line);
@@ -1252,15 +1287,15 @@ dd {
 }
 
 .run-phase-rail i {
-  width: 25px;
-  height: 25px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   color: var(--faint);
-  font: normal 700 12.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: normal 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .run-phase-rail div {
@@ -1269,13 +1304,13 @@ dd {
 }
 
 .run-phase-rail strong {
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .run-phase-rail span {
   overflow: hidden;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1305,7 +1340,7 @@ dd {
 .live-readings,
 .active-route {
   min-width: 0;
-  padding: 13px 0;
+  padding: 17px 0;
 }
 
 .live-readings {
@@ -1325,7 +1360,7 @@ dd {
 
 .metric {
   min-width: 0;
-  padding: 7px 11px;
+  padding: 10px 13px;
   display: grid;
   gap: 2px;
   border-left: 1px solid var(--line);
@@ -1337,13 +1372,13 @@ dd {
 
 .metric > span {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
 }
 
 .metric > strong {
   overflow: hidden;
-  font: 740 clamp(17px, 1.8vw, 23px)/1.15 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 740 clamp(19px, 1.8vw, 26px)/1.15 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: -.045em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1352,24 +1387,24 @@ dd {
 .metric > small {
   overflow: hidden;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .active-stage-budget {
-  padding-top: 13px;
+  padding-top: 17px;
 }
 
 /* Completed diagnostic */
 .completed-run {
-  padding: 0 18px 18px;
+  padding: 0 22px 22px;
 }
 
 .completed-run-header {
-  min-height: 126px;
-  margin: 0 -18px;
-  padding: 18px;
+  min-height: 144px;
+  margin: 0 -22px;
+  padding: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1389,11 +1424,11 @@ dd {
 
 .result-outcome {
   width: max-content;
-  padding: 3px 7px;
+  padding: 4px 8px;
   border: 1px solid var(--line-strong);
   border-radius: 4px;
   color: var(--muted);
-  font: 760 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .1em;
   text-transform: uppercase;
 }
@@ -1422,7 +1457,7 @@ dd {
 }
 
 .completed-run-header h2 {
-  font-size: clamp(22px, 2.45vw, 34px);
+  font-size: clamp(26px, 2.45vw, 38px);
   font-weight: 760;
   line-height: 1.08;
   letter-spacing: -.035em;
@@ -1430,13 +1465,13 @@ dd {
 
 .completed-run-header p {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.45;
 }
 
 .completed-run-header small {
   color: var(--faint);
-  font: 620 12.5px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 620 13.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .diagnostic-result-actions {
@@ -1447,8 +1482,51 @@ dd {
   gap: 7px;
 }
 
+.result-storage-warning,
+.result-success-notice {
+  min-height: 54px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--line));
+  border-radius: 8px;
+  background: var(--warning-soft);
+}
+
+.result-storage-warning > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.result-storage-warning strong,
+.result-storage-warning span {
+  display: block;
+}
+
+.result-storage-warning strong {
+  font-size: 15px;
+}
+
+.result-storage-warning span {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.result-success-notice {
+  justify-content: flex-start;
+  border-color: color-mix(in srgb, var(--good) 42%, var(--line));
+  background: var(--good-soft);
+  color: var(--good);
+  font-size: 14px;
+  font-weight: 680;
+}
+
 .result-kpi-band {
-  min-height: 88px;
+  min-height: 104px;
   align-items: center;
   border-bottom: 1px solid var(--line);
 }
@@ -1466,7 +1544,7 @@ dd {
 .findings-section,
 .result-route-section {
   min-width: 0;
-  padding: 15px 0;
+  padding: 19px 0;
 }
 
 .findings-section {
@@ -1484,8 +1562,8 @@ dd {
 
 .finding-row {
   min-width: 0;
-  min-height: 62px;
-  padding: 9px 0;
+  min-height: 72px;
+  padding: 11px 0;
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 14px;
@@ -1494,7 +1572,7 @@ dd {
 
 .finding-row > span {
   color: var(--faint);
-  font: 680 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 680 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
@@ -1506,12 +1584,12 @@ dd {
 }
 
 .finding-row strong {
-  font-size: 14.5px;
+  font-size: 15.5px;
 }
 
 .finding-row p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.42;
 }
 
@@ -1531,7 +1609,7 @@ dd {
 
 .next-action-block {
   margin-top: 12px;
-  padding: 10px 11px;
+  padding: 12px 13px;
   display: grid;
   gap: 5px;
   border-left: 2px solid var(--accent);
@@ -1540,17 +1618,17 @@ dd {
 
 .next-action-block > span {
   color: var(--accent-strong);
-  font: 760 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .1em;
 }
 
 .next-action-block strong {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.35;
 }
 
 .measurement-ledger {
-  padding: 15px 0;
+  padding: 19px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1563,8 +1641,8 @@ dd {
 
 .measurement-entry {
   min-width: 0;
-  min-height: 62px;
-  padding: 8px 9px;
+  min-height: 74px;
+  padding: 10px 11px;
   display: grid;
   align-content: center;
   gap: 2px;
@@ -1574,13 +1652,13 @@ dd {
 
 .measurement-entry > span {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
 }
 
 .measurement-entry > strong {
   overflow: hidden;
-  font: 730 16px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 730 18px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1588,7 +1666,7 @@ dd {
 .measurement-entry > small {
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1605,8 +1683,8 @@ dd {
 }
 
 .technical-data-panel summary {
-  min-height: 48px;
-  padding: 9px 12px;
+  min-height: 54px;
+  padding: 11px 14px;
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
@@ -1631,12 +1709,12 @@ dd {
 }
 
 .technical-data-panel summary strong {
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .technical-data-panel summary small {
   color: var(--faint);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .technical-data-panel ul {
@@ -1646,7 +1724,19 @@ dd {
   gap: 5px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font: 500 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 500 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.raw-report-panel pre {
+  max-height: min(520px, 55dvh);
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 500 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  tab-size: 2;
+  white-space: pre;
 }
 
 .result-loading,
@@ -1703,7 +1793,7 @@ dd {
 
 .sticky-run-status small {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .sticky-run-status b {
@@ -1714,14 +1804,48 @@ dd {
 }
 
 :root[data-platform="macos"] .product-bar {
-  height: 62px;
+  height: 66px;
   padding-left: 82px;
   user-select: none;
   -webkit-user-select: none;
 }
 
 :root[data-platform="macos"] .app-shell {
-  grid-template-rows: 62px minmax(0, 1fr);
+  grid-template-rows: 66px minmax(0, 1fr);
+}
+
+@media (max-width: 1420px) {
+  .product-bar {
+    grid-template-columns: minmax(190px, 1fr) auto minmax(270px, 1fr);
+    gap: 16px;
+  }
+
+  .host-state {
+    display: none;
+  }
+
+  .workspace-pane {
+    padding-top: 22px;
+  }
+
+  .workspace-heading,
+  .workbench-section-header {
+    margin-bottom: 18px;
+  }
+
+  .console-heading {
+    min-height: 68px;
+    padding-block: 12px;
+  }
+
+  .console-control {
+    padding-block: 14px;
+  }
+
+  .run-command {
+    min-height: 94px;
+    padding-block: 13px;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -1740,64 +1864,59 @@ dd {
     padding-inline: 11px;
   }
 
-  .host-state {
-    max-width: 86px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .workspace-pane {
     padding-inline: 24px;
   }
 
   .diagnostic-setup-grid {
-    grid-template-columns: minmax(450px, 490px) minmax(0, 1fr);
+    grid-template-columns: minmax(430px, 460px) minmax(0, 1fr);
   }
 
   .console-heading {
-    min-height: 58px;
-    padding: 10px 14px;
+    min-height: 70px;
+    padding: 14px 18px;
   }
 
   .console-control {
-    padding: 10px 14px;
+    padding: 14px 18px;
+  }
+
+  .console-control-pair .console-control {
+    padding-inline: 12px;
   }
 
   .profile-fieldset p {
     margin-top: 8px;
-    line-height: 1.3;
-  }
-
-  .console-control-pair .console-control legend small {
-    display: none;
-  }
-
-  .console-control-pair {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .console-control-pair .console-control:first-child {
-    border-right: 1px solid var(--line);
+    line-height: 1.4;
   }
 
   .console-control-pair .segmented-control button {
     padding-inline: 2px;
   }
 
+  .profile-fieldset .segmented-control {
+    grid-template-columns: 1.25fr .9fr .8fr 1fr;
+  }
+
+  .profile-fieldset .segmented-control button {
+    padding-inline: 4px;
+  }
+
   .topology-control .segmented-control {
-    grid-template-columns: .85fr .95fr 1.2fr;
+    grid-template-columns: .75fr .9fr 1.35fr;
   }
 
   .download-path-control .segmented-control {
-    grid-template-columns: 1.1fr 1fr .9fr;
+    grid-template-columns: repeat(3, max-content);
+    justify-content: space-between;
   }
 
   .segmented-control {
-    min-height: 42px;
+    min-height: 46px;
   }
 
   .segmented-control button {
-    min-height: 32px;
+    min-height: 36px;
   }
 
   .interface-control {
@@ -1812,8 +1931,8 @@ dd {
   }
 
   .run-command {
-    min-height: 84px;
-    padding: 10px 14px;
+    min-height: 96px;
+    padding: 14px 18px;
   }
 
   .instrument-columns {

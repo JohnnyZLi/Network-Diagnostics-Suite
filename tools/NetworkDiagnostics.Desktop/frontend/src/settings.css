@@ -1,11 +1,11 @@
 .settings-menu {
   position: relative;
-  height: 34px;
+  height: 42px;
 }
 
 .settings-trigger {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
@@ -28,8 +28,8 @@
 }
 
 .settings-trigger svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -42,8 +42,10 @@
   top: calc(100% + 9px);
   right: 0;
   z-index: 210;
-  width: 340px;
-  overflow: hidden;
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 86px);
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--surface-raised);
@@ -57,7 +59,7 @@
 }
 
 .settings-section {
-  padding: 14px;
+  padding: 18px;
   display: grid;
   gap: 10px;
 }
@@ -72,17 +74,17 @@
 }
 
 .settings-copy strong {
-  font-size: 14px;
+  font-size: 15.5px;
 }
 
 .settings-copy span {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.4;
 }
 
 .appearance-control {
-  min-height: 34px;
+  min-height: 44px;
   padding: 3px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -96,7 +98,7 @@
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 690;
   cursor: pointer;
 }
@@ -126,7 +128,7 @@
 
 .capacity-preference-fields label > span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 670;
 }
 
@@ -136,13 +138,13 @@
 
 .capacity-preference-fields input {
   width: 100%;
-  height: 34px;
+  height: 42px;
   padding: 0 40px 0 9px;
   border: 1px solid var(--line-strong);
   border-radius: 7px;
   background: var(--control);
   color: var(--text);
-  font: 690 13.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 690 14.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .capacity-preference-fields input:focus {
@@ -156,17 +158,18 @@
   top: 50%;
   right: 8px;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
   transform: translateY(-50%);
 }
 
 .settings-save {
-  height: 33px;
+  min-height: 42px;
+  padding: 0 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   border-radius: 7px;
   background: var(--accent);
   color: #fffaf7;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 710;
   cursor: pointer;
 }
@@ -178,7 +181,94 @@
   border-radius: 6px;
   background: var(--good-soft);
   color: var(--good);
-  font-size: 12px;
+  font-size: 13.5px;
+}
+
+.settings-number-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-number-grid label,
+.reports-directory-field,
+.retention-field {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 670;
+}
+
+.settings-number-grid input,
+.reports-directory-field input,
+.retention-field input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--text);
+  font: 680 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.settings-number-grid input:focus,
+.reports-directory-field input:focus,
+.retention-field input:focus {
+  border-color: var(--data);
+  outline: 0;
+  box-shadow: 0 0 0 2px var(--data-soft);
+}
+
+.reports-directory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.reports-directory-actions button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.reports-directory-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.effective-report-path {
+  overflow: hidden;
+  color: var(--faint);
+  font: 500 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retention-field > div {
+  position: relative;
+}
+
+.retention-field input {
+  padding-right: 50px;
+}
+
+.retention-field b {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--faint);
+  font-size: 13px;
+  transform: translateY(-50%);
 }
 
 .settings-message.error {

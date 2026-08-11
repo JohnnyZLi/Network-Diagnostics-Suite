@@ -172,4 +172,11 @@ body::after,
   .site-header .wordmark__product {
     font-size: 0.8125rem;
   }
+
+  /* The product label is longer than the other portfolio identities. Preserve
+     it in full while keeping every header action inside a 320px viewport. */
+  .site-header [data-site-switcher-button] {
+    width: 72px;
+    min-width: 72px;
+  }
 }

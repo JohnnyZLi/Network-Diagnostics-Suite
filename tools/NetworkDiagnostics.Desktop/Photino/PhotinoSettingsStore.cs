@@ -24,7 +24,9 @@ public sealed record PhotinoAppSettings(
     string? LanTarget,
     int LanPort,
     int LanDurationSeconds,
-    int LanConnections)
+    int LanConnections,
+    string? ReportsDirectory,
+    int ReportRetentionDays)
 {
     public static PhotinoAppSettings Default { get; } = new(
         AppearancePreference.System,
@@ -40,7 +42,9 @@ public sealed record PhotinoAppSettings(
         null,
         8765,
         8,
-        4);
+        4,
+        null,
+        0);
 
     public MonitorWindow SelectedMonitoringWindow => MonitorWindowExtensions.Parse(MonitoringWindow);
 
@@ -108,6 +112,35 @@ public sealed class PhotinoSettingsStore
         });
     }
 
+    public PhotinoAppSettings SaveApplicationPreferences(
+        int monitoringIntervalSeconds,
+        int monitoringAlertScoreThreshold,
+        string? reportsDirectory,
+        int reportRetentionDays)
+    {
+        if (monitoringIntervalSeconds is < 2 or > 60)
+        {
+            throw new ArgumentOutOfRangeException(nameof(monitoringIntervalSeconds), "Monitoring interval must be between 2 and 60 seconds.");
+        }
+        if (monitoringAlertScoreThreshold is < 1 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(monitoringAlertScoreThreshold), "Alert threshold must be between 1 and 100.");
+        }
+        if (reportRetentionDays is < 0 or > 3650)
+        {
+            throw new ArgumentOutOfRangeException(nameof(reportRetentionDays), "Report retention must be between 0 and 3,650 days.");
+        }
+
+        var normalizedReportsDirectory = NormalizeReportsDirectory(reportsDirectory);
+        return Update(settings => settings with
+        {
+            MonitoringIntervalSeconds = monitoringIntervalSeconds,
+            MonitoringAlertScoreThreshold = monitoringAlertScoreThreshold,
+            ReportsDirectory = normalizedReportsDirectory,
+            ReportRetentionDays = reportRetentionDays
+        });
+    }
+
     public PhotinoAppSettings SaveAdvanced(
         IEnumerable<string> endpointCandidates,
         string? interfaceId,
@@ -163,7 +196,9 @@ public sealed class PhotinoSettingsStore
             settings.LanTarget,
             settings.LanPort,
             settings.LanDurationSeconds,
-            settings.LanConnections);
+            settings.LanConnections,
+            settings.ReportsDirectory,
+            settings.ReportRetentionDays);
         var json = JsonSerializer.Serialize(document, JsonOptions);
         var temporaryPath = settingsPath + ".tmp";
         File.WriteAllText(temporaryPath, json);
@@ -192,7 +227,9 @@ public sealed class PhotinoSettingsStore
                 NormalizeOptional(document.LanTarget),
                 document.LanPort is >= 1024 and <= 65535 ? document.LanPort : 8765,
                 document.LanDurationSeconds is >= 3 and <= 30 ? document.LanDurationSeconds : 8,
-                document.LanConnections is >= 1 and <= 16 ? document.LanConnections : 4);
+                document.LanConnections is >= 1 and <= 16 ? document.LanConnections : 4,
+                NormalizeReportsDirectory(document.ReportsDirectory),
+                document.ReportRetentionDays is >= 0 and <= 3650 ? document.ReportRetentionDays : 0);
         }
         catch (JsonException)
         {
@@ -236,6 +273,17 @@ public sealed class PhotinoSettingsStore
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private static string? NormalizeReportsDirectory(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var path = Path.GetFullPath(value.Trim());
+        if (File.Exists(path))
+        {
+            throw new ArgumentException("The reports location must be a directory, not a file.", nameof(value));
+        }
+        return path;
+    }
+
     private static string GetDefaultSettingsPath()
     {
         var baseDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -265,5 +313,7 @@ public sealed class PhotinoSettingsStore
         string? LanTarget = null,
         int LanPort = 8765,
         int LanDurationSeconds = 8,
-        int LanConnections = 4);
+        int LanConnections = 4,
+        string? ReportsDirectory = null,
+        int ReportRetentionDays = 0);
 }

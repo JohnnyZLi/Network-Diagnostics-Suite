@@ -141,6 +141,33 @@ public static class NetworkDiagnosticsRunner
         return LanThroughputServer.RunAsync(port, progress, cancellationToken);
     }
 
+    public static IReadOnlyList<string> ListLanServerAddresses() =>
+        LanThroughputServer.GetLocalAddresses();
+
+    public static Task<LanThroughputReport> RunLanThroughputAsync(
+        string target,
+        int port,
+        int durationSeconds,
+        int connections,
+        string? interfaceId = null,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (port is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+        if (durationSeconds is < 3 or > 30) throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+        if (connections is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(connections));
+        var binding = NetworkBindingResolver.Resolve(interfaceId);
+        return LanThroughputClient.RunAsync(
+            target.Trim(),
+            port,
+            durationSeconds,
+            connections,
+            progress,
+            cancellationToken,
+            binding?.SourceAddress);
+    }
+
     private static ProbeOptions CreateProbeOptions(
         TestProfileId profile,
         TransferMethod method,

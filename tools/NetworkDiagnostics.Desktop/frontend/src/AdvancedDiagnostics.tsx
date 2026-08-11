@@ -1,25 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
+import type {
+  AdvancedSettings,
+  DiagnosticProfile,
+  DownloadPathPreference,
+  InterfaceChoice,
+  LanServerStatus,
+  LanThroughputReport,
+  PreflightResult,
+  TransferMethod,
+} from './contracts';
 import './advanced.css';
 
-type TransferMethod = 'compare' | 'single' | 'aggregate';
-type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
 type AdvancedTool = 'configuration' | 'lan';
-
-type AdvancedSettings = {
-  endpointCandidates: string[];
-  interfaceId?: string | null;
-  includeLocalIdentifiers: boolean;
-  lanTarget?: string | null;
-  lanPort: number;
-  lanDurationSeconds: number;
-  lanConnections: number;
-};
-
-type InterfaceChoice = Record<string, unknown>;
-type PreflightResult = { measurement?: unknown; interfaces?: InterfaceChoice[] };
-type LanServerStatus = { running: boolean; port?: number };
-type LanServerStart = { running: boolean; port: number };
+type LanServerStart = LanServerStatus & { running: true; port: number };
 
 export type AdvancedRuntimeStatus = {
   hasOverrides: boolean;
@@ -41,31 +35,49 @@ const defaultSettings: AdvancedSettings = {
 export function AdvancedDiagnostics({
   profile,
   method,
+  downloadPath,
+  initialSettings,
+  initialInterfaces,
+  initialPreflight,
+  onSettingsChange,
+  onPreflightChange,
   onStatusChange,
+  initialTool = 'configuration',
   resetRequest = 0,
   preflightRequest = 0,
 }: {
   profile: DiagnosticProfile;
   method: TransferMethod;
+  downloadPath: DownloadPathPreference;
+  initialSettings?: AdvancedSettings | null;
+  initialInterfaces?: InterfaceChoice[];
+  initialPreflight?: PreflightResult | null;
+  onSettingsChange?: (settings: AdvancedSettings) => void;
+  onPreflightChange?: (preflight: PreflightResult) => void;
   onStatusChange?: (status: AdvancedRuntimeStatus) => void;
+  initialTool?: AdvancedTool;
   resetRequest?: number;
   preflightRequest?: number;
 }) {
   const preflightRef = useRef<HTMLElement>(null);
-  const persistedSettings = useRef<AdvancedSettings>(defaultSettings);
+  const persistedSettings = useRef<AdvancedSettings>(initialSettings ?? defaultSettings);
   // A remount can happen when the normal Run Diagnostics interface control updates
   // persisted configuration. Treat the current reset token as already handled so a
   // historical Reset click cannot unexpectedly wipe a later interface selection.
   const handledResetRequest = useRef(resetRequest);
   const handledPreflightRequest = useRef(preflightRequest);
-  const [tool, setTool] = useState<AdvancedTool>('configuration');
-  const [settings, setSettings] = useState<AdvancedSettings>(defaultSettings);
-  const [endpointText, setEndpointText] = useState('');
-  const [interfaces, setInterfaces] = useState<InterfaceChoice[]>([]);
-  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [tool, setTool] = useState<AdvancedTool>(initialTool);
+  const [settings, setSettings] = useState<AdvancedSettings>(initialSettings ?? defaultSettings);
+  const [endpointText, setEndpointText] = useState((initialSettings ?? defaultSettings).endpointCandidates.join('\n'));
+  const [interfaces, setInterfaces] = useState<InterfaceChoice[]>(initialInterfaces ?? []);
+  const [preflight, setPreflight] = useState<PreflightResult | null>(initialPreflight ?? null);
   const [serverRunning, setServerRunning] = useState(false);
   const [serverPort, setServerPort] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [serverAddresses, setServerAddresses] = useState<string[]>([]);
+  const [lanClientRunning, setLanClientRunning] = useState(false);
+  const [lanClientMessage, setLanClientMessage] = useState<string | null>(null);
+  const [lanResult, setLanResult] = useState<LanThroughputReport | null>(null);
+  const [loading, setLoading] = useState(!initialSettings);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +92,8 @@ export function AdvancedDiagnostics({
     setLoading(true);
     setError(null);
     void Promise.all([
-      desktopBridge.request<AdvancedSettings>('settings.getAdvanced'),
-      desktopBridge.request<InterfaceChoice[]>('diagnostic.interfaces'),
+      initialSettings ? Promise.resolve(initialSettings) : desktopBridge.request<AdvancedSettings>('settings.getAdvanced'),
+      initialInterfaces?.length ? Promise.resolve(initialInterfaces) : desktopBridge.request<InterfaceChoice[]>('diagnostic.interfaces'),
       desktopBridge.request<LanServerStatus>('lan.server.status'),
     ]).then(([saved, choices, server]) => {
       if (cancelled) return;
@@ -92,6 +104,7 @@ export function AdvancedDiagnostics({
       setInterfaces(choices);
       setServerRunning(server.running);
       setServerPort(activePort);
+      setServerAddresses(server.addresses ?? []);
       setDirty(false);
       emitStatus(saved, server.running, activePort);
     }).catch((value: Error) => {
@@ -103,9 +116,10 @@ export function AdvancedDiagnostics({
   }, []);
 
   useEffect(() => {
-    const removeStarted = desktopBridge.on<{ port: number }>('lan.server.started', (next) => {
+    const removeStarted = desktopBridge.on<LanServerStart>('lan.server.started', (next) => {
       setServerRunning(true);
       setServerPort(next.port);
+      setServerAddresses(next.addresses ?? []);
       setNotice('LAN throughput server started.');
       emitStatus(persistedSettings.current, true, next.port);
     });
@@ -120,7 +134,27 @@ export function AdvancedDiagnostics({
       setError(next.message);
       emitStatus(persistedSettings.current, false, null);
     });
-    return () => { removeStarted(); removeStopped(); removeFailed(); };
+    const removeClientProgress = desktopBridge.on<{ message: string }>('lan.client.progress', (next) => {
+      setLanClientRunning(true);
+      setLanClientMessage(next.message);
+    });
+    const removeClientCompleted = desktopBridge.on<{ report: LanThroughputReport }>('lan.client.completed', (next) => {
+      setLanClientRunning(false);
+      setLanClientMessage('LAN throughput measurement complete.');
+      setLanResult(next.report);
+      setNotice('LAN throughput measurement complete.');
+    });
+    const removeClientCancelled = desktopBridge.on('lan.client.cancelled', () => {
+      setLanClientRunning(false);
+      setLanClientMessage(null);
+      setNotice('LAN throughput measurement cancelled.');
+    });
+    const removeClientFailed = desktopBridge.on<{ message: string }>('lan.client.failed', (next) => {
+      setLanClientRunning(false);
+      setLanClientMessage(null);
+      setError(next.message);
+    });
+    return () => { removeStarted(); removeStopped(); removeFailed(); removeClientProgress(); removeClientCompleted(); removeClientCancelled(); removeClientFailed(); };
   }, []);
 
   useEffect(() => {
@@ -186,6 +220,7 @@ export function AdvancedDiagnostics({
     setSettings(next);
     setEndpointText(next.endpointCandidates.join('\n'));
     setDirty(false);
+    onSettingsChange?.(next);
     emitStatus(next, serverRunning, serverPort);
     return next;
   }
@@ -214,6 +249,7 @@ export function AdvancedDiagnostics({
       setEndpointText(next.endpointCandidates.join('\n'));
       setPreflight(null);
       setDirty(false);
+      onSettingsChange?.(next);
       emitStatus(next, serverRunning, serverPort);
       setNotice(serverRunning
         ? `Run configuration reset. The LAN server is still listening on :${serverPort ?? settings.lanPort}.`
@@ -232,9 +268,10 @@ export function AdvancedDiagnostics({
     setPreflight(null);
     try {
       if (!await persist()) return;
-      const result = await desktopBridge.request<PreflightResult>('diagnostic.preflight', { profile, method });
+      const result = await desktopBridge.request<PreflightResult>('diagnostic.preflight', { profile, method, downloadPath });
       setPreflight(result);
       if (result.interfaces?.length) setInterfaces(result.interfaces);
+      onPreflightChange?.(result);
       setNotice('Native preflight completed with the saved configuration.');
       setTool('configuration');
       window.requestAnimationFrame(() => preflightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
@@ -262,11 +299,49 @@ export function AdvancedDiagnostics({
         const started = await desktopBridge.request<LanServerStart>('lan.server.start', { port: saved.lanPort });
         setServerRunning(started.running);
         setServerPort(started.running ? started.port : null);
+        setServerAddresses(started.addresses ?? []);
         emitStatus(saved, started.running, started.running ? started.port : null);
         setNotice(`LAN throughput server listening on port ${started.port}.`);
       }
     } catch (value) {
       setError(value instanceof Error ? value.message : 'LAN throughput server could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runLanClient() {
+    if (lanClientRunning) {
+      try {
+        await desktopBridge.request('lan.client.cancel');
+      } catch (value) {
+        setError(value instanceof Error ? value.message : 'The LAN measurement could not be cancelled.');
+      }
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    setLanResult(null);
+    try {
+      const saved = await persist();
+      if (!saved) return;
+      if (!saved.lanTarget?.trim()) {
+        setError('Enter the hostname or local IP address of a Network Diagnostics LAN server.');
+        return;
+      }
+      await desktopBridge.request('lan.client.run', {
+        target: saved.lanTarget,
+        port: saved.lanPort,
+        durationSeconds: saved.lanDurationSeconds,
+        connections: saved.lanConnections,
+        interfaceId: saved.interfaceId ?? null,
+      });
+      setLanClientRunning(true);
+      setLanClientMessage(`Connecting to ${saved.lanTarget}:${saved.lanPort}…`);
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'The LAN throughput measurement could not start.');
     } finally {
       setBusy(false);
     }
@@ -280,7 +355,7 @@ export function AdvancedDiagnostics({
     <section id="advanced-diagnostics" className="workbench-section advanced-workbench" aria-labelledby="advanced-workbench-title">
       <div className="workbench-section-header advanced-workbench-header">
         <div>
-          <h2 id="advanced-workbench-title">ADVANCED DIAGNOSTICS</h2>
+          <h1 id="advanced-workbench-title">Advanced Diagnostics</h1>
           <p>Configure how native diagnostics reach the network, validate that setup, or use dedicated LAN tools.</p>
         </div>
         <div className="advanced-header-status">
@@ -372,11 +447,17 @@ export function AdvancedDiagnostics({
                   <label className="advanced-field"><span>Duration</span><div className="advanced-input-unit"><input type="number" min={3} max={30} value={settings.lanDurationSeconds} onChange={(event) => patchSettings('lanDurationSeconds', Number(event.target.value))} /><span>sec</span></div></label>
                   <label className="advanced-field"><span>Connections</span><input type="number" min={1} max={16} value={settings.lanConnections} onChange={(event) => patchSettings('lanConnections', Number(event.target.value))} /></label>
                 </div>
+                <div className="advanced-lan-client-actions">
+                  <button type="button" className={lanClientRunning ? 'advanced-secondary stop' : 'advanced-primary'} disabled={busy || (!lanClientRunning && !settings.lanTarget?.trim())} onClick={() => void runLanClient()}>{lanClientRunning ? 'Cancel LAN test' : dirty ? 'Save & run LAN test' : 'Run LAN test'}</button>
+                  {lanClientMessage && <span className="lan-client-progress" role="status"><i />{lanClientMessage}</span>}
+                </div>
+                {lanResult && <div className="lan-result-instrument" aria-label="LAN throughput result"><div><span>Latency</span><strong>{lanResult.latency.medianMs == null ? '—' : `${formatNumber(lanResult.latency.medianMs)} ms`}</strong><small>{formatNumber(lanResult.latency.lossPercent)}% loss</small></div><div><span>Download</span><strong>{formatNumber(lanResult.downloadMbps)} Mbps</strong><small>{formatBytes(lanResult.downloadBytes)} received</small></div><div><span>Upload</span><strong>{formatNumber(lanResult.uploadMbps)} Mbps</strong><small>{formatBytes(lanResult.uploadBytes)} sent</small></div><div><span>Peer</span><strong>{lanResult.resolvedAddress || lanResult.target}</strong><small>{lanResult.concurrency} streams · {formatNumber(lanResult.durationMs / 1000)} sec each way</small></div></div>}
               </section>
 
               <section className="advanced-section advanced-server-section">
                 <div className="advanced-section-heading"><div><strong>LAN throughput server</strong><span>Native listener for another device</span></div><span className={`advanced-server-state ${serverRunning ? 'running' : ''}`}><i />{serverRunning ? `Listening · :${displayedServerPort}` : 'Stopped'}</span></div>
-                <div className="advanced-server-card"><div><strong>{serverRunning ? `Listening on TCP ${displayedServerPort}` : `TCP port ${settings.lanPort}`}</strong><p>Start a local native listener, then point another Network Diagnostics client at this machine.</p></div><button type="button" disabled={busy} className={serverRunning ? 'stop' : ''} onClick={() => void toggleLanServer()}>{serverRunning ? 'Stop server' : dirty ? 'Save & start server' : 'Start server'}</button></div>
+                <div className="advanced-server-card"><div><strong>{serverRunning ? `Listening on TCP ${displayedServerPort}` : `TCP port ${settings.lanPort}`}</strong><p>Start the listener on this machine. On the other device, enter one of the targets below and run the LAN client test.</p></div><button type="button" disabled={busy} className={serverRunning ? 'stop' : ''} onClick={() => void toggleLanServer()}>{serverRunning ? 'Stop server' : dirty ? 'Save & start server' : 'Start server'}</button></div>
+                {serverRunning && <div className="lan-pairing-targets"><span>PAIRING TARGETS</span>{serverAddresses.length > 0 ? serverAddresses.map((address) => <button type="button" key={address} title="Copy LAN target" onClick={() => void navigator.clipboard?.writeText(address)}><strong>{address}</strong><small>TCP {displayedServerPort} · Copy</small></button>) : <p>No usable IPv4 address was detected. Use this machine’s LAN hostname with port {displayedServerPort}.</p>}</div>}
               </section>
               <div className="advanced-pane-actions"><button type="button" className="advanced-primary" disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Working…' : 'Save LAN settings'}</button></div>
             </div>
@@ -421,6 +502,11 @@ function interfaceLabel(choice: InterfaceChoice, fallback: string): string {
 function stringValue(record: Record<string, unknown>, keys: string[]): string | null { for (const key of keys) { const value = record[key]; if (typeof value === 'string' && value.trim()) return value; } return null; }
 function numberValue(record: Record<string, unknown>, keys: string[]): number | null { for (const key of keys) { const value = record[key]; if (typeof value === 'number' && Number.isFinite(value)) return value; } return null; }
 function formatNumber(value: number): string { return new Intl.NumberFormat(undefined, { maximumFractionDigits: value >= 100 ? 0 : 1 }).format(value); }
+function formatBytes(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0 MB';
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`;
+  return `${(value / 1_000_000).toFixed(value >= 100_000_000 ? 0 : 1)} MB`;
+}
 function findString(value: unknown, keys: string[]): string | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as Record<string, unknown>;

@@ -4,6 +4,8 @@ This archive contains the Photino.NET rebuild of the Network Diagnostics desktop
 
 The application is self-contained; the .NET runtime does not need to be installed.
 
+Only one application instance runs for a user by default so monitoring, active diagnostics, and report storage are not duplicated. Developers and automated visual checks can opt out with `--allow-multiple-instances`.
+
 ## Available in this build
 
 - Three primary workspaces keep the instrument compact: **Live Network Health**, **Run Diagnostics**, and **Advanced Diagnostics**. History, alerts, and settings remain secondary panels.
@@ -13,11 +15,11 @@ The application is self-contained; the .NET runtime does not need to be installe
 - The setup workspace shows the actual native run plan: estimated runtime, transfer cap, baseline sampling, download runs, service checks, diagnostic depth, and every connection stage.
 - Native preflight data shows the selected endpoint, provider/network, edge, latency, interface, requested download path, actual delivery path, and R2 availability or fallback behavior before launch.
 - Each profile has an explicit measurement manifest. Full and Stress include the wider native system suite: interface/network context, gateway and ICMP latency, traceroute, DNS resolvers, path MTU, service reachability, Wi-Fi/routing data, loaded-path localization, dual-stack and HTTP/3 data, network-change detection, and host-resource data where supported.
-- A running diagnostic replaces setup controls with phase, stage, overall progress, payload, live latency/throughput, active path, and cancellation controls.
-- A completed diagnostic immediately prioritizes the native verdict, findings, measurements, actual delivery path, recommended next step, saved report, and expandable technical data.
-- **Advanced Diagnostics** covers ordered endpoint candidates, explicit interface binding, local-identifier privacy, native preflight, and LAN peer/server throughput tools.
-- **History** supports saved-run search/filtering, report detail, findings, measurements, technical data, comparison, JSON import/export, and persisted labels/tags.
-- **Settings** owns System/Light/Dark appearance and expected capacity. Diagnostic configuration remains in the workbench.
+- A running diagnostic replaces setup controls with native phase and stage progress, elapsed/remaining time, transferred payload, live latency/throughput, the active path, and cancellation controls.
+- A completed diagnostic immediately prioritizes the native verdict, findings, measurements, actual delivery path, recommended next step, and expandable schema 2.0 technical data. A result remains usable and exportable in the current session if its automatic local save fails, with an explicit retry action.
+- **Advanced Diagnostics** covers ordered endpoint candidates, explicit interface binding, local-identifier privacy, native preflight, a standalone LAN throughput client, and a LAN server with copyable pairing targets.
+- **History** supports saved-run search/filtering, report detail, findings, measurements, full schema 2.0 technical data, comparison, deletion, JSON import/export, and persisted labels/tags.
+- **Settings** owns System/Light/Dark appearance, expected capacity, passive-monitor cadence and alert thresholds, the reports directory, and report retention. Diagnostic configuration remains in the workbench.
 - **Cmd/Ctrl-F** opens a keyboard command palette for workspaces, profiles, topologies, download paths, preflight, run/cancel actions, alerts, and History.
 - Schema 2.0 reports continue to use the existing atomic native report store and remain compatible with existing readers.
 

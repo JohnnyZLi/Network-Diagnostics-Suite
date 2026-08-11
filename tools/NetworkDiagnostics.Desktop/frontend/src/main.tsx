@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { MotionConfig } from 'motion/react';
 import App from './App';
 import './app.css';
 import './interface-picker.css';
@@ -23,6 +24,8 @@ if (navigator.platform.toLowerCase().startsWith('mac')) {
 const rootElement = document.getElementById('root')!;
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <MotionConfig reducedMotion="user" transition={{ duration: 0.16, ease: [0.2, 0.8, 0.2, 1] }}>
+      <App />
+    </MotionConfig>
   </StrictMode>,
 );

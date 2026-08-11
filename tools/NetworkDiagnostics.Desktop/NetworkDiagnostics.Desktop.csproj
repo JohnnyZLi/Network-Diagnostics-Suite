@@ -7,6 +7,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>NetworkDiagnosticsDesktop</AssemblyName>
     <RootNamespace>NetworkDiagnostics.Desktop</RootNamespace>
+    <Product>Network Diagnostics</Product>
+    <Description>Native desktop network diagnostics instrument</Description>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <ApplicationIcon>Resources/AppIcon.ico</ApplicationIcon>
     <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64;linux-x64;linux-arm64</RuntimeIdentifiers>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -29,7 +33,8 @@
     <Compile Include="Presentation/NetworkExperiencePresentation.cs" />
     <Compile Include="Services/ReportComparisonService.cs" />
     <Compile Include="Services/ReportStore.cs" />
-    <EmbeddedResource Include="Resources/**/*" />
+    <EmbeddedResource Include="Resources/wwwroot/**/*" />
+    <Content Include="Resources/AppIcon.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

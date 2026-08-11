@@ -152,18 +152,23 @@ public sealed class PhotinoMigrationTests
             Assert.Equal(8765, defaults.LanPort);
             Assert.Equal(8, defaults.LanDurationSeconds);
             Assert.Equal(4, defaults.LanConnections);
+            Assert.Null(defaults.ReportsDirectory);
+            Assert.Equal(0, defaults.ReportRetentionDays);
 
             store.SaveAppearance(AppearancePreference.Dark);
             store.SaveMonitoringEnabled(false);
             store.SaveMonitoringWindow(MonitorWindow.OneHour);
             store.SaveExpectedCapacity(940, 115);
             store.SaveAdvanced(["https://one.example/", "https://two.example/"], "interface-1", true, "192.168.1.20", 9000, 12, 6);
+            var reportsDirectory = Path.Combine(directory, "custom-reports");
+            store.SaveApplicationPreferences(12, 64, reportsDirectory, 45);
 
             var reloaded = new PhotinoSettingsStore(settingsPath).Load();
             Assert.Equal(AppearancePreference.Dark, reloaded.Appearance);
             Assert.False(reloaded.MonitoringEnabled);
             Assert.Equal(MonitorWindow.OneHour, reloaded.SelectedMonitoringWindow);
-            Assert.Equal(TimeSpan.FromSeconds(5), reloaded.ToMonitorOptions().Interval);
+            Assert.Equal(TimeSpan.FromSeconds(12), reloaded.ToMonitorOptions().Interval);
+            Assert.Equal(64, reloaded.MonitoringAlertScoreThreshold);
             Assert.Equal(940, reloaded.ExpectedDownloadMbps);
             Assert.Equal(115, reloaded.ExpectedUploadMbps);
             Assert.Equal(["https://one.example/", "https://two.example/"], reloaded.TestOrigins);
@@ -173,6 +178,8 @@ public sealed class PhotinoMigrationTests
             Assert.Equal(9000, reloaded.LanPort);
             Assert.Equal(12, reloaded.LanDurationSeconds);
             Assert.Equal(6, reloaded.LanConnections);
+            Assert.Equal(Path.GetFullPath(reportsDirectory), reloaded.ReportsDirectory);
+            Assert.Equal(45, reloaded.ReportRetentionDays);
             Assert.DoesNotContain(".tmp", Directory.EnumerateFiles(directory).Single());
         }
         finally

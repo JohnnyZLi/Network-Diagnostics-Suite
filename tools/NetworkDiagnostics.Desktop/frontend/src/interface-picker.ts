@@ -29,8 +29,9 @@ function closePicker(returnFocus = false) {
   picker = null;
   menu.remove();
   select.classList.remove('app-select-open');
-  select.removeAttribute('aria-expanded');
+  select.setAttribute('aria-expanded', 'false');
   select.removeAttribute('aria-controls');
+  select.removeAttribute('aria-activedescendant');
   if (returnFocus && document.contains(select)) select.focus({ preventScroll: true });
 }
 
@@ -38,7 +39,9 @@ function updateActiveOption() {
   if (!picker) return;
   const optionButtons = Array.from(picker.menu.querySelectorAll<HTMLButtonElement>('.app-select-option'));
   optionButtons.forEach((button, index) => button.classList.toggle('active', index === picker?.activeIndex));
-  optionButtons[picker.activeIndex]?.scrollIntoView({ block: 'nearest' });
+  const active = optionButtons[picker.activeIndex];
+  if (active) picker.select.setAttribute('aria-activedescendant', active.id);
+  active?.scrollIntoView({ block: 'nearest' });
 }
 
 function moveActiveOption(delta: number) {
@@ -123,6 +126,7 @@ function openPicker(select: HTMLSelectElement, initialMove = 0) {
     const parts = splitOptionLabel(option);
     const row = document.createElement('button');
     row.type = 'button';
+    row.id = `${MENU_ID}-option-${index}`;
     row.className = `app-select-option${option.value === '' ? ' automatic' : ''}${option.selected || option.value === select.value ? ' selected' : ''}`;
     row.setAttribute('role', 'option');
     row.setAttribute('aria-selected', option.selected || option.value === select.value ? 'true' : 'false');
@@ -155,6 +159,7 @@ function openPicker(select: HTMLSelectElement, initialMove = 0) {
   document.body.appendChild(menu);
   picker = { select, menu, options, activeIndex: selectedIndex };
   select.classList.add('app-select-open');
+  select.setAttribute('aria-haspopup', 'listbox');
   select.setAttribute('aria-expanded', 'true');
   select.setAttribute('aria-controls', MENU_ID);
   select.focus({ preventScroll: true });
@@ -228,6 +233,22 @@ document.addEventListener('keydown', (event) => {
       break;
     case 'Tab':
       closePicker();
+      break;
+    default:
+      if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const currentPicker = picker;
+        if (!currentPicker) break;
+        const key = event.key.toLocaleLowerCase();
+        const start = currentPicker.activeIndex + 1;
+        const match = currentPicker.options.findIndex((_option, offset) => {
+          const index = (start + offset) % currentPicker.options.length;
+          return splitOptionLabel(currentPicker.options[index]).primary.toLocaleLowerCase().startsWith(key);
+        });
+        if (match >= 0) {
+          event.preventDefault();
+          setActiveOption((start + match) % currentPicker.options.length);
+        }
+      }
       break;
   }
 });

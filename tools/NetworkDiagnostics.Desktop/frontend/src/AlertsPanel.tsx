@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { desktopBridge } from './bridge';
 import type { MonitorSnapshot } from './ContinuousDiagnostics';
+import { useModalFocus } from './dialog-focus';
 import './alerts.css';
 
 export function AlertsPanel({
@@ -17,6 +18,9 @@ export function AlertsPanel({
   const [busy, setBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useModalFocus(open, panelRef, onClose, closeRef);
 
   useEffect(() => {
     if (!open) {
@@ -24,17 +28,12 @@ export function AlertsPanel({
       setError(null);
       return;
     }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (target instanceof Element && target.closest('.settings-trigger')) onClose();
     };
-    window.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown, true);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown, true);
     };
   }, [open, onClose]);
@@ -67,14 +66,14 @@ export function AlertsPanel({
   return (
     <div className="alerts-layer">
       <button type="button" className="alerts-backdrop" aria-label="Close alerts" onClick={onClose} />
-      <aside className="alerts-panel" role="dialog" aria-modal="true" aria-labelledby="alerts-title">
+      <aside ref={panelRef} className="alerts-panel" role="dialog" aria-modal="true" aria-labelledby="alerts-title" tabIndex={-1}>
         <header className="alerts-header">
           <div>
             <span>NETWORK EVENTS</span>
             <h2 id="alerts-title">Issues & alerts</h2>
             <p>{snapshot ? alertSummary(snapshot) : 'Reading local monitoring history…'}</p>
           </div>
-          <button type="button" className="alerts-close" aria-label="Close alerts" onClick={onClose}>
+          <button ref={closeRef} type="button" className="alerts-close" aria-label="Close alerts" onClick={onClose}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
           </button>
         </header>

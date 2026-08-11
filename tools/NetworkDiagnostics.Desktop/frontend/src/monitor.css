@@ -3,7 +3,7 @@
 }
 
 .live-health-header h1 {
-  font-size: clamp(30px, 2.8vw, 40px);
+  font-size: clamp(30px, 2.2vw, 38px);
   font-weight: 760;
   line-height: 1;
   letter-spacing: -.035em;
@@ -20,7 +20,7 @@
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 680;
   white-space: nowrap;
 }
@@ -40,15 +40,15 @@
 
 .monitor-toggle,
 .monitor-share-menu > summary {
-  height: 40px;
-  padding: 0 14px;
+  height: 44px;
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -91,12 +91,12 @@
 }
 
 .monitor-share-menu > div button {
-  height: 42px;
+  height: 46px;
   padding: 0 12px;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -110,14 +110,14 @@
   padding: 6px 8px;
   border-top: 1px solid var(--line);
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
 .monitor-error,
 .monitor-notice,
 .diagnostic-load-notice {
-  min-height: 39px;
+  min-height: 44px;
   margin-bottom: 10px;
   padding: 8px 11px;
   display: flex;
@@ -127,7 +127,7 @@
   border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .monitor-error {
@@ -155,17 +155,17 @@
 
 .diagnostic-load-notice strong {
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .diagnostic-load-notice p {
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .live-health-dashboard {
   display: grid;
   grid-template-columns: minmax(370px, .8fr) minmax(500px, 1.2fr);
-  gap: 16px;
+  gap: 20px;
   align-items: stretch;
 }
 
@@ -184,22 +184,22 @@
   flex-direction: column;
 }
 
-  .live-health-hero {
-  min-height: 310px;
-  padding: 24px;
+.live-health-hero {
+  min-height: 360px;
+  padding: 30px;
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 178px minmax(0, 1fr);
   align-items: center;
-  gap: 24px;
+  gap: 30px;
   flex: 1 1 auto;
   background:
     radial-gradient(circle at 10% 48%, var(--good-soft), transparent 45%),
     var(--surface);
 }
 
-  .health-score-orb {
-  width: 144px;
-  height: 144px;
+.health-score-orb {
+  width: 170px;
+  height: 170px;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -210,15 +210,15 @@
   box-shadow: inset 0 0 0 6px color-mix(in srgb, var(--surface-soft) 70%, transparent);
 }
 
-  .health-score-orb strong {
-  font: 770 46px/.95 ui-monospace, SFMono-Regular, Menlo, monospace;
+.health-score-orb strong {
+  font: 770 52px/.95 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: -.08em;
 }
 
 .health-score-orb span {
   max-width: 108px;
   overflow: hidden;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 730;
   text-align: center;
   text-overflow: ellipsis;
@@ -228,7 +228,7 @@
 .health-score-orb small {
   max-width: 104px;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.15;
   text-align: center;
 }
@@ -258,7 +258,7 @@
 }
 
 .live-health-summary h2 {
-  font-size: clamp(24px, 2.25vw, 32px);
+  font-size: clamp(27px, 2.25vw, 36px);
   font-weight: 750;
   line-height: 1.08;
   letter-spacing: -.03em;
@@ -266,8 +266,8 @@
 
 .live-health-summary > p {
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15.5px;
+  line-height: 1.45;
 }
 
 .live-health-metrics {
@@ -279,8 +279,8 @@
 
 .live-health-metrics > div {
   min-width: 0;
-  min-height: 52px;
-  padding: 9px 10px;
+  min-height: 62px;
+  padding: 11px 12px;
   display: grid;
   gap: 1px;
   border-right: 1px solid var(--line);
@@ -289,12 +289,12 @@
 
 .live-health-metrics span {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .live-health-metrics strong {
   overflow: hidden;
-  font: 730 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 730 17px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -314,31 +314,31 @@
 
 .health-recommendation > span {
   color: var(--faint);
-  font: 730 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 730 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 
 .health-recommendation strong {
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .health-recommendation p {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.35;
 }
 
 .health-recommendation .inline-action {
   width: max-content;
   margin-top: 2px;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .latest-diagnostic-summary {
-  min-height: 88px;
+  min-height: 104px;
   margin-top: auto;
-  padding: 14px 16px;
+  padding: 16px 18px;
   display: grid;
   gap: 8px;
   border-top: 1px solid var(--line);
@@ -347,7 +347,7 @@
 
 .latest-diagnostic-summary > span {
   color: var(--faint);
-  font: 700 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 700 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
@@ -368,7 +368,7 @@
 
 .latest-diagnostic-summary strong {
   overflow: hidden;
-  font-size: 14px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -377,7 +377,7 @@
   display: -webkit-box;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.3;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -387,19 +387,19 @@
   min-height: 40px;
   padding-inline: 13px;
   flex: 0 0 auto;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .live-timeline-section {
-  min-height: 400px;
-  padding: 18px 20px;
+  min-height: clamp(470px, 52dvh, 560px);
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
 }
 
 .live-timeline-heading {
-  min-height: 48px;
-  margin-bottom: 11px;
+  min-height: 54px;
+  margin-bottom: 13px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -413,12 +413,12 @@
 }
 
 .live-timeline-heading strong {
-  font-size: 14.5px;
+  font-size: 16px;
 }
 
 .live-timeline-heading span {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .monitor-window-control,
@@ -435,13 +435,13 @@
 
 .monitor-window-control button,
 .timeline-metric-control button {
-  min-width: 56px;
-  height: 34px;
+  min-width: 62px;
+  height: 38px;
   padding: 0 9px;
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 680;
   cursor: pointer;
 }
@@ -454,9 +454,9 @@
 }
 
 .timeline-range-summary {
-  min-height: 38px;
+  min-height: 44px;
   margin-bottom: 10px;
-  padding: 0 11px;
+  padding: 0 13px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -465,13 +465,13 @@
   border-radius: 6px;
   background: var(--control);
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .timeline-range-summary strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 13.5px;
 }
 
 .timeline-analysis {
@@ -482,7 +482,7 @@
 }
 
 .timeline-chart-toolbar {
-  min-height: 42px;
+  min-height: 48px;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -498,11 +498,11 @@
 
 .timeline-chart-reading span {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .timeline-chart-reading strong {
-  font: 720 13.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 720 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .timeline-chart-frame {
@@ -519,18 +519,18 @@
 
 .timeline-chart-frame svg {
   width: 100%;
-  height: 220px;
+  height: clamp(260px, 30dvh, 340px);
   display: block;
   overflow: visible;
 }
 
 .timeline-chart-frame.sparse {
   display: grid;
-  grid-template-rows: 196px 24px;
+  grid-template-rows: minmax(236px, 1fr) 30px;
 }
 
 .timeline-chart-frame.sparse svg {
-  height: 196px;
+  height: clamp(236px, 27dvh, 310px);
 }
 
 .timeline-grid-line,
@@ -547,7 +547,7 @@
 .timeline-axis-label,
 .timeline-time-label {
   fill: var(--faint);
-  font: 600 11.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .timeline-series-line {
@@ -597,17 +597,17 @@
   justify-self: end;
   padding: 0 8px;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .timeline-chart-legend {
-  min-height: 32px;
+  min-height: 38px;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
   gap: 14px;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .timeline-chart-legend span {
@@ -637,16 +637,16 @@
 }
 
 .live-health-components {
-  min-height: 188px;
-  margin-top: 16px;
+  min-height: 228px;
+  margin-top: 20px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .monitor-component-card {
   min-width: 0;
-  min-height: 188px;
-  padding: 18px 20px;
+  min-height: 228px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
 }
@@ -657,7 +657,7 @@
 
 .monitor-component-top,
 .capacity-card-heading {
-  min-height: 44px;
+  min-height: 50px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -674,7 +674,7 @@
 .monitor-component-top span,
 .capacity-card-heading span {
   color: var(--faint);
-  font: 720 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 720 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .07em;
   text-transform: uppercase;
 }
@@ -682,14 +682,14 @@
 .monitor-component-top strong,
 .capacity-card-heading strong {
   overflow: hidden;
-  font-size: 14px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .monitor-component-top > b {
   color: var(--good);
-  font: 750 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 750 19px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .component-headline-metric {
@@ -700,17 +700,17 @@
 }
 
 .component-headline-metric strong {
-  font: 740 22px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 740 25px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .component-headline-metric span {
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .monitor-component-card > p {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -734,13 +734,13 @@
 .monitor-component-metrics span,
 .capacity-values span {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .monitor-component-metrics strong,
 .capacity-values strong {
   overflow: hidden;
-  font: 700 13.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 700 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -750,7 +750,7 @@
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--good);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .capacity-expectations {
@@ -758,7 +758,7 @@
   display: flex;
   justify-content: space-between;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .capacity-expectations strong {
@@ -773,13 +773,13 @@
 }
 
 .monitor-card-action {
-  height: 38px;
-  padding: 0 13px;
+  height: 42px;
+  padding: 0 15px;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: 6px;
   background: var(--accent-soft);
   color: var(--accent-strong);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
 }

@@ -21,6 +21,16 @@ internal static class Program
         Directory.SetCurrentDirectory(AppContext.BaseDirectory);
         ConfigureHeadlessLinuxWebKit();
 
+        var settingsRoot = new PhotinoSettingsStore().RootDirectory;
+        using var singleInstance = args.Contains("--allow-multiple-instances", StringComparer.Ordinal)
+            ? null
+            : DesktopSingleInstance.TryAcquire(settingsRoot);
+        if (singleInstance is null && !args.Contains("--allow-multiple-instances", StringComparer.Ordinal))
+        {
+            Console.Error.WriteLine("Network Diagnostics is already running for this user.");
+            return 0;
+        }
+
         var windowSize = InitialWindowSize(args);
         var serverArgs = args.Where(argument => !IsDesktopLaunchArgument(argument)).ToArray();
 
@@ -39,8 +49,15 @@ internal static class Program
                 .SetTitle("Network Diagnostics")
                 .SetUseOsDefaultSize(false)
                 .SetSize(windowSize)
+                .SetMinSize(960, 700)
                 .Center()
                 .SetResizable(true);
+
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "AppIcon.png");
+            if (File.Exists(iconPath))
+            {
+                window.SetIconFile(iconPath);
+            }
 
             if (OperatingSystem.IsMacOS())
             {
@@ -56,6 +73,7 @@ internal static class Program
             }
 
             bridge.Attach(window);
+            using var lifetime = new DesktopLifetime(window.Close);
             window.Load(BuildLaunchUrl(baseUrl, args));
             if (OperatingSystem.IsMacOS())
             {
@@ -98,7 +116,7 @@ internal static class Program
         var value = OptionValue(args, "window-size");
         if (value is null)
         {
-            return new Size(1180, 800);
+            return new Size(1360, 860);
         }
 
         var dimensions = value.Split('x', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
@@ -106,7 +124,7 @@ internal static class Program
             || !int.TryParse(dimensions[0], out var width)
             || !int.TryParse(dimensions[1], out var height))
         {
-            return new Size(1180, 800);
+            return new Size(1360, 860);
         }
 
         return new Size(Math.Clamp(width, 900, 2560), Math.Clamp(height, 680, 1600));
@@ -126,6 +144,7 @@ internal static class Program
         AddAllowedOption(query, args, "method", ["compare", "single", "aggregate"]);
         AddAllowedOption(query, args, "download-path", ["automatic", "direct-r2", "worker"]);
         AddAllowedOption(query, args, "panel", ["history", "alerts", "settings"]);
+        AddAllowedOption(query, args, "advanced-tool", ["configuration", "lan"]);
         AddAllowedOption(query, args, "run", ["connection-check"]);
         AddAllowedOption(query, args, "open-interface-picker", ["run", "advanced"]);
 
@@ -162,7 +181,8 @@ internal static class Program
 
     private static bool IsDesktopLaunchArgument(string argument)
     {
-        string[] names = ["window-size", "workspace", "appearance", "profile", "method", "download-path", "panel", "run", "open-interface-picker"];
-        return names.Any(name => argument.StartsWith($"--{name}=", StringComparison.Ordinal));
+        string[] names = ["window-size", "workspace", "appearance", "profile", "method", "download-path", "panel", "advanced-tool", "run", "open-interface-picker"];
+        return string.Equals(argument, "--allow-multiple-instances", StringComparison.Ordinal)
+            || names.Any(name => argument.StartsWith($"--{name}=", StringComparison.Ordinal));
     }
 }

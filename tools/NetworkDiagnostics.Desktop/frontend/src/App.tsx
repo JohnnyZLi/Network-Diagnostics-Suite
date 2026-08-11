@@ -1,17 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { AdvancedDiagnostics, type AdvancedRuntimeStatus } from './AdvancedDiagnostics';
 import { AlertsPanel } from './AlertsPanel';
 import { desktopBridge } from './bridge';
 import { CommandPalette, type PaletteCommand } from './CommandPalette';
+import type {
+  AdvancedSettings,
+  AppearanceMode,
+  DiagnosticPlan,
+  DiagnosticProfile,
+  DiagnosticProgress,
+  DiagnosticResult,
+  DownloadDelivery,
+  DownloadPathPreference,
+  InterfaceChoice,
+  MeasurementPathSummary,
+  PreflightResult,
+  RunAccepted,
+  SavedReportDetail,
+  SavedReportSummary,
+  TransferMethod,
+  WorkbenchSection,
+} from './contracts';
 import { ContinuousDiagnostics, type MonitorSnapshot } from './ContinuousDiagnostics';
-import { HistoryPanel, type SavedReportSummary } from './HistoryPanel';
-import { SettingsMenu, type AppearanceMode } from './SettingsMenu';
-
-type TransferMethod = 'compare' | 'single' | 'aggregate';
-type DownloadPathPreference = 'automatic' | 'direct-r2' | 'worker';
-type DiagnosticProfile = 'connection-check' | 'quick' | 'full' | 'stress';
-type WorkbenchSection = 'live-network-health' | 'run-diagnostics' | 'advanced-diagnostics';
-type InterfaceChoice = Record<string, unknown>;
+import { HistoryPanel } from './HistoryPanel';
+import { SettingsMenu } from './SettingsMenu';
 
 type HostInfo = {
   product: string;
@@ -25,145 +38,11 @@ type HostInfo = {
 
 type AppearanceSettings = { appearance: AppearanceMode };
 
-type DiagnosticStage = {
-  id: string;
-  direction: 'download' | 'upload';
-  strategy: 'single' | 'aggregate';
-  connections: number;
-  durationMs: number;
-  capBytes: number;
-  samples: number;
-};
-
-type DiagnosticPlan = {
-  profile: DiagnosticProfile;
-  profileName: string;
-  method: TransferMethod;
-  downloadPath: DownloadPathPreference;
-  estimatedSeconds: number;
-  transferCapBytes: number;
-  includeServices: boolean;
-  deepDiagnostics: boolean;
-  idlePingCount: number;
-  pingIntervalMs: number;
-  downloadStages: DiagnosticStage[];
-  uploadStages: DiagnosticStage[];
-  downloadRuns: number;
-  maxDownloadConnections: number;
-  maxUploadConnections: number;
-  totalTransferStages: number;
-};
-
-type DownloadDelivery = {
-  requestedPath: string;
-  selectedPath: string;
-  r2ProbeStatus: string;
-  fallbackReason?: string | null;
-  r2Origin: string;
-  bytes: number;
-  requestsStarted: number;
-  requestsCompleted: number;
-  r2Requests: number;
-  workerRequests: number;
-};
-
-type RunAccepted = {
-  runId: string;
-  profile: DiagnosticProfile;
-  method: TransferMethod;
-  downloadPath: DownloadPathPreference;
-  transferCapBytes: number;
-};
-
-type DiagnosticProgress = {
-  runId: string;
-  phase: string;
-  message: string;
-  fraction: number;
-  liveMbps?: number | null;
-  liveLatencyMs?: number | null;
-  bytesTransferred: number;
-};
-
-type DiagnosticResult = {
-  runId: string;
-  reportId: string;
-  generatedAt: string;
-  profile: DiagnosticProfile;
-  method: TransferMethod;
-  downloadPath?: DownloadPathPreference;
-  downloadDelivery?: DownloadDelivery | null;
-  latencyMs?: number | null;
-  requestLossPercent?: number | null;
-  downloadMbps?: number | null;
-  uploadMbps?: number | null;
-  dataUsedBytes?: number | null;
-  savedLocally?: boolean;
-  storageError?: string | null;
-  storedReport?: SavedReportSummary | null;
-};
-
-type ReportPresentation = {
-  outcome: string;
-  label: string;
-  verdict: string;
-  summary: string;
-  nextAction: string;
-  metrics: Array<{ label: string; value: string; detail: string; wasMeasured: boolean }>;
-  findings: Array<{ label: string; title: string; summary: string }>;
-  technicalData?: string[];
-  technicalEvidence?: string[];
-};
-
-type SavedReportDetail = {
-  report: SavedReportSummary;
-  context: string;
-  method: string;
-  downloadDelivery?: DownloadDelivery | null;
-  measurement?: unknown;
-  presentation: ReportPresentation;
-};
-
 type PendingRun = {
   profile: DiagnosticProfile;
   method: TransferMethod;
   downloadPath: DownloadPathPreference;
   plan: DiagnosticPlan;
-};
-
-type AdvancedSettings = {
-  endpointCandidates: string[];
-  interfaceId?: string | null;
-  includeLocalIdentifiers: boolean;
-  lanTarget?: string | null;
-  lanPort: number;
-  lanDurationSeconds: number;
-  lanConnections: number;
-};
-
-type PreflightResult = {
-  measurement?: unknown;
-  interfaces?: InterfaceChoice[];
-  downloadPath?: {
-    requestedPath: string;
-    selectedPath: string;
-    r2ProbeStatus: string;
-    fallbackReason?: string | null;
-    r2Origin?: string | null;
-  };
-};
-
-type MeasurementPathSummary = {
-  endpoint: string;
-  origin: string;
-  providerNetwork: string;
-  edge: string;
-  latency: string;
-  interface: string;
-  protocol: string;
-  ipVersion: string;
-  tls: string;
-  http3: string;
 };
 
 type DiagnosticFailure = { runId: string; message: string; errorType: string };
@@ -224,6 +103,7 @@ const downloadPaths: Array<{ id: DownloadPathPreference; label: string; detail: 
 ];
 
 type StartupPanel = 'history' | 'alerts' | 'settings' | null;
+type StartupAdvancedTool = 'configuration' | 'lan';
 type StartupOptions = {
   appearance: AppearanceMode | null;
   profile: DiagnosticProfile;
@@ -231,6 +111,7 @@ type StartupOptions = {
   downloadPath: DownloadPathPreference;
   workspace: WorkbenchSection;
   panel: StartupPanel;
+  advancedTool: StartupAdvancedTool;
   runConnectionCheck: boolean;
 };
 
@@ -248,7 +129,10 @@ function App() {
   const [liveMetrics, setLiveMetrics] = useState<LiveMetrics>(emptyLiveMetrics);
   const [measuredBytes, setMeasuredBytes] = useState(0);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
-  const [latestReport, setLatestReport] = useState<SavedReportDetail | null>(null);
+  const [latestSavedReport, setLatestSavedReport] = useState<SavedReportDetail | null>(null);
+  const [currentResultDetail, setCurrentResultDetail] = useState<SavedReportDetail | null>(null);
+  const [resultActionBusy, setResultActionBusy] = useState<'save' | 'export' | null>(null);
+  const [resultNotice, setResultNotice] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(startupOptions.panel === 'history');
@@ -278,7 +162,6 @@ function App() {
   const activeProfile = useRef<DiagnosticProfile>('connection-check');
   const activeDownloadPath = useRef<DownloadPathPreference>('automatic');
   const highestProgress = useRef(0);
-  const stageBytes = useRef(new Map<string, number>());
   const appearanceRequest = useRef(0);
   const preflightRequest = useRef(0);
   const startupRunScheduled = useRef(false);
@@ -287,7 +170,7 @@ function App() {
   const displayedProfile = result ? profiles.find((item) => item.id === result.profile) ?? selectedProfile : selectedProfile;
   const selectedPath = downloadPaths.find((item) => item.id === downloadPath) ?? downloadPaths[0];
   const preflightSummary = summarizePreflight(preflight?.measurement);
-  const resultPathSummary = summarizePreflight(latestReport?.measurement ?? preflight?.measurement);
+  const resultPathSummary = summarizePreflight(currentResultDetail?.measurement ?? preflight?.measurement);
   const shellHealthLabel = !monitorSnapshot
     ? 'Live network health: building baseline'
     : !monitorSnapshot.running
@@ -313,8 +196,10 @@ function App() {
         } else {
           void loadMonitor();
         }
-        void loadRunConfiguration(true);
+        void loadRunConfiguration();
         void loadReports(true);
+        if (startupOptions.panel === 'history') setHistoryOpen(true);
+        if (startupOptions.panel === 'alerts') setAlertsOpen(true);
         if (startupOptions.runConnectionCheck && !startupRunScheduled.current) {
           startupRunScheduled.current = true;
           window.setTimeout(() => void prepareDiagnostic('connection-check', startupOptions.method, startupOptions.downloadPath), 350);
@@ -344,22 +229,14 @@ function App() {
     const removeProgress = desktopBridge.on<DiagnosticProgress>('diagnostic.progress', (next) => {
       if (activeRunId.current && next.runId !== activeRunId.current) return;
       setProgress(next);
-      const inferred = overallProgress(next, activeMethod.current);
-      highestProgress.current = Math.max(highestProgress.current, inferred);
+      highestProgress.current = Math.max(highestProgress.current, next.overallFraction);
       setProgressRatio(highestProgress.current);
       setLiveMetrics((current) => ({
         latencyMs: next.phase === 'idle' && next.liveLatencyMs != null ? next.liveLatencyMs : current.latencyMs,
         downloadMbps: next.phase === 'download' && next.liveMbps != null ? next.liveMbps : current.downloadMbps,
         uploadMbps: next.phase === 'upload' && next.liveMbps != null ? next.liveMbps : current.uploadMbps,
       }));
-      if ((next.phase === 'download' || next.phase === 'upload') && next.bytesTransferred > 0) {
-        const stageKey = `${next.phase}:${next.message}`;
-        const prior = stageBytes.current.get(stageKey) ?? 0;
-        if (next.bytesTransferred > prior) {
-          stageBytes.current.set(stageKey, next.bytesTransferred);
-          setMeasuredBytes([...stageBytes.current.values()].reduce((total, value) => total + value, 0));
-        }
-      }
+      setMeasuredBytes(next.totalBytesTransferred);
     });
 
     const removeCompleted = desktopBridge.on<DiagnosticResult>('diagnostic.completed', (next) => {
@@ -368,14 +245,15 @@ function App() {
       highestProgress.current = 1;
       setProgressRatio(1);
       setResult(next);
+      setCurrentResultDetail(next.detail);
       setMeasuredBytes((current) => next.dataUsedBytes ?? current);
-      setProgress((current) => current ? { ...current, fraction: 1, phase: 'complete', message: 'Complete' } : current);
+      setProgress((current) => current ? { ...current, fraction: 1, overallFraction: 1, phase: 'complete', stage: 'complete', stageLabel: 'Complete', message: 'Complete', estimatedSecondsRemaining: 0 } : current);
       setRunning(false);
       setPendingRun(null);
       if (next.storedReport) {
         setReports((current) => [next.storedReport!, ...current.filter((item) => item.id !== next.storedReport!.id)]);
+        setLatestSavedReport(next.detail);
       }
-      if (next.reportId) void loadReportDetail(next.reportId).then(setLatestReport).catch(() => undefined);
       if (next.storageError) setError(`Measurement completed, but the report could not be saved: ${next.storageError}`);
     });
 
@@ -411,7 +289,7 @@ function App() {
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
-    const query = window.matchMedia('(min-width: 1360px)');
+    const query = window.matchMedia('(min-width: 1760px)');
     const update = () => setHistoryDocked(query.matches);
     update();
     query.addEventListener?.('change', update);
@@ -455,11 +333,15 @@ function App() {
     try {
       const nextReports = await desktopBridge.request<SavedReportSummary[]>('reports.list');
       setReports(nextReports);
-      if (loadLatest && nextReports.length > 0) {
-        try {
-          setLatestReport(await loadReportDetail(nextReports[0].id));
-        } catch {
-          // History remains usable even if a single detail report cannot be opened.
+      if (loadLatest) {
+        if (nextReports.length === 0) {
+          setLatestSavedReport(null);
+        } else {
+          try {
+            setLatestSavedReport(await loadReportDetail(nextReports[0].id));
+          } catch {
+            // History remains usable even if a single detail report cannot be opened.
+          }
         }
       }
     } catch (value) {
@@ -489,7 +371,7 @@ function App() {
     }
   }
 
-  async function loadRunConfiguration(refresh = false) {
+  async function loadRunConfiguration() {
     if (!desktopBridge.available) return;
     try {
       const [settings, choices] = await Promise.all([
@@ -498,7 +380,6 @@ function App() {
       ]);
       setAdvancedSettings(settings);
       setInterfaces(choices);
-      if (refresh) await refreshPreflight(settings);
     } catch (value) {
       setPreflightError(value instanceof Error ? value.message : 'Native measurement configuration could not be read.');
     }
@@ -526,6 +407,7 @@ function App() {
   async function selectInterface(interfaceId: string) {
     if (!advancedSettings || running) return;
     setError(null);
+    setResultNotice(null);
     try {
       const saved = await desktopBridge.request<AdvancedSettings>('settings.setAdvanced', {
         ...advancedSettings,
@@ -556,6 +438,7 @@ function App() {
   function selectProfile(next: DiagnosticProfile) {
     if (running) return;
     setResult(null);
+    setCurrentResultDetail(null);
     if (next === profile) return;
     setProfile(next);
     setPendingRun(null);
@@ -565,6 +448,7 @@ function App() {
   function selectMethod(next: TransferMethod) {
     if (running) return;
     setResult(null);
+    setCurrentResultDetail(null);
     if (next === method) return;
     setMethod(next);
     setPendingRun(null);
@@ -574,6 +458,7 @@ function App() {
   function selectDownloadPath(next: DownloadPathPreference) {
     if (running) return;
     setResult(null);
+    setCurrentResultDetail(null);
     if (next === downloadPath) return;
     setDownloadPath(next);
     setPendingRun(null);
@@ -612,13 +497,28 @@ function App() {
     activeMethod.current = nextMethod;
     activeDownloadPath.current = nextPath;
     highestProgress.current = 0;
-    stageBytes.current.clear();
     setError(null);
     setPendingRun(null);
     setLiveMetrics(emptyLiveMetrics);
+    setResult(null);
+    setCurrentResultDetail(null);
     setMeasuredBytes(0);
     setProgressRatio(0);
-    setProgress({ runId: '', phase: 'starting', message: 'Preparing the measurement path…', fraction: 0, bytesTransferred: 0 });
+    setProgress({
+      runId: '',
+      phase: 'starting',
+      stage: 'starting',
+      stageLabel: 'Preparing',
+      message: 'Preparing the measurement path…',
+      fraction: 0,
+      overallFraction: 0,
+      stageIndex: 0,
+      totalStages: plan?.totalTransferStages ? plan.totalTransferStages + (plan.deepDiagnostics ? 4 : 3) : 1,
+      elapsedSeconds: 0,
+      estimatedSecondsRemaining: plan?.estimatedSeconds ?? null,
+      bytesTransferred: 0,
+      totalBytesTransferred: 0,
+    });
     setRunning(true);
     try {
       const accepted = await desktopBridge.request<RunAccepted>('diagnostic.run', {
@@ -662,13 +562,51 @@ function App() {
     }
   }
 
+  async function saveCurrentResult() {
+    if (!result || resultActionBusy) return;
+    setResultActionBusy('save');
+    setError(null);
+    setResultNotice(null);
+    try {
+      const saved = await desktopBridge.request<{ saved: boolean; detail: SavedReportDetail }>('reports.saveCurrent', { id: result.reportId });
+      setCurrentResultDetail(saved.detail);
+      setLatestSavedReport(saved.detail);
+      setResult((current) => current ? { ...current, savedLocally: true, storageError: null, storedReport: saved.detail.report } : current);
+      setReports((current) => [saved.detail.report, ...current.filter((item) => item.id !== saved.detail.report.id)]);
+      setResultNotice('Report saved locally.');
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'The report could not be saved.');
+    } finally {
+      setResultActionBusy(null);
+    }
+  }
+
+  async function exportCurrentResult() {
+    if (!result || resultActionBusy) return;
+    setResultActionBusy('export');
+    setError(null);
+    setResultNotice(null);
+    try {
+      const exported = await desktopBridge.request<{ cancelled: boolean; fileName?: string }>('reports.exportCurrent', { id: result.reportId });
+      if (!exported.cancelled) setResultNotice(`Exported ${exported.fileName || 'report JSON'}.`);
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'The report could not be exported.');
+    } finally {
+      setResultActionBusy(null);
+    }
+  }
+
   function configureNextRun() {
     setResult(null);
+    setCurrentResultDetail(null);
+    setResultNotice(null);
     setError(null);
   }
 
   function repeatDiagnostic() {
     setResult(null);
+    setCurrentResultDetail(null);
+    setResultNotice(null);
     window.requestAnimationFrame(() => void prepareDiagnostic());
   }
 
@@ -793,18 +731,18 @@ function App() {
     } satisfies PaletteCommand)),
   ];
 
-  const latestDiagnostic = latestReport ? {
-    profileName: latestReport.report.profileName,
-    generatedAt: latestReport.report.generatedAt,
-    outcome: latestReport.presentation.outcome,
-    label: latestReport.presentation.label,
-    verdict: latestReport.presentation.verdict,
-    summary: latestReport.presentation.summary,
-    nextAction: latestReport.presentation.nextAction,
+  const latestDiagnostic = latestSavedReport ? {
+    profileName: latestSavedReport.report.profileName,
+    generatedAt: latestSavedReport.report.generatedAt,
+    outcome: latestSavedReport.presentation.outcome,
+    label: latestSavedReport.presentation.label,
+    verdict: latestSavedReport.presentation.verdict,
+    summary: latestSavedReport.presentation.summary,
+    nextAction: latestSavedReport.presentation.nextAction,
   } : null;
 
-  const recommendedProfile = recommendationProfile(result, latestReport);
-  const technicalData = latestReport?.presentation.technicalData ?? latestReport?.presentation.technicalEvidence ?? [];
+  const recommendedProfile = recommendationProfile(result, currentResultDetail);
+  const technicalData = currentResultDetail?.presentation.technicalData ?? currentResultDetail?.presentation.technicalEvidence ?? [];
 
   return (
     <div className={`app-shell ${historyOpen && historyDocked ? 'history-docked' : ''}`}>
@@ -835,37 +773,37 @@ function App() {
             <span>Alerts</span>
             {!!monitorSnapshot?.unreadAlertCount && <b>{monitorSnapshot.unreadAlertCount > 99 ? '99+' : monitorSnapshot.unreadAlertCount}</b>}
           </button>
-          <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} disabled={!desktopBridge.available} initialOpen={startupOptions.panel === 'settings'} />
+          <SettingsMenu appearance={appearance} onAppearanceChange={(next) => void changeAppearance(next)} onReportsChanged={() => void loadReports(true)} disabled={!desktopBridge.available} initialOpen={startupOptions.panel === 'settings'} />
         </div>
       </header>
 
       <main className="app-main">
         <div className="workspace-stage">
-        <div className={`workspace-pane ${activeSection === 'live-network-health' ? 'active' : ''}`} aria-hidden={activeSection !== 'live-network-health'}>
+        <motion.div className={`workspace-pane ${activeSection === 'live-network-health' ? 'active' : ''}`} aria-hidden={activeSection !== 'live-network-health'} animate={workspaceAnimation(activeSection === 'live-network-health')}>
         <ContinuousDiagnostics
           snapshot={monitorSnapshot}
           loading={monitorLoading}
           error={monitorError}
-          activeDiagnostic={running ? { profileName: profileTitle(activeProfile.current), phase: phaseLabel(progress?.phase, progress?.message) } : null}
+          activeDiagnostic={running ? { profileName: profileTitle(activeProfile.current), phase: progress?.stageLabel || phaseLabel(progress?.phase) } : null}
           latestDiagnostic={latestDiagnostic}
           onUpdate={setMonitorSnapshot}
           onError={setMonitorError}
           onRunRecommended={() => { showWorkspace('run-diagnostics'); selectProfile('connection-check'); }}
-          onOpenLatestReport={() => latestReport && openHistory(latestReport.report.id)}
+          onOpenLatestReport={() => latestSavedReport && openHistory(latestSavedReport.report.id)}
           onMeasureCapacity={measureCapacity}
           onMeasurePeakCapacity={measurePeakCapacity}
         />
-        </div>
+        </motion.div>
 
-        <div className={`workspace-pane ${activeSection === 'run-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'run-diagnostics'}>
+        <motion.div className={`workspace-pane ${activeSection === 'run-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'run-diagnostics'} animate={workspaceAnimation(activeSection === 'run-diagnostics')}>
         <section id="run-diagnostics" className="workbench-section diagnostics-workbench" aria-labelledby="run-diagnostics-title">
           <header className="workspace-heading diagnostics-heading">
             <div>
-              <h1 id="run-diagnostics-title">RUN DIAGNOSTICS</h1>
+              <h1 id="run-diagnostics-title">Run Diagnostics</h1>
             </div>
             <div className="workspace-heading-status" aria-live="polite">
               <span>{running ? 'RUN IN PROGRESS' : result ? 'LATEST RESULT' : 'NATIVE ENGINE READY'}</span>
-              <strong>{running ? phaseLabel(progress?.phase, progress?.message) : result ? displayedProfile.title : selectedProfile.title}</strong>
+              <strong>{running ? progress?.stageLabel || phaseLabel(progress?.phase) : result ? displayedProfile.title : selectedProfile.title}</strong>
             </div>
           </header>
 
@@ -960,11 +898,13 @@ function App() {
                       <header><div><span>RUN PLAN</span><strong>{selectedProfile.label}</strong></div><small>{plan ? plan.totalTransferStages + ' transfer stages' : 'Loading'}</small></header>
                       <div className="plan-fact-grid">
                         <PlanFact label="Runtime" value={plan ? formatDuration(plan.estimatedSeconds) : '—'} />
-                        <PlanFact label="Transfer cap" value={plan ? formatBytes(plan.transferCapBytes) : '—'} />
+                        <PlanFact label="Internet transfer cap" value={plan ? formatBytes(plan.internetTransferCapBytes) : '—'} />
                         <PlanFact label="Baseline" value={plan ? plan.idlePingCount + ' × ' + plan.pingIntervalMs + ' ms' : '—'} />
                         <PlanFact label="Download runs" value={plan ? String(plan.downloadRuns) : '—'} />
-                        <PlanFact label="Service checks" value={plan ? plan.includeServices ? 'Enabled' : 'Off' : '—'} />
-                        <PlanFact label="Diagnostic depth" value={plan ? plan.deepDiagnostics ? 'Full native suite' : 'Core native set' : '—'} />
+                        <PlanFact label="Service checks" value={plan ? plan.serviceCheckCount ? `${plan.serviceCheckCount} endpoints` : 'Off' : '—'} />
+                        <PlanFact label="Diagnostic depth" value={plan?.diagnosticDepth ?? '—'} />
+                        {plan?.lanEnabled && <PlanFact label="LAN measurement" value={`${plan.lanConnections} streams · ${formatDuration(plan.lanEstimatedSeconds)}`} />}
+                        {plan?.lanEnabled && <PlanFact label="LAN target" value={`${plan.lanTarget}:${plan.lanPort}`} />}
                       </div>
                       <div className="stage-plan">
                         <span>CONNECTION STAGES</span>
@@ -975,7 +915,7 @@ function App() {
                     <section className="instrument-section path-section">
                       <header><div><span>MEASUREMENT PATH</span><strong>{preflightLoading ? 'Checking route' : preflightSummary.endpoint}</strong></div><small>{preflightLoading ? 'LIVE PREFLIGHT' : 'CURRENT'}</small></header>
                       <dl className="path-ledger">
-                        <PathRow label="Endpoint" value={preflightLoading ? 'Selecting…' : preflightSummary.origin} />
+                        <PathRow label="Endpoint" value={preflightLoading ? 'Selecting…' : preflightSummary.origin} copyable={!preflightLoading} />
                         <PathRow label="Provider / network" value={preflightSummary.providerNetwork} />
                         <PathRow label="Location / protocol" value={[preflightSummary.edge, preflightSummary.protocol, preflightSummary.ipVersion].filter((value) => value !== '—').join(' · ') || '—'} />
                         <PathRow label="Preflight latency" value={preflightSummary.latency} />
@@ -990,9 +930,9 @@ function App() {
                   </div>
 
                   <section className="measurements-manifest">
-                    <header><div><span>MEASUREMENTS THIS PROFILE COLLECTS</span><strong>{dataCollectionLevel(profile)} depth</strong></div><small>{advancedSettings?.lanTarget ? 'LAN target included' : 'Internet + native system'}</small></header>
+                    <header><div><span>MEASUREMENTS THIS PROFILE COLLECTS</span><strong>{dataCollectionLevel(profile)} depth</strong></div><small>{plan?.lanEnabled ? 'Internet + native system + LAN' : 'Internet + native system'}</small></header>
                     <div className="measurement-groups">
-                      {dataCollectedFor(profile, method, !!advancedSettings?.lanTarget).map((group) => (
+                      {dataCollectedFor(profile, method, !!plan?.lanEnabled).map((group) => (
                         <div className="measurement-group" key={group.label}><span>{group.label}</span><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></div>
                       ))}
                     </div>
@@ -1003,22 +943,22 @@ function App() {
           )}
 
           {running && (
-            <div className="active-run-instrument">
+            <motion.div className="active-run-instrument" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
               <header className="active-run-header">
                 <div>
                   <span className="run-status-line"><i className="pulse" aria-hidden="true" />CONTROLLED LOAD · {profileTitle(activeProfile.current).toUpperCase()}</span>
                   <h2>{progress?.message || 'Preparing the measurement path…'}</h2>
-                  <p>{phaseLabel(progress?.phase, progress?.message)} · {methodLabel(activeMethod.current)} · {downloadPathLabel(activeDownloadPath.current)}</p>
+                  <p>{progress?.stageLabel || phaseLabel(progress?.phase)} · stage {progress?.stageIndex ?? 0} of {progress?.totalStages ?? '—'} · {methodLabel(activeMethod.current)} · {downloadPathLabel(activeDownloadPath.current)}</p>
                 </div>
                 <button type="button" className="secondary-action danger-action" onClick={() => void cancelDiagnostic()}>Cancel run</button>
               </header>
 
               <div className="active-progress">
                 <div className="active-progress-value"><strong>{progressPercent}</strong><span>%</span></div>
-                <div><div className="diagnostic-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><span style={{ width: progressPercent + '%' }} /></div><small>{formatBytes(measuredBytes)} measured · {plan ? formatBytes(plan.transferCapBytes) : '—'} cap</small></div>
+                <div><div className="diagnostic-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><span style={{ width: progressPercent + '%' }} /></div><small>{formatBytes(measuredBytes)} measured · {plan ? formatBytes(plan.transferCapBytes) : '—'} cap · {formatDuration(progress?.elapsedSeconds ?? 0)} elapsed{progress?.estimatedSecondsRemaining != null && progress.estimatedSecondsRemaining > 0 ? ` · about ${formatDuration(progress.estimatedSecondsRemaining)} remaining` : ''}</small></div>
               </div>
 
-              <RunPhaseRail phase={progress?.phase} message={progress?.message} plan={plan} />
+              <RunPhaseRail phase={progress?.phase} plan={plan} />
 
               <div className="active-run-grid">
                 <section className="live-readings">
@@ -1034,7 +974,7 @@ function App() {
                 <section className="active-route">
                   <header><span>ACTIVE PATH</span><small>{preflightSummary.latency} preflight</small></header>
                   <dl className="path-ledger">
-                    <PathRow label="Endpoint" value={preflightSummary.endpoint} />
+                    <PathRow label="Endpoint" value={preflightSummary.endpoint} copyable />
                     <PathRow label="Network / edge" value={[preflightSummary.providerNetwork, preflightSummary.edge].filter((value) => value !== '—').join(' · ') || '—'} />
                     <PathRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
                     <PathRow label="Delivery request" value={downloadPathLabel(activeDownloadPath.current)} accent />
@@ -1044,26 +984,30 @@ function App() {
 
               <section className="active-stage-budget">
                 <header><span>STAGE BUDGET</span><small>{plan?.totalTransferStages ?? '—'} transfer stages · {plan?.downloadRuns ?? '—'} download runs</small></header>
-                <PlanStages plan={plan} activePhase={progress?.phase} activeMessage={progress?.message} />
+                <PlanStages plan={plan} activePhase={progress?.phase} activeStage={progress?.stage} />
               </section>
-            </div>
+            </motion.div>
           )}
 
           {!running && result && (
-            <div className="completed-run">
+            <motion.div key={result.reportId} className="completed-run" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <header className="completed-run-header">
                 <div>
-                  <span className={'result-outcome ' + (latestReport?.presentation.outcome ?? 'complete')}>{latestReport?.presentation.label || 'COMPLETE'}</span>
-                  <h2>{latestReport?.presentation.verdict || displayedProfile.title + ' complete'}</h2>
-                  <p>{latestReport?.presentation.summary || 'The native measurement completed and the result was saved locally.'}</p>
+                  <span className={'result-outcome ' + (currentResultDetail?.presentation.outcome ?? 'complete')}>{currentResultDetail?.presentation.label || 'COMPLETE'}</span>
+                  <h2>{currentResultDetail?.presentation.verdict || displayedProfile.title + ' complete'}</h2>
+                  <p>{currentResultDetail?.presentation.summary || 'The native measurement completed.'}</p>
                   <small>{new Date(result.generatedAt).toLocaleString()} · {methodLabel(result.method)} · {result.savedLocally ? 'Saved locally' : 'Report not saved'} · {formatBytes(result.dataUsedBytes ?? 0)} transferred</small>
                 </div>
                 <div className="diagnostic-result-actions">
                   <button type="button" className="secondary-action" onClick={configureNextRun}>Configure new run</button>
-                  <button type="button" className="secondary-action" onClick={() => openHistory(result.reportId)}>Open saved report</button>
+                  <button type="button" className="secondary-action" onClick={() => void exportCurrentResult()} disabled={resultActionBusy !== null}>{resultActionBusy === 'export' ? 'Exporting…' : 'Export JSON'}</button>
+                  {result.savedLocally && <button type="button" className="secondary-action" onClick={() => openHistory(result.reportId)}>Open saved report</button>}
                   <button type="button" className="primary-action" onClick={repeatDiagnostic} disabled={!desktopBridge.available}>Run again</button>
                 </div>
               </header>
+
+              {!result.savedLocally && <div className="result-storage-warning" role="alert"><div><strong>Report is only in this session</strong><span>{result.storageError || 'The local report write did not complete.'}</span></div><button type="button" className="secondary-action" onClick={() => void saveCurrentResult()} disabled={resultActionBusy !== null}>{resultActionBusy === 'save' ? 'Saving…' : 'Retry save'}</button></div>}
+              {resultNotice && <div className="result-success-notice" role="status">{resultNotice}</div>}
 
               <div className="result-kpi-band" aria-label="Primary result measurements">
                 <Metric label="Latency" value={metric(result.latencyMs, 'ms')} detail="Median response" />
@@ -1072,13 +1016,13 @@ function App() {
                 <Metric label="Request loss" value={metric(result.requestLossPercent, '%')} detail="First-party requests" />
               </div>
 
-              {latestReport ? (
+              {currentResultDetail ? (
                 <>
                   <div className="result-analysis-grid">
                     <section className="findings-section">
-                      <header><div><span>FINDINGS</span><strong>{latestReport.presentation.findings.length} reported</strong></div><small>Native classifier</small></header>
+                      <header><div><span>FINDINGS</span><strong>{currentResultDetail.presentation.findings.length} reported</strong></div><small>Native classifier</small></header>
                       <div className="findings-list">
-                        {latestReport.presentation.findings.map((finding, index) => (
+                        {currentResultDetail.presentation.findings.map((finding, index) => (
                           <article className="finding-row" key={finding.title + '-' + index}>
                             <span>{String(index + 1).padStart(2, '0')} · {finding.label}</span>
                             <div><strong>{finding.title}</strong><p>{finding.summary}</p></div>
@@ -1090,25 +1034,25 @@ function App() {
                     <aside className="result-route-section">
                       <header><div><span>ACTUAL MEASUREMENT PATH</span><strong>{resultPathSummary.endpoint}</strong></div><small>{resultPathSummary.latency}</small></header>
                       <dl className="path-ledger">
-                        <PathRow label="Endpoint" value={resultPathSummary.origin} />
+                        <PathRow label="Endpoint" value={resultPathSummary.origin} copyable />
                         <PathRow label="Provider / network" value={resultPathSummary.providerNetwork} />
                         <PathRow label="Location / protocol" value={[resultPathSummary.edge, resultPathSummary.protocol, resultPathSummary.ipVersion].filter((value) => value !== '—').join(' · ') || '—'} />
                         <PathRow label="TLS / HTTP3" value={[resultPathSummary.tls, resultPathSummary.http3].filter((value) => value !== '—').join(' · ') || '—'} />
                         <PathRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
                       </dl>
-                      <DownloadDeliveryRows delivery={result.downloadDelivery ?? latestReport.downloadDelivery ?? null} />
+                      <DownloadDeliveryRows delivery={result.downloadDelivery ?? currentResultDetail.downloadDelivery ?? null} />
                       <div className="next-action-block">
                         <span>NEXT STEP</span>
-                        <strong>{latestReport.presentation.nextAction || 'No additional diagnostic is required.'}</strong>
+                        <strong>{currentResultDetail.presentation.nextAction || 'No additional diagnostic is required.'}</strong>
                         {recommendedProfile && <button type="button" className="inline-action" onClick={() => { configureNextRun(); selectProfile(recommendedProfile); }}>Configure {profileTitle(recommendedProfile)}</button>}
                       </div>
                     </aside>
                   </div>
 
                   <section className="measurement-ledger">
-                    <header><div><span>MEASUREMENTS</span><strong>{latestReport.presentation.metrics.filter((item) => item.wasMeasured).length} measured</strong></div><small>{displayedProfile.title} · schema 2.0 report</small></header>
+                    <header><div><span>MEASUREMENTS</span><strong>{currentResultDetail.presentation.metrics.filter((item) => item.wasMeasured).length} measured</strong></div><small>{displayedProfile.title} · schema 2.0 report</small></header>
                     <div className="measurement-ledger-grid">
-                      {latestReport.presentation.metrics.map((item, index) => (
+                      {currentResultDetail.presentation.metrics.map((item, index) => (
                         <div className={'measurement-entry ' + (item.wasMeasured ? '' : 'not-measured')} key={item.label + '-' + index}>
                           <span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small>
                         </div>
@@ -1116,33 +1060,55 @@ function App() {
                     </div>
                   </section>
 
-                  {technicalData.length > 0 && <details className="technical-data-panel"><summary><span>TECHNICAL DATA</span><strong>{technicalData.length} items</strong><small>Raw native context and report identifiers</small></summary><ul>{technicalData.map((item, index) => <li key={index + '-' + item}>{item}</li>)}</ul></details>}
+                  {technicalData.length > 0 && <details className="technical-data-panel"><summary><span>TECHNICAL DATA</span><strong>{technicalData.length} items</strong><small>Native context and report identifiers</small></summary><ul>{technicalData.map((item, index) => <li key={index + '-' + item}>{item}</li>)}</ul></details>}
+                  {currentResultDetail.technicalReport && <details className="technical-data-panel raw-report-panel"><summary><span>SCHEMA 2.0 REPORT</span><strong>Full technical data</strong><small>Raw native measurements</small></summary><pre>{JSON.stringify(currentResultDetail.technicalReport, null, 2)}</pre></details>}
                 </>
               ) : <div className="result-loading"><span className="monitor-loader" /><strong>Loading native findings and measurements</strong></div>}
-            </div>
+            </motion.div>
           )}
         </section>
-        </div>
+        </motion.div>
 
-        <div className={`workspace-pane ${activeSection === 'advanced-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'advanced-diagnostics'}>
-        <AdvancedDiagnostics
+        <motion.div className={`workspace-pane ${activeSection === 'advanced-diagnostics' ? 'active' : ''}`} aria-hidden={activeSection !== 'advanced-diagnostics'} animate={workspaceAnimation(activeSection === 'advanced-diagnostics')}>
+        {activeSection === 'advanced-diagnostics' && <AdvancedDiagnostics
           key={`advanced-${advancedSyncKey}`}
           profile={profile}
           method={method}
-          onStatusChange={(next) => { setAdvancedStatus(next); void loadRunConfiguration(false); }}
+          downloadPath={downloadPath}
+          initialSettings={advancedSettings}
+          initialInterfaces={interfaces}
+          initialPreflight={preflight}
+          onSettingsChange={setAdvancedSettings}
+          onPreflightChange={(next) => { setPreflight(next); if (next.interfaces?.length) setInterfaces(next.interfaces); }}
+          onStatusChange={setAdvancedStatus}
+          initialTool={startupOptions.advancedTool}
           resetRequest={advancedResetRequest}
           preflightRequest={advancedPreflightRequest}
-        />
-        </div>
+        />}
+        </motion.div>
         </div>
       </main>
 
       {running && activeSection !== 'run-diagnostics' && (
-        <button type="button" className="sticky-run-status" onClick={() => showWorkspace('run-diagnostics')}><span className="pulse" aria-hidden="true" /><strong>{profileTitle(activeProfile.current)}</strong><small>{phaseLabel(progress?.phase, progress?.message)} · {progressPercent}%</small><b>View</b></button>
+        <button type="button" className="sticky-run-status" onClick={() => showWorkspace('run-diagnostics')}><span className="pulse" aria-hidden="true" /><strong>{profileTitle(activeProfile.current)}</strong><small>{progress?.stageLabel || phaseLabel(progress?.phase)} · {progressPercent}%</small><b>View</b></button>
       )}
 
       <AlertsPanel open={alertsOpen} snapshot={monitorSnapshot} onUpdate={setMonitorSnapshot} onClose={() => setAlertsOpen(false)} />
-      <HistoryPanel open={historyOpen} reports={reports} loading={historyLoading} error={historyError} initialReportId={historyInitialReportId} docked={historyDocked} onClose={() => { setHistoryOpen(false); setHistoryInitialReportId(null); }} onRefresh={() => void loadReports()} />
+      <HistoryPanel
+        open={historyOpen}
+        reports={reports}
+        loading={historyLoading}
+        error={historyError}
+        initialReportId={historyInitialReportId}
+        docked={historyDocked}
+        onClose={() => { setHistoryOpen(false); setHistoryInitialReportId(null); }}
+        onRefresh={() => void loadReports()}
+        onDeleted={(reportId) => {
+          if (currentResultDetail?.report.id !== reportId) return;
+          setResult((current) => current ? { ...current, savedLocally: false, storageError: 'The saved copy was deleted from local storage.' } : current);
+          setCurrentResultDetail((current) => current ? { ...current, report: { ...current.report, savedLocally: false } } : current);
+        }}
+      />
       <CommandPalette open={paletteOpen} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
     </div>
   );
@@ -1159,12 +1125,13 @@ function readStartupOptions(): StartupOptions {
   const downloadPath = allowedStartupValue(query.get('download-path'), ['automatic', 'direct-r2', 'worker'] as const, 'automatic');
   const panelValue = query.get('panel');
   const panel = panelValue && ['history', 'alerts', 'settings'].includes(panelValue) ? panelValue as StartupPanel : null;
+  const advancedTool = allowedStartupValue(query.get('advanced-tool'), ['configuration', 'lan'] as const, 'configuration');
   const runConnectionCheck = query.get('run') === 'connection-check';
   const hash = window.location.hash.replace(/^#/, '');
   const workspace = ['live-network-health', 'run-diagnostics', 'advanced-diagnostics'].includes(hash)
     ? hash as WorkbenchSection
     : runConnectionCheck ? 'run-diagnostics' : 'live-network-health';
-  return { appearance, profile, method, downloadPath, workspace, panel, runConnectionCheck };
+  return { appearance, profile, method, downloadPath, workspace, panel, advancedTool, runConnectionCheck };
 }
 
 function allowedStartupValue<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
@@ -1179,22 +1146,25 @@ function PlanFact({ label, value }: { label: string; value: string }) {
   return <div className="plan-fact"><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function PathRow({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
-  return <div className={accent ? 'path-row accent' : 'path-row'}><dt>{label}</dt><dd>{value}</dd></div>;
+function PathRow({ label, value, accent = false, copyable = false }: { label: string; value: string; accent?: boolean; copyable?: boolean }) {
+  const canCopy = copyable && value !== '—' && value.length > 0;
+  return <div className={accent ? 'path-row accent' : 'path-row'}><dt>{label}</dt><dd title={value}><span>{value}</span>{canCopy && <button type="button" className="path-copy" aria-label={`Copy ${label.toLowerCase()}`} onClick={() => void navigator.clipboard?.writeText(value)}>Copy</button>}</dd></div>;
 }
 
-function PlanStages({ plan, activePhase, activeMessage }: { plan: DiagnosticPlan | null; activePhase?: string; activeMessage?: string }) {
+function workspaceAnimation(active: boolean) {
+  return active ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 };
+}
+
+function PlanStages({ plan, activePhase, activeStage }: { plan: DiagnosticPlan | null; activePhase?: string; activeStage?: string }) {
   if (!plan) return <span className="stage-plan-empty">Reading connection stages…</span>;
-  const message = activeMessage?.toLowerCase() ?? '';
-  const effectivePhase = message.includes('download') ? 'download' : message.includes('upload') ? 'upload' : activePhase;
   const stages = [...plan.downloadStages, ...plan.uploadStages];
+  const activeIndex = stages.findIndex((stage) => stage.direction === activePhase && stage.id === activeStage);
+  const transfersComplete = activePhase === 'diagnostics' || activePhase === 'finalize' || activePhase === 'complete';
   return (
     <div className="stage-chip-list">
       {stages.map((stage, index) => {
-        const done = effectivePhase === 'upload' && stage.direction === 'download'
-          || effectivePhase === 'diagnostics' && !message.includes('download') && !message.includes('upload')
-          || activePhase === 'complete';
-        const active = effectivePhase === stage.direction;
+        const done = transfersComplete || activeIndex > index;
+        const active = activeIndex === index;
         return (
           <div className={'stage-chip ' + (done ? 'done' : active ? 'active' : '')} key={stage.direction + '-' + stage.id + '-' + index}>
             <span>{stage.direction === 'download' ? '↓' : '↑'}</span>
@@ -1206,12 +1176,11 @@ function PlanStages({ plan, activePhase, activeMessage }: { plan: DiagnosticPlan
   );
 }
 
-function RunPhaseRail({ phase, message, plan }: { phase?: string; message?: string; plan: DiagnosticPlan | null }) {
-  const normalized = message?.toLowerCase() ?? '';
-  const current = phase === 'complete' || normalized.includes('finaliz') || normalized.includes('complete') ? 4
-    : phase === 'upload' || normalized.includes('upload') ? 3
-      : phase === 'download' || normalized.includes('download') ? 2
-        : phase === 'idle' || normalized.includes('latency') ? 1
+function RunPhaseRail({ phase, plan }: { phase?: string; plan: DiagnosticPlan | null }) {
+  const current = phase === 'complete' || phase === 'finalize' || phase === 'diagnostics' ? 4
+    : phase === 'upload' ? 3
+      : phase === 'download' ? 2
+        : phase === 'idle' ? 1
           : 0;
   const phases = [
     ['Path', 'Endpoint + route'],
@@ -1234,32 +1203,6 @@ function DownloadDeliveryRows({ delivery }: { delivery: DownloadDelivery | null 
       {delivery.fallbackReason && <div className="delivery-fallback"><dt>Fallback</dt><dd>{delivery.fallbackReason}</dd></div>}
     </dl>
   );
-}
-
-function overallProgress(progress: DiagnosticProgress, method: TransferMethod): number {
-  const fraction = Math.min(1, Math.max(0, progress.fraction || 0));
-  const message = progress.message.toLowerCase();
-  if (progress.phase === 'complete') return 1;
-  if (progress.phase === 'starting') return 0.01;
-  if (progress.phase === 'idle') return 0.08 + fraction * 0.17;
-  if (progress.phase === 'download') {
-    if (method === 'compare') {
-      if (message.includes('single')) return 0.25 + fraction * 0.15;
-      if (message.includes('aggregate') || message.includes('scale')) return 0.40 + fraction * 0.20;
-    }
-    return 0.28 + fraction * 0.34;
-  }
-  if (progress.phase === 'upload') return method === 'compare' ? 0.60 + fraction * 0.25 : 0.62 + fraction * 0.26;
-  if (progress.phase === 'diagnostics') {
-    if (message.includes('selecting the measurement endpoint')) return 0.03;
-    if (message.includes('latency')) return 0.08;
-    if (message.includes('single download')) return method === 'compare' ? 0.25 : 0.28;
-    if (message.includes('aggregate download')) return method === 'compare' ? 0.40 : 0.28;
-    if (message.includes('upload')) return method === 'compare' ? 0.60 : 0.62;
-    if (message.includes('finalizing')) return 0.88;
-    return 0.90;
-  }
-  return 0.02;
 }
 
 function recommendationProfile(result: DiagnosticResult | null, detail: SavedReportDetail | null): DiagnosticProfile | null {
@@ -1305,19 +1248,14 @@ function downloadPathResultLabel(path: string): string {
 }
 function statusLabel(value: string): string { return value.replaceAll('-', ' ').replace(/\b\w/g, (match) => match.toUpperCase()); }
 function profileTitle(profile: DiagnosticProfile): string { return profiles.find((item) => item.id === profile)?.title ?? 'Diagnostic'; }
-function phaseLabel(phase?: string, message?: string): string {
+function phaseLabel(phase?: string): string {
   switch (phase) {
+    case 'preflight': return 'Measurement path';
     case 'idle': return 'Baseline latency';
     case 'download': return 'Download measurement';
     case 'upload': return 'Upload measurement';
-    case 'diagnostics': {
-      const normalized = message?.toLowerCase() ?? '';
-      if (normalized.includes('selecting')) return 'Endpoint selection';
-      if (normalized.includes('latency')) return 'Latency checks';
-      if (normalized.includes('download')) return 'Download checks';
-      if (normalized.includes('upload')) return 'Upload checks';
-      return 'Network diagnostics';
-    }
+    case 'diagnostics': return 'System and path diagnostics';
+    case 'finalize': return 'Findings and report';
     case 'complete': return 'Complete';
     case 'starting': return 'Preparing';
     default: return 'Measuring';

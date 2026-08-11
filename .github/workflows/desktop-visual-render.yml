@@ -302,11 +302,11 @@ jobs:
           fi
           find "$reports_dir" -maxdepth 1 -type f -name '*.json' -print | sort > desktop-visual/report-files.txt
 
-          # At 1600px History is a docked inspector, not a modal sheet. It must leave
-          # the workbench visible and still support the full report-management flow.
+          # At 1600px History uses an overlay so the primary workbench is not crushed
+          # into unusable columns. Docking is reserved for wider desktop windows.
           xdotool key --clearmodifiers ctrl+h
           sleep 0.5
-          capture saved-runs-docked
+          capture saved-runs-overlay
 
           # Filters add useful list controls above the first row; select the first run.
           xdotool mousemove --sync 1325 340 click 1

@@ -127,6 +127,47 @@ public sealed class ReportStore
         return WriteAtomicAsync(destinationPath, report, cancellationToken);
     }
 
+    public bool Delete(StoredReport stored)
+    {
+        ArgumentNullException.ThrowIfNull(stored);
+        var reportPath = Path.GetFullPath(stored.Path);
+        var reportDirectory = Path.GetFullPath(ReportsDirectory);
+        if (!string.Equals(Path.GetDirectoryName(reportPath), reportDirectory, PathComparison))
+        {
+            throw new InvalidOperationException("The report is outside the configured reports directory.");
+        }
+        if (!File.Exists(reportPath)) return false;
+        File.Delete(reportPath);
+        return true;
+    }
+
+    public int Prune(int retentionDays)
+    {
+        if (retentionDays is < 0 or > 3650) throw new ArgumentOutOfRangeException(nameof(retentionDays));
+        if (retentionDays == 0 || !Directory.Exists(ReportsDirectory)) return 0;
+
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
+        var removed = 0;
+        foreach (var path in Directory.EnumerateFiles(ReportsDirectory, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(path) >= cutoff.UtcDateTime) continue;
+                File.Delete(path);
+                removed++;
+            }
+            catch (IOException)
+            {
+                // Keep reports that are in use and try again during the next maintenance pass.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Keep reports that cannot be removed with the current permissions.
+            }
+        }
+        return removed;
+    }
+
     public void OpenReportsFolder()
     {
         Directory.CreateDirectory(ReportsDirectory);
@@ -212,4 +253,7 @@ public sealed class ReportStore
         TestProfileId.Extended => "stress",
         _ => "diagnostic"
     };
+
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 }

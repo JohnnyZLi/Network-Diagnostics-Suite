@@ -190,7 +190,7 @@ export function ContinuousDiagnostics({
     <section id="live-network-health" className="workbench-section live-health-section" aria-labelledby="live-health-title">
       <div className="workbench-section-header live-health-header">
         <div>
-          <h1 id="live-health-title">LIVE NETWORK HEALTH</h1>
+          <h1 id="live-health-title">Live Network Health</h1>
         </div>
         {snapshot && (
           <div className="live-health-actions">
