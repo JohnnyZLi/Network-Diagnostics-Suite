@@ -60,42 +60,56 @@ public sealed partial class RunningTestWorkspace : UserControl
                 Width = 8,
                 Height = 8,
                 CornerRadius = new Avalonia.CornerRadius(4),
-                Background = Brush.Parse(status switch
-                {
-                    "Complete" => "#C77E68",
-                    "In progress" => "#E7E2DA",
-                    "Not included" => "#444A4B",
-                    _ => "#697071"
-                }),
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Avalonia.Thickness(0, 5, 0, 0)
             };
-            var title = new TextBlock { Text = phase.Title, FontWeight = FontWeight.SemiBold };
+            marker.Classes.Add(status switch
+            {
+                "Complete" => "indicatorSuccess",
+                "In progress" => "indicatorAccent",
+                _ => "indicatorNeutral"
+            });
+
+            var title = new TextBlock
+            {
+                Text = phase.Title,
+                FontSize = 12,
+                FontWeight = FontWeight.SemiBold
+            };
             var detail = new TextBlock
             {
                 Text = phase.Detail,
                 FontSize = 11,
-                Foreground = Brush.Parse("#969C9D"),
                 TextWrapping = TextWrapping.Wrap
             };
+            detail.Classes.Add("muted");
+
             var statusText = new TextBlock
             {
                 Text = status,
-                FontSize = 11,
-                Foreground = Brush.Parse(status == "In progress" ? "#E9E6E0" : "#969C9D"),
+                FontSize = 10,
                 HorizontalAlignment = HorizontalAlignment.Right
             };
+            statusText.Classes.Add(status == "In progress" ? "secondary" : "muted");
+
             var text = new StackPanel { Spacing = 3 };
             text.Children.Add(title);
             text.Children.Add(detail);
+
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
             grid.Children.Add(marker);
             Grid.SetColumn(text, 1);
             grid.Children.Add(text);
             Grid.SetColumn(statusText, 2);
             grid.Children.Add(statusText);
-            var border = new Border { Child = grid, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
-            border.Classes.Add("phase");
+
+            var border = new Border
+            {
+                Child = grid,
+                Padding = new Avalonia.Thickness(0, 3, 0, 11),
+                Margin = new Avalonia.Thickness(0, 0, 0, 10)
+            };
+            border.Classes.Add("divider");
             PhaseItems.Items.Add(border);
         }
     }
@@ -108,61 +122,66 @@ public sealed partial class RunningTestWorkspace : UserControl
             var time = new TextBlock
             {
                 Text = item.Timestamp.ToLocalTime().ToString("h:mm:ss tt", CultureInfo.InvariantCulture),
-                FontSize = 10,
-                Foreground = Brush.Parse("#777E7F")
+                FontSize = 10
             };
+            time.Classes.Add("muted");
+
             var phase = new TextBlock
             {
-                Text = item.Phase.ToUpperInvariant(),
-                FontSize = 10,
-                FontWeight = FontWeight.SemiBold,
-                LetterSpacing = 1.2,
-                Foreground = Brush.Parse("#C77E68")
+                Text = item.Phase.ToUpperInvariant()
             };
+            phase.Classes.Add("eyebrow");
+
             var detail = new TextBlock
             {
                 Text = item.Detail,
                 FontSize = 12,
-                Foreground = Brush.Parse("#D5D2CC"),
                 TextWrapping = TextWrapping.Wrap
             };
+            detail.Classes.Add("secondary");
+
             var values = new List<string>();
             if (item.LiveMbps is { } rate) values.Add($"{Format(rate)} Mbps");
             if (item.LiveLatencyMs is { } latency) values.Add($"{Format(latency)} ms");
             if (item.BytesTransferred > 0) values.Add($"{item.BytesTransferred / 1_000_000d:0.0} MB");
-            var content = new StackPanel { Spacing = 3 };
+
+            var content = new StackPanel { Spacing = 4 };
             var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
             header.Children.Add(phase);
             Grid.SetColumn(time, 1);
             header.Children.Add(time);
             content.Children.Add(header);
             content.Children.Add(detail);
+
             if (values.Count > 0)
             {
-                content.Children.Add(new TextBlock
+                var valueText = new TextBlock
                 {
                     Text = string.Join(" · ", values),
-                    FontSize = 11,
-                    Foreground = Brush.Parse("#969C9D")
-                });
+                    FontSize = 10
+                };
+                valueText.Classes.Add("muted");
+                content.Children.Add(valueText);
             }
-            EventPanel.Children.Add(new Border
+
+            var row = new Border
             {
-                BorderBrush = Brush.Parse("#303536"),
-                BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-                Padding = new Avalonia.Thickness(0, 0, 0, 10),
+                Padding = new Avalonia.Thickness(0, 10, 0, 11),
                 Child = content
-            });
+            };
+            row.Classes.Add("divider");
+            EventPanel.Children.Add(row);
         }
 
         if (events.Count == 0)
         {
-            EventPanel.Children.Add(new TextBlock
+            var empty = new TextBlock
             {
                 Text = "Waiting for the first measurement update…",
-                Foreground = Brush.Parse("#969C9D"),
                 TextWrapping = TextWrapping.Wrap
-            });
+            };
+            empty.Classes.Add("muted");
+            EventPanel.Children.Add(empty);
         }
     }
 

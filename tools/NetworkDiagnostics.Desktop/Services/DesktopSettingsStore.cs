@@ -6,6 +6,7 @@ namespace NetworkDiagnostics.Desktop.Services;
 
 public sealed record DesktopSettings(
     bool IncludeLocalIdentifiers = false,
+    string Appearance = "system",
     string DefaultProfile = "connection-check",
     string DefaultTransferMethod = "compare",
     string? ReportDirectory = null,

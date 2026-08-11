@@ -23,6 +23,8 @@ public sealed partial class SettingsWorkspace : UserControl
 
     public event EventHandler<SettingsIndexRequestedEventArgs>? MethodRequested;
 
+    public event EventHandler<SettingsIndexRequestedEventArgs>? AppearanceRequested;
+
     public event EventHandler<SettingsIndexRequestedEventArgs>? InterfaceRequested;
 
     public event EventHandler<SettingsBooleanChangedEventArgs>? IdentifiersChanged;
@@ -58,6 +60,7 @@ public sealed partial class SettingsWorkspace : UserControl
         {
             ProfileComboBox.SelectedIndex = model.ProfileIndex;
             MethodComboBox.SelectedIndex = model.MethodIndex;
+            AppearanceComboBox.SelectedIndex = model.AppearanceIndex;
 
             InterfaceComboBox.Items.Clear();
             foreach (var label in model.InterfaceLabels)
@@ -108,7 +111,7 @@ public sealed partial class SettingsWorkspace : UserControl
             "Privacy & data" => ("PRIVACY & DATA", "Report privacy and approvals", "Control local identifiers in saved reports and clear remembered approvals for higher-data diagnostic profiles."),
             "Storage" => ("STORAGE", "Local report storage", "Inspect the directory used for completed and imported reports. Report data remains local unless you explicitly export it."),
             "Developer" => ("DEVELOPER", "Presentation previews", "Exercise terminal result states for UI validation without starting a network measurement."),
-            _ => ("GENERAL", "Application defaults", "Choose the default diagnostic profile, transfer method, and network interface used when starting new work.")
+            _ => ("GENERAL", "Application defaults", "Choose the app appearance and the default diagnostic profile, transfer method, and network interface used when starting new work.")
         };
         SectionEyebrowText.Text = copy.Item1;
         SectionTitleText.Text = copy.Item2;
@@ -135,6 +138,14 @@ public sealed partial class SettingsWorkspace : UserControl
         if (!applyingModel && MethodComboBox.SelectedIndex >= 0)
         {
             MethodRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(MethodComboBox.SelectedIndex));
+        }
+    }
+
+    private void AppearanceSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    {
+        if (!applyingModel && AppearanceComboBox.SelectedIndex >= 0)
+        {
+            AppearanceRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(AppearanceComboBox.SelectedIndex));
         }
     }
 
@@ -270,6 +281,7 @@ public sealed record SettingsWorkspaceModel(
     string Section,
     int ProfileIndex,
     int MethodIndex,
+    int AppearanceIndex,
     IReadOnlyList<string> InterfaceLabels,
     int InterfaceIndex,
     bool IncludeIdentifiers,
