@@ -6,6 +6,7 @@ on:
       - ".github/workflows/theme-audit.yml"
       - "index.html"
       - "scripts/theme-visual-audit.mjs"
+      - "scripts/header-alignment-audit.mjs"
       - "src/**"
       - "package.json"
       - "package-lock.json"
@@ -38,6 +39,7 @@ jobs:
           cat /tmp/network-theme-preview.log
           exit 1
       - run: node scripts/theme-visual-audit.mjs
+      - run: node scripts/header-alignment-audit.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         if: always()
         with:

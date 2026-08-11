@@ -39,6 +39,48 @@ function syncThemeButtons(menu) {
   }
 }
 
+function createThemeIcon(document, preference) {
+  const namespace = "http" + "://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.classList.add("jl-theme-option__icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  if (preference === "system") {
+    const screen = document.createElementNS(namespace, "rect");
+    screen.setAttribute("x", "3");
+    screen.setAttribute("y", "4");
+    screen.setAttribute("width", "18");
+    screen.setAttribute("height", "12");
+    screen.setAttribute("rx", "2");
+    const stand = document.createElementNS(namespace, "path");
+    stand.setAttribute("d", "M8 20h8M12 16v4");
+    svg.append(screen, stand);
+    return svg;
+  }
+
+  if (preference === "light") {
+    const sun = document.createElementNS(namespace, "circle");
+    sun.setAttribute("cx", "12");
+    sun.setAttribute("cy", "12");
+    sun.setAttribute("r", "4");
+    const rays = document.createElementNS(namespace, "path");
+    rays.setAttribute("d", "M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42");
+    svg.append(sun, rays);
+    return svg;
+  }
+
+  const moon = document.createElementNS(namespace, "path");
+  moon.setAttribute("d", "M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z");
+  svg.append(moon);
+  return svg;
+}
+
 function createThemeControl(document) {
   const group = document.createElement("div");
   group.className = "jl-theme-options";
@@ -47,10 +89,13 @@ function createThemeControl(document) {
 
   for (const preference of THEME_PREFERENCES) {
     const button = document.createElement("button");
+    const label = preference[0].toUpperCase() + preference.slice(1);
     button.type = "button";
     button.dataset.themePreference = preference;
-    button.textContent = preference[0].toUpperCase() + preference.slice(1);
     button.setAttribute("aria-pressed", "false");
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.append(createThemeIcon(document, preference));
     group.append(button);
   }
 
@@ -108,6 +153,18 @@ function ensureSettingsControl(root, sitesButton, sitesMenu) {
   }
 
   return { button, menu };
+}
+
+function ensureDisclosureShell(root, button, menu, className) {
+  let shell = button.parentElement;
+  if (!(shell instanceof HTMLElement) || !shell.classList.contains(className)) {
+    shell = root.ownerDocument.createElement("div");
+    shell.className = className;
+    root.insertBefore(shell, button);
+  }
+  if (button.parentElement !== shell) shell.append(button);
+  if (menu.parentElement !== shell) shell.append(menu);
+  return shell;
 }
 
 export function populateOwnedSites(menu, currentSite) {
@@ -193,7 +250,10 @@ export function installDisclosureMenu({
   const openMenu = (options = {}) => applyState(true, options);
   const toggle = () => applyState(!open);
 
-  const handleButtonClick = () => toggle();
+  const handleButtonClick = (event) => {
+    toggle();
+    if (event.detail > 0) button.blur();
+  };
   const handleButtonKeyDown = (event) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
@@ -261,6 +321,62 @@ export function installDisclosureMenu({
   };
 }
 
+function installHeaderDisclosureExit(root) {
+  const header = root.closest(".jl-global-header, .jl-site-header");
+  const inner = header?.querySelector(".jl-global-header__inner");
+  const window = root.ownerDocument.defaultView;
+  let timer = null;
+  let animationEndHandler = null;
+  let sequence = 0;
+
+  const hasOpenDisclosure = () => root.querySelector(
+    '[data-site-switcher-button][aria-expanded="true"], [data-settings-button][aria-expanded="true"]',
+  ) !== null;
+
+  const clearExit = () => {
+    if (timer !== null && window) window.clearTimeout(timer);
+    timer = null;
+    if (animationEndHandler && inner instanceof HTMLElement) inner.removeEventListener("animationend", animationEndHandler);
+    animationEndHandler = null;
+    if (header instanceof HTMLElement) {
+      header.removeAttribute("data-jl-header-disclosure-exit");
+      header.style.removeProperty("--_jl-header-disclosure-exit-y");
+    }
+  };
+
+  const cancel = () => { sequence += 1; clearExit(); };
+
+  const beginExit = () => {
+    if (!(header instanceof HTMLElement) || !(inner instanceof HTMLElement) || !window || hasOpenDisclosure()) { clearExit(); return; }
+    const naturalRect = header.getBoundingClientRect();
+    const fixedRect = inner.getBoundingClientRect();
+    const distance = Math.min(fixedRect.height, Math.max(0, -naturalRect.top));
+    if (distance < 1) { clearExit(); return; }
+    header.style.setProperty("--_jl-header-disclosure-exit-y", `${-distance}px`);
+    header.setAttribute("data-jl-header-disclosure-exit", "");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { queueMicrotask(clearExit); return; }
+    const currentSequence = ++sequence;
+    animationEndHandler = (event) => {
+      if (event.animationName !== "jl-header-disclosure-exit" || currentSequence !== sequence) return;
+      clearExit();
+    };
+    inner.addEventListener("animationend", animationEndHandler);
+    timer = window.setTimeout(() => { if (currentSequence === sequence) clearExit(); }, 420);
+  };
+
+  const sync = (open) => {
+    if (open) { cancel(); return; }
+    const currentSequence = ++sequence;
+    queueMicrotask(() => {
+      if (currentSequence !== sequence) return;
+      if (hasOpenDisclosure()) { clearExit(); return; }
+      beginExit();
+    });
+  };
+
+  return { cancel, sync, destroy: cancel };
+}
+
 export function installSiteSwitcher(root, options = {}) {
   const button = root.querySelector("[data-site-switcher-button]");
   const menu = root.querySelector("[data-site-switcher-menu]");
@@ -271,7 +387,10 @@ export function installSiteSwitcher(root, options = {}) {
   if (options.populate && options.currentSite) populateOwnedSites(menu, options.currentSite);
 
   const settings = ensureSettingsControl(root, button, menu);
+  ensureDisclosureShell(root, button, menu, "jl-site-disclosure");
+  ensureDisclosureShell(root, settings.button, settings.menu, "jl-settings-disclosure");
   const theme = installThemeControl(settings.menu);
+  const headerExit = installHeaderDisclosureExit(root);
   let settingsDisclosure = null;
 
   const sitesDisclosure = installDisclosureMenu({
@@ -280,10 +399,14 @@ export function installSiteSwitcher(root, options = {}) {
     menu,
     useHidden: true,
     onBeforeOpen: () => {
+      headerExit.cancel();
       settingsDisclosure?.close();
       options.onBeforeOpen?.();
     },
-    onOpenChange: options.onOpenChange,
+    onOpenChange: (open) => {
+      headerExit.sync(open);
+      options.onOpenChange?.(open);
+    },
   });
 
   settingsDisclosure = installDisclosureMenu({
@@ -293,10 +416,11 @@ export function installSiteSwitcher(root, options = {}) {
     useHidden: true,
     closeOnSelect: false,
     onBeforeOpen: () => {
+      headerExit.cancel();
       sitesDisclosure.close();
       options.onBeforeOpen?.();
     },
-    onOpenChange: options.onOpenChange,
+    onOpenChange: headerExit.sync,
   });
 
   return {
@@ -310,6 +434,7 @@ export function installSiteSwitcher(root, options = {}) {
       sitesDisclosure.destroy();
       settingsDisclosure.destroy();
       theme.destroy();
+      headerExit.destroy();
     },
   };
 }

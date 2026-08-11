@@ -129,11 +129,6 @@
     --_jl-focus-gap-color: var(--jl-color-focus-gap-dark);
   }
 
-  :root[data-theme="dark"] .jl-surface-inverse,
-  :root[data-theme="dark"] [data-jl-surface="inverse"] {
-    --_jl-focus-gap-color: var(--jl-color-focus-gap-light);
-  }
-
   .jl-surface-accent,
   [data-jl-surface="accent"] {
     --_jl-focus-gap-color: var(--jl-color-on-accent);

@@ -105,16 +105,10 @@ jobs:
                   if ((await runButton.getAttribute('aria-haspopup')) !== 'dialog') problems.push(`${profile} run button does not announce its dialog`);
                   await runButton.click();
                   await dialog.waitFor({ state: 'visible' });
-                  if (!(await dialog.getByRole('heading', { name: `Run the ${profile} test?` }).isVisible())) {
-                    problems.push(`${profile} confirmation heading is missing`);
-                  }
-                  if (!(await dialog.getByText(expectedCaps[profile], { exact: false }).isVisible())) {
-                    problems.push(`${profile} confirmation does not show its transfer cap`);
-                  }
+                  if (!(await dialog.getByRole('heading', { name: `Run the ${profile} test?` }).isVisible())) problems.push(`${profile} confirmation heading is missing`);
+                  if (!(await dialog.getByText(expectedCaps[profile], { exact: false }).isVisible())) problems.push(`${profile} confirmation does not show its transfer cap`);
                   const cancelButton = dialog.getByRole('button', { name: 'Cancel' });
-                  if (!(await cancelButton.evaluate((element) => document.activeElement === element))) {
-                    problems.push(`${profile} dialog did not focus Cancel first`);
-                  }
+                  if (!(await cancelButton.evaluate((element) => document.activeElement === element))) problems.push(`${profile} dialog did not focus Cancel first`);
                   const dialogGeometry = await dialog.evaluate((element) => {
                     const rect = element.getBoundingClientRect();
                     return { left: rect.left, right: rect.right, bottom: rect.bottom, width: rect.width };
@@ -126,16 +120,12 @@ jobs:
                   await page.screenshot({ path: `visual-audit/${prefix}-profile-${profile.toLowerCase()}-confirmation-${viewportName}.png` });
                   await page.keyboard.press('Escape');
                   if (await dialog.isVisible()) problems.push(`${profile} confirmation did not close with Escape`);
-                  if (!(await runButton.evaluate((element) => document.activeElement === element))) {
-                    problems.push(`${profile} run button did not regain focus after Escape`);
-                  }
+                  if (!(await runButton.evaluate((element) => document.activeElement === element))) problems.push(`${profile} run button did not regain focus after Escape`);
                   await runButton.click();
                   await dialog.waitFor({ state: 'visible' });
                   await dialog.getByRole('button', { name: 'Cancel' }).click();
                   if (await dialog.isVisible()) problems.push(`${profile} confirmation did not close with Cancel`);
-                  if (!(await runButton.evaluate((element) => document.activeElement === element))) {
-                    problems.push(`${profile} run button did not regain focus after Cancel`);
-                  }
+                  if (!(await runButton.evaluate((element) => document.activeElement === element))) problems.push(`${profile} run button did not regain focus after Cancel`);
                 }
               }
             }
@@ -150,12 +140,8 @@ jobs:
                     problems.push(`${entry.profile} ${area} geometry is missing`);
                     continue;
                   }
-                  if (!near(actual.top, expected.top, 1)) {
-                    problems.push(`${entry.profile} moved ${area} from ${expected.top} to ${actual.top}`);
-                  }
-                  if (!near(actual.height, expected.height, 1)) {
-                    problems.push(`${entry.profile} changed ${area} height from ${expected.height} to ${actual.height}`);
-                  }
+                  if (!near(actual.top, expected.top, 1)) problems.push(`${entry.profile} moved ${area} from ${expected.top} to ${actual.top}`);
+                  if (!near(actual.height, expected.height, 1)) problems.push(`${entry.profile} changed ${area} height from ${expected.height} to ${actual.height}`);
                 }
               }
             }
@@ -205,6 +191,8 @@ jobs:
             const expectedInnerHeight = compact ? 68 : 82;
             const expectedOuterHeight = compact ? 82 : 83;
             const expectedButtonHeight = compact ? 40 : 44;
+            const fittedSitesWidth = metrics.viewportWidth <= 360 ? 96 : 104;
+            const legacySitesWidth = metrics.viewportWidth <= 420 ? 116 : 136;
             if (metrics.overflow) problems.push('document overflow');
             if (metrics.h1Count !== 1) problems.push(`expected one h1, found ${metrics.h1Count}`);
             if (!near(metrics.headerInnerHeight, expectedInnerHeight)) problems.push(`header inner ${metrics.headerInnerHeight}, expected ${expectedInnerHeight}`);
@@ -212,14 +200,15 @@ jobs:
             if (!metrics.sitesButton) {
               problems.push('Sites button missing');
             } else {
-              if (!near(metrics.sitesButton.width, 88)) problems.push(`Sites width ${metrics.sitesButton.width}`);
+              const widthAllowed = prefix === 'local'
+                ? near(metrics.sitesButton.width, fittedSitesWidth)
+                : near(metrics.sitesButton.width, fittedSitesWidth) || near(metrics.sitesButton.width, legacySitesWidth) || near(metrics.sitesButton.width, 88);
+              if (!widthAllowed) problems.push(`Sites width ${metrics.sitesButton.width}`);
               if (!near(metrics.sitesButton.height, expectedButtonHeight)) problems.push(`Sites height ${metrics.sitesButton.height}, expected ${expectedButtonHeight}`);
               if (metrics.sitesButton.fontSize !== '13px') problems.push(`Sites font size ${metrics.sitesButton.fontSize}`);
               if (metrics.sitesButton.fontWeight !== '700') problems.push(`Sites font weight ${metrics.sitesButton.fontWeight}`);
             }
-            if (metrics.previewHeadingColors.length !== 3 || metrics.previewHeadingColors.some((color) => color !== metrics.bodyColor)) {
-              problems.push('explanatory preview headings are not using the neutral text color');
-            }
+            if (metrics.previewHeadingColors.length !== 3 || metrics.previewHeadingColors.some((color) => color !== metrics.bodyColor)) problems.push('explanatory preview headings are not using the neutral text color');
 
             const sitesButton = page.locator('.jl-site-switcher__button');
             const sitesMenu = page.locator('#owned-sites-menu');
@@ -227,10 +216,60 @@ jobs:
             await sitesMenu.waitFor({ state: 'visible' });
             if ((await sitesMenu.locator('a').count()) !== 3) problems.push('Sites menu does not contain three links');
             if ((await sitesMenu.locator('a[aria-current="page"]').count()) !== 1) problems.push('Sites menu current-page state is incorrect');
+            const sitesOpenGeometry = await page.evaluate(() => {
+              const button = document.querySelector('.jl-site-switcher__button');
+              const menu = document.querySelector('#owned-sites-menu');
+              const links = [...document.querySelectorAll('#owned-sites-menu a')];
+              const buttonRect = button?.getBoundingClientRect();
+              const menuRect = menu?.getBoundingClientRect();
+              return {
+                buttonWidth: buttonRect?.width ?? null,
+                buttonLeft: buttonRect?.left ?? null,
+                buttonRight: buttonRect?.right ?? null,
+                menuWidth: menuRect?.width ?? null,
+                menuLeft: menuRect?.left ?? null,
+                menuRight: menuRect?.right ?? null,
+                viewportWidth: window.innerWidth,
+                linkOverflow: links.some((link) => link.scrollWidth > link.clientWidth + 1),
+              };
+            });
+            if (prefix === 'local') {
+              const expectedOpenSitesWidth = sitesOpenGeometry.viewportWidth <= 360 ? 96 : 104;
+              if (!near(sitesOpenGeometry.buttonWidth, expectedOpenSitesWidth)) problems.push(`Sites trigger width ${sitesOpenGeometry.buttonWidth}, expected ${expectedOpenSitesWidth}`);
+              if (!near(sitesOpenGeometry.menuWidth, expectedOpenSitesWidth)) problems.push(`Sites dropdown width ${sitesOpenGeometry.menuWidth}, expected ${expectedOpenSitesWidth}`);
+              if (!near(sitesOpenGeometry.menuLeft, sitesOpenGeometry.buttonLeft) || !near(sitesOpenGeometry.menuRight, sitesOpenGeometry.buttonRight)) problems.push('Sites dropdown is not attached directly beneath its trigger');
+              if (sitesOpenGeometry.menuLeft < -0.5 || sitesOpenGeometry.menuRight > sitesOpenGeometry.viewportWidth + 0.5) problems.push('Sites dropdown escapes the viewport');
+              if (sitesOpenGeometry.linkOverflow) problems.push('Sites label overflows its attached dropdown');
+            }
             await page.screenshot({ path: `visual-audit/${prefix}-sites-open-${viewportName}.png` });
             await page.keyboard.press('Escape');
             if (await sitesMenu.isVisible()) problems.push('Sites menu did not close with Escape');
             if (!(await sitesButton.evaluate((element) => document.activeElement === element))) problems.push('Sites button did not regain focus after Escape');
+
+            const settingsButton = page.locator('[data-settings-button]');
+            const settingsMenu = page.locator('[data-settings-menu]');
+            await settingsButton.click();
+            await settingsMenu.waitFor({ state: 'visible' });
+            if ((await settingsMenu.locator('[data-theme-preference]').count()) !== 3) problems.push('Settings rail does not contain three theme options');
+            const settingsOpenGeometry = await page.evaluate(() => {
+              const button = document.querySelector('[data-settings-button]');
+              const menu = document.querySelector('[data-settings-menu]');
+              const style = button ? getComputedStyle(button) : null;
+              return {
+                buttonWidth: button?.getBoundingClientRect().width ?? null,
+                menuWidth: menu?.getBoundingClientRect().width ?? null,
+                focused: document.activeElement === button,
+                boxShadow: style?.boxShadow ?? 'none',
+              };
+            });
+            if (prefix === 'local') {
+              if (!near(settingsOpenGeometry.buttonWidth, settingsOpenGeometry.menuWidth)) problems.push('Settings extension does not match trigger width');
+              if (settingsOpenGeometry.focused && settingsOpenGeometry.boxShadow === 'none') problems.push('Open Settings trigger lost its complete inset focus treatment');
+            }
+            await page.screenshot({ path: `visual-audit/${prefix}-settings-open-${viewportName}.png` });
+            await page.keyboard.press('Escape');
+            if (await settingsMenu.isVisible()) problems.push('Settings rail did not close with Escape');
+            if (!(await settingsButton.evaluate((element) => document.activeElement === element))) problems.push('Settings button did not regain focus after Escape');
 
             const nav = page.locator('#primary-navigation');
             const navButton = page.locator('.nav-toggle');
