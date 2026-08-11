@@ -16,6 +16,8 @@ public sealed partial class ComparisonWorkspace : UserControl
     public ComparisonWorkspace()
     {
         InitializeComponent();
+        SelectionGrid.ColumnDefinitions = new ColumnDefinitions("*,180,*");
+        ComparisonBody.ColumnDefinitions = new ColumnDefinitions("400,*");
         Render([], null, null, ReportComparisonService.AnalyzeTrend([]));
     }
 
@@ -43,12 +45,18 @@ public sealed partial class ComparisonWorkspace : UserControl
             ? reports.FirstOrDefault(item => item.Report.Run.Id == candidateValue)
             : null;
 
-        ClearButton.IsEnabled = baseline is not null || candidate is not null;
+        var libraryEmpty = reports.Count == 0;
+        var hasSelection = baseline is not null || candidate is not null;
+        EmptyLibraryPanel.IsVisible = libraryEmpty;
+        SelectionGrid.IsVisible = !libraryEmpty;
+        ComparisonBody.IsVisible = !libraryEmpty;
+        ClearButton.IsVisible = !libraryEmpty && hasSelection;
+        ClearButton.IsEnabled = hasSelection;
         PickerInstructionText.Text = baseline is null
-            ? "Select a baseline first."
+            ? "Choose the reference condition."
             : candidate is null
-                ? "Baseline selected. Choose a candidate."
-                : "Both reports are selected. Change either side at any time.";
+                ? "Reference selected. Choose the changed condition."
+                : "Both conditions are selected. You can replace either one.";
 
         RenderPicker();
         RenderSelectionCards();
@@ -110,20 +118,6 @@ public sealed partial class ComparisonWorkspace : UserControl
     private void RenderPicker()
     {
         ReportPickerPanel.Children.Clear();
-        if (reports.Count == 0)
-        {
-            var empty = new TextBlock
-            {
-                Margin = new Avalonia.Thickness(16, 20),
-                Text = "No saved reports are available. Complete or import a diagnostic first.",
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap
-            };
-            empty.Classes.Add("muted");
-            ReportPickerPanel.Children.Add(empty);
-            return;
-        }
-
         foreach (var stored in reports)
         {
             ReportPickerPanel.Children.Add(BuildPickerRow(stored));
@@ -140,14 +134,14 @@ public sealed partial class ComparisonWorkspace : UserControl
         titlePanel.Children.Add(new TextBlock
         {
             Text = stored.Label ?? presentation.Verdict,
-            FontSize = 12,
+            FontSize = 11.5,
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
         });
         var meta = new TextBlock
         {
             Text = $"{stored.ProfileName} · {stored.Report.GeneratedAt.ToLocalTime():MMM d, h:mm tt}",
-            FontSize = 10,
+            FontSize = 9.5,
             TextWrapping = TextWrapping.Wrap
         };
         meta.Classes.Add("muted");
@@ -159,42 +153,46 @@ public sealed partial class ComparisonWorkspace : UserControl
             Tag = stored,
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
-        open.Classes.Add("pickerRow");
+        open.Classes.Add("dataRow");
         if (isBaseline || isCandidate) open.Classes.Add("selected");
         open.Click += OpenReportClicked;
 
         var baselineButton = new Button
         {
-            Content = isBaseline ? "Baseline" : "Set baseline",
+            Content = isBaseline ? "Baseline" : "Use as baseline",
             Tag = stored,
             IsEnabled = !isBaseline
         };
-        baselineButton.Classes.Add("ghost");
+        baselineButton.Classes.Add("secondary");
+        baselineButton.Classes.Add("pickerAction");
         baselineButton.Click += SetBaselineClicked;
 
-        var canSelectCandidate = baseline is not null && !isBaseline && !isCandidate;
         var candidateButton = new Button
         {
-            Content = isCandidate ? "Candidate" : baseline is null ? "Choose baseline first" : "Set candidate",
+            Content = isCandidate ? "Candidate" : "Use as candidate",
             Tag = stored,
-            IsEnabled = canSelectCandidate
+            IsVisible = baseline is not null && !isBaseline,
+            IsEnabled = !isCandidate
         };
-        candidateButton.Classes.Add(canSelectCandidate ? "action" : "ghost");
+        candidateButton.Classes.Add(isCandidate ? "secondary" : "primary");
+        candidateButton.Classes.Add("pickerAction");
         candidateButton.Click += SetCandidateClicked;
 
         var editButton = new Button
         {
             Content = "Edit",
-            Tag = stored
+            Tag = stored,
+            HorizontalAlignment = HorizontalAlignment.Right
         };
-        editButton.Classes.Add("ghost");
+        editButton.Classes.Add("linkAction");
+        editButton.Classes.Add("pickerAction");
         editButton.Click += EditReportClicked;
 
         var actions = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*"),
             ColumnSpacing = 7,
-            Margin = new Avalonia.Thickness(12, 8, 12, 11)
+            Margin = new Avalonia.Thickness(14, 6, 14, 10)
         };
         actions.Children.Add(baselineButton);
         Grid.SetColumn(candidateButton, 1);
@@ -205,12 +203,9 @@ public sealed partial class ComparisonWorkspace : UserControl
         var stack = new StackPanel();
         stack.Children.Add(open);
         stack.Children.Add(actions);
-        return new Border
-        {
-            BorderBrush = Brush.Parse("#2B3031"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
-            Child = stack
-        };
+        var row = new Border { Child = stack };
+        row.Classes.Add("divider");
+        return row;
     }
 
     private void RenderSelectionCards()
@@ -219,6 +214,7 @@ public sealed partial class ComparisonWorkspace : UserControl
         {
             BaselineTitleText.Text = "Not selected";
             BaselineMetaText.Text = "Choose the report that represents the reference condition.";
+            OpenBaselineButton.IsVisible = false;
             OpenBaselineButton.IsEnabled = false;
         }
         else
@@ -226,6 +222,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             var presentation = DiagnosticReportPresenter.FromReport(baseline.Report);
             BaselineTitleText.Text = baseline.Label ?? presentation.Verdict;
             BaselineMetaText.Text = $"{baseline.ProfileName} · {baseline.DisplayDate}\n{ReportComparisonService.ContextLabel(baseline.Report)}";
+            OpenBaselineButton.IsVisible = true;
             OpenBaselineButton.IsEnabled = true;
         }
 
@@ -235,6 +232,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             CandidateMetaText.Text = baseline is null
                 ? "Choose a baseline before selecting the candidate."
                 : "Choose a second report to measure change.";
+            OpenCandidateButton.IsVisible = false;
             OpenCandidateButton.IsEnabled = false;
         }
         else
@@ -242,6 +240,7 @@ public sealed partial class ComparisonWorkspace : UserControl
             var presentation = DiagnosticReportPresenter.FromReport(candidate.Report);
             CandidateTitleText.Text = candidate.Label ?? presentation.Verdict;
             CandidateMetaText.Text = $"{candidate.ProfileName} · {candidate.DisplayDate}\n{ReportComparisonService.ContextLabel(candidate.Report)}";
+            OpenCandidateButton.IsVisible = true;
             OpenCandidateButton.IsEnabled = true;
         }
     }
@@ -251,18 +250,18 @@ public sealed partial class ComparisonWorkspace : UserControl
         MetricRowsPanel.Children.Clear();
         if (baseline is null || candidate is null)
         {
-            CompatibilityIndicator.Background = Brush.Parse("#777D7E");
+            SetIndicatorClass("indicatorNeutral");
             CompatibilityTitleText.Text = "Waiting for two reports";
-            CompatibilityDetailText.Text = "Compatibility checks compare profile, method, endpoint, interface, and transfer ceiling.";
+            CompatibilityDetailText.Text = "Profile, method, endpoint, interface, and transfer ceiling are checked before comparison.";
             ComparisonSummaryText.Text = baseline is null
-                ? "Select a baseline, then choose a candidate report."
-                : "Baseline selected. Choose the candidate report from the left pane.";
+                ? "Choose a baseline, then choose a candidate report."
+                : "Baseline selected. Choose the candidate from Saved diagnostics.";
             AddEmptyMetricRow("Metrics appear after both reports are selected.");
             return;
         }
 
         var comparison = ReportComparisonService.Compare(baseline.Report, candidate.Report);
-        CompatibilityIndicator.Background = Brush.Parse(comparison.Comparable ? "#72A17B" : "#C77E68");
+        SetIndicatorClass(comparison.Comparable ? "indicatorSuccess" : "indicatorAccent");
         CompatibilityTitleText.Text = comparison.Comparable
             ? "Equivalent test context"
             : "Comparison includes cautions";
@@ -281,6 +280,14 @@ public sealed partial class ComparisonWorkspace : UserControl
         {
             MetricRowsPanel.Children.Add(BuildMetricRow(metric));
         }
+    }
+
+    private void SetIndicatorClass(string className)
+    {
+        CompatibilityIndicator.Classes.Remove("indicatorNeutral");
+        CompatibilityIndicator.Classes.Remove("indicatorAccent");
+        CompatibilityIndicator.Classes.Remove("indicatorSuccess");
+        CompatibilityIndicator.Classes.Add(className);
     }
 
     private static Border BuildMetricRow(ReportMetricDelta metric)
@@ -304,21 +311,22 @@ public sealed partial class ComparisonWorkspace : UserControl
         Grid.SetColumn(candidateText, 2);
         grid.Children.Add(candidateText);
         var change = MetricText(metric.Change);
-        change.Foreground = Brush.Parse(metric.Change.Contains("improved", StringComparison.OrdinalIgnoreCase)
-            ? "#79A982"
+        change.Classes.Remove("secondary");
+        change.Classes.Add(metric.Change.Contains("improved", StringComparison.OrdinalIgnoreCase)
+            ? "deltaPositive"
             : metric.Change.Contains("worsened", StringComparison.OrdinalIgnoreCase)
-                ? "#D1846D"
-                : "#B7BCBC");
+                ? "deltaNegative"
+                : "deltaNeutral");
         Grid.SetColumn(change, 3);
         grid.Children.Add(change);
 
-        return new Border
+        var row = new Border
         {
-            BorderBrush = Brush.Parse("#2B3031"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1),
             Padding = new Avalonia.Thickness(14, 11),
             Child = grid
         };
+        row.Classes.Add("divider");
+        return row;
     }
 
     private void AddEmptyMetricRow(string text)
@@ -327,19 +335,23 @@ public sealed partial class ComparisonWorkspace : UserControl
         {
             Margin = new Avalonia.Thickness(14, 18),
             Text = text,
-            FontSize = 12,
+            FontSize = 11,
             TextWrapping = TextWrapping.Wrap
         };
         label.Classes.Add("muted");
         MetricRowsPanel.Children.Add(label);
     }
 
-    private static TextBlock MetricText(string text) => new()
+    private static TextBlock MetricText(string text)
     {
-        Text = text,
-        FontSize = 11,
-        Foreground = Brush.Parse("#B7BCBC"),
-        VerticalAlignment = VerticalAlignment.Center,
-        TextWrapping = TextWrapping.Wrap
-    };
+        var value = new TextBlock
+        {
+            Text = text,
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap
+        };
+        value.Classes.Add("secondary");
+        return value;
+    }
 }

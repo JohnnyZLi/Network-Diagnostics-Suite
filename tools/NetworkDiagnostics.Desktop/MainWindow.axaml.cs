@@ -4,6 +4,7 @@ using NetworkDeepProbe.Diagnostics;
 using NetworkDeepProbe.Models;
 using NetworkDeepProbe.Planning;
 using NetworkDiagnostics.Desktop.Models;
+using NetworkDiagnostics.Desktop.Monitoring;
 using NetworkDiagnostics.Desktop.Navigation;
 using NetworkDiagnostics.Desktop.Presentation;
 using NetworkDiagnostics.Desktop.Services;
@@ -26,14 +27,13 @@ public sealed partial class MainWindow : Window
     private readonly ActiveRunSession activeRunSession = new();
     private readonly Dictionary<WorkspaceKind, NavigationEntry> lastWorkspaceEntries = new();
     private readonly ReportStore reportStore;
+    private readonly ContinuousMonitorService monitoringService;
     private CancellationTokenSource? runCancellation => activeRunSession.CancellationSource;
     private CancellationTokenSource? preflightCancellation;
     private CancellationTokenSource? lanServerCancellation;
     private WorkbenchShell? workbenchShell;
     private TestSetupWorkspace? testSetupWorkspace;
     private TestConfigurationPanel? testConfigurationPanel;
-    private RunningTestWorkspace? runningTestWorkspace;
-    private TestResultWorkspace? testResultWorkspace;
     private ReportBrowserWorkspace? reportBrowserWorkspace;
     private ReportDetailWorkspace? reportDetailWorkspace;
     private ComparisonWorkspace? comparisonWorkspace;
@@ -52,13 +52,10 @@ public sealed partial class MainWindow : Window
     private ConnectionCheckPresentation currentPresentation
     {
         get => currentPresentationValue;
-        set
-        {
-            currentPresentationValue = value;
-            SyncRunResultWorkspaces();
-        }
+        set => currentPresentationValue = value;
     }
     private DesktopSettings settings = new();
+    private MonitorWindow monitorWindow = MonitorWindow.FiveMinutes;
     private NetworkDiagnosticsReportV2? currentReport;
     private NetworkDiagnosticsReportV2? comparisonBaselineReport;
     private StoredReport? selectedHistoryReport { get; set; }
@@ -89,9 +86,11 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         reportStore = new ReportStore(settingsStore.RootDirectory);
+        monitoringService = new ContinuousMonitorService(settingsStore.RootDirectory);
         InitializeComponent();
         InstallTestWorkspace();
         InstallWorkbenchShell();
+        SetWorkbenchReady(false);
         initialized = true;
         RenderProfileSelection();
         RenderMethodSelection();
@@ -107,26 +106,58 @@ public sealed partial class MainWindow : Window
     {
         initialized = false;
         settingsLoaded = false;
-        settings = await settingsStore.LoadAsync();
-        reportStore.Configure(settings.ReportDirectory);
-        selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
-        selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
-        testOriginsText = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
-        lanTargetText = settings.LanTarget ?? string.Empty;
-        lanPortText = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        lanDurationText = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        lanConnectionsText = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        PopulateInterfaceChoices();
-        initialized = true;
-        RenderProfileSelection();
-        RenderMethodSelection();
+
+        try
+        {
+            settings = await settingsStore.LoadAsync();
+            ApplyAppearance(settings.Appearance);
+            ApplyAccessibilityPreferences();
+            monitorWindow = settings.SelectedMonitoringWindow;
+            reportStore.Configure(settings.ReportDirectory);
+            selectedProfileIndex = ProfileIndex(settings.SelectedProfile);
+            selectedMethodIndex = MethodIndex(settings.SelectedTransferMethod);
+            testOriginsText = string.Join(Environment.NewLine, settings.ParsedTestOrigins.Select(uri => uri.ToString()));
+            lanTargetText = settings.LanTarget ?? string.Empty;
+            lanPortText = settings.LanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            lanDurationText = settings.LanDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            lanConnectionsText = settings.LanConnections.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            PopulateInterfaceChoices();
+            initialized = true;
+            RenderProfileSelection();
+            RenderMethodSelection();
+            SyncTestWorkspace();
+            SyncSettingsWorkspace();
+            settingsLoaded = true;
+
+            // Restore the intended destination before exposing the shell. The previous
+            // sequence displayed the default setup workspace while startup services ran,
+            // then visibly replaced it with Home several seconds later.
+            await RestorePersistedWorkbenchStateAsync();
+            workbenchShell?.SetInspectorOpen(false);
+            PreserveCurrentNavigationState();
+            await PersistWorkbenchStateAsync();
+            RefreshWorkbenchChrome();
+        }
+        finally
+        {
+            SetWorkbenchReady(true);
+        }
+
+        // Slower local and network-backed data can populate the restored screen in place.
         await RefreshHistoryAsync();
         await RefreshPreflightAsync();
+        await InitializeMonitoringAsync();
+        await UpdateTrayIntegrationAsync();
         SyncTestWorkspace();
         SyncSettingsWorkspace();
-        settingsLoaded = true;
-        await RestorePersistedWorkbenchStateAsync();
         RefreshWorkbenchChrome();
+    }
+
+    private void SetWorkbenchReady(bool ready)
+    {
+        if (workbenchShell is null) return;
+        workbenchShell.Opacity = ready ? 1 : 0;
+        workbenchShell.IsHitTestVisible = ready;
     }
 
     private void WindowClosed(object? sender, EventArgs eventArgs)
@@ -134,6 +165,8 @@ public sealed partial class MainWindow : Window
         activeRunSession.Dispose();
         preflightCancellation?.Cancel();
         lanServerCancellation?.Cancel();
+        if (liveTrayIcon is not null) liveTrayIcon.IsVisible = false;
+        _ = monitoringService.DisposeAsync();
     }
 
     private void PopulateInterfaceChoices()

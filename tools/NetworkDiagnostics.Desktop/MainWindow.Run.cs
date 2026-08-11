@@ -34,12 +34,19 @@ public sealed partial class MainWindow
                 progress,
                 activeRunSession.CancellationToken);
             currentReport = report;
-            await reportStore.SaveAsync(report, activeRunSession.CancellationToken);
+            var stored = await reportStore.SaveAsync(report, activeRunSession.CancellationToken);
+            selectedHistoryReport = stored;
+            comparisonBaselineReport ??= report;
+            RememberSavedReportWithoutRendering(stored);
+
             currentPresentation = DiagnosticReportPresenter.FromReport(report);
             activeRunSession.Complete(report);
             CompleteRunningState();
             RenderPresentation(currentPresentation);
-            await RefreshHistoryAsync();
+
+            // The result is already saved and fully represented in memory. Move to
+            // the focused report workspace now instead of scanning/re-rendering the
+            // entire history surface first; the library refreshes when it is opened.
             PresentRunOutcome(report.Run.Id);
         }
         catch (OperationCanceledException)
@@ -58,17 +65,24 @@ public sealed partial class MainWindow
         }
         finally
         {
+            // Do not rebuild or refresh the test hub here. Session state changes and
+            // destination navigation already own those visual updates. A second pass
+            // during the report handoff can expose an intermediate frame on macOS.
             RenderProfileSelection();
-            SyncTestWorkspace();
-            RefreshWorkbenchChrome();
         }
     }
 
-    private void StopClicked(object? sender, RoutedEventArgs eventArgs)
+    private void RememberSavedReportWithoutRendering(Services.StoredReport stored)
     {
-        activeRunSession.RequestCancel();
-        RefreshWorkbenchChrome();
+        controlCenterReports = new[] { stored }
+            .Concat(controlCenterReports.Where(item => item.Report.Run.Id != stored.Report.Run.Id))
+            .OrderByDescending(item => item.Report.GeneratedAt)
+            .ToArray();
+        savedReportCount = controlCenterReports.Count;
     }
+
+    private void StopClicked(object? sender, RoutedEventArgs eventArgs) =>
+        activeRunSession.RequestCancel();
 
     private void RunAgainClicked(object? sender, RoutedEventArgs eventArgs) =>
         NavigateToDestination(new TestSetupDestination());
@@ -89,6 +103,8 @@ public sealed partial class MainWindow
         }
 
         displayedRunProgress = nextProgress;
+        // UpdateProgress raises ActiveRunSession.Changed, whose single UI handler
+        // updates the fixed live tile and workbench chrome. Do not refresh it twice.
         activeRunSession.UpdateProgress(
             progress.Phase,
             LiveProgressText(progress),
@@ -96,21 +112,21 @@ public sealed partial class MainWindow
             progress.LiveMbps,
             progress.LiveLatencyMs,
             progress.BytesTransferred);
-        RefreshWorkbenchChrome();
     }
 
     private void ResetRunningState()
     {
+        // ActiveRunSession.Start already raised the state change that installs the
+        // live tile. This method only resets the monotonic progress accumulator.
         displayedRunProgress = 0;
-        SyncTestWorkspace();
-        RefreshWorkbenchChrome();
     }
 
     private void CompleteRunningState()
     {
+        // ActiveRunSessionChanged already converted the fixed live tile into its
+        // completed handoff state. Updating only the logical progress avoids
+        // restoring the idle test choices before the focused report view is shown.
         displayedRunProgress = 100;
-        SyncTestWorkspace();
-        RefreshWorkbenchChrome();
     }
 
     private async Task<bool> ConfirmDataUseAsync(TestProfileId profile, TransferMethod method)

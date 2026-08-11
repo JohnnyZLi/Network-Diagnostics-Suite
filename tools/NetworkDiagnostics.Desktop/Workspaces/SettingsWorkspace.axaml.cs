@@ -1,7 +1,5 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 
 namespace NetworkDiagnostics.Desktop.Workspaces;
 
@@ -13,43 +11,40 @@ public sealed partial class SettingsWorkspace : UserControl
     public SettingsWorkspace()
     {
         InitializeComponent();
-        SizeChanged += SettingsWorkspaceSizeChanged;
         ShowSection(currentSection);
     }
 
     public event EventHandler<SettingsSectionRequestedEventArgs>? SectionRequested;
-
     public event EventHandler<SettingsIndexRequestedEventArgs>? ProfileRequested;
-
     public event EventHandler<SettingsIndexRequestedEventArgs>? MethodRequested;
-
+    public event EventHandler<SettingsIndexRequestedEventArgs>? AppearanceRequested;
     public event EventHandler<SettingsIndexRequestedEventArgs>? InterfaceRequested;
-
     public event EventHandler<SettingsBooleanChangedEventArgs>? IdentifiersChanged;
-
+    public event EventHandler? SaveGeneralRequested;
+    public event EventHandler? SaveMonitoringRequested;
     public event EventHandler? RefreshPreflightRequested;
-
     public event EventHandler? SaveMeasurementRequested;
-
     public event EventHandler? StartLanServerRequested;
-
     public event EventHandler? StopLanServerRequested;
-
     public event EventHandler? ResetApprovalsRequested;
-
     public event EventHandler? OpenReportsFolderRequested;
-
     public event EventHandler<SettingsIndexRequestedEventArgs>? PreviewRequested;
 
     public string Origins => OriginsTextBox.Text ?? string.Empty;
-
     public string LanTarget => LanTargetTextBox.Text ?? string.Empty;
-
     public string LanPort => LanPortTextBox.Text ?? string.Empty;
-
     public string LanDuration => LanDurationTextBox.Text ?? string.Empty;
-
     public string LanConnections => LanConnectionsTextBox.Text ?? string.Empty;
+    public bool MonitoringEnabled => MonitoringEnabledCheckBox.IsChecked == true;
+    public int MonitoringIntervalIndex => Math.Max(0, MonitoringIntervalComboBox.SelectedIndex);
+    public int ContentCadenceIndex => Math.Max(0, ContentCadenceComboBox.SelectedIndex);
+    public string ExpectedDownload => ExpectedDownloadTextBox.Text ?? string.Empty;
+    public string ExpectedUpload => ExpectedUploadTextBox.Text ?? string.Empty;
+    public string AlertThreshold => AlertThresholdTextBox.Text ?? string.Empty;
+    public bool StartInBackground => StartInBackgroundCheckBox.IsChecked == true;
+    public bool LiveTrayEnabled => LiveTrayCheckBox.IsChecked == true;
+    public bool ReduceMotion => ReduceMotionCheckBox.IsChecked == true;
+    public bool IncreaseContrast => IncreaseContrastCheckBox.IsChecked == true;
 
     public void Render(SettingsWorkspaceModel model)
     {
@@ -58,6 +53,7 @@ public sealed partial class SettingsWorkspace : UserControl
         {
             ProfileComboBox.SelectedIndex = model.ProfileIndex;
             MethodComboBox.SelectedIndex = model.MethodIndex;
+            AppearanceComboBox.SelectedIndex = model.AppearanceIndex;
 
             InterfaceComboBox.Items.Clear();
             foreach (var label in model.InterfaceLabels)
@@ -65,6 +61,20 @@ public sealed partial class SettingsWorkspace : UserControl
                 InterfaceComboBox.Items.Add(new ComboBoxItem { Content = label });
             }
             InterfaceComboBox.SelectedIndex = Math.Clamp(model.InterfaceIndex, 0, Math.Max(0, model.InterfaceLabels.Count - 1));
+
+            StartInBackgroundCheckBox.IsChecked = model.StartInBackground;
+            LiveTrayCheckBox.IsChecked = model.LiveTrayEnabled;
+            ReduceMotionCheckBox.IsChecked = model.ReduceMotion;
+            IncreaseContrastCheckBox.IsChecked = model.IncreaseContrast;
+            PlatformFeatureStatusText.Text = model.PlatformFeatureStatus;
+
+            MonitoringEnabledCheckBox.IsChecked = model.MonitoringEnabled;
+            MonitoringIntervalComboBox.SelectedIndex = Math.Clamp(model.MonitoringIntervalIndex, 0, 4);
+            ContentCadenceComboBox.SelectedIndex = Math.Clamp(model.ContentCadenceIndex, 0, 4);
+            ExpectedDownloadTextBox.Text = model.ExpectedDownload;
+            ExpectedUploadTextBox.Text = model.ExpectedUpload;
+            AlertThresholdTextBox.Text = model.AlertThreshold;
+            MonitoringStatusText.Text = model.MonitoringStatus;
 
             IdentifiersCheckBox.IsChecked = model.IncludeIdentifiers;
             OriginsTextBox.Text = model.Origins;
@@ -91,12 +101,14 @@ public sealed partial class SettingsWorkspace : UserControl
     {
         currentSection = NormalizeSection(section);
         SetSelected(GeneralButton, currentSection == "General");
+        SetSelected(MonitoringButton, currentSection == "Monitoring");
         SetSelected(MeasurementButton, currentSection == "Measurement");
         SetSelected(PrivacyButton, currentSection == "Privacy & data");
         SetSelected(StorageButton, currentSection == "Storage");
         SetSelected(DeveloperButton, currentSection == "Developer");
 
         GeneralPanel.IsVisible = currentSection == "General";
+        MonitoringPanel.IsVisible = currentSection == "Monitoring";
         MeasurementPanel.IsVisible = currentSection == "Measurement";
         PrivacyPanel.IsVisible = currentSection == "Privacy & data";
         StoragePanel.IsVisible = currentSection == "Storage";
@@ -104,11 +116,12 @@ public sealed partial class SettingsWorkspace : UserControl
 
         var copy = currentSection switch
         {
-            "Measurement" => ("MEASUREMENT", "Measurement path and LAN isolation", "Configure endpoint candidates and optional trusted-LAN evidence without changing the diagnostic engine or report format."),
-            "Privacy & data" => ("PRIVACY & DATA", "Report privacy and approvals", "Control local identifiers in saved reports and clear remembered approvals for higher-data diagnostic profiles."),
-            "Storage" => ("STORAGE", "Local report storage", "Inspect the directory used for completed and imported reports. Report data remains local unless you explicitly export it."),
-            "Developer" => ("DEVELOPER", "Presentation previews", "Exercise terminal result states for UI validation without starting a network measurement."),
-            _ => ("GENERAL", "Application defaults", "Choose the default diagnostic profile, transfer method, and network interface used when starting new work.")
+            "Monitoring" => ("MONITORING", "Continuous monitoring", "Configure background sampling, scheduled speed checks, score expectations, and alert thresholds."),
+            "Measurement" => ("DIAGNOSTICS", "Diagnostic defaults", "Configure new-run defaults, measurement endpoints, and optional trusted-LAN isolation."),
+            "Privacy & data" => ("PRIVACY", "Privacy and approvals", "Control local identifiers in exported data and remembered approval for high-data diagnostic runs."),
+            "Storage" => ("STORAGE", "Local data", "Review where reports, monitoring history, and alerts are stored and how data leaves the app."),
+            "Developer" => ("DEVELOPER", "Preview states", "Exercise result presentations without starting a live network measurement or writing a report."),
+            _ => ("GENERAL", "Application", "Choose appearance, measurement interface, startup behavior, live status, and accessibility preferences.")
         };
         SectionEyebrowText.Text = copy.Item1;
         SectionTitleText.Text = copy.Item2;
@@ -138,6 +151,14 @@ public sealed partial class SettingsWorkspace : UserControl
         }
     }
 
+    private void AppearanceSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    {
+        if (!applyingModel && AppearanceComboBox.SelectedIndex >= 0)
+        {
+            AppearanceRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(AppearanceComboBox.SelectedIndex));
+        }
+    }
+
     private void InterfaceSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
     {
         if (!applyingModel && InterfaceComboBox.SelectedIndex >= 0)
@@ -153,6 +174,12 @@ public sealed partial class SettingsWorkspace : UserControl
             IdentifiersChanged?.Invoke(this, new SettingsBooleanChangedEventArgs(IdentifiersCheckBox.IsChecked == true));
         }
     }
+
+    private void SaveGeneralClicked(object? sender, RoutedEventArgs eventArgs) =>
+        SaveGeneralRequested?.Invoke(this, EventArgs.Empty);
+
+    private void SaveMonitoringClicked(object? sender, RoutedEventArgs eventArgs) =>
+        SaveMonitoringRequested?.Invoke(this, EventArgs.Empty);
 
     private void RefreshPreflightClicked(object? sender, RoutedEventArgs eventArgs) =>
         RefreshPreflightRequested?.Invoke(this, EventArgs.Empty);
@@ -175,78 +202,10 @@ public sealed partial class SettingsWorkspace : UserControl
     private void PreviewClicked(object? sender, RoutedEventArgs eventArgs) =>
         PreviewRequested?.Invoke(this, new SettingsIndexRequestedEventArgs(Math.Max(0, FixtureComboBox.SelectedIndex)));
 
-    private void SettingsWorkspaceSizeChanged(object? sender, SizeChangedEventArgs eventArgs) =>
-        ApplyResponsiveLayout(eventArgs.NewSize.Width);
-
-    private void ApplyResponsiveLayout(double width)
-    {
-        var wide = width >= 900;
-        SettingsContentContainer.Margin = wide
-            ? new Thickness(32, 28, 32, 40)
-            : new Thickness(22, 24, 22, 36);
-
-        ConfigureGrid(GeneralLayoutGrid, wide ? 2 : 1, wide ? 2 : 3);
-        Grid.SetColumn(GeneralInterfaceContainer, wide ? 1 : 0);
-        Grid.SetRow(GeneralInterfaceContainer, wide ? 0 : 1);
-        GeneralInterfaceContainer.BorderThickness = wide
-            ? new Thickness(1, 0, 0, 0)
-            : new Thickness(0, 1, 0, 0);
-        GeneralInterfaceContainer.Padding = wide
-            ? new Thickness(24, 0, 0, 0)
-            : new Thickness(0, 18, 0, 0);
-        Grid.SetRow(RefreshPreflightButton, wide ? 1 : 2);
-        Grid.SetColumn(RefreshPreflightButton, 0);
-        Grid.SetColumnSpan(RefreshPreflightButton, wide ? 2 : 1);
-
-        ConfigureGrid(PrivacyLayoutGrid, wide ? 2 : 1, wide ? 2 : 3);
-        Grid.SetColumn(PrivacyApprovalsContainer, wide ? 1 : 0);
-        Grid.SetRow(PrivacyApprovalsContainer, wide ? 0 : 1);
-        PrivacyApprovalsContainer.BorderThickness = wide
-            ? new Thickness(1, 0, 0, 0)
-            : new Thickness(0, 1, 0, 0);
-        PrivacyApprovalsContainer.Padding = wide
-            ? new Thickness(24, 0, 0, 0)
-            : new Thickness(0, 18, 0, 0);
-        Grid.SetRow(PrivacyStatusText, wide ? 1 : 2);
-        Grid.SetColumn(PrivacyStatusText, 0);
-        Grid.SetColumnSpan(PrivacyStatusText, wide ? 2 : 1);
-
-        ConfigureGrid(StorageLayoutGrid, wide ? 2 : 1, wide ? 1 : 2, secondColumnAuto: true);
-        Grid.SetColumn(StorageActionSection, wide ? 1 : 0);
-        Grid.SetRow(StorageActionSection, wide ? 0 : 1);
-        StorageActionSection.Width = wide ? 188 : double.NaN;
-        StorageActionSection.Margin = wide ? new Thickness(0) : new Thickness(0, 16, 0, 0);
-        StorageActionSection.VerticalAlignment = wide ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-
-        ConfigureGrid(DeveloperLayoutGrid, wide ? 2 : 1, wide ? 1 : 2, secondColumnAuto: true);
-        Grid.SetColumn(DeveloperActionSection, wide ? 1 : 0);
-        Grid.SetRow(DeveloperActionSection, wide ? 0 : 1);
-        DeveloperActionSection.Width = wide ? 200 : double.NaN;
-        DeveloperActionSection.Margin = wide ? new Thickness(0) : new Thickness(0, 16, 0, 0);
-        DeveloperActionSection.VerticalAlignment = wide ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-    }
-
-    private static void ConfigureGrid(Grid grid, int columns, int rows, bool secondColumnAuto = false)
-    {
-        grid.ColumnDefinitions.Clear();
-        for (var index = 0; index < columns; index++)
-        {
-            var width = secondColumnAuto && index == 1
-                ? GridLength.Auto
-                : new GridLength(1, GridUnitType.Star);
-            grid.ColumnDefinitions.Add(new ColumnDefinition(width));
-        }
-
-        grid.RowDefinitions.Clear();
-        for (var index = 0; index < rows; index++)
-        {
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        }
-    }
-
     private static string NormalizeSection(string? section) => section?.Trim() switch
     {
-        "Measurement" => "Measurement",
+        "Monitoring" => "Monitoring",
+        "Measurement" or "Diagnostics" => "Measurement",
         "Privacy & data" or "Privacy" or "Data" => "Privacy & data",
         "Storage" => "Storage",
         "Developer" => "Developer",
@@ -270,8 +229,21 @@ public sealed record SettingsWorkspaceModel(
     string Section,
     int ProfileIndex,
     int MethodIndex,
+    int AppearanceIndex,
     IReadOnlyList<string> InterfaceLabels,
     int InterfaceIndex,
+    bool StartInBackground,
+    bool LiveTrayEnabled,
+    bool ReduceMotion,
+    bool IncreaseContrast,
+    string PlatformFeatureStatus,
+    bool MonitoringEnabled,
+    int MonitoringIntervalIndex,
+    int ContentCadenceIndex,
+    string ExpectedDownload,
+    string ExpectedUpload,
+    string AlertThreshold,
+    string MonitoringStatus,
     bool IncludeIdentifiers,
     string Origins,
     string LanTarget,

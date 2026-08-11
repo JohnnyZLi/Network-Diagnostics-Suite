@@ -134,6 +134,11 @@ public sealed partial class ReportBrowserWorkspace : UserControl
 
     private void RefreshRows()
     {
+        var libraryEmpty = allReports.Count == 0;
+        EmptyStateBorder.IsVisible = libraryEmpty;
+        FilterBar.IsVisible = !libraryEmpty;
+        ReportTableBorder.IsVisible = !libraryEmpty;
+
         var query = SearchBox.Text?.Trim() ?? string.Empty;
         IEnumerable<StoredReport> filtered = allReports;
         if (query.Length > 0)
@@ -155,25 +160,26 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         VisibleCountText.Text = visibleReports.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
         ReportListPanel.Children.Clear();
 
-        if (visibleReports.Length == 0)
+        if (!libraryEmpty && visibleReports.Length == 0)
         {
             var empty = new StackPanel
             {
-                Margin = new Avalonia.Thickness(22, 28),
-                Spacing = 6
+                Margin = new Avalonia.Thickness(32, 70),
+                Spacing = 7,
+                HorizontalAlignment = HorizontalAlignment.Center
             };
             empty.Children.Add(new TextBlock
             {
-                Text = allReports.Count == 0 ? "No saved reports" : "No reports match this search",
-                FontSize = 16,
-                FontWeight = FontWeight.SemiBold
+                Text = "No matching reports",
+                FontSize = 18,
+                FontWeight = FontWeight.SemiBold,
+                TextAlignment = TextAlignment.Center
             });
             var detail = new TextBlock
             {
-                Text = allReports.Count == 0
-                    ? "Completed diagnostics and imported schema 2.0 reports will appear here."
-                    : "Try a profile, verdict, label, tag, interface, or network name.",
-                FontSize = 12,
+                Text = "Try a profile, verdict, label, tag, interface, or network name.",
+                FontSize = 11,
+                TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
             };
             detail.Classes.Add("muted");
@@ -199,7 +205,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
     private Button BuildRow(StoredReport stored)
     {
         var presentation = DiagnosticReportPresenter.FromReport(stored.Report);
-        var resultPanel = new StackPanel { Spacing = 2 };
+        var resultPanel = new StackPanel { Spacing = 3 };
         resultPanel.Children.Add(new TextBlock
         {
             Text = stored.Label ?? presentation.Verdict,
@@ -212,7 +218,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
             var verdictText = new TextBlock
             {
                 Text = presentation.Verdict,
-                FontSize = 10,
+                FontSize = 9,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             verdictText.Classes.Add("muted");
@@ -221,8 +227,8 @@ public sealed partial class ReportBrowserWorkspace : UserControl
 
         var grid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("128,112,*,210"),
-            ColumnSpacing = 12
+            ColumnDefinitions = new ColumnDefinitions("148,112,*,300"),
+            ColumnSpacing = 14
         };
         grid.Children.Add(new TextBlock
         {
@@ -233,7 +239,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var profile = new TextBlock
         {
             Text = stored.ProfileName,
-            FontSize = 11,
+            FontSize = 10,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -245,7 +251,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var context = new TextBlock
         {
             Text = ReportComparisonService.ContextLabel(stored.Report),
-            FontSize = 10,
+            FontSize = 9,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -256,9 +262,10 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var button = new Button
         {
             Content = grid,
-            Tag = stored
+            Tag = stored,
+            MinHeight = 54
         };
-        button.Classes.Add("reportRow");
+        button.Classes.Add("dataRow");
         if (selectedReport?.Report.Run.Id == stored.Report.Run.Id)
         {
             button.Classes.Add("selected");
@@ -270,16 +277,18 @@ public sealed partial class ReportBrowserWorkspace : UserControl
     private void RenderSelection()
     {
         var enabled = selectedReport is not null;
+        SelectionPanel.IsVisible = enabled;
+        SelectionHintBorder.IsVisible = !enabled && allReports.Count > 0;
         OpenSelectedButton.IsEnabled = enabled;
         CompareSelectedButton.IsEnabled = enabled;
         EditSelectedButton.IsEnabled = enabled;
 
         if (selectedReport is null)
         {
-            SelectedTitleText.Text = "Select a report";
-            SelectedMetaText.Text = "Choose a row to inspect its context and available actions.";
-            SelectedContextText.Text = "No report selected";
-            SelectedTagsText.Text = "No tags";
+            SelectedTitleText.Text = string.Empty;
+            SelectedMetaText.Text = string.Empty;
+            SelectedContextText.Text = string.Empty;
+            SelectedTagsText.Text = string.Empty;
             return;
         }
 
@@ -301,7 +310,7 @@ public sealed partial class ReportBrowserWorkspace : UserControl
         var trend = ReportComparisonService.AnalyzeTrend(allReports);
         LibrarySummaryText.Text = allReports.Count == 0
             ? "The library is empty."
-            : $"{allReports.Count} saved · {profileCount} profile type{(profileCount == 1 ? string.Empty : "s")}\n{trend.CompatibleRuns} compatible in the latest trend set";
+            : $"{allReports.Count} saved · {profileCount} profile type{(profileCount == 1 ? string.Empty : "s")}\n{trend.CompatibleRuns} in the latest trend set";
     }
 
     private void RaiseStateChanged() =>

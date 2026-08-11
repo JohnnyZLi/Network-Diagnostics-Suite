@@ -1,178 +1,241 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NetworkDiagnostics.Desktop.Workspaces.ReportBrowserWorkspace"
-             Background="#111415"
-             Foreground="#E9E6E0"
+             Background="{DynamicResource AppCanvasBrush}"
+             Foreground="{DynamicResource AppTextBrush}"
              FontFamily="Inter">
   <UserControl.Styles>
-    <Style Selector="TextBlock.eyebrow">
-      <Setter Property="Foreground" Value="#C77E68" />
-      <Setter Property="FontSize" Value="10" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.6" />
+    <Style Selector="Border.filterBar">
+      <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10" />
     </Style>
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#969B9C" />
-    </Style>
-    <Style Selector="Border.workspaceCard">
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="BorderBrush" Value="#303536" />
+    <Style Selector="Border.selectionTray">
+      <Setter Property="Background" Value="{DynamicResource AppSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16" />
     </Style>
-    <Style Selector="Button.action">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="13,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="#C96346" />
-      <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderThickness" Value="0" />
+    <Style Selector="TextBlock.columnHeader">
+      <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+      <Setter Property="FontSize" Value="9" />
       <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.action:pointerover">
-      <Setter Property="Background" Value="#D36E50" />
-    </Style>
-    <Style Selector="Button.ghost">
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="Padding" Value="12,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#D4D7D6" />
-      <Setter Property="BorderBrush" Value="#3B4142" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
-    <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Background" Value="#222728" />
-      <Setter Property="BorderBrush" Value="#565D5E" />
-    </Style>
-    <Style Selector="Button.reportRow">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#E9E6E0" />
-      <Setter Property="BorderBrush" Value="#2B3031" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="14,12" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    </Style>
-    <Style Selector="Button.reportRow:pointerover">
-      <Setter Property="Background" Value="#1D2223" />
-    </Style>
-    <Style Selector="Button.reportRow.selected">
-      <Setter Property="Background" Value="#2A241E" />
-      <Setter Property="BorderBrush" Value="#7D5548" />
-    </Style>
-    <Style Selector="TextBox.filter">
-      <Setter Property="MinHeight" Value="36" />
-      <Setter Property="Padding" Value="11,7" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="Foreground" Value="#ECE9E3" />
-      <Setter Property="BorderBrush" Value="#343A3B" />
-    </Style>
-    <Style Selector="ComboBox.filter">
-      <Setter Property="MinHeight" Value="36" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Background" Value="#171B1C" />
-      <Setter Property="Foreground" Value="#ECE9E3" />
-      <Setter Property="BorderBrush" Value="#343A3B" />
+      <Setter Property="LetterSpacing" Value="1" />
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*" Margin="28,24,28,24" RowSpacing="16">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
+  <Grid RowDefinitions="Auto,Auto,Auto,*"
+        Margin="34,30,34,34"
+        RowSpacing="18"
+        MaxWidth="1480"
+        HorizontalAlignment="Stretch">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24">
       <StackPanel Spacing="5">
-        <TextBlock Classes="eyebrow" Text="REPORT LIBRARY" />
-        <TextBlock FontSize="27" FontWeight="SemiBold" Text="Saved diagnostics" />
+        <TextBlock Classes="eyebrow" Text="HISTORY" />
+        <TextBlock FontSize="30" FontWeight="SemiBold" Text="Diagnostics history" />
         <TextBlock Classes="muted"
                    FontSize="12"
-                   Text="Search, inspect, label, export, and compare local schema 2.0 reports." />
+                   Text="Review past network conditions, reopen evidence, or choose two comparable runs." />
       </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <Button Classes="ghost" Content="Open folder" Click="OpenFolderClicked" />
-        <Button Classes="action" Content="Import report" Click="ImportClicked" />
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  Spacing="8"
+                  VerticalAlignment="Center">
+        <Button Classes="ghost" Content="Open data folder" Click="OpenFolderClicked" />
+        <Button Classes="primary" Content="Import JSON" Click="ImportClicked" />
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,170,140" ColumnSpacing="10">
-      <TextBox Name="SearchBox"
-               Classes="filter"
-               Watermark="Search verdicts, labels, tags, profiles, or network context"
-               TextChanged="SearchChanged" />
-      <ComboBox Name="SortSelector"
-                Grid.Column="1"
-                Classes="filter"
-                SelectionChanged="SortChanged">
-        <ComboBoxItem Content="Newest first" Tag="date-desc" />
-        <ComboBoxItem Content="Oldest first" Tag="date-asc" />
-        <ComboBoxItem Content="Profile" Tag="profile" />
-        <ComboBoxItem Content="Verdict" Tag="verdict" />
-      </ComboBox>
-      <Border Grid.Column="2" Classes="workspaceCard" Padding="12,8">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-          <TextBlock Name="VisibleCountText" FontWeight="SemiBold" />
-          <TextBlock Classes="muted" Text="visible" />
+    <Border Name="FilterBar" Grid.Row="1" Classes="filterBar">
+      <Grid ColumnDefinitions="*,178,Auto" ColumnSpacing="10">
+        <TextBox Name="SearchBox"
+                 Classes="appInput"
+                 PlaceholderText="Search reports"
+                 TextChanged="SearchChanged" />
+        <ComboBox Name="SortSelector"
+                  Grid.Column="1"
+                  Classes="appInput"
+                  SelectionChanged="SortChanged">
+          <ComboBoxItem Content="Newest first" Tag="date-desc" />
+          <ComboBoxItem Content="Oldest first" Tag="date-asc" />
+          <ComboBoxItem Content="Profile" Tag="profile" />
+          <ComboBoxItem Content="Verdict" Tag="verdict" />
+        </ComboBox>
+        <Border Grid.Column="2"
+                Background="{DynamicResource AppInsetBrush}"
+                CornerRadius="8"
+                Padding="13,0"
+                MinWidth="88">
+          <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Name="VisibleCountText" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="reports" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Name="SelectionHintBorder"
+            Grid.Row="2"
+            Background="Transparent"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="2,0,2,13">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+        <StackPanel Spacing="3">
+          <TextBlock FontSize="13" FontWeight="SemiBold" Text="Select a report to reveal its actions" />
+          <TextBlock Classes="muted" FontSize="10" Text="Report context appears inline without reducing the width of the history table." />
         </StackPanel>
-      </Border>
-    </Grid>
+        <TextBlock Grid.Column="1"
+                   Classes="muted"
+                   FontSize="10"
+                   VerticalAlignment="Center"
+                   Text="Open · Compare · Label" />
+      </Grid>
+    </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="*,300" ColumnSpacing="14">
-      <Border Grid.Column="0" Classes="workspaceCard" ClipToBounds="True">
-        <Grid RowDefinitions="38,*">
-          <Border Background="#15191A" BorderBrush="#303536" BorderThickness="0,0,0,1" Padding="14,0">
-            <Grid ColumnDefinitions="128,112,*,210" ColumnSpacing="12">
-              <TextBlock Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="DATE" />
-              <TextBlock Grid.Column="1" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="PROFILE" />
-              <TextBlock Grid.Column="2" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="RESULT" />
-              <TextBlock Grid.Column="3" Classes="muted" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Text="CONTEXT" />
-            </Grid>
-          </Border>
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Name="ReportListPanel" />
-          </ScrollViewer>
-        </Grid>
-      </Border>
+    <Border Name="SelectionPanel"
+            Grid.Row="2"
+            Classes="selectionTray"
+            IsVisible="False">
+      <Grid ColumnDefinitions="1.3*,1*,0.72*,Auto" ColumnSpacing="22">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Classes="eyebrow" Text="SELECTED REPORT" />
+          <TextBlock Name="SelectedTitleText"
+                     FontSize="17"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock Name="SelectedMetaText"
+                     Classes="muted"
+                     FontSize="10"
+                     LineHeight="15"
+                     TextWrapping="Wrap" />
+        </StackPanel>
 
-      <Border Grid.Column="1" Classes="workspaceCard" Padding="18">
-        <Grid RowDefinitions="Auto,*,Auto">
-          <StackPanel Grid.Row="0" Spacing="5">
-            <TextBlock Classes="eyebrow" Text="SELECTION" />
-            <TextBlock Name="SelectedTitleText"
-                       FontSize="18"
+        <StackPanel Grid.Column="1" Spacing="4">
+          <TextBlock Classes="eyebrow" Text="CONTEXT" />
+          <TextBlock Name="SelectedContextText"
+                     Classes="secondary"
+                     FontSize="11"
+                     LineHeight="16"
+                     TextWrapping="Wrap" />
+          <TextBlock Name="SelectedTagsText"
+                     Classes="muted"
+                     FontSize="10"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Spacing="4">
+          <TextBlock Classes="eyebrow" Text="LIBRARY" />
+          <TextBlock Name="LibrarySummaryText"
+                     Classes="secondary"
+                     FontSize="10"
+                     LineHeight="15"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+          <Button Name="EditSelectedButton"
+                  Classes="ghost"
+                  Content="Edit label"
+                  IsEnabled="False"
+                  Click="EditSelectedClicked" />
+          <Button Name="CompareSelectedButton"
+                  Classes="secondary"
+                  Content="Compare"
+                  IsEnabled="False"
+                  Click="CompareSelectedClicked" />
+          <Button Name="OpenSelectedButton"
+                  Classes="primary"
+                  Content="Open report"
+                  IsEnabled="False"
+                  Click="OpenSelectedClicked" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Name="ReportTableBorder"
+            Grid.Row="3"
+            Background="{DynamicResource AppRaisedBrush}"
+            CornerRadius="14"
+            ClipToBounds="True">
+      <Grid RowDefinitions="42,*">
+        <Border Background="{DynamicResource AppInsetBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="17,0">
+          <Grid ColumnDefinitions="148,112,*,300" ColumnSpacing="14">
+            <TextBlock Classes="columnHeader" VerticalAlignment="Center" Text="DATE" />
+            <TextBlock Grid.Column="1" Classes="columnHeader" VerticalAlignment="Center" Text="PROFILE" />
+            <TextBlock Grid.Column="2" Classes="columnHeader" VerticalAlignment="Center" Text="RESULT" />
+            <TextBlock Grid.Column="3" Classes="columnHeader" VerticalAlignment="Center" Text="NETWORK CONTEXT" />
+          </Grid>
+        </Border>
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Name="ReportListPanel" />
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <Border Name="EmptyStateBorder"
+            Grid.Row="1"
+            Grid.RowSpan="3"
+            Background="{DynamicResource AppRaisedBrush}"
+            CornerRadius="16"
+            IsVisible="False">
+      <Grid Margin="42" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
+        <StackPanel Spacing="18" HorizontalAlignment="Center">
+          <Grid Width="88" Height="88" HorizontalAlignment="Center">
+            <Border Width="88"
+                    Height="88"
+                    CornerRadius="44"
+                    Background="{DynamicResource AppSelectedBrush}" />
+            <Border Width="58"
+                    Height="58"
+                    CornerRadius="29"
+                    Background="{DynamicResource AppInsetBrush}"
+                    BorderBrush="{DynamicResource AppAccentBorderBrush}"
+                    BorderThickness="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+              <TextBlock Text="↗"
+                         FontSize="25"
+                         Foreground="{DynamicResource AppAccentBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+          </Grid>
+          <StackPanel Spacing="7" HorizontalAlignment="Center">
+            <TextBlock FontSize="24"
                        FontWeight="SemiBold"
-                       Text="Select a report"
-                       TextWrapping="Wrap" />
-            <TextBlock Name="SelectedMetaText"
-                       Classes="muted"
-                       FontSize="11"
-                       Text="Choose a row to inspect its context and available actions."
-                       TextWrapping="Wrap" />
+                       Text="Build a diagnostic history"
+                       TextAlignment="Center" />
+            <TextBlock Classes="secondary"
+                       FontSize="12"
+                       LineHeight="19"
+                       Text="Completed tests are saved locally so you can revisit evidence and compare network conditions over time."
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="520" />
           </StackPanel>
-
-          <StackPanel Grid.Row="1" Margin="0,18,0,18" Spacing="14">
-            <Border BorderBrush="#303536" BorderThickness="0,1,0,0" />
-            <StackPanel Spacing="5">
-              <TextBlock Classes="eyebrow" Text="TEST CONTEXT" />
-              <TextBlock Name="SelectedContextText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Spacing="5">
-              <TextBlock Classes="eyebrow" Text="TAGS" />
-              <TextBlock Name="SelectedTagsText" Classes="muted" FontSize="12" LineHeight="18" Text="No tags" TextWrapping="Wrap" />
-            </StackPanel>
-            <StackPanel Spacing="5">
-              <TextBlock Classes="eyebrow" Text="LIBRARY" />
-              <TextBlock Name="LibrarySummaryText" Classes="muted" FontSize="12" LineHeight="18" TextWrapping="Wrap" />
-            </StackPanel>
-          </StackPanel>
-
-          <StackPanel Grid.Row="2" Spacing="8">
-            <Button Name="OpenSelectedButton" Classes="action" Content="Open report" IsEnabled="False" Click="OpenSelectedClicked" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-              <Button Name="CompareSelectedButton" Classes="ghost" Content="Compare" IsEnabled="False" Click="CompareSelectedClicked" />
-              <Button Name="EditSelectedButton" Grid.Column="1" Classes="ghost" Content="Edit label" IsEnabled="False" Click="EditSelectedClicked" />
-            </Grid>
-          </StackPanel>
-        </Grid>
-      </Border>
-    </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Width="360" HorizontalAlignment="Center">
+            <Button Grid.Column="0"
+                    Classes="secondary"
+                    Content="Open data folder"
+                    Click="OpenFolderClicked" />
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    Content="Import report"
+                    Click="ImportClicked" />
+          </Grid>
+          <TextBlock Classes="muted"
+                     FontSize="10"
+                     Text="Run a diagnostic from Overview to create the first local report."
+                     TextAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>
