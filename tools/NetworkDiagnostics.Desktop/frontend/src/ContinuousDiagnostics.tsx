@@ -243,16 +243,16 @@ export function ContinuousDiagnostics({
                 <LiveMetric label="Loss" value={latestLoss(snapshot)} />
                 <LiveMetric label="Availability" value={componentMetric(snapshot.reliability, 'Availability')} />
               </div>
-              {recommendation && (
-                <div className={`health-recommendation ${recommendation.kind}`}>
-                  <span>Recommended action</span>
-                  <strong>{recommendation.title}</strong>
-                  <p>{recommendation.detail}</p>
-                  {recommendation.action === 'diagnostic' && <button type="button" className="inline-action" onClick={onRunRecommended}>Prepare Connection Check</button>}
-                  {recommendation.action === 'capacity' && <button type="button" className="inline-action" onClick={onMeasureCapacity}>Measure capacity</button>}
-                </div>
-              )}
             </div>
+            {recommendation && (
+              <div className={`health-recommendation ${recommendation.kind}`}>
+                <span>Recommended action</span>
+                <strong>{recommendation.title}</strong>
+                <p>{recommendation.detail}</p>
+                {recommendation.action === 'diagnostic' && <button type="button" className="inline-action" onClick={onRunRecommended}>Prepare Connection Check</button>}
+                {recommendation.action === 'capacity' && <button type="button" className="inline-action" onClick={onMeasureCapacity}>Measure capacity</button>}
+              </div>
+            )}
           </div>
 
           {latestDiagnostic && (
@@ -359,7 +359,7 @@ function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSa
   }, []);
 
   const { width, height } = size;
-  const left = width < 760 ? 52 : 58;
+  const left = width < 760 ? 74 : 80;
   const right = 18;
   const top = 18;
   const plotBottom = height - 76;

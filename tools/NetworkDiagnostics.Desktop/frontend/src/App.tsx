@@ -801,10 +801,6 @@ function App() {
             <div>
               <h1 id="run-diagnostics-title">Run Diagnostics</h1>
             </div>
-            <div className="workspace-heading-status" aria-live="polite">
-              <span>{running ? 'RUN IN PROGRESS' : result ? 'LATEST RESULT' : 'NATIVE ENGINE READY'}</span>
-              <strong>{running ? progress?.stageLabel || phaseLabel(progress?.phase) : result ? displayedProfile.title : selectedProfile.title}</strong>
-            </div>
           </header>
 
           {error && <div className="error-banner" role="alert"><strong>Diagnostic status</strong><span>{error}</span><button type="button" aria-label="Dismiss status" onClick={() => setError(null)}>×</button></div>}
@@ -943,7 +939,7 @@ function App() {
           )}
 
           {running && (
-            <motion.div className="active-run-instrument" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div className="active-run-instrument" initial={false} animate={{ opacity: 1, y: 0 }}>
               <header className="active-run-header">
                 <div>
                   <span className="run-status-line"><i className="pulse" aria-hidden="true" />CONTROLLED LOAD · {profileTitle(activeProfile.current).toUpperCase()}</span>
@@ -974,7 +970,7 @@ function App() {
                 <section className="active-route">
                   <header><span>ACTIVE PATH</span><small>{preflightSummary.latency} preflight</small></header>
                   <dl className="path-ledger">
-                    <PathRow label="Endpoint" value={preflightSummary.endpoint} copyable />
+                    <PathRow label="Endpoint" value={preflightSummary.origin} copyable />
                     <PathRow label="Network / edge" value={[preflightSummary.providerNetwork, preflightSummary.edge].filter((value) => value !== '—').join(' · ') || '—'} />
                     <PathRow label="Interface" value={activeInterfaceLabel(advancedSettings, interfaces)} />
                     <PathRow label="Delivery request" value={downloadPathLabel(activeDownloadPath.current)} accent />
@@ -990,7 +986,7 @@ function App() {
           )}
 
           {!running && result && (
-            <motion.div key={result.reportId} className="completed-run" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div key={result.reportId} className="completed-run" initial={false} animate={{ opacity: 1, y: 0 }}>
               <header className="completed-run-header">
                 <div>
                   <span className={'result-outcome ' + (currentResultDetail?.presentation.outcome ?? 'complete')}>{currentResultDetail?.presentation.label || 'COMPLETE'}</span>

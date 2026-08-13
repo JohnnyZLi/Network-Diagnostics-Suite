@@ -90,6 +90,28 @@ beforeEach(() => {
 });
 
 describe('desktop result state', () => {
+  it('renders the active-run instrument immediately after the native run is accepted', async () => {
+    const user = userEvent.setup();
+    bridgeHarness.setResponder((method) => {
+      if (method === 'app.ready') return { product: 'Network Diagnostics', host: 'photino', platform: 'macOS', architecture: 'Arm64', appearance: 'dark', monitor };
+      if (method === 'diagnostic.describePlan') return plan;
+      if (method === 'settings.getAdvanced') return advancedSettings;
+      if (method === 'diagnostic.interfaces') return [];
+      if (method === 'diagnostic.preflight') return { measurement: {}, interfaces: [], downloadPath: { requestedPath: 'automatic', selectedPath: 'worker', r2ProbeStatus: 'available' } };
+      if (method === 'reports.list') return [];
+      if (method === 'diagnostic.run') return { runId: 'active-run', profile: 'connection-check', method: 'compare', downloadPath: 'automatic', transferCapBytes: 28_000_000, estimatedSeconds: 15, totalStages: 6 };
+      return {};
+    });
+
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Diagnostics' }));
+    await user.click(await screen.findByRole('button', { name: 'Run Connection' }));
+
+    expect(await screen.findByRole('button', { name: 'Cancel run' })).toBeTruthy();
+    expect(screen.getByText('LIVE MEASUREMENTS')).toBeTruthy();
+    expect(screen.getByText('ACTIVE PATH')).toBeTruthy();
+  });
+
   it('shows the newly completed native detail without re-reading or mixing the prior saved report', async () => {
     const oldDetail = reportDetail('old-report', 'Old saved verdict');
     bridgeHarness.setResponder((method) => {

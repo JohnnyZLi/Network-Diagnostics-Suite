@@ -39,7 +39,9 @@ export function SettingsMenu({
 
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : triggerRef.current;
     const frame = window.requestAnimationFrame(() => {
-      popoverRef.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled])')?.focus();
+      const selectedAppearance = popoverRef.current?.querySelector<HTMLElement>('.appearance-control button.active');
+      const firstControl = popoverRef.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled])');
+      (selectedAppearance ?? firstControl)?.focus();
     });
 
     const onPointerDown = (event: PointerEvent) => {
@@ -52,7 +54,12 @@ export function SettingsMenu({
       }
     };
     const onFocusIn = (event: FocusEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      const container = containerRef.current;
+      const nextTarget = event.target as Node;
+      const previousTarget = event.relatedTarget as Node | null;
+      if (container && !container.contains(nextTarget) && previousTarget && container.contains(previousTarget)) {
+        setOpen(false);
+      }
     };
 
     window.addEventListener('pointerdown', onPointerDown);

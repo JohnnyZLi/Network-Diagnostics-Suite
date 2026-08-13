@@ -565,7 +565,7 @@ dd {
 /* Diagnostics setup */
 .diagnostic-setup-grid {
   display: grid;
-  grid-template-columns: minmax(550px, 620px) minmax(0, 1fr);
+  grid-template-columns: minmax(500px, 560px) minmax(0, 1fr);
   min-height: min(780px, calc(100dvh - 178px));
   gap: 20px;
   align-items: stretch;
@@ -838,7 +838,7 @@ dd {
 .instrument-columns {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
   flex: 1 1 auto;
 }
 
@@ -1831,6 +1831,20 @@ dd {
   .workspace-heading,
   .workbench-section-header {
     margin-bottom: 18px;
+  }
+
+  .diagnostic-setup-grid {
+    grid-template-columns: minmax(480px, 520px) minmax(0, 1fr);
+  }
+
+  .topology-control .segmented-control,
+  .download-path-control .segmented-control {
+    grid-template-columns: repeat(3, max-content);
+    justify-content: space-between;
+  }
+
+  .console-control-pair .segmented-control button {
+    padding-inline: 3px;
   }
 
   .console-heading {

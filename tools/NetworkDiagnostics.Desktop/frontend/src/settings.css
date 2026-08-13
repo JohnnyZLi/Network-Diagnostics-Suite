@@ -147,6 +147,24 @@
   font: 690 14.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+.capacity-preference-fields input[type="number"],
+.settings-number-grid input[type="number"],
+.retention-field input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.capacity-preference-fields input[type="number"]::-webkit-inner-spin-button,
+.capacity-preference-fields input[type="number"]::-webkit-outer-spin-button,
+.settings-number-grid input[type="number"]::-webkit-inner-spin-button,
+.settings-number-grid input[type="number"]::-webkit-outer-spin-button,
+.retention-field input[type="number"]::-webkit-inner-spin-button,
+.retention-field input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 .capacity-preference-fields input:focus {
   border-color: var(--data);
   outline: 0;
@@ -201,6 +219,10 @@
   font-weight: 670;
 }
 
+.settings-number-grid label > div {
+  position: relative;
+}
+
 .settings-number-grid input,
 .reports-directory-field input,
 .retention-field input {
@@ -213,6 +235,19 @@
   background: var(--control);
   color: var(--text);
   font: 680 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.settings-number-grid input {
+  padding-right: 50px;
+}
+
+.settings-number-grid b {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--faint);
+  font-size: 13px;
+  transform: translateY(-50%);
 }
 
 .settings-number-grid input:focus,
