@@ -51,6 +51,7 @@ type ProfileOption = {
   id: DiagnosticProfile;
   label: string;
   title: string;
+  cue: string;
   description: string;
 };
 
@@ -68,24 +69,28 @@ const profiles: ProfileOption[] = [
     id: 'connection-check',
     label: 'Connection',
     title: 'Connection Check',
+    cue: 'Baseline',
     description: 'Fast native baseline for responsiveness, loss, throughput, loaded latency, and current path behavior.',
   },
   {
     id: 'quick',
     label: 'Quick',
     title: 'Quick Test',
+    cue: 'Short run',
     description: 'Short native run with broader throughput sampling and path data while keeping transfer use moderate.',
   },
   {
     id: 'full',
     label: 'Full',
     title: 'Full Test',
+    cue: 'Complete',
     description: 'Complete native network diagnostic with Internet performance, local-link, routing, protocol, and host data.',
   },
   {
     id: 'stress',
     label: 'Stress',
     title: 'Stress Test',
+    cue: 'Sustained load',
     description: 'Heavy sustained-load run with connection scaling, capacity limits, loaded responsiveness, and full native diagnostics.',
   },
 ];
@@ -832,57 +837,63 @@ function App() {
 
               <div className="diagnostic-setup-grid">
                 <section className="setup-console" aria-label="Diagnostic controls">
-                  <div className="console-heading">
-                    <div><span>RUN CONFIGURATION</span><strong>{selectedProfile.title}</strong></div>
-                    <span>{plan ? formatDuration(plan.estimatedSeconds) : 'Reading plan…'}</span>
+                  <div className="profile-rail" role="group" aria-label="Diagnostic profile">
+                    <span className="profile-rail-label">Test profile</span>
+                    {profiles.map((item) => (
+                      <button key={item.id} type="button" aria-label={item.label} aria-pressed={profile === item.id} className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)}>
+                        <strong>{item.label}</strong>
+                        <small>{item.cue}</small>
+                      </button>
+                    ))}
                   </div>
 
-                  <fieldset className="console-control profile-fieldset">
-                    <legend>Profile</legend>
-                    <div className="segmented-control profile-control" aria-label="Diagnostic profile">
-                      {profiles.map((item) => (
-                        <button key={item.id} type="button" aria-pressed={profile === item.id} className={profile === item.id ? 'active' : ''} onClick={() => selectProfile(item.id)}>
-                          <strong>{item.label}</strong>
-                        </button>
-                      ))}
-                    </div>
-                    <p>{selectedProfile.description}</p>
-                  </fieldset>
-
-                  <div className="console-control-pair">
-                    <fieldset className="console-control topology-control">
-                      <legend>Topology <small>{methods.find((item) => item.id === method)?.detail}</small></legend>
-                      <div className="segmented-control compact" aria-label="Transfer topology">
-                        {methods.map((item) => (
-                          <button key={item.id} type="button" aria-pressed={method === item.id} className={method === item.id ? 'active' : ''} onClick={() => selectMethod(item.id)}>{item.label}</button>
-                        ))}
+                  <div className="configuration-surface">
+                    <header className="configuration-summary">
+                      <div>
+                        <h2>{selectedProfile.title}</h2>
+                        <p>{selectedProfile.description}</p>
                       </div>
-                    </fieldset>
-
-                    <fieldset className="console-control download-path-control">
-                      <legend>Download path <small>{selectedPath.detail}</small></legend>
-                      <div className="segmented-control compact" aria-label="Download measurement path">
-                        {downloadPaths.map((item) => (
-                          <button key={item.id} type="button" aria-pressed={downloadPath === item.id} className={downloadPath === item.id ? 'active' : ''} onClick={() => selectDownloadPath(item.id)}>{item.label}</button>
-                        ))}
+                      <div className="configuration-vitals" aria-label="Selected run summary">
+                        <span><small>Runtime</small><strong>{plan ? formatDuration(plan.estimatedSeconds) : '—'}</strong></span>
+                        <span><small>Transfer cap</small><strong>{plan ? formatBytes(plan.transferCapBytes) : '—'}</strong></span>
+                        <span><small>Stages</small><strong>{plan ? String(plan.totalTransferStages) : '—'}</strong></span>
                       </div>
-                    </fieldset>
-                  </div>
+                    </header>
 
-                  <div className="console-control interface-control">
-                    <div className="control-label-row"><label htmlFor="run-interface">Network interface</label><span>{interfaces.length} detected</span></div>
-                    <div className="interface-row diagnostic-interface-row">
-                      <select id="run-interface" data-interface-picker aria-label="Network interface" value={advancedSettings?.interfaceId ?? ''} disabled={!advancedSettings || running} onChange={(event) => void selectInterface(event.target.value)}>
-                        <option value="">Automatic routing</option>
-                        {interfaces.map((choice, index) => {
-                          const id = interfaceId(choice);
-                          if (!id) return null;
-                          return <option key={id + '-' + index} value={id}>{interfaceLabel(choice, id)}</option>;
-                        })}
-                        {advancedSettings?.interfaceId && !interfaces.some((choice) => interfaceId(choice) === advancedSettings.interfaceId) && <option value={advancedSettings.interfaceId}>{advancedSettings.interfaceId}</option>}
-                      </select>
+                    <div className="configuration-controls">
+                      <fieldset className="console-control topology-control">
+                        <legend>Topology <small>{methods.find((item) => item.id === method)?.detail}</small></legend>
+                        <div className="segmented-control compact" aria-label="Transfer topology">
+                          {methods.map((item) => (
+                            <button key={item.id} type="button" aria-pressed={method === item.id} className={method === item.id ? 'active' : ''} onClick={() => selectMethod(item.id)}>{item.label}</button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      <fieldset className="console-control download-path-control">
+                        <legend>Download path <small>{selectedPath.detail}</small></legend>
+                        <div className="segmented-control compact" aria-label="Download measurement path">
+                          {downloadPaths.map((item) => (
+                            <button key={item.id} type="button" aria-pressed={downloadPath === item.id} className={downloadPath === item.id ? 'active' : ''} onClick={() => selectDownloadPath(item.id)}>{item.label}</button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      <div className="console-control interface-control">
+                        <div className="control-label-row"><label htmlFor="run-interface">Network interface</label><span>{interfaces.length} detected</span></div>
+                        <div className="interface-row diagnostic-interface-row">
+                          <select id="run-interface" data-interface-picker aria-label="Network interface" value={advancedSettings?.interfaceId ?? ''} disabled={!advancedSettings || running} onChange={(event) => void selectInterface(event.target.value)}>
+                            <option value="">Automatic routing</option>
+                            {interfaces.map((choice, index) => {
+                              const id = interfaceId(choice);
+                              if (!id) return null;
+                              return <option key={id + '-' + index} value={id}>{interfaceLabel(choice, id)}</option>;
+                            })}
+                            {advancedSettings?.interfaceId && !interfaces.some((choice) => interfaceId(choice) === advancedSettings.interfaceId) && <option value={advancedSettings.interfaceId}>{advancedSettings.interfaceId}</option>}
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <small>Explicit binding applies to supported HTTP and LAN sockets; system-routed probes remain identified in the report.</small>
                   </div>
 
                   {pendingRun ? (
@@ -893,9 +904,9 @@ function App() {
                   ) : (
                     <div className="run-command">
                       <div>
-                        <span>READY TO RUN</span>
-                        <strong>{plan ? formatBytes(plan.transferCapBytes) + ' maximum transfer' : 'Loading native plan'}</strong>
-                        <small>{methodLabel(method)} · {downloadPathLabel(downloadPath)} · report saved locally</small>
+                        <span>Ready</span>
+                        <strong>{methodLabel(method)} topology · {downloadPathLabel(downloadPath)}</strong>
+                        <small>{plan ? `${formatBytes(plan.transferCapBytes)} maximum · ${formatDuration(plan.estimatedSeconds)}` : 'Loading native plan'} · report saved locally</small>
                       </div>
                       <button type="button" className="primary-action diagnostic-run-button" onClick={() => void prepareDiagnostic()} disabled={!desktopBridge.available || !plan}>
                         <span aria-hidden="true">▶</span> Run {selectedProfile.label}

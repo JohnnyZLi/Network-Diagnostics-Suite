@@ -407,7 +407,6 @@ dd {
 }
 
 .workspace-heading-status span,
-.console-heading span,
 .instrument-section header span,
 .measurements-manifest header span,
 .active-run-instrument header > span,
@@ -565,9 +564,7 @@ dd {
 /* Diagnostics setup */
 .diagnostic-setup-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 0;
-  gap: 16px;
+  gap: 18px;
 }
 
 .setup-console,
@@ -575,129 +572,214 @@ dd {
 .active-run-instrument,
 .completed-run {
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 14px;
   background: var(--surface);
   overflow: hidden;
 }
 
 .setup-console {
   min-width: 0;
-  min-height: 0;
   display: grid;
-  grid-template-columns: 190px minmax(360px, 1.45fr) minmax(280px, 1.1fr) 230px;
-  grid-template-rows: auto auto;
+  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-rows: auto 76px;
 }
 
-.console-heading {
-  min-height: 108px;
-  padding: 16px 22px;
+.profile-rail {
+  padding: 18px 12px;
   display: grid;
-  align-content: center;
+  grid-template-rows: auto repeat(4, 1fr);
   gap: 5px;
   grid-column: 1;
-  grid-row: 1;
-  border-bottom: 1px solid var(--line);
+  grid-row: 1 / 3;
   border-right: 1px solid var(--line);
-  background: var(--surface-soft);
+  background: color-mix(in srgb, var(--surface-soft) 74%, transparent);
 }
 
-.console-heading > div {
+.profile-rail-label {
+  padding: 0 10px 8px;
+  color: var(--faint);
+  font: 740 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.profile-rail button {
   min-width: 0;
+  min-height: 54px;
+  padding: 8px 11px 8px 14px;
   display: grid;
+  align-content: center;
+  gap: 2px;
+  position: relative;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-rail button::before {
+  content: "";
+  position: absolute;
+  inset: 9px auto 9px 0;
+  width: 3px;
+  border-radius: 3px;
+  background: transparent;
+}
+
+.profile-rail button:hover {
+  background: var(--control);
+  color: var(--text);
+}
+
+.profile-rail button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.profile-rail button.active::before {
+  background: var(--accent);
+}
+
+.profile-rail button strong {
+  font-size: 16px;
+  font-weight: 740;
+}
+
+.profile-rail button small {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.profile-rail button.active small {
+  color: var(--accent-strong);
+}
+
+.configuration-surface {
+  min-width: 0;
+  padding: 20px 22px 18px;
+  display: grid;
+  gap: 18px;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.configuration-summary {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  align-items: start;
+  gap: 28px;
+}
+
+.configuration-summary h2 {
+  margin: 0 0 7px;
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: -.025em;
+}
+
+.configuration-summary p {
+  max-width: 720px;
+  min-height: 44px;
+  margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 15.5px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.configuration-vitals {
+  min-width: 320px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(82px, 1fr));
+  border-left: 1px solid var(--line);
+}
+
+.configuration-vitals > span {
+  min-width: 0;
+  padding: 4px 16px;
+  display: grid;
+  align-content: start;
   gap: 3px;
 }
 
-.console-heading > span {
-  color: var(--data);
+.configuration-vitals small {
+  color: var(--faint);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.configuration-vitals strong {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 750;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.console-heading strong {
-  font-size: 17px;
-  font-weight: 750;
+.configuration-controls {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, 1fr) minmax(280px, 1.12fr);
+  gap: 22px;
 }
 
 .console-control {
   min-width: 0;
   margin: 0;
-  padding: 15px 20px;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.profile-fieldset {
-  grid-column: 2 / 4;
-  grid-row: 1;
-  border-right: 1px solid var(--line);
-}
-
-.profile-fieldset legend {
-  float: left;
-}
-
-.profile-fieldset .segmented-control {
-  clear: both;
 }
 
 .console-control legend {
   width: 100%;
-  margin: 0 0 9px;
+  margin: 0 0 8px;
   padding: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  gap: 2px;
   color: var(--text);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 740;
-  letter-spacing: .02em;
 }
 
 .console-control legend small,
 .control-label-row span {
   overflow: hidden;
   color: var(--faint);
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 620;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.profile-fieldset p {
-  min-height: 42px;
-  margin-top: 8px;
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .segmented-control {
   min-width: 0;
-  min-height: 50px;
-  padding: 4px;
+  min-height: 46px;
+  padding: 3px;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 3px;
+  gap: 2px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--control);
 }
 
 .segmented-control button {
   min-width: 0;
-  min-height: 40px;
-  padding: 0 10px;
+  min-height: 38px;
+  padding: 0 9px;
   overflow: hidden;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
-  font-weight: 680;
+  font-size: 14px;
+  font-weight: 690;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
@@ -709,184 +791,145 @@ dd {
 }
 
 .segmented-control button.active {
-  background: var(--accent-soft);
+  background: var(--surface);
   color: var(--accent-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.segmented-control button strong {
-  font: inherit;
-}
-
-.console-control-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-column: 1 / 3;
-  grid-row: 2;
-}
-
-.console-control-pair .console-control:first-child {
-  border-right: 1px solid var(--line);
-}
-
-.console-control-pair .segmented-control button {
-  padding-inline: 4px;
-  font-size: 14px;
-}
-
-.console-control-pair .console-control legend {
-  display: grid;
-  align-content: start;
-  justify-content: stretch;
-  gap: 3px;
-}
-
-.console-control-pair .console-control legend small {
-  line-height: 1.2;
-  white-space: normal;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--text) 9%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .interface-control {
   display: grid;
+  align-content: start;
   gap: 8px;
-  grid-column: 3;
-  grid-row: 2;
-  border-right: 1px solid var(--line);
 }
 
 .control-label-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  min-height: 31px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
 }
 
 .control-label-row label {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 740;
 }
 
-.interface-control > small {
-  color: var(--faint);
-  font-size: 13.5px;
-  line-height: 1.4;
+.diagnostic-interface-row select,
+.diagnostic-interface-row .interface-picker-trigger {
+  min-height: 46px;
 }
 
 .run-command {
-  min-height: 0;
-  margin: 0;
-  padding: 18px;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
-  grid-column: 4;
-  grid-row: 1 / 3;
-  background: color-mix(in srgb, var(--surface-soft) 76%, var(--accent) 4%);
+  min-width: 0;
+  min-height: 76px;
+  padding: 12px 16px 12px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  align-items: center;
+  gap: 22px;
+  grid-column: 2;
+  grid-row: 2;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
 }
 
 .run-command > div {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  grid-template-columns: auto minmax(0, auto);
+  align-items: baseline;
+  justify-content: start;
+  column-gap: 12px;
 }
 
 .run-command > div > span,
 .high-data-confirm > div > span {
-  color: var(--accent-strong);
-  font: 760 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .12em;
+  color: var(--good);
+  font: 760 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .09em;
+  text-transform: uppercase;
 }
 
 .run-command strong {
-  min-height: 38px;
-  display: -webkit-box;
   overflow: hidden;
-  font-size: 16px;
-  line-height: 1.2;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  font-size: 15px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .run-command small {
+  grid-column: 1 / -1;
+  margin-top: 3px;
   color: var(--faint);
-  font-size: 13.5px;
-  line-height: 1.25;
+  font-size: 13px;
 }
 
 .diagnostic-run-button {
-  min-width: 0;
   width: 100%;
-  height: 54px;
+  height: 50px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  flex: 0 0 auto;
   white-space: nowrap;
 }
 
-.diagnostic-run-button > span {
-  font-size: 13px;
-}
-
 .high-data-confirm {
-  min-height: 0;
-  margin: 0;
-  padding: 18px;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  flex-direction: column;
-  gap: 14px;
-  grid-column: 4;
-  grid-row: 1 / 3;
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px 16px 10px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  grid-column: 2;
+  grid-row: 2;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 34%, var(--line));
   background: var(--warning-soft);
 }
 
 .high-data-confirm > div:first-child {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .high-data-confirm strong {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .high-data-confirm p {
+  overflow: hidden;
   color: var(--muted);
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .high-data-confirm > div:last-child {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  gap: 8px;
 }
 
 .run-intelligence {
   min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .instrument-columns {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(360px, .8fr);
-  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1.45fr) minmax(390px, .8fr);
 }
 
 .instrument-section {
   min-width: 0;
-  padding: 18px 22px;
+  padding: 20px 22px;
 }
 
 .instrument-section + .instrument-section {
   border-left: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-soft) 66%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 52%, transparent);
 }
 
 .instrument-section header,
@@ -897,7 +940,7 @@ dd {
 .findings-section header,
 .result-route-section header,
 .measurement-ledger header {
-  min-height: 46px;
+  min-height: 42px;
   margin-bottom: 14px;
   display: flex;
   align-items: flex-start;
@@ -921,16 +964,10 @@ dd {
 .result-route-section header strong,
 .measurement-ledger header strong {
   overflow: hidden;
-  font-size: 16px;
-  font-weight: 730;
+  font-size: 17px;
+  font-weight: 740;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.instrument-section header strong {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
 }
 
 .instrument-section header small,
@@ -942,88 +979,75 @@ dd {
 .result-route-section header small,
 .measurement-ledger header small {
   color: var(--faint);
-  font: 680 13px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .06em;
+  font: 680 12.5px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .05em;
   white-space: nowrap;
 }
 
 .plan-fact-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  gap: 7px;
 }
 
 .plan-fact {
   min-width: 0;
-  min-height: 68px;
-  padding: 11px 14px;
+  min-height: 64px;
+  padding: 10px 12px;
   display: grid;
   align-content: center;
-  gap: 1px;
-  border-right: 1px solid var(--line);
-}
-
-.plan-fact:nth-child(3n) {
-  border-right: 0;
-}
-
-.plan-fact:nth-child(n + 4) {
-  border-top: 1px solid var(--line);
+  gap: 3px;
+  border-radius: 7px;
+  background: var(--surface-soft);
 }
 
 .plan-fact span,
 .path-row dt,
 .delivery-fallback dt {
   color: var(--faint);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 650;
-  letter-spacing: .025em;
 }
 
 .plan-fact strong {
-  min-height: 36px;
-  display: -webkit-box;
   overflow: hidden;
   font-size: 15px;
-  font-weight: 710;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stage-plan {
-  margin-top: 14px;
+  margin-top: 16px;
   display: grid;
   gap: 8px;
 }
 
 .stage-plan > span {
   color: var(--faint);
-  font: 730 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .09em;
+  font: 730 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
 }
 
 .stage-chip-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .stage-chip {
   min-width: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
+  gap: 7px;
   border-radius: 7px;
   background: var(--control);
 }
 
 .stage-chip > span {
   color: var(--data);
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -1033,24 +1057,23 @@ dd {
 }
 
 .stage-chip strong {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   text-transform: capitalize;
 }
 
 .stage-chip small {
   color: var(--faint);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .stage-chip.active {
-  border-color: color-mix(in srgb, var(--data) 55%, var(--line));
   background: var(--data-soft);
 }
 
 .stage-chip.done {
-  border-color: color-mix(in srgb, var(--good) 34%, var(--line));
+  background: color-mix(in srgb, var(--good) 10%, var(--control));
 }
 
 .stage-chip.done > span {
@@ -1064,18 +1087,23 @@ dd {
 
 .path-ledger,
 .delivery-ledger {
-  border-top: 1px solid var(--line);
+  display: grid;
 }
 
 .path-row,
 .delivery-fallback {
   min-width: 0;
-  height: 50px;
+  min-height: 42px;
+  padding: 0 2px;
   display: grid;
-  grid-template-columns: minmax(92px, .72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(118px, .72fr) minmax(0, 1.28fr);
   align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid var(--line);
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+}
+
+.path-row:last-child {
+  border-bottom: 0;
 }
 
 .path-row dd,
@@ -1083,37 +1111,37 @@ dd {
   min-width: 0;
   overflow: hidden;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 680;
+  font-size: 13.5px;
+  font-weight: 690;
   text-align: right;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .path-row dd {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 7px;
 }
 
 .path-row dd > span {
   min-width: 0;
-  display: -webkit-box;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .path-copy {
-  min-width: 46px;
-  height: 28px;
-  padding: 0 8px;
+  min-width: 44px;
+  height: 27px;
+  padding: 0 7px;
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--control);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 720;
   cursor: pointer;
 }
@@ -1129,11 +1157,11 @@ dd {
 
 .path-callout {
   margin-top: 10px;
-  padding: 11px 13px;
+  padding: 10px 12px;
   border-left: 2px solid var(--warning);
   background: var(--warning-soft);
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 .path-callout.error {
@@ -1143,15 +1171,15 @@ dd {
 }
 
 .measurements-manifest {
-  padding: 18px 22px 20px;
+  padding: 17px 22px 19px;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface-soft) 40%, transparent);
 }
 
 .measurement-groups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  gap: 22px;
 }
 
 .measurement-group {
@@ -1160,8 +1188,8 @@ dd {
 
 .measurement-group > span {
   color: var(--data);
-  font: 730 13px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .08em;
+  font: 730 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .07em;
   text-transform: uppercase;
 }
 
@@ -1170,16 +1198,16 @@ dd {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
+  gap: 6px 14px;
   list-style: none;
 }
 
 .measurement-group li {
   position: relative;
-  padding-left: 13px;
+  padding-left: 11px;
   color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .measurement-group li::before {
@@ -1887,31 +1915,7 @@ dd {
   }
 
   .setup-console {
-    grid-template-columns: 170px minmax(330px, 1.35fr) minmax(270px, 1fr) 210px;
-  }
-
-  .topology-control .segmented-control,
-  .download-path-control .segmented-control {
-    grid-template-columns: repeat(3, max-content);
-    justify-content: space-between;
-  }
-
-  .console-control-pair .segmented-control button {
-    padding-inline: 3px;
-  }
-
-  .console-heading {
-    min-height: 68px;
-    padding-block: 12px;
-  }
-
-  .console-control {
-    padding-block: 14px;
-  }
-
-  .run-command {
-    min-height: 94px;
-    padding-block: 13px;
+    grid-template-columns: 170px minmax(0, 1fr);
   }
 }
 
@@ -1936,46 +1940,28 @@ dd {
   }
 
   .setup-console {
-    grid-template-columns: 155px minmax(300px, 1.3fr) minmax(250px, 1fr) 190px;
+    grid-template-columns: 155px minmax(0, 1fr);
   }
 
-  .console-heading {
-    min-height: 108px;
-    padding: 14px 18px;
+  .configuration-surface {
+    padding-inline: 18px;
   }
 
-  .console-control {
-    padding: 14px 18px;
+  .configuration-summary {
+    gap: 18px;
   }
 
-  .console-control-pair .console-control {
-    padding-inline: 12px;
+  .configuration-vitals {
+    min-width: 280px;
   }
 
-  .profile-fieldset p {
-    margin-top: 8px;
-    line-height: 1.4;
+  .configuration-vitals > span {
+    padding-inline: 11px;
   }
 
-  .console-control-pair .segmented-control button {
-    padding-inline: 2px;
-  }
-
-  .profile-fieldset .segmented-control {
-    grid-template-columns: 1.25fr .9fr .8fr 1fr;
-  }
-
-  .profile-fieldset .segmented-control button {
-    padding-inline: 4px;
-  }
-
-  .topology-control .segmented-control {
-    grid-template-columns: .75fr .9fr 1.35fr;
-  }
-
-  .download-path-control .segmented-control {
-    grid-template-columns: repeat(3, max-content);
-    justify-content: space-between;
+  .configuration-controls {
+    gap: 14px;
+    grid-template-columns: minmax(210px, 1fr) minmax(225px, 1fr) minmax(245px, 1.1fr);
   }
 
   .segmented-control {
@@ -1984,21 +1970,6 @@ dd {
 
   .segmented-control button {
     min-height: 36px;
-  }
-
-  .interface-control {
-    gap: 6px;
-  }
-
-  .interface-control > small {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
-
-  .run-command {
-    padding: 14px 18px;
   }
 
   .instrument-columns {
@@ -2033,58 +2004,46 @@ dd {
     min-width: 82px;
   }
 
-  .diagnostic-setup-grid {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
   .setup-console {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 76px;
   }
 
-  .console-heading {
+  .profile-rail {
+    padding: 10px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: 1fr;
     grid-column: 1;
     grid-row: 1;
-  }
-
-  .profile-fieldset {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .console-control-pair {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .interface-control {
-    grid-column: 1 / -1;
-    grid-row: 3;
     border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .profile-rail-label {
+    display: none;
+  }
+
+  .configuration-surface {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .run-command,
   .high-data-confirm {
-    grid-column: 1 / -1;
-    grid-row: 4;
-    align-items: center;
-    justify-content: space-between;
-    flex-direction: row;
+    grid-column: 1;
+    grid-row: 3;
   }
 
-  .diagnostic-run-button {
-    width: auto;
-    min-width: 190px;
+  .configuration-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .instrument-columns {
-    grid-template-columns: 1fr;
+  .configuration-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .instrument-section + .instrument-section {
-    border-top: 1px solid var(--line);
-    border-left: 0;
+  .configuration-vitals {
+    min-width: 260px;
   }
 
   .measurement-groups {
@@ -2122,41 +2081,35 @@ dd {
     display: none;
   }
 
-  .diagnostic-setup-grid {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
-  .console-control-pair,
   .instrument-columns,
   .active-run-grid,
   .result-analysis-grid {
     grid-template-columns: 1fr;
   }
 
-  .setup-console {
-    display: flex;
-    flex-direction: column;
+  .profile-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 1fr);
   }
 
-  .profile-fieldset,
-  .interface-control,
-  .console-heading {
-    border-right: 0;
+  .configuration-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .configuration-vitals {
+    min-width: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .configuration-controls {
+    grid-template-columns: 1fr;
   }
 
   .run-command,
   .high-data-confirm {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .diagnostic-run-button {
-    width: 100%;
-  }
-
-  .console-control-pair .console-control:first-child {
-    border-right: 0;
+    min-height: 0;
+    grid-template-columns: 1fr;
   }
 
   .instrument-section + .instrument-section,
