@@ -90,6 +90,28 @@ beforeEach(() => {
 });
 
 describe('desktop result state', () => {
+  it('updates profile information in place without replacing the diagnostic control deck', async () => {
+    const user = userEvent.setup();
+    bridgeHarness.setResponder((method, payload) => {
+      if (method === 'app.ready') return { product: 'Network Diagnostics', host: 'photino', platform: 'macOS', architecture: 'Arm64', appearance: 'dark', monitor };
+      if (method === 'diagnostic.describePlan') return { ...plan, profile: payload.profile ?? 'connection-check', profileName: payload.profile === 'stress' ? 'Stress Test' : 'Connection Check' };
+      if (method === 'settings.getAdvanced') return advancedSettings;
+      if (method === 'diagnostic.interfaces') return [];
+      if (method === 'diagnostic.preflight') return { measurement: {}, interfaces: [], downloadPath: { requestedPath: 'automatic', selectedPath: 'worker', r2ProbeStatus: 'available' } };
+      if (method === 'reports.list') return [];
+      return {};
+    });
+
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Diagnostics' }));
+    const controlDeck = await screen.findByLabelText('Diagnostic controls');
+    await user.click(screen.getByRole('button', { name: 'Stress' }));
+
+    await waitFor(() => expect(bridgeHarness.requests.some((request) => request.method === 'diagnostic.describePlan' && request.payload.profile === 'stress')).toBe(true));
+    expect(screen.getByLabelText('Diagnostic controls')).toBe(controlDeck);
+    expect(screen.getByRole('button', { name: 'Run Stress' })).toBeTruthy();
+  });
+
   it('renders the active-run instrument immediately after the native run is accepted', async () => {
     const user = userEvent.setup();
     bridgeHarness.setResponder((method) => {

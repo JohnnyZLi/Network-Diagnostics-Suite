@@ -565,10 +565,9 @@ dd {
 /* Diagnostics setup */
 .diagnostic-setup-grid {
   display: grid;
-  grid-template-columns: minmax(500px, 560px) minmax(0, 1fr);
-  min-height: min(780px, calc(100dvh - 178px));
-  gap: 20px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  gap: 16px;
 }
 
 .setup-console,
@@ -584,19 +583,21 @@ dd {
 .setup-console {
   min-width: 0;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-self: start;
+  display: grid;
+  grid-template-columns: 190px minmax(360px, 1.45fr) minmax(280px, 1.1fr) 230px;
+  grid-template-rows: auto auto;
 }
 
 .console-heading {
-  min-height: 76px;
+  min-height: 108px;
   padding: 16px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  grid-column: 1;
+  grid-row: 1;
   border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
   background: var(--surface-soft);
 }
 
@@ -619,9 +620,23 @@ dd {
 .console-control {
   min-width: 0;
   margin: 0;
-  padding: 17px 22px;
+  padding: 15px 20px;
   border: 0;
   border-bottom: 1px solid var(--line);
+}
+
+.profile-fieldset {
+  grid-column: 2 / 4;
+  grid-row: 1;
+  border-right: 1px solid var(--line);
+}
+
+.profile-fieldset legend {
+  float: left;
+}
+
+.profile-fieldset .segmented-control {
+  clear: both;
 }
 
 .console-control legend {
@@ -649,10 +664,15 @@ dd {
 }
 
 .profile-fieldset p {
-  margin-top: 10px;
+  min-height: 42px;
+  margin-top: 8px;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--muted);
   font-size: 15px;
-  line-height: 1.45;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .segmented-control {
@@ -701,6 +721,8 @@ dd {
 .console-control-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-column: 1 / 3;
+  grid-row: 2;
 }
 
 .console-control-pair .console-control:first-child {
@@ -727,6 +749,9 @@ dd {
 .interface-control {
   display: grid;
   gap: 8px;
+  grid-column: 3;
+  grid-row: 2;
+  border-right: 1px solid var(--line);
 }
 
 .control-label-row {
@@ -747,13 +772,16 @@ dd {
 }
 
 .run-command {
-  min-height: 104px;
-  margin-top: auto;
-  padding: 16px 18px 16px 22px;
+  min-height: 0;
+  margin: 0;
+  padding: 18px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: stretch;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  grid-column: 4;
+  grid-row: 1 / 3;
   background: color-mix(in srgb, var(--surface-soft) 76%, var(--accent) 4%);
 }
 
@@ -771,10 +799,13 @@ dd {
 }
 
 .run-command strong {
+  min-height: 38px;
+  display: -webkit-box;
   overflow: hidden;
   font-size: 16px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .run-command small {
@@ -784,13 +815,15 @@ dd {
 }
 
 .diagnostic-run-button {
-  min-width: 178px;
+  min-width: 0;
+  width: 100%;
   height: 54px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .diagnostic-run-button > span {
@@ -798,13 +831,16 @@ dd {
 }
 
 .high-data-confirm {
-  min-height: 92px;
-  margin-top: auto;
-  padding: 11px 12px 11px 14px;
+  min-height: 0;
+  margin: 0;
+  padding: 18px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: stretch;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  grid-column: 4;
+  grid-row: 1 / 3;
   background: var(--warning-soft);
 }
 
@@ -824,13 +860,14 @@ dd {
 }
 
 .high-data-confirm > div:last-child {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
 .run-intelligence {
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -838,17 +875,18 @@ dd {
 .instrument-columns {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, .8fr);
   flex: 1 1 auto;
 }
 
 .instrument-section {
   min-width: 0;
-  padding: 20px 22px;
+  padding: 18px 22px;
 }
 
 .instrument-section + .instrument-section {
   border-left: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-soft) 66%, transparent);
 }
 
 .instrument-section header,
@@ -911,19 +949,27 @@ dd {
 
 .plan-fact-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .plan-fact {
   min-width: 0;
-  min-height: 64px;
-  padding: 11px 12px;
+  min-height: 68px;
+  padding: 11px 14px;
   display: grid;
+  align-content: center;
   gap: 1px;
   border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+}
+
+.plan-fact:nth-child(3n) {
+  border-right: 0;
+}
+
+.plan-fact:nth-child(n + 4) {
+  border-top: 1px solid var(--line);
 }
 
 .plan-fact span,
@@ -936,11 +982,14 @@ dd {
 }
 
 .plan-fact strong {
-  overflow: visible;
+  min-height: 36px;
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 15px;
   font-weight: 710;
   overflow-wrap: anywhere;
-  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .stage-plan {
@@ -1021,7 +1070,7 @@ dd {
 .path-row,
 .delivery-fallback {
   min-width: 0;
-  min-height: 46px;
+  height: 50px;
   display: grid;
   grid-template-columns: minmax(92px, .72fr) minmax(0, 1.28fr);
   align-items: center;
@@ -1032,7 +1081,7 @@ dd {
 .path-row dd,
 .delivery-fallback dd {
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
   color: var(--text);
   font-size: 14px;
   font-weight: 680;
@@ -1049,6 +1098,10 @@ dd {
 
 .path-row dd > span {
   min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .path-copy {
@@ -1090,9 +1143,9 @@ dd {
 }
 
 .measurements-manifest {
-  padding: 20px 22px 22px;
+  padding: 18px 22px 20px;
   border-top: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-soft) 62%, transparent);
+  background: var(--surface);
 }
 
 .measurement-groups {
@@ -1833,8 +1886,8 @@ dd {
     margin-bottom: 18px;
   }
 
-  .diagnostic-setup-grid {
-    grid-template-columns: minmax(480px, 520px) minmax(0, 1fr);
+  .setup-console {
+    grid-template-columns: 170px minmax(330px, 1.35fr) minmax(270px, 1fr) 210px;
   }
 
   .topology-control .segmented-control,
@@ -1882,12 +1935,12 @@ dd {
     padding-inline: 24px;
   }
 
-  .diagnostic-setup-grid {
-    grid-template-columns: minmax(430px, 460px) minmax(0, 1fr);
+  .setup-console {
+    grid-template-columns: 155px minmax(300px, 1.3fr) minmax(250px, 1fr) 190px;
   }
 
   .console-heading {
-    min-height: 70px;
+    min-height: 108px;
     padding: 14px 18px;
   }
 
@@ -1945,12 +1998,11 @@ dd {
   }
 
   .run-command {
-    min-height: 96px;
     padding: 14px 18px;
   }
 
   .instrument-columns {
-    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+    grid-template-columns: minmax(0, 1.25fr) minmax(330px, .8fr);
   }
 
   .measurement-groups {
@@ -1984,6 +2036,46 @@ dd {
   .diagnostic-setup-grid {
     grid-template-columns: 1fr;
     min-height: 0;
+  }
+
+  .setup-console {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .console-heading {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .profile-fieldset {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .console-control-pair {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .interface-control {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    border-right: 0;
+  }
+
+  .run-command,
+  .high-data-confirm {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row;
+  }
+
+  .diagnostic-run-button {
+    width: auto;
+    min-width: 190px;
   }
 
   .instrument-columns {
@@ -2040,6 +2132,27 @@ dd {
   .active-run-grid,
   .result-analysis-grid {
     grid-template-columns: 1fr;
+  }
+
+  .setup-console {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-fieldset,
+  .interface-control,
+  .console-heading {
+    border-right: 0;
+  }
+
+  .run-command,
+  .high-data-confirm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .diagnostic-run-button {
+    width: 100%;
   }
 
   .console-control-pair .console-control:first-child {

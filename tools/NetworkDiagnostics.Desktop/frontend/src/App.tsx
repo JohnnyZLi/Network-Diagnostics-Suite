@@ -182,6 +182,22 @@ function App() {
   }, [appearance]);
 
   useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    const resetScroll = () => {
+      document.querySelector<HTMLElement>('.workspace-stage')?.scrollTo({ top: 0 });
+      document.querySelector<HTMLElement>('main')?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    };
+    resetScroll();
+    const frame = window.requestAnimationFrame(resetScroll);
+    const timer = window.setTimeout(resetScroll, 120);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!desktopBridge.available) {
       setMonitorLoading(false);
       return;
@@ -857,7 +873,7 @@ function App() {
                     <div className="control-label-row"><label htmlFor="run-interface">Network interface</label><span>{interfaces.length} detected</span></div>
                     <div className="interface-row diagnostic-interface-row">
                       <select id="run-interface" data-interface-picker aria-label="Network interface" value={advancedSettings?.interfaceId ?? ''} disabled={!advancedSettings || running} onChange={(event) => void selectInterface(event.target.value)}>
-                        <option value="">Automatic routing · System default route</option>
+                        <option value="">Automatic routing</option>
                         {interfaces.map((choice, index) => {
                           const id = interfaceId(choice);
                           if (!id) return null;

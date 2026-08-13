@@ -259,16 +259,26 @@
 }
 
 .live-health-summary h2 {
+  min-height: 2.16em;
+  display: -webkit-box;
+  overflow: hidden;
   font-size: clamp(27px, 2.25vw, 36px);
   font-weight: 750;
   line-height: 1.08;
   letter-spacing: -.03em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .live-health-summary > p {
+  min-height: 4.35em;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--muted);
   font-size: 15.5px;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .live-health-metrics {
@@ -322,13 +332,19 @@
 }
 
 .health-recommendation strong {
+  min-height: 1.35em;
   font-size: 14.5px;
 }
 
 .health-recommendation p {
+  min-height: 2.7em;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .health-recommendation .inline-action {
@@ -369,6 +385,7 @@
 }
 
 .latest-diagnostic-summary strong {
+  min-height: 2.6em;
   display: -webkit-box;
   overflow: hidden;
   font-size: 15px;
@@ -378,6 +395,7 @@
 }
 
 .latest-diagnostic-summary p {
+  min-height: 2.6em;
   display: -webkit-box;
   overflow: hidden;
   color: var(--muted);
@@ -713,9 +731,14 @@
 }
 
 .monitor-component-card > p {
+  min-height: 2.8em;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .monitor-component-metrics,
