@@ -3,6 +3,8 @@ name: Desktop app
 on:
   push:
     branches: [main]
+    tags:
+      - "desktop-v*"
     paths:
       - ".github/workflows/desktop.yml"
       - "contracts/**"
@@ -88,8 +90,21 @@ jobs:
           dotnet-version: 10.0.x
       - name: Test desktop bridge contract
         run: dotnet test tools/NetworkDiagnostics.Desktop.Tests/NetworkDiagnostics.Desktop.Tests.csproj --configuration Release
+      - name: Resolve desktop version
+        id: desktop-version
+        shell: bash
+        run: |
+          version="0.1.0"
+          if [[ "$GITHUB_REF" == refs/tags/desktop-v* ]]; then
+            version="${GITHUB_REF_NAME#desktop-v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "Desktop release tags must use desktop-v<semver>; received $GITHUB_REF_NAME" >&2
+              exit 1
+            fi
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
       - name: Publish desktop application
-        run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/desktop-${{ matrix.rid }}/publish
+        run: dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output artifacts/desktop-${{ matrix.rid }}/publish /p:Version=${{ steps.desktop-version.outputs.value }}
       - name: Smoke-test desktop bootstrap
         shell: bash
         run: artifacts/desktop-${{ matrix.rid }}/publish/${{ matrix.binary }} --smoke-test
@@ -106,7 +121,7 @@ jobs:
             tools/NetworkDiagnostics.Desktop/package-macos-app.sh \
               "artifacts/desktop-${{ matrix.rid }}/publish" \
               "$app" \
-              "0.1.0" \
+              "${{ steps.desktop-version.outputs.value }}" \
               "${{ github.run_number }}"
           else
             cp -R "artifacts/desktop-${{ matrix.rid }}/publish/." "$package/"
@@ -156,3 +171,41 @@ jobs:
           path: artifacts/desktop-${{ matrix.rid }}/NetworkDiagnosticsDesktop-${{ matrix.rid }}.*
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish desktop release
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: desktop-app
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: NetworkDiagnosticsDesktop-*
+          path: release-assets
+          merge-multiple: true
+      - name: Validate release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for rid in win-x64 osx-arm64 osx-x64 linux-x64 linux-arm64; do
+            extension="tar.gz"
+            if [ "$rid" = "win-x64" ]; then
+              extension="zip"
+            fi
+            archive="release-assets/NetworkDiagnosticsDesktop-$rid.$extension"
+            test -f "$archive"
+            test -f "$archive.sha256"
+          done
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#desktop-v}"
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Network Diagnostics Desktop $version" \
+            --generate-notes

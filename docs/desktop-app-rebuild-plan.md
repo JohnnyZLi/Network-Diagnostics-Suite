@@ -1,5 +1,7 @@
 # Desktop App Rebuild Plan
 
+> **Historical implementation plan.** The rebuild described here has been superseded by the shipped React + TypeScript + Vite workbench in Photino.NET. See the [current desktop package guide](../tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md) and [native architecture](native-architecture.md).
+
 ## Decision
 
 Build the new desktop application branch directly from `main`.

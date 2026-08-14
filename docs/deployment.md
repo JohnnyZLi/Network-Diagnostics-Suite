@@ -1,6 +1,6 @@
 # Deployment and native distribution
 
-The browser application requires dynamic ping, fallback download, upload, and metadata endpoints. GitHub Pages can host a portfolio card or documentation, but not the complete service. Deploy the browser application as a Cloudflare Worker and distribute native clients through reproducible GitHub Actions artifacts or a later signed release process.
+The browser application requires dynamic ping, fallback download, upload, and metadata endpoints. GitHub Pages can host a portfolio card or documentation, but not the complete service. Deploy the browser application as a Cloudflare Worker and distribute native clients through reproducible tagged GitHub Releases.
 
 Recommended application URL: `https://network.johnnyli.dev`
 
@@ -129,18 +129,42 @@ Each job:
 6. creates SHA-256 checksum files;
 7. uploads 30-day workflow artifacts.
 
-The desktop smoke test uses `--smoke-test`, loads the shared Quick/Compare plan, and exits without creating a window or contacting the network.
+The desktop smoke test uses `--smoke-test`, loads the shared Quick/Both plan, and exits without creating a window or contacting the network.
+
+### Publish a portable desktop release
+
+The desktop workflow treats tags named `desktop-vX.Y.Z` as releases. Create the tag from the reviewed `main` commit and push it:
+
+```bash
+git switch main
+git pull --ff-only
+git tag desktop-v0.1.0
+git push origin desktop-v0.1.0
+```
+
+The workflow tests and packages all five runtime targets before creating the GitHub Release. The version following `desktop-v` is embedded in the .NET binaries and macOS application bundles. Release publication fails if any archive or checksum is missing.
+
+Permanent release assets use predictable names so the README can link to the latest version directly:
+
+| Runtime | Archive |
+| --- | --- |
+| `win-x64` | `NetworkDiagnosticsDesktop-win-x64.zip` |
+| `osx-arm64` | `NetworkDiagnosticsDesktop-osx-arm64.tar.gz` |
+| `osx-x64` | `NetworkDiagnosticsDesktop-osx-x64.tar.gz` |
+| `linux-x64` | `NetworkDiagnosticsDesktop-linux-x64.tar.gz` |
+| `linux-arm64` | `NetworkDiagnosticsDesktop-linux-arm64.tar.gz` |
+
+Each archive has a sibling `.sha256` asset. Ordinary branch and pull-request builds remain 30-day workflow artifacts and are not presented as releases.
 
 ### Signing and installers
 
-Current CI artifacts are not code-signed, notarized, or wrapped in platform installers. Do not label them as trusted signed releases.
+Current portable releases and CI artifacts are not code-signed, notarized, or wrapped in platform installers. Do not label them as trusted signed releases.
 
-A production release process should add:
+A future signed release process should add:
 
 - Windows Authenticode signing and an installer format such as MSIX or MSI;
 - macOS application bundling, Developer ID signing, hardened runtime, and notarization;
 - Linux package metadata or clearly documented portable archives;
-- immutable release tags and retained checksums;
 - manual launch and accessibility review on physical Windows, macOS, and Linux systems.
 
 Signing credentials must be held in protected repository environments or an external signing service, never committed to the repository.
@@ -151,7 +175,7 @@ Component workflows use path filters so unrelated changes do not rebuild all ten
 
 - `.github/workflows/ci.yml` validates the browser, Worker, design-system integration, TypeScript, tests, production build, and Wrangler bundle when browser-facing files or shared contracts change.
 - `.github/workflows/native-probe.yml` runs the native test suite and packages the command-line probe when CLI, tests, shared-core, contract, or packaging files change.
-- `.github/workflows/desktop.yml` builds, smoke-tests, and packages the desktop application when desktop, shared-core, deep-diagnostic, contract, or packaging files change.
+- `.github/workflows/desktop.yml` builds, smoke-tests, and packages the desktop application when desktop, shared-core, deep-diagnostic, contract, or packaging files change. `desktop-v*` tags additionally publish retained GitHub Release assets.
 
 Contract changes under `contracts/**` trigger all three component workflows. Changes to `tools/NetworkDiagnostics.Core/**` or `tools/DeepProbe/**` trigger both native workflows because both hosts consume that implementation. Each component workflow also supports manual `workflow_dispatch` runs.
 
@@ -162,7 +186,7 @@ Repository-wide gates remain separate and continue to cover:
 - performance baseline;
 - CodeQL and secret scanning.
 
-Deployment, R2 provisioning, signing, notarization, and installer publication remain deliberate manual processes.
+Browser deployment, R2 provisioning, signing, notarization, and installer publication remain deliberate manual processes. Portable desktop Release publication is automated from reviewed release tags.
 
 ## Production safeguards
 

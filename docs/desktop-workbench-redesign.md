@@ -1,5 +1,7 @@
 # Desktop network diagnostics workbench
 
+> **Historical design record.** The shipped application now uses a React + TypeScript + Vite workbench in Photino.NET, not Avalonia. See the [current desktop package guide](../tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md) and [native architecture](native-architecture.md) for implemented behavior.
+
 This document defines the product and interaction architecture for the native desktop redesign. The diagnostic engine, report schema, report storage, packaging, and cross-platform support remain intact. The existing desktop presentation layer is replaced incrementally through focused pull requests.
 
 ## Product boundary
