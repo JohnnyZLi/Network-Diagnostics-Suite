@@ -13,15 +13,17 @@ The project does not use accounts, cookies, analytics, advertising, telemetry, o
 
 ## Download the desktop app
 
-The desktop packages are self-contained; installing .NET is not required. Choose the package that matches the operating system and processor:
+The desktop packages are self-contained; installing .NET is not required. Choose the build that matches the operating system and processor:
 
-| System | Architecture | Download | Verify |
-| --- | --- | --- | --- |
-| Windows | x64 | [![Download Windows x64](https://img.shields.io/badge/Download-ZIP-0078D4?logo=windows&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip.sha256) |
-| macOS 12+ | Apple Silicon | [![Download macOS Apple Silicon](https://img.shields.io/badge/Download-TAR.GZ-000000?logo=apple&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz.sha256) |
-| macOS 12+ | Intel | [![Download macOS Intel](https://img.shields.io/badge/Download-TAR.GZ-555555?logo=apple&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz.sha256) |
-| Linux | x64 | [![Download Linux x64](https://img.shields.io/badge/Download-TAR.GZ-FCC624?logo=linux&logoColor=black)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz.sha256) |
-| Linux | ARM64 | [![Download Linux ARM64](https://img.shields.io/badge/Download-TAR.GZ-FCC624?logo=linux&logoColor=black)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz.sha256) |
+<p>
+  <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip"><img src="docs/assets/download-windows-x64.svg" alt="Download for Windows x64" width="180" height="62"></a>
+  <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz"><img src="docs/assets/download-macos-arm64.svg" alt="Download for macOS Apple Silicon" width="180" height="62"></a>
+  <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz"><img src="docs/assets/download-macos-x64.svg" alt="Download for macOS Intel" width="180" height="62"></a><br>
+  <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz"><img src="docs/assets/download-linux-x64.svg" alt="Download for Linux x64" width="180" height="62"></a>
+  <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz"><img src="docs/assets/download-linux-arm64.svg" alt="Download for Linux ARM64" width="180" height="62"></a>
+</p>
+
+**SHA-256:** [Windows x64](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip.sha256) · [macOS Apple Silicon](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz.sha256) · [macOS Intel](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz.sha256) · [Linux x64](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz.sha256) · [Linux ARM64](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz.sha256)
 
 These portable builds are currently unsigned. On macOS, try opening **Network Diagnostics.app** normally, then use **System Settings → Privacy & Security → Open Anyway** if Gatekeeper blocks it. See [all releases](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases) and the [desktop package guide](tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md) for launch and privacy details.
 
@@ -96,24 +98,13 @@ Browsers do not expose a portable exact-version request API. The web client reco
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    Contract["Profiles, findings rules, parity fixtures, and report contracts"] --> Browser["React browser app"]
-    Contract --> Core[".NET native core"]
-    Browser --> Preflight["Endpoint preflight + metadata"]
-    Browser --> Assets["Cloudflare static speed assets"]
-    Browser --> Worker["Cloudflare Worker APIs"]
-    Desktop["React + Photino desktop app"] --> Core
-    CLI["Deep-probe CLI"] --> Core
-    Core --> Preflight
-    Core --> Assets
-    Core --> Worker
-    Core --> OS["ICMP, routes, DNS, MTU, TLS, interfaces, Wi-Fi"]
-    LanServer["Optional LAN server"] --> Core
-    Core --> Report["Local schema 2.0 JSON report"]
-    Report --> Desktop
-    Report --> Browser
-```
+| Client | Runtime | Responsibilities |
+| --- | --- | --- |
+| Browser application | React, TypeScript, Cloudflare Worker | Browser-safe measurements, first-party transfers, local report viewing |
+| Desktop application | React, TypeScript, Photino.NET | Native diagnostics, passive monitoring, advanced workflows, local report storage |
+| Deep-probe CLI | .NET 10 | Scriptable native diagnostics, Internet transfer, LAN server and client |
+
+The desktop and CLI share `NetworkDiagnostics.Core`, profile contracts, findings rules, endpoint selection, native probes, and schema 2.0 serialization. The browser uses the same report contract and cross-language parity fixtures.
 
 - **React and TypeScript** render the browser dashboard and run browser measurements.
 - **Cloudflare Workers Static Assets** and optional R2 delivery provide deterministic first-party download payloads.
