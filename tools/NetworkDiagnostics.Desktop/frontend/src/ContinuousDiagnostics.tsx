@@ -267,7 +267,7 @@ export function ContinuousDiagnostics({
 
           </div>
 
-          <div className="live-timeline-section">
+          <div className={`live-timeline-section${snapshot.timeline.length === 0 ? ' empty' : ''}`}>
             <div className="live-timeline-heading">
               <div><strong>Connection timeline</strong><span>{snapshot.timeline.length} samples · latency, jitter, loss & response state</span></div>
               <div className="monitor-window-control" aria-label="Monitoring history window">
@@ -320,7 +320,32 @@ export function ContinuousDiagnostics({
                   <span className="diagnostic"><i />Diagnostic load</span>
                 </div>
               </div>
-            ) : <p className="monitor-muted">The first heartbeat sample will appear after the native monitor reaches its endpoint.</p>}
+            ) : (
+              <div className="timeline-empty-state" role="status">
+                <div className="timeline-empty-heading">
+                  <span className={`timeline-empty-pulse${snapshot.running ? ' running' : ''}`} aria-hidden="true" />
+                  <div>
+                    <strong>{snapshot.running ? 'Waiting for the first heartbeat' : 'Monitoring is paused'}</strong>
+                    <p>{snapshot.running
+                      ? 'The timeline begins when the native endpoint returns its first response.'
+                      : 'Resume monitoring to collect new response-time and availability samples.'}</p>
+                  </div>
+                </div>
+                <dl className="timeline-empty-facts">
+                  <div><dt>Status</dt><dd>{snapshot.running ? 'Connecting' : 'Paused'}</dd></div>
+                  <div><dt>Interface</dt><dd>{snapshot.interfaceName || 'Automatic routing'}</dd></div>
+                  <div><dt>Window</dt><dd>{windowLabel(snapshot.window)}</dd></div>
+                  <div><dt>Stored samples</dt><dd>0</dd></div>
+                </dl>
+                <div className="timeline-empty-measurements" aria-label="Measurements collected by passive monitoring">
+                  <span><i className="latency" /><b>Latency</b><small>Response time</small></span>
+                  <span><i className="jitter" /><b>Jitter</b><small>Timing variation</small></span>
+                  <span><i className="loss" /><b>Loss</b><small>Missed responses</small></span>
+                  <span><i className="state" /><b>State</b><small>Responsive or degraded</small></span>
+                </div>
+                <small className="timeline-empty-privacy">Monitoring history is stored locally on this computer.</small>
+              </div>
+            )}
           </div>
           </div>
 
@@ -335,6 +360,10 @@ export function ContinuousDiagnostics({
       )}
     </section>
   );
+}
+
+function windowLabel(window: MonitorWindow): string {
+  return windows.find((item) => item.id === window)?.label ?? window;
 }
 
 function TimelineChart({ samples, window, metric }: { samples: MonitorTimelineSample[]; window: MonitorWindow; metric: TimelineMetric }) {

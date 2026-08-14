@@ -937,12 +937,25 @@ function App() {
 
                     <section className="instrument-section path-section">
                       <header><div><span>MEASUREMENT PATH</span><strong>{preflightLoading ? 'Checking route' : preflightSummary.endpoint}</strong></div><small>{preflightLoading ? 'LIVE PREFLIGHT' : 'CURRENT'}</small></header>
+                      <div className="measurement-route" aria-label="Current measurement route">
+                        <div className="route-node">
+                          <span>Interface</span>
+                          <strong>{resultPathSummary.interface}</strong>
+                        </div>
+                        <i aria-hidden="true" />
+                        <div className="route-node">
+                          <span>Network</span>
+                          <strong>{preflightSummary.providerNetwork}</strong>
+                        </div>
+                        <i aria-hidden="true" />
+                        <div className="route-node accent">
+                          <span>Edge</span>
+                          <strong>{preflightSummary.edge}</strong>
+                        </div>
+                      </div>
                       <dl className="path-ledger">
                         <PathRow label="Endpoint" value={preflightLoading ? 'Selecting…' : preflightSummary.origin} copyable={!preflightLoading} />
-                        <PathRow label="Provider / network" value={preflightSummary.providerNetwork} />
-                        <PathRow label="Location / protocol" value={[preflightSummary.edge, preflightSummary.protocol, preflightSummary.ipVersion].filter((value) => value !== '—').join(' · ') || '—'} />
-                        <PathRow label="Preflight latency" value={preflightSummary.latency} />
-                        <PathRow label="Interface" value={resultPathSummary.interface} />
+                        <PathRow label="Protocol" value={[preflightSummary.protocol, preflightSummary.ipVersion, preflightSummary.latency].filter((value) => value !== '—').join(' · ') || '—'} />
                         <PathRow label="Requested delivery" value={downloadPathLabel(downloadPath)} />
                         <PathRow label="Actual preflight path" value={preflight?.downloadPath ? downloadPathResultLabel(preflight.downloadPath.selectedPath) : preflightLoading ? 'Checking…' : '—'} accent />
                         <PathRow label="R2 probe" value={preflight?.downloadPath ? statusLabel(preflight.downloadPath.r2ProbeStatus) : downloadPath === 'worker' ? 'Not requested' : 'Pending'} />
@@ -978,7 +991,7 @@ function App() {
 
               <div className="active-progress">
                 <div className="active-progress-value"><strong>{progressPercent}</strong><span>%</span></div>
-                <div><div className="diagnostic-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><span style={{ width: progressPercent + '%' }} /></div><small>{formatBytes(measuredBytes)} measured · {plan ? formatBytes(plan.transferCapBytes) : '—'} cap · {formatDuration(progress?.elapsedSeconds ?? 0)} elapsed{progress?.estimatedSecondsRemaining != null && progress.estimatedSecondsRemaining > 0 ? ` · about ${formatDuration(progress.estimatedSecondsRemaining)} remaining` : ''}</small></div>
+                <div><div className="diagnostic-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><span style={{ transform: `scaleX(${progressRatio})` }} /></div><small>{formatBytes(measuredBytes)} measured · {plan ? formatBytes(plan.transferCapBytes) : '—'} cap · {formatDuration(progress?.elapsedSeconds ?? 0)} elapsed{progress?.estimatedSecondsRemaining != null && progress.estimatedSecondsRemaining > 0 ? ` · about ${formatDuration(progress.estimatedSecondsRemaining)} remaining` : ''}</small></div>
               </div>
 
               <RunPhaseRail phase={progress?.phase} plan={plan} />
