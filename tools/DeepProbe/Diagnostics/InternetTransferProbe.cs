@@ -10,27 +10,47 @@ namespace NetworkDeepProbe.Diagnostics;
 public static class InternetTransferProbe
 {
     public static readonly Uri DefaultOrigin = new("https://network.johnnyli.dev/");
+    public static readonly Uri DirectR2Origin = new("https://speed.johnnyli.dev/");
+    private const string DirectR2ObjectPath = "network-diagnostics-speed-v1.bin";
+    private const long DirectR2ObjectBytes = 256L * 1024 * 1024;
+    private const long DirectR2RangeBytes = 192L * 1024 * 1024;
+    private const long DirectR2RangeStrideBytes = 6L * 1024 * 1024;
+    private const int DirectR2RangeSlotCount = 10;
     private const int TimelineIntervalMs = 250;
     private const int LoadedLatencyIntervalMs = 225;
     private const int UploadRequestBytes = 16 * 1024 * 1024;
     private const int StressUploadRequestBytes = 32 * 1024 * 1024;
+
+    public static async Task<NativeDownloadPathStatus> ProbeDownloadPathAsync(
+        Uri origin,
+        DownloadPathPreference requestedPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        ValidateOrigin(origin);
+        using var client = BoundHttpClientFactory.Create(2, null);
+        return await ResolveDownloadPathStatusAsync(client, origin, requestedPath, cancellationToken);
+    }
 
     public static async Task<NativeInternetTransferReport> RunAsync(
         NativeTransferPlan plan,
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
         CancellationToken cancellationToken,
-        IPAddress? sourceAddress = null)
+        IPAddress? sourceAddress = null,
+        DownloadPathPreference downloadPath = DownloadPathPreference.Automatic)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(origin);
-        if (!origin.IsAbsoluteUri || origin.Scheme is not ("http" or "https"))
-        {
-            throw new ArgumentException("The test origin must be an absolute HTTP or HTTPS URI.", nameof(origin));
-        }
+        ValidateOrigin(origin);
 
         using var transferClient = BoundHttpClientFactory.Create(32, sourceAddress);
         using var latencyClient = BoundHttpClientFactory.Create(4, sourceAddress);
+        var downloadRuntime = await CreateDownloadRuntimeAsync(
+            transferClient,
+            origin,
+            downloadPath,
+            cancellationToken);
 
         progress?.Report(new NativeTransferProgress("idle", "baseline", 0, null, null, 0));
         var idleSamples = await CollectIdleLatencyAsync(
@@ -49,7 +69,8 @@ public static class InternetTransferProbe
             origin,
             idleLatency,
             progress,
-            cancellationToken);
+            cancellationToken,
+            downloadRuntime);
         var uploadResults = await RunStageSequenceAsync(
             plan.UploadStages,
             transferClient,
@@ -57,7 +78,8 @@ public static class InternetTransferProbe
             origin,
             idleLatency,
             progress,
-            cancellationToken);
+            cancellationToken,
+            downloadRuntime);
 
         var singleDownload = downloadResults.FirstOrDefault(item => item.Stage.Connections == 1);
         var aggregateDownload = downloadResults
@@ -110,6 +132,7 @@ public static class InternetTransferProbe
                 item.Latency)).ToArray()
             : [];
         var dataUsed = downloadResults.Concat(uploadResults).Sum(item => item.Throughput.Bytes);
+        var downloadBytes = downloadResults.Sum(item => item.Throughput.Bytes);
 
         progress?.Report(new NativeTransferProgress("complete", "complete", 1, null, null, dataUsed));
         return new NativeInternetTransferReport(
@@ -121,8 +144,114 @@ public static class InternetTransferProbe
             primaryUpload.Latency,
             measurements,
             scaling,
-            dataUsed);
+            dataUsed,
+            downloadRuntime.ToReport(downloadBytes));
     }
+
+    private static void ValidateOrigin(Uri origin)
+    {
+        if (!origin.IsAbsoluteUri || origin.Scheme is not ("http" or "https"))
+        {
+            throw new ArgumentException("The test origin must be an absolute HTTP or HTTPS URI.", nameof(origin));
+        }
+    }
+
+    private static async Task<DownloadPathRuntime> CreateDownloadRuntimeAsync(
+        HttpClient client,
+        Uri origin,
+        DownloadPathPreference requestedPath,
+        CancellationToken cancellationToken)
+    {
+        var status = await ResolveDownloadPathStatusAsync(client, origin, requestedPath, cancellationToken);
+        if (requestedPath == DownloadPathPreference.DirectR2 && status.SelectedPath == "unavailable")
+        {
+            throw new InvalidOperationException(status.FallbackReason ?? "Direct R2 is unavailable for the selected measurement endpoint.");
+        }
+        return new DownloadPathRuntime(requestedPath, status);
+    }
+
+    private static async Task<NativeDownloadPathStatus> ResolveDownloadPathStatusAsync(
+        HttpClient client,
+        Uri origin,
+        DownloadPathPreference requestedPath,
+        CancellationToken cancellationToken)
+    {
+        if (requestedPath == DownloadPathPreference.Worker)
+        {
+            return new NativeDownloadPathStatus(
+                DownloadPathId(requestedPath),
+                "worker",
+                "not-requested",
+                null,
+                DirectR2Origin.ToString());
+        }
+
+        if (!IsFirstPartyOrigin(origin))
+        {
+            var reason = "Direct R2 is only available with the built-in first-party measurement endpoint.";
+            return new NativeDownloadPathStatus(
+                DownloadPathId(requestedPath),
+                requestedPath == DownloadPathPreference.Automatic ? "worker" : "unavailable",
+                "unavailable",
+                reason,
+                DirectR2Origin.ToString());
+        }
+
+        var probe = await ProbeDirectR2Async(client, cancellationToken);
+        if (probe.Available)
+        {
+            return new NativeDownloadPathStatus(
+                DownloadPathId(requestedPath),
+                "direct-r2",
+                "available",
+                null,
+                DirectR2Origin.ToString());
+        }
+
+        return new NativeDownloadPathStatus(
+            DownloadPathId(requestedPath),
+            requestedPath == DownloadPathPreference.Automatic ? "worker" : "unavailable",
+            "unavailable",
+            probe.Reason,
+            DirectR2Origin.ToString());
+    }
+
+    private static bool IsFirstPartyOrigin(Uri origin) =>
+        string.Equals(origin.Host, DefaultOrigin.Host, StringComparison.OrdinalIgnoreCase);
+
+    private static async Task<(bool Available, string? Reason)> ProbeDirectR2Async(
+        HttpClient client,
+        CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(4_000);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Head, new Uri(DirectR2Origin, DirectR2ObjectPath));
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            var contentLength = response.Content.Headers.ContentLength;
+            if (response.IsSuccessStatusCode && contentLength == DirectR2ObjectBytes)
+            {
+                return (true, null);
+            }
+            return (false, $"Direct R2 probe returned HTTP {(int)response.StatusCode} with {contentLength?.ToString() ?? "unknown"} bytes.");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (false, "Direct R2 probe timed out.");
+        }
+        catch (HttpRequestException error)
+        {
+            return (false, $"Direct R2 probe failed: {error.Message}");
+        }
+    }
+
+    private static string DownloadPathId(DownloadPathPreference path) => path switch
+    {
+        DownloadPathPreference.DirectR2 => "direct-r2",
+        DownloadPathPreference.Worker => "worker",
+        _ => "automatic"
+    };
 
     private static async Task<IReadOnlyList<double?>> CollectIdleLatencyAsync(
         HttpClient client,
@@ -158,6 +287,7 @@ public static class InternetTransferProbe
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
         CancellationToken cancellationToken,
+        DownloadPathRuntime downloadRuntime,
         IPAddress? sourceAddress = null)
     {
         var results = new List<StageMeasurement>(stages.Count);
@@ -171,7 +301,8 @@ public static class InternetTransferProbe
                 origin,
                 idleLatency,
                 progress,
-                cancellationToken);
+                cancellationToken,
+                downloadRuntime);
             results.Add(result);
         }
         return results;
@@ -185,6 +316,7 @@ public static class InternetTransferProbe
         LatencyStatistics idleLatency,
         IProgress<NativeTransferProgress>? progress,
         CancellationToken cancellationToken,
+        DownloadPathRuntime downloadRuntime,
         IPAddress? sourceAddress = null)
     {
         using var latencyCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -204,7 +336,7 @@ public static class InternetTransferProbe
         try
         {
             throughput = stage.Direction == TransferDirection.Download
-                ? await RunDownloadSamplesAsync(stage, transferClient, origin, progress, cancellationToken)
+                ? await RunDownloadSamplesAsync(stage, transferClient, origin, progress, cancellationToken, downloadRuntime)
                 : await RunUploadSampleAsync(stage, transferClient, origin, progress, cancellationToken);
         }
         finally
@@ -279,6 +411,7 @@ public static class InternetTransferProbe
         Uri origin,
         IProgress<NativeTransferProgress>? progress,
         CancellationToken cancellationToken,
+        DownloadPathRuntime downloadRuntime,
         IPAddress? sourceAddress = null)
     {
         var sampleCount = Math.Max(1, stage.Samples);
@@ -305,7 +438,8 @@ public static class InternetTransferProbe
                     liveMbps,
                     null,
                     completedBytes + bytes)),
-                cancellationToken);
+                cancellationToken,
+                downloadRuntime);
             samples.Add(sample);
             completedBytes += sample.Bytes;
         }
@@ -319,7 +453,8 @@ public static class InternetTransferProbe
         HttpClient client,
         Uri origin,
         Action<double, long> onProgress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DownloadPathRuntime downloadRuntime)
     {
         using var phase = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         phase.CancelAfter(durationMs);
@@ -341,7 +476,7 @@ public static class InternetTransferProbe
         }
 
         var workers = Enumerable.Range(0, stage.Connections)
-            .Select(_ => DownloadWorkerAsync(client, origin, budget, MarkCapReached, phase.Token))
+            .Select(worker => DownloadWorkerAsync(client, origin, worker, budget, MarkCapReached, phase.Token, downloadRuntime))
             .ToArray();
         try
         {
@@ -370,64 +505,152 @@ public static class InternetTransferProbe
     private static async Task DownloadWorkerAsync(
         HttpClient client,
         Uri origin,
+        int workerIndex,
         ConcurrentByteBudget budget,
         Action onCapReached,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DownloadPathRuntime downloadRuntime)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(128 * 1024);
+        var generation = 0;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                using var request = new HttpRequestMessage(
-                    HttpMethod.Get,
-                    new Uri(origin, $"speed/v4/stream?n={Guid.NewGuid():N}"));
-                request.Version = HttpVersion.Version20;
-                request.VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
-                using var response = await client.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken);
-                response.EnsureSuccessStatusCode();
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                while (!cancellationToken.IsCancellationRequested)
+                if (downloadRuntime.UseDirectR2)
                 {
-                    var reservation = budget.Reserve(buffer.Length);
-                    if (reservation == 0)
-                    {
-                        if (budget.IsExhausted) return;
-                        await Task.Delay(1, cancellationToken);
-                        continue;
-                    }
-
-                    int read;
                     try
                     {
-                        read = await stream.ReadAsync(buffer.AsMemory(0, reservation), cancellationToken);
+                        await DownloadDirectR2RequestAsync(
+                            client,
+                            workerIndex,
+                            generation,
+                            budget,
+                            onCapReached,
+                            buffer,
+                            cancellationToken,
+                            downloadRuntime);
+                        generation++;
+                        continue;
                     }
-                    catch
+                    catch (Exception error) when (
+                        error is HttpRequestException or InvalidDataException
+                        && downloadRuntime.RequestedPath == DownloadPathPreference.Automatic
+                        && !cancellationToken.IsCancellationRequested)
                     {
-                        budget.Release(reservation);
-                        throw;
-                    }
-
-                    if (read == 0)
-                    {
-                        budget.Release(reservation);
-                        break;
-                    }
-
-                    if (budget.Commit(reservation, read))
-                    {
-                        onCapReached();
-                        return;
+                        downloadRuntime.FallbackToWorker($"Direct R2 failed during transfer: {error.Message}");
+                        continue;
                     }
                 }
+
+                await DownloadWorkerStreamRequestAsync(
+                    client,
+                    origin,
+                    budget,
+                    onCapReached,
+                    buffer,
+                    cancellationToken,
+                    downloadRuntime);
+                generation++;
             }
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private static async Task DownloadDirectR2RequestAsync(
+        HttpClient client,
+        int workerIndex,
+        int generation,
+        ConcurrentByteBudget budget,
+        Action onCapReached,
+        byte[] buffer,
+        CancellationToken cancellationToken,
+        DownloadPathRuntime runtime)
+    {
+        var slot = (workerIndex + generation * 3) % DirectR2RangeSlotCount;
+        var start = slot * DirectR2RangeStrideBytes;
+        var end = start + DirectR2RangeBytes - 1;
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(DirectR2Origin, DirectR2ObjectPath));
+        request.Headers.Range = new RangeHeaderValue(start, end);
+        request.Version = HttpVersion.Version20;
+        request.VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
+        runtime.RequestStarted(directR2: true);
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.PartialContent)
+        {
+            throw new InvalidDataException($"Direct R2 returned HTTP {(int)response.StatusCode} instead of a range response.");
+        }
+        await ConsumeDownloadResponseAsync(response, budget, onCapReached, buffer, cancellationToken);
+        runtime.RequestCompleted();
+    }
+
+    private static async Task DownloadWorkerStreamRequestAsync(
+        HttpClient client,
+        Uri origin,
+        ConcurrentByteBudget budget,
+        Action onCapReached,
+        byte[] buffer,
+        CancellationToken cancellationToken,
+        DownloadPathRuntime runtime)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            new Uri(origin, $"speed/v4/stream?n={Guid.NewGuid():N}"));
+        request.Version = HttpVersion.Version20;
+        request.VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
+        runtime.RequestStarted(directR2: false);
+        using var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await ConsumeDownloadResponseAsync(response, budget, onCapReached, buffer, cancellationToken);
+        runtime.RequestCompleted();
+    }
+
+    private static async Task ConsumeDownloadResponseAsync(
+        HttpResponseMessage response,
+        ConcurrentByteBudget budget,
+        Action onCapReached,
+        byte[] buffer,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var reservation = budget.Reserve(buffer.Length);
+            if (reservation == 0)
+            {
+                if (budget.IsExhausted) return;
+                await Task.Delay(1, cancellationToken);
+                continue;
+            }
+
+            int read;
+            try
+            {
+                read = await stream.ReadAsync(buffer.AsMemory(0, reservation), cancellationToken);
+            }
+            catch
+            {
+                budget.Release(reservation);
+                throw;
+            }
+
+            if (read == 0)
+            {
+                budget.Release(reservation);
+                return;
+            }
+
+            if (budget.Commit(reservation, read))
+            {
+                onCapReached();
+                return;
+            }
         }
     }
 
@@ -716,6 +939,71 @@ public static class InternetTransferProbe
         TransferStagePlan Stage,
         NativeThroughputSummary Throughput,
         NativeLoadedLatencyReport Latency);
+
+    private sealed class DownloadPathRuntime
+    {
+        private readonly object gate = new();
+        private string selectedPath;
+        private string? fallbackReason;
+        private int requestsStarted;
+        private int requestsCompleted;
+        private int r2Requests;
+        private int workerRequests;
+
+        public DownloadPathRuntime(DownloadPathPreference requestedPath, NativeDownloadPathStatus status)
+        {
+            RequestedPath = requestedPath;
+            selectedPath = status.SelectedPath;
+            R2ProbeStatus = status.R2ProbeStatus;
+            fallbackReason = status.FallbackReason;
+        }
+
+        public DownloadPathPreference RequestedPath { get; }
+        public string R2ProbeStatus { get; }
+        public bool UseDirectR2
+        {
+            get
+            {
+                lock (gate) return selectedPath == "direct-r2";
+            }
+        }
+
+        public void FallbackToWorker(string reason)
+        {
+            lock (gate)
+            {
+                selectedPath = r2Requests > 0 ? "mixed" : "worker";
+                fallbackReason ??= reason;
+            }
+        }
+
+        public void RequestStarted(bool directR2)
+        {
+            Interlocked.Increment(ref requestsStarted);
+            if (directR2) Interlocked.Increment(ref r2Requests);
+            else Interlocked.Increment(ref workerRequests);
+        }
+
+        public void RequestCompleted() => Interlocked.Increment(ref requestsCompleted);
+
+        public NativeDownloadDeliveryReport ToReport(long bytes)
+        {
+            lock (gate)
+            {
+                return new NativeDownloadDeliveryReport(
+                    DownloadPathId(RequestedPath),
+                    selectedPath,
+                    R2ProbeStatus,
+                    fallbackReason,
+                    DirectR2Origin.ToString(),
+                    bytes,
+                    Volatile.Read(ref requestsStarted),
+                    Volatile.Read(ref requestsCompleted),
+                    Volatile.Read(ref r2Requests),
+                    Volatile.Read(ref workerRequests));
+            }
+        }
+    }
 
     private sealed class GeneratedUploadContent : HttpContent
     {

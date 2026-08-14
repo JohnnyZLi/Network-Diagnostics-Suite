@@ -20,18 +20,21 @@ public sealed record NativeDiagnosticRunOptions(
     string ProducerApplication = "desktop",
     string? ProducerVersion = null,
     IReadOnlyList<Uri>? TestOrigins = null,
-    string? InterfaceId = null);
+    string? InterfaceId = null,
+    DownloadPathPreference DownloadPath = DownloadPathPreference.Automatic);
 
 public sealed record NativePreflightOptions(
     TestProfileId Profile = TestProfileId.ConnectionCheck,
     TransferMethod TransferMethod = TransferMethod.Compare,
     IReadOnlyList<Uri>? TestOrigins = null,
     string? InterfaceId = null,
-    bool IncludeAddresses = false);
+    bool IncludeAddresses = false,
+    DownloadPathPreference DownloadPath = DownloadPathPreference.Automatic);
 
 public sealed record NativePreflightResult(
     MeasurementContextReport Measurement,
-    IReadOnlyList<NetworkInterfaceChoice> Interfaces);
+    IReadOnlyList<NetworkInterfaceChoice> Interfaces,
+    NativeDownloadPathStatus DownloadPath);
 
 public sealed record NativeRunProgress(
     string Phase,
@@ -64,7 +67,8 @@ public static class NetworkDiagnosticsRunner
             null,
             8765,
             8,
-            4);
+            4,
+            options.DownloadPath);
         var preflight = await MeasurementPreflight.RunAsync(
             probeOptions.CandidateOrigins,
             probeOptions.InterfaceId,
@@ -72,7 +76,11 @@ public static class NetworkDiagnosticsRunner
             "network-diagnostics-native",
             FullDiagnosticRunner.Capabilities(probeOptions),
             cancellationToken);
-        return new NativePreflightResult(preflight.Measurement, ListInterfaces());
+        var downloadPath = await InternetTransferProbe.ProbeDownloadPathAsync(
+            preflight.EndpointSelection.Selected.Origin,
+            options.DownloadPath,
+            cancellationToken);
+        return new NativePreflightResult(preflight.Measurement, ListInterfaces(), downloadPath);
     }
 
     public static async Task<NetworkDiagnosticsReportV2> RunAsync(
@@ -91,6 +99,7 @@ public static class NetworkDiagnosticsRunner
             options.LanPort,
             options.LanDurationSeconds,
             options.LanConnections,
+            options.DownloadPath,
             options.Target,
             options.PingCount,
             options.MaximumHops);
@@ -132,6 +141,33 @@ public static class NetworkDiagnosticsRunner
         return LanThroughputServer.RunAsync(port, progress, cancellationToken);
     }
 
+    public static IReadOnlyList<string> ListLanServerAddresses() =>
+        LanThroughputServer.GetLocalAddresses();
+
+    public static Task<LanThroughputReport> RunLanThroughputAsync(
+        string target,
+        int port,
+        int durationSeconds,
+        int connections,
+        string? interfaceId = null,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (port is < 1024 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+        if (durationSeconds is < 3 or > 30) throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+        if (connections is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(connections));
+        var binding = NetworkBindingResolver.Resolve(interfaceId);
+        return LanThroughputClient.RunAsync(
+            target.Trim(),
+            port,
+            durationSeconds,
+            connections,
+            progress,
+            cancellationToken,
+            binding?.SourceAddress);
+    }
+
     private static ProbeOptions CreateProbeOptions(
         TestProfileId profile,
         TransferMethod method,
@@ -142,6 +178,7 @@ public static class NetworkDiagnosticsRunner
         int lanPort,
         int lanDurationSeconds,
         int lanConnections,
+        DownloadPathPreference downloadPath = DownloadPathPreference.Automatic,
         string target = "1.1.1.1",
         int pingCount = 20,
         int maximumHops = 30)
@@ -168,7 +205,8 @@ public static class NetworkDiagnosticsRunner
             primary,
             false,
             candidates.Skip(1).ToArray(),
-            interfaceId);
+            interfaceId,
+            downloadPath);
     }
 
     private static string ProgressMessage(NativeTransferProgress progress) => progress.Phase switch

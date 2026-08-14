@@ -4,9 +4,9 @@
   "package": "@johnnyzli/web-design-system",
   "contractVersion": "1.0.0",
   "designSystemVersion": "1.9.0",
-  "sourceCommit": "57ba35fc314a01deeac69f77fc8a11eade993e9d",
-  "consumerCommit": "01425a6cd59ddaebcd02fbd61e1a23e7cebd59b2",
-  "generatedAt": "2026-08-08T09:24:48.719Z",
+  "sourceCommit": "e1905fe7dea19ddd6bdfddc9cd24239c31aa41f9",
+  "consumerCommit": null,
+  "generatedAt": "2026-08-11T21:58:46.222Z",
   "summary": {
     "blockingFailures": 0,
     "advisoryFailures": 0,

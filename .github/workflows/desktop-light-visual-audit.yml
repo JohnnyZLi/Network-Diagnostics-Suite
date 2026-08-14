@@ -1,0 +1,170 @@
+name: Desktop Light visual audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-light-visual-audit.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-light:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      GTK_THEME: 'Adwaita'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Photino Linux host and virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libnotify-dev \
+            xvfb openbox xdotool wmctrl scrot
+
+      - name: Publish Linux desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output desktop-light/publish
+          test -f desktop-light/publish/wwwroot/index.html
+
+      - name: Launch Light Photino desktop
+        run: |
+          mkdir -p desktop-light/screenshots
+          Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/desktop-light-xvfb.log 2>&1 &
+          echo $! > /tmp/desktop-light-xvfb.pid
+          sleep 1
+          openbox > /tmp/desktop-light-openbox.log 2>&1 &
+          echo $! > /tmp/desktop-light-openbox.pid
+          desktop-light/publish/NetworkDiagnosticsDesktop --appearance=light \
+            > /tmp/desktop-light-app.log 2>&1 &
+          echo $! > /tmp/desktop-light-app.pid
+          for attempt in {1..50}; do
+            if wmctrl -l | grep -q 'Network Diagnostics'; then
+              # Explicit geometry is more reliable than X11 maximize for WebKitGTK;
+              # maximize can leave the backing surface blank until a later resize.
+              wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              xdotool mousemove --sync 800 500 click 1
+              sleep 3
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/desktop-light-app.pid)" 2>/dev/null; then
+              cat /tmp/desktop-light-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/desktop-light-app.log
+          exit 1
+
+      - name: Capture Light milestone states
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capture() {
+            local name="$1"
+            local path="desktop-light/screenshots/$name.png"
+            sleep 0.8
+            scrot "$path"
+
+            # A blank WebKitGTK backing surface compresses to a very small PNG even
+            # though the window manager frame is present. Force a one-pixel resize
+            # redraw once, then reject the artifact if it is still blank-like.
+            if (( $(stat -c%s "$path") < 60000 )); then
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1579,939
+              sleep 0.45
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              sleep 1
+              scrot "$path"
+            fi
+
+            if (( $(stat -c%s "$path") < 60000 )); then
+              echo "Light-theme screenshot $name is blank or did not redraw."
+              ls -lh "$path"
+              cat /tmp/desktop-light-app.log
+              exit 1
+            fi
+          }
+
+          open_palette() {
+            xdotool mousemove --sync 800 330 click 1
+            sleep 0.15
+            xdotool key --clearmodifiers ctrl+f
+            sleep 0.45
+          }
+
+          capture connection-check-light-wide
+          wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,760
+          sleep 0.7
+          capture connection-check-light-compact
+
+          # The diagnostics surface has materially different density than Health;
+          # audit it independently at both desktop and compact widths.
+          wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+          sleep 0.6
+          open_palette
+          xdotool type --delay 30 'run diagnostics'
+          xdotool key --clearmodifiers Return
+          sleep 1.1
+          capture diagnostics-light-wide
+
+          wmctrl -r 'Network Diagnostics' -e 0,100,80,1000,820
+          sleep 0.7
+          capture diagnostics-light-compact
+
+          # Stress exercises the densest native plan/data layout without spending the
+          # several-gigabyte transfer budget during a visual-only audit.
+          wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+          sleep 0.6
+          open_palette
+          xdotool type --delay 30 'select stress'
+          xdotool key --clearmodifiers Return
+          sleep 1.1
+          capture diagnostics-stress-light-wide
+
+          if ! kill -0 "$(cat /tmp/desktop-light-app.pid)" 2>/dev/null; then
+            cat /tmp/desktop-light-app.log
+            exit 1
+          fi
+          if grep -Ei 'unhandled exception|fatal error|segmentation fault' /tmp/desktop-light-app.log; then
+            cat /tmp/desktop-light-app.log
+            exit 1
+          fi
+
+      - name: Upload Light rendered states
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: desktop-photino-light-visual-audit
+          path: |
+            desktop-light/screenshots
+            /tmp/desktop-light-app.log
+            /tmp/desktop-light-openbox.log
+            /tmp/desktop-light-xvfb.log
+          retention-days: 7

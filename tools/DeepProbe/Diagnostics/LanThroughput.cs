@@ -138,7 +138,7 @@ internal static class LanThroughputServer
         return Encoding.ASCII.GetString(buffer, 0, length).Trim();
     }
 
-    private static IReadOnlyList<string> GetLocalAddresses()
+    internal static IReadOnlyList<string> GetLocalAddresses()
     {
         var addresses = NetworkInterface.GetAllNetworkInterfaces()
             .Where(network => network.OperationalStatus == OperationalStatus.Up && network.NetworkInterfaceType != NetworkInterfaceType.Loopback)

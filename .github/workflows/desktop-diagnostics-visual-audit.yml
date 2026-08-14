@@ -1,0 +1,191 @@
+name: Desktop Diagnostics visual audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-diagnostics-visual-audit.yml'
+      - 'tools/NetworkDiagnostics.Desktop/**'
+      - 'tools/NetworkDiagnostics.Core/**'
+      - 'tools/DeepProbe/**'
+      - 'contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics-ux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DISPLAY: ':99'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      GTK_THEME: 'Adwaita:dark'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Photino Linux host and virtual desktop tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libnotify-dev \
+            xvfb openbox xdotool wmctrl scrot
+
+      - name: Publish desktop application
+        run: |
+          dotnet publish tools/NetworkDiagnostics.Desktop/NetworkDiagnostics.Desktop.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output diagnostics-visual/publish
+          test -f diagnostics-visual/publish/wwwroot/index.html
+
+      - name: Launch Photino desktop
+        run: |
+          mkdir -p diagnostics-visual/screenshots
+          Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp > /tmp/diagnostics-xvfb.log 2>&1 &
+          echo $! > /tmp/diagnostics-xvfb.pid
+          sleep 1
+          openbox > /tmp/diagnostics-openbox.log 2>&1 &
+          echo $! > /tmp/diagnostics-openbox.pid
+          diagnostics-visual/publish/NetworkDiagnosticsDesktop \
+            --workspace=diagnostics --appearance=dark --window-size=1580x940 \
+            > /tmp/diagnostics-app.log 2>&1 &
+          echo $! > /tmp/diagnostics-app.pid
+          for attempt in {1..50}; do
+            if wmctrl -l | grep -q 'Network Diagnostics'; then
+              wmctrl -r 'Network Diagnostics' -b remove,maximized_vert,maximized_horz
+              wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              sleep 3
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/diagnostics-app.pid)" 2>/dev/null; then
+              cat /tmp/diagnostics-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/diagnostics-app.log
+          exit 1
+
+      - name: Capture diagnostics UX states
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capture() {
+            local name="$1"
+            local path="diagnostics-visual/screenshots/$name.png"
+            local attempt
+            for attempt in {1..5}; do
+              sleep 0.8
+              scrot "$path"
+              if (( $(stat -c%s "$path") >= 60000 )); then
+                return
+              fi
+              # WebKitGTK can retain a blank backing surface after navigation or an
+              # X11 resize. Alternate one pixel of geometry and focus the webview so
+              # every milestone gets several real redraw opportunities.
+              if (( attempt % 2 == 1 )); then
+                wmctrl -r 'Network Diagnostics' -e 0,10,35,1579,939
+              else
+                wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+              fi
+              xdotool mousemove --sync 800 330 click 1
+            done
+            if (( $(stat -c%s "$path") < 60000 )); then
+              echo "Screenshot $name is blank or did not redraw."
+              cat /tmp/diagnostics-app.log
+              exit 1
+            fi
+          }
+
+          open_palette() {
+            xdotool mousemove --sync 800 330 click 1
+            xdotool key --clearmodifiers ctrl+f
+            sleep 0.3
+          }
+
+          navigate_palette() {
+            open_palette
+            xdotool type --delay 25 "$1"
+            xdotool key --clearmodifiers Return
+            sleep 0.65
+          }
+
+          navigate_palette 'run diagnostics'
+          capture diagnostics-ready-wide-dark
+
+          # Force a real redraw after X11 geometry changes, then navigate back to the
+          # diagnostic section because WebKit may reset the scroll offset on resize.
+          wmctrl -r 'Network Diagnostics' -e 0,100,70,1000,840
+          sleep 0.45
+          wmctrl -r 'Network Diagnostics' -e 0,100,70,999,839
+          sleep 0.3
+          wmctrl -r 'Network Diagnostics' -e 0,100,70,1000,840
+          sleep 0.6
+          navigate_palette 'run diagnostics'
+          capture diagnostics-ready-1000x840-dark
+
+          wmctrl -r 'Network Diagnostics' -e 0,10,35,1580,940
+          sleep 0.6
+          navigate_palette 'run diagnostics'
+          navigate_palette 'select quick'
+          capture diagnostics-quick-ready-dark
+
+          # Quick spends roughly the first two seconds collecting baseline latency,
+          # which gives us a reliable active-run window without intentionally moving
+          # hundreds of megabytes just to render a screenshot.
+          open_palette
+          xdotool type --delay 25 'run quick test'
+          xdotool key --clearmodifiers Return
+          sleep 0.12
+          capture diagnostics-running-baseline-dark
+          sleep 0.7
+          capture diagnostics-running-baseline-later-dark
+
+          if ! grep -Fq '"profile":"quick","method":"compare","downloadPath":"automatic"' /tmp/diagnostics-app.log; then
+            echo "Quick visual run did not start with Both + Automatic."
+            tail -160 /tmp/diagnostics-app.log
+            exit 1
+          fi
+
+          open_palette
+          xdotool type --delay 25 'cancel active diagnostic'
+          xdotool key --clearmodifiers Return
+          sleep 0.8
+          navigate_palette 'run diagnostics'
+          capture diagnostics-after-cancel-dark
+
+          if ! kill -0 "$(cat /tmp/diagnostics-app.pid)" 2>/dev/null; then
+            cat /tmp/diagnostics-app.log
+            exit 1
+          fi
+          if grep -Ei 'unhandled exception|fatal error|segmentation fault' /tmp/diagnostics-app.log; then
+            cat /tmp/diagnostics-app.log
+            exit 1
+          fi
+
+      - name: Upload diagnostics visual states
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: desktop-diagnostics-visual-audit
+          path: |
+            diagnostics-visual/screenshots
+            /tmp/diagnostics-app.log
+            /tmp/diagnostics-openbox.log
+            /tmp/diagnostics-xvfb.log
+          retention-days: 7
