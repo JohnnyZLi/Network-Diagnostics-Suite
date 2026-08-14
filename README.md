@@ -5,17 +5,31 @@
 
 A privacy-first connection-quality suite with three clients built around a shared measurement and report model:
 
-- The **browser application** measures first-party Internet throughput, latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, service reachability, endpoint preflight evidence, and deterministic findings.
-- The **native desktop application** provides Connection Check, Quick, Full, and Stress profiles with Compare, Single, and Aggregate transfer methods, then adds operating-system, LAN, interface, route, resolver, path, and protocol evidence.
+- The **browser application** measures first-party Internet throughput, latency distributions, jitter, request failures, loaded responsiveness, bufferbloat, service reachability, endpoint preflight data, and deterministic findings.
+- The **native desktop application** provides Connection, Quick, Full, and Stress profiles with Both, Single, and Aggregate topologies, then adds operating-system, LAN, interface, route, resolver, path, and protocol measurements.
 - The **command-line deep probe** preserves scriptable ICMP, traceroute, DNS, path MTU, interface, Wi-Fi, routing, TCP/TLS, endpoint selection, HTTP/3, and optional two-machine LAN diagnostics.
 
 The project does not use accounts, cookies, analytics, advertising, telemetry, or a project-operated results database. Browser measurements remain in that browser. Native reports are written to the user's computer. The primary transfer path uses project-controlled Cloudflare endpoints rather than publishing results to a public speed-test dataset.
 
+## Download the desktop app
+
+The desktop packages are self-contained; installing .NET is not required. Choose the package that matches the operating system and processor:
+
+| System | Architecture | Download | Verify |
+| --- | --- | --- | --- |
+| Windows | x64 | [![Download Windows x64](https://img.shields.io/badge/Download-ZIP-0078D4?logo=windows&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-win-x64.zip.sha256) |
+| macOS 12+ | Apple Silicon | [![Download macOS Apple Silicon](https://img.shields.io/badge/Download-TAR.GZ-000000?logo=apple&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-arm64.tar.gz.sha256) |
+| macOS 12+ | Intel | [![Download macOS Intel](https://img.shields.io/badge/Download-TAR.GZ-555555?logo=apple&logoColor=white)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-osx-x64.tar.gz.sha256) |
+| Linux | x64 | [![Download Linux x64](https://img.shields.io/badge/Download-TAR.GZ-FCC624?logo=linux&logoColor=black)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-x64.tar.gz.sha256) |
+| Linux | ARM64 | [![Download Linux ARM64](https://img.shields.io/badge/Download-TAR.GZ-FCC624?logo=linux&logoColor=black)](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz) | [SHA-256](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download/NetworkDiagnosticsDesktop-linux-arm64.tar.gz.sha256) |
+
+These portable builds are currently unsigned. On macOS, try opening **Network Diagnostics.app** normally, then use **System Settings → Privacy & Security → Open Anyway** if Gatekeeper blocks it. See [all releases](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases) and the [desktop package guide](tools/NetworkDiagnostics.Desktop/DISTRIBUTION.md) for launch and privacy details.
+
 ## Design system
 
-The browser application consumes Johnny Li Web Design System v1.8.2 from the immutable source recorded in `design-system.lock.json` and `src/design-system/SOURCE.md`. Continuous integration verifies the committed tokens, shared foundations, navigation controllers, conformance contract, and integration evidence against that exact source.
+The browser application consumes Johnny Li Web Design System v1.9.0 from the immutable source recorded in `design-system.lock.json` and `src/design-system/SOURCE.md`. Continuous integration verifies the committed tokens, shared foundations, navigation controllers, conformance contract, and integration data against that exact source.
 
-The desktop application translates the same approved product hierarchy and restrained terracotta/neutral visual language into native controls. Platform menus, window behavior, focus, keyboard navigation, accessibility, and high-contrast behavior remain owned by Avalonia rather than reproducing browser markup.
+The desktop application uses a dedicated React + TypeScript + Vite workbench embedded in Photino.NET. Photino owns the cross-platform native window and .NET bridge; the frontend provides the compact desktop interaction model, keyboard navigation, accessibility states, and System/Light/Dark themes.
 
 ## What it measures
 
@@ -24,7 +38,7 @@ The desktop application translates the same approved product hierarchy and restr
 | First-party Internet download and upload | Yes | Yes | Opt-in |
 | Quick, Full, and Stress profiles | Yes | Yes | Opt-in |
 | Low-data Connection Check | — | Yes | Opt-in |
-| Compare, Single, and Aggregate methods | Yes | Yes | Opt-in |
+| Both/Compare, Single, and Aggregate topologies | Yes | Yes | Opt-in |
 | Single-flow and aggregate results | Yes | Yes | Opt-in |
 | Stress 1, 2, 4, 8, and 10 connection scaling | Yes | Yes | Opt-in |
 | Idle and loaded latency | Yes | Yes | With Internet transfer |
@@ -40,9 +54,9 @@ The desktop application translates the same approved product hierarchy and restr
 | Selectable source interface | — | Yes | Yes |
 | Wi-Fi signal, channel, band, and link rates | — | When exposed by the OS | When exposed by the OS |
 | Route-table and default-route details | — | When exposed by the OS | When exposed by the OS |
-| Endpoint latency preflight and selection evidence | Yes | Yes | With Internet transfer |
+| Endpoint latency preflight and selection data | Yes | Yes | With Internet transfer |
 | Edge, network, ASN, protocol, TLS, and IP-version metadata | Yes | Yes | With Internet transfer |
-| Evidence-backed findings and suggested next steps | Yes | Yes | With Internet transfer |
+| Measurement-backed findings and suggested next steps | Yes | Yes | With Internet transfer |
 | Exact HTTP/3 request | — | Yes | With Internet transfer |
 | Observed browser HTTP protocol | Yes | Imported as evidence | — |
 | Isolated two-machine LAN throughput | — | Yes | Yes |
@@ -89,7 +103,7 @@ flowchart TD
     Browser --> Preflight["Endpoint preflight + metadata"]
     Browser --> Assets["Cloudflare static speed assets"]
     Browser --> Worker["Cloudflare Worker APIs"]
-    Desktop["Avalonia desktop app"] --> Core
+    Desktop["React + Photino desktop app"] --> Core
     CLI["Deep-probe CLI"] --> Core
     Core --> Preflight
     Core --> Assets
@@ -105,7 +119,7 @@ flowchart TD
 - **Cloudflare Workers Static Assets** and optional R2 delivery provide deterministic first-party download payloads.
 - **Cloudflare Workers** provide same-origin latency, upload, metadata, and fallback download endpoints.
 - **NetworkDiagnostics.Core on .NET 10** owns native planning, endpoint selection, Internet transfers, deep diagnostics, platform capability reporting, findings, and report serialization.
-- **Avalonia** provides the Windows, macOS, and Linux desktop host.
+- **Photino.NET** embeds the React workbench in a native Windows, macOS, and Linux host and connects it to the shared .NET engine.
 - **Shared parity fixtures** verify that the TypeScript and C# findings engines produce the same finding IDs for representative reports.
 - Imported native JSON is read locally by the browser File API and is not uploaded.
 
@@ -143,7 +157,7 @@ Individual scripts such as `npm run probe:build:mac-arm64` and `npm run desktop:
 
 ## Native desktop application
 
-The [Desktop app workflow](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/desktop.yml) publishes these 30-day artifacts when desktop, shared-core, or contract files change:
+Tagged desktop versions are retained on [GitHub Releases](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases) using the direct downloads above. The [Desktop app workflow](https://github.com/JohnnyZLi/Network-Diagnostics-Suite/actions/workflows/desktop.yml) also publishes 30-day development artifacts for relevant commits and pull requests:
 
 | Artifact | Intended system |
 | --- | --- |
@@ -155,18 +169,21 @@ The [Desktop app workflow](https://github.com/JohnnyZLi/Network-Diagnostics-Suit
 
 Each package contains the self-contained app, license, run/privacy notes, and a SHA-256 checksum. The application provides:
 
-- Connection Check, Quick, Full, and Stress;
-- Compare, Single, and Aggregate transfer methods;
-- pre-test endpoint, network, edge, and HTTP/3 evidence;
+- Connection, Quick, Full, and Stress profiles;
+- Both, Single, and Aggregate transfer topologies;
+- Automatic, Direct R2, and Worker download paths;
+- pre-test endpoint, network, edge, interface, route, delivery-path, and HTTP/3 measurements;
 - selectable source interface with documented binding scope;
 - computed time, cap, connection, and run summaries;
 - live progress, cancellation, and partial-result preservation;
-- evidence-backed findings and suggested next tests;
+- findings, measurements, and suggested next tests;
 - single-versus-aggregate and Stress scaling results;
 - interface, Wi-Fi, routing, DNS, TLS, MTU, and traceroute views;
 - LAN server and LAN-target client controls;
 - local report history, reopen, import, and export;
-- persisted profile, method, privacy, endpoint, interface, LAN, and data-approval settings.
+- passive network-health monitoring with local history and exports;
+- Advanced Diagnostics for endpoint, binding, privacy, preflight, and LAN workflows;
+- persisted profile, topology, download path, privacy, endpoint, interface, LAN, and data-approval settings.
 
 macOS CI artifacts are valid `.app` bundles but are not Apple-signed or notarized. Review the source and checksum, build locally, or explicitly approve the app in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
 
@@ -246,7 +263,7 @@ See [Privacy model](docs/privacy.md) and [Measurement methodology](docs/methodol
 
 ## Deployment
 
-The complete browser application is deployed as a Cloudflare Worker with bundled static assets at `network.johnnyli.dev`. GitHub Actions builds and packages native artifacts but does not sign or automatically publish an installer release.
+The complete browser application is deployed as a Cloudflare Worker with bundled static assets at `network.johnnyli.dev`. A `desktop-vX.Y.Z` tag builds all five desktop targets, verifies their archives and checksums, and publishes an unsigned portable GitHub Release.
 
 A protected manual workflow is prepared for Apple Developer ID signing, notarization, stapling, and signed DMG creation after release credentials are configured.
 

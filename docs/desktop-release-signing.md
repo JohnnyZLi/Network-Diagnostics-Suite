@@ -1,8 +1,10 @@
 # Desktop release signing
 
-The normal `Desktop app` workflow builds unsigned development artifacts for every pull request and supported runtime. macOS development artifacts are packaged as valid `.app` bundles, but Gatekeeper will still require explicit approval because they are not signed or notarized.
+The normal `Desktop app` workflow builds unsigned development artifacts for every pull request and supported runtime. A reviewed `desktop-vX.Y.Z` tag publishes those portable Windows, macOS, and Linux archives as a retained GitHub Release with SHA-256 files. macOS portable builds are packaged as valid `.app` bundles, but Gatekeeper will still require explicit approval because they are not signed or notarized.
 
 The manual `Signed desktop release` workflow produces signed and notarized Apple Silicon and Intel DMGs. It uses the protected `desktop-release` GitHub environment and does not run during pull requests.
+
+The signed workflow is deliberately separate from the portable release workflow. Publishing signed DMGs to a GitHub Release remains a manual, credential-protected step until the repository has an approved signing and release policy for every platform.
 
 ## Apple requirements
 
