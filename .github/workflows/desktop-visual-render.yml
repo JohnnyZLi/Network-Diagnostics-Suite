@@ -24,7 +24,7 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       GTK_THEME: 'Adwaita:dark'
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -32,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3
+      - uses: actions/setup-dotnet@c97148f4733f57845eed08c03153ce9975bd616a
         with:
           dotnet-version: '10.0.x'
 
