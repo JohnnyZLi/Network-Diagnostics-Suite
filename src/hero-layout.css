@@ -1,3 +1,30 @@
+/* Give the browser product the same atmospheric family as the portfolio while
+   keeping the diagnostics surface restrained. The light is deliberately
+   opposite the portfolio hero: it pools behind the Network headline on the
+   left and fades before the dense Test profile controls on the right. */
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(76vw, 980px);
+  aspect-ratio: 1;
+  top: -300px;
+  left: max(-300px, -18vw);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--jl-color-accent-soft) 34%, transparent),
+    color-mix(in srgb, var(--jl-color-accent-decorative) 10%, transparent) 38%,
+    transparent 70%
+  );
+}
+
 /* Pair the editorial hero copy with the Test profile panel on wide layouts.
    Both columns begin on the same baseline; the copy then remains visible only
    while its own hero section is still in view. */
@@ -24,5 +51,25 @@
   .hero__copy {
     position: static;
     top: auto;
+  }
+
+  .hero::before {
+    width: min(112vw, 760px);
+    top: -220px;
+    left: -34vw;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero::before {
+    width: 150vw;
+    top: -180px;
+    left: -68vw;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .hero::before {
+    display: none;
   }
 }

@@ -40,6 +40,30 @@ body::after,
   box-shadow: 0 0 0 5px var(--_jl-focus-gap-color);
 }
 
+/* Keep shared header geometry and controls intact while letting the hero's
+   product-owned atmosphere continue through the sticky rail. The blur lives
+   on a decorative layer so it does not change fixed/disclosure containing
+   blocks or re-own shared interaction behavior. */
+.app-shell > .jl-global-header {
+  isolation: isolate;
+  background: transparent;
+}
+
+.app-shell > .jl-global-header::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--jl-color-canvas) 80%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(112%);
+  backdrop-filter: blur(10px) saturate(112%);
+}
+
+:root[data-theme="dark"] .app-shell > .jl-global-header::before {
+  background: color-mix(in srgb, var(--jl-color-canvas) 74%, transparent);
+}
+
 /* The global bar is inside Network's constrained application shell. Only its
    placement stays product-local; all header form and control geometry remain
    owned by the shared Portfolio-baseline header classes. */
