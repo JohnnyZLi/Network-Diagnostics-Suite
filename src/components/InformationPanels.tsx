@@ -1,4 +1,4 @@
-const RELEASES_URL = "https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest";
+const RELEASE_DOWNLOAD_BASE = "https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download";
 
 export function InformationPanels() {
   return (
@@ -20,11 +20,15 @@ export function InformationPanels() {
         <div className="probe-status">
           <span>Native builds</span>
           <strong className="probe-status__links">
-            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View Windows native builds in the latest release">Windows</a>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-win-x64.zip`} aria-label="Download Network Diagnostics for Windows x64">Windows x64</a>
             <span aria-hidden="true">·</span>
-            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View macOS native builds in the latest release">macOS</a>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-osx-arm64.tar.gz`} aria-label="Download Network Diagnostics for macOS ARM64">macOS ARM64</a>
             <span aria-hidden="true">·</span>
-            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View Linux native builds in the latest release">Linux</a>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-osx-x64.tar.gz`} aria-label="Download Network Diagnostics for macOS x64">macOS x64</a>
+            <span aria-hidden="true">·</span>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-linux-x64.tar.gz`} aria-label="Download Network Diagnostics for Linux x64">Linux x64</a>
+            <span aria-hidden="true">·</span>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-linux-arm64.tar.gz`} aria-label="Download Network Diagnostics for Linux ARM64">Linux ARM64</a>
           </strong>
         </div>
       </article>
