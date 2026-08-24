@@ -1,3 +1,5 @@
+const RELEASES_URL = "https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest";
+
 export function InformationPanels() {
   return (
     <section className="information-grid">
@@ -15,7 +17,16 @@ export function InformationPanels() {
         <span className="eyebrow">Deep probe</span>
         <h2>Some answers require the operating system.</h2>
         <p>Browsers cannot perform honest traceroutes or expose raw packet loss. The optional native probe adds hops, Internet Control Message Protocol loss, Domain Name System timing, interface and gateway details, and path Maximum Transmission Unit discovery.</p>
-        <div className="probe-status"><span>Native builds</span><strong>Windows · macOS · Linux</strong></div>
+        <div className="probe-status">
+          <span>Native builds</span>
+          <strong className="probe-status__links">
+            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View Windows native builds in the latest release">Windows</a>
+            <span aria-hidden="true">·</span>
+            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View macOS native builds in the latest release">macOS</a>
+            <span aria-hidden="true">·</span>
+            <a href={RELEASES_URL} target="_blank" rel="noreferrer" aria-label="View Linux native builds in the latest release">Linux</a>
+          </strong>
+        </div>
       </article>
     </section>
   );
