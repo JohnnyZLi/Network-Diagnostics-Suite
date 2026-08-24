@@ -145,6 +145,27 @@ body::after,
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
 }
 
+/* Recent path-comparison cards were also using a light-only translucent fill.
+   In dark mode they should read as ordinary analytical surfaces rather than
+   bright cards floating over the dark canvas. */
+:root[data-theme="dark"] .comparison-card {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .comparison-card__heading span,
+:root[data-theme="dark"] .comparison-card dd {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .comparison-card__heading small,
+:root[data-theme="dark"] .comparison-card dt,
+:root[data-theme="dark"] .comparison-card p {
+  color: var(--muted);
+}
+
 :root[data-theme="dark"] .deep-probe {
   background: linear-gradient(
     120deg,
