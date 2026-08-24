@@ -7,6 +7,7 @@ on:
       - "index.html"
       - "scripts/theme-visual-audit.mjs"
       - "scripts/header-alignment-audit.mjs"
+      - "scripts/advanced-path-dark-audit.mjs"
       - "src/**"
       - "package.json"
       - "package-lock.json"
@@ -40,6 +41,7 @@ jobs:
           exit 1
       - run: node scripts/theme-visual-audit.mjs
       - run: node scripts/header-alignment-audit.mjs
+      - run: node scripts/advanced-path-dark-audit.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         if: always()
         with:
