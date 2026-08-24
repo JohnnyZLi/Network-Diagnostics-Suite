@@ -26,9 +26,9 @@ export function InformationPanels() {
             <span aria-hidden="true">·</span>
             <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-osx-x64.tar.gz`} aria-label="Download Network Diagnostics for macOS x64">macOS x64</a>
             <span aria-hidden="true">·</span>
-            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-linux-x64.tar.gz`} aria-label="Download Network Diagnostics for Linux x64">Linux x64</a>
-            <span aria-hidden="true">·</span>
             <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-linux-arm64.tar.gz`} aria-label="Download Network Diagnostics for Linux ARM64">Linux ARM64</a>
+            <span aria-hidden="true">·</span>
+            <a href={`${RELEASE_DOWNLOAD_BASE}/NetworkDiagnosticsDesktop-linux-x64.tar.gz`} aria-label="Download Network Diagnostics for Linux x64">Linux x64</a>
           </strong>
         </div>
       </article>
