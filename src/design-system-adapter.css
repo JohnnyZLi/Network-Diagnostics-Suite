@@ -100,6 +100,30 @@ body::after,
   color: var(--accent);
 }
 
+.probe-status__links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  justify-content: flex-end;
+}
+
+.probe-status__links a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 58%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition:
+    color var(--jl-motion-fast) var(--jl-motion-ease-out),
+    text-decoration-color var(--jl-motion-fast) var(--jl-motion-ease-out);
+}
+
+.probe-status__links a:hover,
+.probe-status__links a:focus-visible {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
 /* Legacy translucent panels were authored against the light palette. In dark
    mode, give those analytical surfaces an explicit dark token background so
    their inherited semantic text remains readable. */
