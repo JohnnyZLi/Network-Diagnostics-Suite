@@ -4,6 +4,22 @@ import { chromium } from "playwright";
 
 const baseUrl = process.env.THEME_AUDIT_BASE_URL ?? "http://127.0.0.1:4173";
 const output = "theme-visual-audit";
+const historySeed = [
+  {
+    id: "theme-audit-r2",
+    startedAt: "2026-08-24T08:00:00.000Z",
+    completedAt: "2026-08-24T08:00:20.000Z",
+    mode: "quick",
+    transferMode: "compare",
+    download: {
+      steadyMbps: 382,
+      stabilityPercent: 81,
+      delivery: { selectedPath: "r2-direct-v1" }
+    },
+    upload: { steadyMbps: 42 },
+    downloadLatency: { increaseMs: 9 }
+  }
+];
 
 const parseRgb = (value) => {
   const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number);
@@ -26,9 +42,14 @@ const contrast = (foreground, background) => {
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "dark", reducedMotion: "reduce" });
-await context.addInitScript(() => localStorage.setItem("jl-theme", "dark"));
+await context.addInitScript((seed) => {
+  localStorage.setItem("jl-theme", "dark");
+  localStorage.setItem("network-diagnostics.recent-results.v1", JSON.stringify(seed));
+}, historySeed);
 const page = await context.newPage();
 const problems = [];
+let advancedReport = null;
+let comparisonReport = null;
 
 try {
   const response = await page.goto(baseUrl, { waitUntil: "networkidle" });
@@ -69,16 +90,62 @@ try {
   if (activeContrast === null || activeContrast < 4.5) problems.push(`active path option contrast is ${activeContrast?.toFixed(2) ?? "unreadable"}`);
   if (state.surface === state.selectorSurface) problems.push("advanced path shell and inset selector lost surface hierarchy");
 
+  advancedReport = { state, summaryContrast, activeContrast };
   await disclosure.screenshot({ path: `${output}/network-advanced-path-desktop-dark.png` });
-  await writeFile(`${output}/advanced-path-dark-report.json`, JSON.stringify({ state, summaryContrast, activeContrast, problems }, null, 2));
+
+  const recentResults = page.locator(".recent-results");
+  await recentResults.waitFor({ state: "visible" });
+  const comparisonGrid = recentResults.locator(".comparison-grid");
+  const comparisonCards = comparisonGrid.locator(".comparison-card");
+  if (await comparisonCards.count() !== 2) problems.push(`expected 2 path comparison cards, found ${await comparisonCards.count()}`);
+
+  const comparisonState = await comparisonGrid.evaluate((element) => {
+    const cards = [...element.querySelectorAll(".comparison-card")];
+    return cards.map((card) => {
+      const heading = card.querySelector(".comparison-card__heading span");
+      const value = card.querySelector("dd");
+      const empty = card.querySelector("p");
+      const cardStyle = getComputedStyle(card);
+      return {
+        surface: cardStyle.backgroundColor,
+        border: cardStyle.borderColor,
+        headingColor: heading ? getComputedStyle(heading).color : "",
+        valueColor: value ? getComputedStyle(value).color : "",
+        emptyColor: empty ? getComputedStyle(empty).color : "",
+      };
+    });
+  });
+
+  for (const [index, card] of comparisonState.entries()) {
+    const rgb = parseRgb(card.surface);
+    if (!rgb || luminance(rgb) > 0.12) problems.push(`comparison card ${index + 1} surface is too light: ${card.surface}`);
+    const headingContrast = contrast(card.headingColor, card.surface);
+    if (headingContrast === null || headingContrast < 4.5) problems.push(`comparison card ${index + 1} heading contrast is ${headingContrast?.toFixed(2) ?? "unreadable"}`);
+    if (card.valueColor) {
+      const valueContrast = contrast(card.valueColor, card.surface);
+      if (valueContrast === null || valueContrast < 4.5) problems.push(`comparison card ${index + 1} value contrast is ${valueContrast?.toFixed(2) ?? "unreadable"}`);
+    }
+    if (card.emptyColor) {
+      const emptyContrast = contrast(card.emptyColor, card.surface);
+      if (emptyContrast === null || emptyContrast < 3) problems.push(`comparison card ${index + 1} empty-state contrast is ${emptyContrast?.toFixed(2) ?? "unreadable"}`);
+    }
+  }
+
+  if (comparisonState.length === 2 && comparisonState[0].surface !== comparisonState[1].surface) {
+    problems.push("path comparison cards do not share the same dark surface");
+  }
+
+  comparisonReport = comparisonState;
+  await comparisonGrid.screenshot({ path: `${output}/network-path-comparison-desktop-dark.png` });
+  await writeFile(`${output}/advanced-path-dark-report.json`, JSON.stringify({ advancedReport, comparisonReport, problems }, null, 2));
 } finally {
   await context.close();
   await browser.close();
 }
 
 if (problems.length) {
-  console.error("Advanced download path dark-mode audit failures:", problems);
+  console.error("Dark analytical-surface audit failures:", problems);
   process.exitCode = 1;
 } else {
-  console.log("Advanced download path dark-mode audit passed.");
+  console.log("Advanced path and path comparison dark-mode audit passed.");
 }
