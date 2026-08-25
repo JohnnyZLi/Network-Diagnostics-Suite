@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 const RELEASE_DOWNLOAD_BASE = "https://github.com/JohnnyZLi/Network-Diagnostics-Suite/releases/latest/download";
 
 const NATIVE_BUILDS = [
@@ -29,10 +31,10 @@ export function InformationPanels() {
           <span>Native builds</span>
           <strong className="probe-status__links">
             {NATIVE_BUILDS.map((build, index) => (
-              <span key={build.asset}>
-                {index > 0 && <span aria-hidden="true"> · </span>}
+              <Fragment key={build.asset}>
+                {index > 0 && <span aria-hidden="true">·</span>}
                 <a href={`${RELEASE_DOWNLOAD_BASE}/${build.asset}`} aria-label={`Download Network Diagnostics for ${build.label}`}>{build.label}</a>
-              </span>
+              </Fragment>
             ))}
           </strong>
         </div>
