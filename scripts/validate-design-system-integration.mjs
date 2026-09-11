@@ -16,8 +16,6 @@ const metricCardStyles = await read("src/metric-card-layout.css");
 const heroLayout = await read("src/hero-layout.css");
 const adapter = await read("src/design-system-adapter.css");
 const identityStyles = await read("src/design-system/site-identity.css");
-const updater = await read("scripts/update-design-system.mjs");
-const consumerRelease = await read("scripts/design-system-consumer-release.mjs");
 const conformanceRunner = await read("scripts/design-system-conformance-runner.mjs");
 const conformanceContract = JSON.parse(await read("scripts/design-system-conformance-contract.json"));
 const conformanceManifest = JSON.parse(await read("design-system.conformance.json"));
@@ -48,6 +46,7 @@ if (!source.includes(expectedCommit) || !source.includes(`Version: ${expectedVer
 if (conformanceContract.designSystemVersion !== expectedVersion || conformanceContract.schemaVersion !== "1.0.0") fail("Conformance contract metadata drifted.");
 if (conformanceManifest.product !== "network" || conformanceManifest.schemaVersion !== "1.0.0") fail("Network conformance manifest metadata drifted.");
 if (packageMetadata.scripts?.["design-system:conformance"] !== "node scripts/design-system-conformance-runner.mjs --contract scripts/design-system-conformance-contract.json") fail("Network conformance command drifted.");
+if (packageMetadata.scripts?.["design-system:update"] !== undefined) fail("Network still exposes the retired local design-system resolver command.");
 for (const id of ["DS-DIST-001", "DS-DIALOG-001", "DS-DIALOG-002", "DS-RESP-001", "DS-TEST-001"]) {
   if (!conformanceManifest.rules?.[id]) fail(`Network conformance manifest is missing ${id}.`);
 }
@@ -260,29 +259,21 @@ const attachedHeaderGeometry = identityStyles.includes("grid-template-columns: 1
   && !identityStyles.includes("--_jl-site-menu-trigger-offset");
 if (!attachedHeaderGeometry) fail("Shared header geometry is not the approved attached-width Sites contract.");
 
-requireFragments(updater, [
-  'import { resolveConsumerRelease } from "./design-system-consumer-release.mjs"',
-  "resolveConsumerRelease()", "release.version", "release.sourceCommit",
-], "Shared design-system release resolver");
-requireFragments(consumerRelease, [
-  'const REPOSITORY = "JohnnyZLi/Web-Design-System"', "function localPath(value)",
-  'relation.startsWith("..")', "export async function resolveConsumerRelease",
-  "design-system.lock.json", "api.github.com/repos/${REPOSITORY}/commits/main",
-], "Constrained consumer release helper");
-if (consumerRelease.includes("child_process") || consumerRelease.includes("exec(")) fail("Consumer helper can execute arbitrary commands.");
 requireFragments(synchronizer, [
-  'readFile(resolve("design-system.lock.json")', 'styles/content-primitives.css',
-  'scripts/consumer-release.mjs", "scripts/design-system-consumer-release.mjs',
+  'const PACKAGE = "@johnnyzli/web-design-system"', "RETRYABLE_STATUS", 'styles/content-primitives.css',
   'scripts/conformance-runner.mjs", "scripts/design-system-conformance-runner.mjs',
   'conformance/contract.json", "scripts/design-system-conformance-contract.json',
-  "versionMetadata.version !== lockedVersion", "sourceMetadata.includes(sourceCommit)",
+  "sourceMetadataPath", "expectedSourceMetadata", "if (write) await writeFile(sourceMetadataPath",
+  "sourceMetadata !== expectedSourceMetadata",
 ], "Design-system synchronizer");
+if (synchronizer.includes("scripts/consumer-release.mjs")) fail("Network synchronizer still vendors the retired release resolver.");
 requireFragments(syncWorkflow, [
-  "workflow_dispatch:", "schedule:", "contents: write", "pull-requests: write",
+  "workflow_dispatch:", "schedule:", "push:", "design-system.lock.json", "contents: write", "pull-requests: write",
   'node-version: "24"', "npm run design-system:check", "npm run design-system:conformance", "npm test", "npm run build",
-  "scripts/design-system-consumer-release.mjs", "scripts/design-system-conformance-runner.mjs", "product-name: Network Diagnostics",
+  "scripts/design-system-conformance-runner.mjs", "product-name: Network Diagnostics",
 ], "Shared design-system update workflow caller");
 requireImmutableWorkflow(syncWorkflow, "consumer-design-system-sync\\.yml", "Shared design-system update workflow caller");
+if (syncWorkflow.includes("scripts/design-system-consumer-release.mjs")) fail("Network workflow still tracks the retired local release resolver.");
 if (syncWorkflow.includes("gh pr create") || syncWorkflow.includes("git push")) fail("Network workflow still duplicates shared publication behavior.");
 requireFragments(conformanceWorkflow, [
   "npm run design-system:check", "npm run design-system:integration", "npm run design-system:conformance", "npm test", "npm run build",
