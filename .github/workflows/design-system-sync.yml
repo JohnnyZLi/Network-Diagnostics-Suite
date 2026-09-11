@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "37 16 * * 1"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/design-system-sync.yml"
+      - "design-system.lock.json"
 
 permissions:
   contents: write
@@ -11,7 +16,7 @@ permissions:
 
 jobs:
   update:
-    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@82f97cb4072758991f8baf98d7e7bed052142136
+    uses: JohnnyZLi/Web-Design-System/.github/workflows/consumer-design-system-sync.yml@2a67ca85f96878cb8f074c596f5098b836ffd5d6
     with:
       node-version: "24"
       timeout-minutes: 20
@@ -20,7 +25,6 @@ jobs:
       tracked-paths: |
         design-system.lock.json
         design-system.conformance.json
-        scripts/design-system-consumer-release.mjs
         scripts/design-system-conformance-runner.mjs
         scripts/design-system-conformance-contract.json
         src/design-system
