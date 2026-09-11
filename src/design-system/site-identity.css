@@ -232,8 +232,44 @@
   background: transparent;
 }
 
-.jl-site-switcher__chevron,
-.jl-site-switcher__button > [aria-hidden="true"] {
+.jl-site-switcher__content {
+  display: inline-grid;
+  grid-template-columns: max-content 12px;
+  align-items: center;
+  column-gap: 0.55em;
+  line-height: 1;
+}
+
+.jl-site-switcher__label {
+  display: block;
+  line-height: 1;
+}
+
+.jl-site-switcher__chevron {
+  width: 12px;
+  height: 12px;
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jl-site-switcher__chevron path {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(0deg);
+}
+
+.jl-site-switcher__button[aria-expanded="true"] .jl-site-switcher__chevron path {
+  transform: rotate(180deg);
+}
+
+/* Backward-compatible fallback for consumers that still provide the
+   former text span. Canonical markup uses the centered inline SVG. */
+.jl-site-switcher__button > [aria-hidden="true"]:not(svg) {
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
@@ -244,8 +280,7 @@
   transform-origin: center;
 }
 
-.jl-site-switcher__button[aria-expanded="true"] .jl-site-switcher__chevron,
-.jl-site-switcher__button[aria-expanded="true"] > [aria-hidden="true"] {
+.jl-site-switcher__button[aria-expanded="true"] > [aria-hidden="true"]:not(svg) {
   transform: translateY(2px) rotate(-135deg);
 }
 
@@ -284,7 +319,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .jl-site-switcher__chevron,
-  .jl-site-switcher__button > [aria-hidden="true"],
+  .jl-site-switcher__button > [aria-hidden="true"]:not(svg),
   .jl-settings-button__icon {
     transition: transform var(--jl-motion-base) var(--jl-motion-ease-out);
   }
@@ -605,6 +640,70 @@
     min-width: 96px;
   }
 
+}
+
+
+/* Optional compact utility expression. The shared controls keep their full
+   desktop hit targets and interaction contract while the bar uses less
+   vertical space and Sites/Settings read as one quiet utility cluster. */
+@media (min-width: 561px) {
+  .jl-global-header--compact-utility,
+  .jl-global-header--compact-utility .jl-global-header__inner {
+    min-height: 72px;
+  }
+
+  .jl-global-header--compact-utility .jl-global-header__inner {
+    padding-block: 14px;
+  }
+
+  .jl-global-header--compact-utility .jl-site-switcher {
+    width: 140px;
+    grid-template-columns: 96px var(--jl-control-height-md);
+    column-gap: 0;
+    border: 1px solid var(--jl-color-rule);
+    border-radius: var(--jl-radius-md);
+    background: color-mix(in srgb, var(--jl-color-surface) 42%, transparent);
+  }
+
+  .jl-global-header--compact-utility .jl-site-disclosure,
+  .jl-global-header--compact-utility .jl-settings-disclosure {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .jl-global-header--compact-utility .jl-site-disclosure,
+  .jl-global-header--compact-utility .jl-site-switcher__button,
+  .jl-global-header--compact-utility .jl-site-menu {
+    width: 96px;
+    min-width: 96px;
+  }
+
+  .jl-global-header--compact-utility .jl-settings-disclosure {
+    border-left: 1px solid var(--jl-color-rule);
+  }
+
+  .jl-global-header--compact-utility .jl-site-disclosure:has(> .jl-site-switcher__button:hover:not([aria-expanded="true"])),
+  .jl-global-header--compact-utility .jl-settings-disclosure:has(> .jl-settings-button:hover:not([aria-expanded="true"])) {
+    background: color-mix(in srgb, var(--jl-color-surface-strong) 38%, transparent);
+    box-shadow: none;
+  }
+
+  .jl-global-header--compact-utility .jl-site-disclosure:has(> .jl-site-switcher__button:focus-visible),
+  .jl-global-header--compact-utility .jl-settings-disclosure:has(> .jl-settings-button:focus-visible) {
+    box-shadow: inset 0 0 0 2px var(--jl-color-focus-ring);
+  }
+
+  .jl-global-header--compact-utility .jl-site-disclosure:has(> .jl-site-switcher__button[aria-expanded="true"]),
+  .jl-global-header--compact-utility .jl-settings-disclosure:has(> .jl-settings-button[aria-expanded="true"]) {
+    border-radius: var(--jl-radius-md);
+    background: var(--jl-color-surface);
+    box-shadow: inset 0 0 0 1px var(--jl-color-rule-strong);
+  }
+
+  .jl-global-header--compact-utility .jl-settings-disclosure:has(> .jl-settings-button[aria-expanded="true"]) {
+    border-left-color: transparent;
+  }
 }
 
 @media (forced-colors: active) {
