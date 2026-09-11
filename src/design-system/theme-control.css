@@ -240,3 +240,23 @@
     height: 69px;
   }
 }
+
+
+/* The compact utility header keeps a 73px reserved desktop footprint while a
+   disclosure is pinned or dismissing. Compact/mobile geometry remains the
+   existing 69px shared contract. */
+@media (min-width: 561px) {
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility):has([data-site-switcher-button][aria-expanded="true"]),
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility):has([data-settings-button][aria-expanded="true"]),
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility)[data-jl-header-disclosure-exit] {
+    height: 73px;
+    min-height: 73px;
+    max-height: 73px;
+  }
+
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility):has([data-site-switcher-button][aria-expanded="true"])::before,
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility):has([data-settings-button][aria-expanded="true"])::before,
+  :is(.jl-global-header.jl-global-header--compact-utility, .jl-site-header.jl-global-header--compact-utility)[data-jl-header-disclosure-exit]::before {
+    height: 73px;
+  }
+}
