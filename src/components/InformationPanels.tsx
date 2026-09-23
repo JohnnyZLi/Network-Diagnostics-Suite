@@ -20,8 +20,11 @@ export function InformationPanels() {
         <ul className="plain-list">
           <li><span>01</span> Cloudflare processes the test traffic but Worker request logging is disabled.</li>
           <li><span>02</span> The tool never displays, stores, or returns your public IP address.</li>
-          <li><span>03</span> A full test contacts the named services only after you select it.</li>
+          <li><span>03</span> Full and Stress service checks contact the named services only after you select those profiles.</li>
         </ul>
+        <a className="privacy-detail-link" href="https://johnnyli.dev/privacy/#network-diagnostics">
+          Read full privacy information <span aria-hidden="true">↗</span>
+        </a>
       </article>
       <article className="information-panel information-panel--probe">
         <span className="eyebrow">Deep probe</span>

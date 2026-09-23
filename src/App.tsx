@@ -245,7 +245,7 @@ export default function App() {
               data-header-menu
             >
               <a href="#methodology">Methodology</a>
-              <a href="#privacy">Privacy</a>
+              <a href="https://johnnyli.dev/privacy/#network-diagnostics">Privacy</a>
               <a href="https://github.com/JohnnyZLi/Network-Diagnostics-Suite" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
             </nav>
             <div className="jl-global-header__actions">
@@ -376,7 +376,10 @@ export default function App() {
         <footer>
           <span>Network Diagnostics Suite</span>
           <p>Open source · no analytics · no accounts · local-only report history</p>
-          <a href="https://johnnyli.dev">Back to johnnyli.dev</a>
+          <div className="footer-links">
+            <a href="https://johnnyli.dev/privacy/#network-diagnostics">Privacy</a>
+            <a href="https://johnnyli.dev">Back to johnnyli.dev</a>
+          </div>
         </footer>
       </div>
     </>

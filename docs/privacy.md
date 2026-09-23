@@ -2,15 +2,19 @@
 
 The project is designed around data minimization and explicit boundaries. It has no application database and no code path that sends a completed result back to the project owner.
 
+The public-facing summary for the johnnyli.dev ecosystem is [johnnyli.dev/privacy/#network-diagnostics](https://johnnyli.dev/privacy/#network-diagnostics). This document is the more detailed engineering privacy model.
+
 ## Browser application
 
 ### Transient processing
 
 The browser processes timing samples and generated transfer payloads, Cloudflare edge/network/protocol context, and—on Full and Stress—reachability timing for named services. The Worker examines the connecting address only to identify IPv4 or IPv6 and does not return the address itself.
 
-The browser application has no accounts, authentication, cookies, tracking local storage, analytics, advertising, telemetry, results database, third-party scripts, remote fonts, or result-submission endpoint. Imported native JSON is read with the File API and remains in the current tab.
+The browser application has no accounts, authentication, analytics, advertising, telemetry, results database, third-party scripts, remote fonts, or result-submission endpoint. It does not create tracking identifiers in local storage. Imported native JSON is read with the File API and remains in the current tab.
 
 Recent browser reports and remembered high-data confirmations are stored only in that browser's local storage. Clearing site data removes them.
+
+The shared johnnyli.dev appearance control is separate from diagnostic state. If a visitor selects System, Light, or Dark, it stores the `jl-theme` preference in local storage and in a functional `jl-theme` cookie scoped to `.johnnyli.dev` for up to one year so the appearance can follow the visitor across supported subdomains. The stored value is only the appearance choice; it is not an analytics, advertising, or behavioral-tracking identifier.
 
 ### Infrastructure boundary
 
