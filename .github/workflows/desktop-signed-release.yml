@@ -42,7 +42,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
+      - uses: actions/setup-dotnet@074373ff885ac73f77e5f1d46785eeb8c925e06a # v6.0.0
         with:
           dotnet-version: 10.0.x
 
